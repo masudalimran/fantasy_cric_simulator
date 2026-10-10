@@ -18,15 +18,17 @@ type Sort = { key: string; dir: 'asc' | 'desc' } | null
  * A table whose columns can be sorted. It opens in the order the rows come in; clicking a column sorts by it
  * (an arrow shows which way), clicking again reverses it, and a third click goes back to the starting order.
  */
-export function SortTable<T>({ rows, cols, rowKey, lead, rowClass }: {
+export function SortTable<T>({ rows, cols, rowKey, lead, rowClass, initial }: {
   rows: T[]
   cols: Col<T>[]
   rowKey: (row: T) => string
   /** A first column (rank, cap icon…). It gets `isDefault` so e.g. a cap icon only shows on the real leader. */
   lead?: (rank: number, isDefault: boolean) => React.ReactNode
   rowClass?: (row: T, rank: number) => string
+  /** The column the rows already come sorted by, so its arrow shows from the start. A third click returns to it. */
+  initial?: { key: string; dir: 'asc' | 'desc' }
 }) {
-  const [sort, setSort] = useState<Sort>(null)
+  const [sort, setSort] = useState<Sort>(initial ?? null)
   const col = sort ? cols.find((c) => c.key === sort.key) : undefined
 
   const shown = (() => {
@@ -44,7 +46,7 @@ export function SortTable<T>({ rows, cols, rowKey, lead, rowClass }: {
   const click = (c: Col<T>) => {
     const natural = c.first ?? (c.align === 'left' ? 'asc' : 'desc')
     const opposite = natural === 'asc' ? 'desc' : 'asc'
-    setSort((s) => (!s || s.key !== c.key ? { key: c.key, dir: natural } : s.dir === natural ? { key: c.key, dir: opposite } : null))
+    setSort((s) => (!s || s.key !== c.key ? { key: c.key, dir: natural } : s.dir === natural ? { key: c.key, dir: opposite } : (initial ?? null)))
   }
 
   return (
@@ -68,7 +70,7 @@ export function SortTable<T>({ rows, cols, rowKey, lead, rowClass }: {
       <tbody>
         {shown.map((r, i) => (
           <tr key={rowKey(r)} className={`border-t border-line/60 ${rowClass?.(r, i) ?? ''}`}>
-            {lead && lead(i, !sort)}
+            {lead && lead(i, !sort || (!!initial && sort.key === initial.key && sort.dir === initial.dir))}
             {cols.map((c) => (
               <td key={c.key} className={c.align === 'left' ? 'px-2 py-1.5' : 'px-2 py-2 text-right tabular-nums text-slate-300'}>{c.cell(r, i)}</td>
             ))}

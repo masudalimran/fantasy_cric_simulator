@@ -3,7 +3,7 @@ import { generateSeason } from '../season/generate'
 import { recordResult, simDay, nextMatchDate } from '../season/results'
 import type { SessionFile } from '../store/useStore'
 import { emptyTeamDraft } from './generate'
-import { applyBackup, buildBackup, emptyData, isEmpty, parseBackup, summarize, type BackupData } from './backup'
+import { applyBackup, backupFileName, buildBackup, emptyData, isEmpty, parseBackup, summarize, teamsOnly, type BackupData } from './backup'
 import { BUILT_IN_TEAMS } from './teams'
 
 const teamMap = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
@@ -134,5 +134,23 @@ describe('older saves and new fields', () => {
     expect(r.backup.data.sessions[0].season.myTeamId).toBe(BUILT_IN_TEAMS[3].id)
     expect(r.backup.data.sessions[0].season.difficulty).toBe('legend')
     expect(r.backup.data.sessions[0].reviews[0].titles).toEqual(['A Cup'])
+  })
+})
+
+describe('exporting only the teams', () => {
+  it('keeps created teams and edits but leaves out careers and a match in progress', () => {
+    const t = BUILT_IN_TEAMS
+    const full = { ...emptyData(), customTeams: [{ ...t[0], id: 'mine', isCustom: true }], overrides: { [t[1].id]: { ...t[1], name: 'Edited' } }, sessions: [{ id: 's', name: 'S', createdAt: '', updatedAt: '', season: {} as never, reviews: [] }], activeSessionId: 's' }
+    const only = teamsOnly(full)
+    expect(only.customTeams).toHaveLength(1)
+    expect(Object.keys(only.overrides)).toEqual([t[1].id])
+    expect(only.sessions).toEqual([])
+    expect(only.activeSessionId).toBeNull()
+    expect(only.liveMatch).toBeNull()
+    expect(backupFileName(new Date(2026, 0, 5, 9, 7), 'teams')).toBe('fantasy-cric-sim-teams-2026-01-05-0907.json')
+    expect(backupFileName(new Date(2026, 0, 5, 9, 7))).toBe('fantasy-cric-sim-2026-01-05-0907.json')
+    // a teams-only file is a valid backup that imports on its own
+    const parsed = parseBackup(JSON.stringify(buildBackup(only)))
+    expect(parsed.ok).toBe(true)
   })
 })

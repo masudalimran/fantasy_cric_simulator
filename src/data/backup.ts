@@ -29,9 +29,12 @@ export function buildBackup(data: BackupData, now = new Date()): BackupFile {
   return { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: now.toISOString(), data }
 }
 
-export function backupFileName(now = new Date()): string {
+/** Just your teams (the ones you created and the edits to built-in ones), without careers or a match in progress. */
+export const teamsOnly = (d: BackupData): BackupData => ({ ...emptyData(), customTeams: d.customTeams, overrides: d.overrides })
+
+export function backupFileName(now = new Date(), kind: 'all' | 'teams' = 'all'): string {
   const p = (n: number) => String(n).padStart(2, '0')
-  return `fantasy-cric-sim-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}.json`
+  return `fantasy-cric-sim${kind === 'teams' ? '-teams' : ''}-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}.json`
 }
 
 export interface BackupSummary {

@@ -4,6 +4,7 @@ import { Rng } from '../engine/rng'
 import { computeAwards } from '../engine/awards'
 import { FORMATS } from '../engine/types'
 import type { Team } from '../types'
+import { applyMatchChanges, sessionTeam } from './progression'
 import { cpuSelections, formTable } from './selection'
 import type { Competition, Fixture, MatchSummary, RawSummary, Season, Slot, TableRow, TeamScore } from './types'
 
@@ -38,13 +39,16 @@ export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: num
     for (const b of inn.bowlers.values()) bowl.push([b.id, b.legalBalls, b.runs, b.wickets, b.maidens])
   }
   const motm = computeAwards(match).motm
-  return { fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl }
+  return { played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl }
 }
 
 export function simulateFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): RawSummary {
-  const home = teams.get(fixture.homeId as string)
-  const away = teams.get(fixture.awayId as string)
-  if (!home || !away) throw new Error(`Teams for ${fixture.id} are not available`)
+  // `teams` are the teams as they start out; each match is played with the ratings earned up to that moment (and your lineup)
+  const home0 = teams.get(fixture.homeId as string)
+  const away0 = teams.get(fixture.awayId as string)
+  if (!home0 || !away0) throw new Error(`Teams for ${fixture.id} are not available`)
+  const home = sessionTeam(home0, season)
+  const away = sessionTeam(away0, season)
   const seed = fixtureSeed(season, fixture.id)
   // the computer picks its own XI (form, injuries, batting order); your team plays as you set it
   const [h, a] = season.myTeamId ? cpuSelections(season, fixture, [home, away], season.myTeamId, formTable(season, teams)).map((x) => x.team) : [home, away]
@@ -122,7 +126,7 @@ export function resolveSeason(season: Season): Season {
 }
 
 /** Stores a finished match, swapping player ids for roster positions to keep the saved season small. */
-export function recordResult(season: Season, raw: RawSummary): Season {
+export function recordResult(season: Season, raw: RawSummary, teams?: Map<string, Team>): Season {
   const roster = [...(season.roster ?? [])]
   const index = new Map(roster.map((id, i) => [id, i]))
   const idx = (id: string) => {
@@ -134,8 +138,18 @@ export function recordResult(season: Season, raw: RawSummary): Season {
     ...raw,
     bat: raw.bat.map(([id, ...rest]) => [idx(id), ...rest] as MatchSummary['bat'][number]),
     bowl: raw.bowl.map(([id, ...rest]) => [idx(id), ...rest] as MatchSummary['bowl'][number]),
+    played: raw.played?.map(idx),
   }
-  return resolveSeason({ ...season, roster, results: { ...season.results, [summary.fixtureId]: summary } })
+  const fixture = season.fixtures.find((f) => f.id === raw.fixtureId)
+  const next = { ...season, roster, results: { ...season.results, [summary.fixtureId]: summary } }
+  // with the teams to hand, every player in the match is graded and his ratings move a little
+  let graded = next
+  if (teams && fixture) {
+    const pair = new Map<string, Team>()
+    for (const id of [fixture.homeId, fixture.awayId]) { const t = id ? teams.get(id) : undefined; if (t && id) pair.set(id, sessionTeam(t, season)) } // the ratings the match was played with
+    graded = applyMatchChanges(next, fixture, raw, pair)
+  }
+  return resolveSeason(graded)
 }
 
 // ---- Calendar queries ----------------------------------------------------
@@ -184,14 +198,15 @@ export const seasonComplete = (season: Season) => season.fixtures.length > 0 && 
  * Plays every pending fixture on `date`, in order, so later rounds can resolve from earlier results.
  * With `leaveMine`, the player's own matches are left for the player to play or sim themselves.
  */
-export function simDay(season: Season, date: string, teams: Map<string, Team>, leaveMine = false): Season {
+export function simDay(season: Season, date: string, teams: Map<string, Team>, leaveMine = false, skip?: string | null): Season {
   let s = season
   const today = s.fixtures.filter((f) => f.date === date).map((f) => f.id)
   for (const id of today) {
     const f = s.fixtures.find((x) => x.id === id)
     if (!f || s.results[f.id] || !isPlayable(f)) continue
     if (leaveMine && isMine(s, f)) continue
-    s = recordResult(s, simulateFixture(s, f, teams))
+    if (skip && f.id === skip) continue // a match that is being played right now
+    s = recordResult(s, simulateFixture(s, f, teams), teams)
   }
   return s
 }

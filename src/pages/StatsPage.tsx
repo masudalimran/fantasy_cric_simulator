@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { PlayerCell, competitionName, usePlayerIndex, useTeamMap, type PlayerEntry } from '../components/season/shared'
-import { TeamCrest } from '../components/ui'
+import { Delta, RatingBadge, TeamCrest } from '../components/ui'
 import { paths } from '../routes'
 import { formatDate } from '../season/dates'
 import { oversText } from '../components/match/format'
@@ -11,13 +11,15 @@ import {
 } from '../season/stats'
 import { useDetails } from '../components/season/Details'
 import { SortTable, type Col } from '../components/season/SortTable'
-import { useViewedSeason } from '../store/useStore'
-import type { MatchFormat, Team } from '../types'
+import { overall } from '../data/builders'
+import { useTeams, useViewedSeason } from '../store/useStore'
+import type { MatchFormat, Player, Team } from '../types'
 
 const TABS = [
   { id: 'batting', label: 'Batting' },
   { id: 'bowling', label: 'Bowling' },
   { id: 'awards', label: 'Awards' },
+  { id: 'ratings', label: 'Rating' },
   { id: 'teams', label: 'Teams' },
   { id: 'records', label: 'Records' },
 ] as const
@@ -120,6 +122,63 @@ function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: M
   return <SortTable rows={rows} cols={cols} rowKey={(r) => r.teamId} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} />
 }
 
+/** Every player's current ratings, with how far each has moved from where it started. Sorted by the current value, never by the change. */
+function Ratings({ index }: { index: Map<string, PlayerEntry> }) {
+  const [q, setQ] = useState('')
+  const base = useTeams()
+  const baseById = useMemo(() => { const m = new Map<string, Player>(); for (const t of base) for (const p of t.players) m.set(p.id, p); return m }, [base])
+  type Row = { id: string; player: Player; team: Team }
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    return [...index.values()]
+      .filter((e) => !needle || `${e.player.name} ${e.team.name} ${e.team.series}`.toLowerCase().includes(needle))
+      .map((e): Row => ({ id: e.player.id, player: e.player, team: e.team }))
+      .sort((a, b) => overall(b.player) - overall(a.player) || a.player.name.localeCompare(b.player.name))
+  }, [index, q])
+  const val = (p: Player, label: string): number | null => {
+    switch (label) {
+      case 'Overall': return overall(p)
+      case 'Technique': return p.batting.technique
+      case 'Power': return p.batting.power
+      case 'Temperament': return p.batting.temperament
+      case 'Running': return p.batting.running
+      case 'Accuracy': return p.bowling?.accuracy ?? null
+      case 'Variation': return p.bowling?.variation ?? null
+      case 'Stamina': return p.bowling?.stamina ?? null
+      case 'Fielding': return p.fielding
+    }
+    return null
+  }
+  const cols: Col<Row>[] = [
+    { key: 'player', label: 'Player', align: 'left', get: (r) => r.player.name, cell: (r) => <PlayerCell id={r.id} index={index} /> },
+    ...['Overall', 'Technique', 'Power', 'Temperament', 'Running', 'Accuracy', 'Variation', 'Stamina', 'Fielding'].map((label): Col<Row> => ({
+      key: label, label, get: (r) => val(r.player, label),
+      cell: (r) => {
+        const v = val(r.player, label)
+        if (v === null) return <span className="text-slate-600">-</span>
+        const b0 = baseById.get(r.id)
+        const start = b0 ? val(b0, label) : null
+        const d = start === null ? 0 : v - start
+        return (
+          <span className="inline-flex items-center justify-end gap-1.5" title={d ? `Started at ${start}, now ${v}` : undefined}>
+            <span className="w-7 text-right"><Delta n={d} className="text-xs" /></span>
+            {label === 'Overall' ? <RatingBadge value={v} size="sm" /> : <span className="w-6 text-right font-semibold text-slate-100">{v}</span>}
+          </span>
+        )
+      },
+    })),
+  ]
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2">
+        <p className="text-sm text-slate-400">Every player's current ratings, as they stand right now. Sorted by the current value (overall to start with); click a heading to sort by that rating. The green +n or red −n beside a rating shows how far it has moved since the player started.</p>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search players or teams…" className="rounded-lg border border-line bg-panel px-3 py-1.5 text-sm outline-none focus:border-indigo-400" aria-label="Search players" />
+      </div>
+      {rows.length === 0 ? <p className="p-8 text-center text-sm text-slate-400">No players match.</p> : <SortTable rows={rows} cols={cols} rowKey={(r) => r.id} initial={{ key: 'Overall', dir: 'desc' }} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} />}
+    </div>
+  )
+}
+
 export function StatsPage() {
   const { season } = useViewedSeason()
   const [params, setParams] = useSearchParams()
@@ -165,13 +224,14 @@ export function StatsPage() {
         </div>
       </div>
 
-      {collected.matches === 0 ? (
+      {collected.matches === 0 && tab !== 'ratings' ? (
         <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">No matches played here yet. Sim a few from the <Link to={paths.session()} className="text-indigo-300 hover:underline">session</Link>.</div>
       ) : (
         <div className={tab === 'awards' || tab === 'records' ? '' : 'overflow-x-auto rounded-2xl border border-line bg-panel p-3'}>
           {tab === 'batting' && <Batting c={collected} index={index} />}
           {tab === 'bowling' && <Bowling c={collected} index={index} />}
           {tab === 'awards' && <Awards c={collected} index={index} />}
+          {tab === 'ratings' && <Ratings index={index} />}
           {tab === 'teams' && <Teams rows={teamRows} teams={teams} />}
           {tab === 'records' && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

@@ -56,7 +56,7 @@ export function CareerTeamPage() {
   const played = season.fixtures.filter((f) => season.results[f.id] && (f.homeId === team.id || f.awayId === team.id)).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
   const upcoming = season.fixtures.filter((f) => !season.results[f.id] && (f.homeId === team.id || f.awayId === team.id) && f.homeId && f.awayId).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3)
   const form = [...played].reverse().map((f) => (season.results[f.id].winnerId === team.id ? 'W' : season.results[f.id].winnerId === null ? 'T' : 'L') as 'W' | 'L' | 'T').slice(-5)
-  const tile = (label: string, value: React.ReactNode) => <div className="rounded-2xl border border-line bg-panel px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</div><div className="font-display text-4xl leading-none text-white">{value}</div></div>
+  const tile = (label: string, value: React.ReactNode) => <div className="rounded-2xl border border-line bg-panel px-4 py-3"><div className="cursor-help text-[11px] font-bold uppercase tracking-widest text-slate-400" data-gloss={label}>{label}</div><div className="font-display text-4xl leading-none text-white">{value}</div></div>
   const nameOf = (id: string) => data.used.players.find((p) => p.id === id)?.name ?? ''
 
   const cols: Col<Row>[] = [

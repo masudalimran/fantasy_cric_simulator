@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import { playerImage, teamArt } from '../data/images'
+import { useHideImages } from '../prefs'
 import { frameFor, frameShape, GLYPHS } from './emblems'
 import type { Player, Role, Team } from '../types'
 
@@ -46,6 +47,7 @@ export const ProfileContext = createContext<((playerId: string) => void) | null>
 /** `profile`: clicking the portrait opens the player's profile (when the app offers one). */
 export function PlayerAvatar({ player, team, size = 44, profile = false }: { player: Pick<Player, 'id' | 'name' | 'imageUrl'>; team: Pick<Team, 'colors'>; size?: number; profile?: boolean }) {
   const open = useContext(ProfileContext)
+  const hideImages = useHideImages()
   const [failed, setFailed] = useState(false)
   const initials = player.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
   const src = player.imageUrl ?? playerImage(player.id)
@@ -56,7 +58,7 @@ export function PlayerAvatar({ player, team, size = 44, profile = false }: { pla
       className={`relative shrink-0 overflow-hidden rounded-full ${profile && open ? 'cursor-pointer transition hover:scale-110 hover:brightness-110' : ''}`}
       style={{ width: size, height: size, background: `linear-gradient(135deg, ${team.colors.primary}, ${team.colors.secondary})`, boxShadow: `0 0 0 2px ${accent}66` }}
     >
-      {failed ? (
+      {failed || hideImages ? (
         <div className="grid h-full w-full place-items-center font-display text-white mix-blend-normal" style={{ fontSize: size * 0.42, textShadow: '0 1px 3px #000a' }}>
           {initials}
         </div>
@@ -67,14 +69,26 @@ export function PlayerAvatar({ player, team, size = 44, profile = false }: { pla
   )
 }
 
-export function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
+/** +3 in green or -2 in red; nothing when there is no change. */
+export function Delta({ n, className = '' }: { n: number; className?: string }) {
+  if (!n) return null
+  return <span className={`font-bold tabular-nums ${n > 0 ? 'text-emerald-400' : 'text-rose-400'} ${className}`}>{n > 0 ? `+${n}` : n}</span>
+}
+
+/** A rating bar. With `base`, it shows where the rating started and what it has become: 78 → 81 +3. */
+export function StatBar({ label, value, color, base }: { label: string; value: number; color: string; base?: number }) {
+  const changed = base !== undefined && base !== value
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="w-20 shrink-0 text-slate-400">{label}</span>
+      <span className="w-20 shrink-0 cursor-help text-slate-400" data-gloss={label}>{label}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
         <div className="h-full rounded-full" style={{ width: `${value}%`, background: color }} />
       </div>
-      <span className="w-7 text-right tabular-nums text-slate-200">{value}</span>
+      {changed ? (
+        <span className="flex w-24 items-center justify-end gap-1 tabular-nums" title={`Started at ${base}, now ${value}`}>
+          <span className="text-slate-500">{base}→</span><span className="text-slate-100">{value}</span><Delta n={value - (base as number)} />
+        </span>
+      ) : <span className="w-7 text-right tabular-nums text-slate-200">{value}</span>}
     </div>
   )
 }

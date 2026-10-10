@@ -69,14 +69,17 @@ export function NowPlaying({ match, displayOver }: { match: Match; displayOver: 
         {bowler && (
           <Card kind="bowler">
             <div className="flex items-center gap-3">
-              <ClickAvatar player={bowler} team={bowl.team} size={52} />
-              <div className="min-w-0 flex-1 text-[15px] font-bold leading-tight text-white">{bowler.name}</div>
-              <div className="shrink-0 text-right">
-                <span className="font-display text-2xl leading-none text-white">{bowlerLine ? `${oversText(bowlerLine.legalBalls)}-${bowlerLine.maidens}-${bowlerLine.runs}-${bowlerLine.wickets}` : '0-0-0-0'}</span>
-                <div className="text-[10px] uppercase tracking-wider text-slate-400">O-M-R-W</div>
+              <ClickAvatar player={bowler} team={bowl.team} size={44} />
+              <div className="min-w-0 flex-1 leading-tight">
+                <div className="text-[15px] font-bold text-white">{bowler.name}</div>
+                <div className="text-[11px] capitalize text-slate-300">{bowler.bowling?.type ?? 'part-timer'}{bowlerLine && <> · Econ <b className="text-white">{economy(bowlerLine)}</b></>}</div>
               </div>
             </div>
-            <div className="mt-2 flex gap-3 text-xs capitalize text-slate-300"><span>{bowler.bowling?.type ?? 'part-timer'}</span>{bowlerLine && <span>Econ <b className="text-white">{economy(bowlerLine)}</b></span>}</div>
+            {/* the figures are longer than a batsman's, so they get a line to themselves (kept small so the card stays short) */}
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="font-display text-xl leading-none text-white">{bowlerLine ? `${oversText(bowlerLine.legalBalls)}-${bowlerLine.maidens}-${bowlerLine.runs}-${bowlerLine.wickets}` : '0-0-0-0'}</span>
+              <span className="text-[9px] uppercase tracking-wider text-slate-400">O-M-R-W</span>
+            </div>
           </Card>
         )}
       </div>

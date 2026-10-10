@@ -3,7 +3,8 @@ import { NavLink, Navigate, Outlet, useLocation } from 'react-router'
 import { paths } from '../routes'
 import { DIFFICULTIES } from '../engine/types'
 import { selectSeason, selectSession, useStore, useViewedSeason } from '../store/useStore'
-import { useTeamMap } from './season/shared'
+import { gradePlayedMatches } from '../season/progression'
+import { useBaseTeamMap, useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
 
 const COLOR = { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' } as const
@@ -21,6 +22,10 @@ export function CareerLayout() {
   const viewYear = useStore((s) => s.viewYear)
   const setViewYear = useStore((s) => s.setViewYear)
   const viewed = useViewedSeason()
+  const baseTeams = useBaseTeamMap()
+  const updateSeason = useStore((s) => s.updateSeason)
+  // A career started before ratings changed with every match is caught up once, from the matches already played.
+  useEffect(() => { if (season && !season.graded) updateSeason((s) => gradePlayedMatches(s, baseTeams)) }, [season?.graded, season?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // Only these pages can look back at a past year; the others always show the year being played.
   const canLookBack = /^\/career\/(tournaments|stats|team|results)/.test(pathname)
   useEffect(() => { if (!canLookBack && viewYear !== null) setViewYear(null) }, [canLookBack, viewYear, setViewYear])

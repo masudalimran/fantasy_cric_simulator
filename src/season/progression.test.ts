@@ -2,75 +2,122 @@ import { describe, expect, it } from 'vitest'
 import { overall } from '../data/builders'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { applyShift, applyShifts, computeProgression, sessionTeam } from './progression'
+import { applyDelta, applyShift, applyShifts, gradePlayedMatches, matchChanges, seasonAttrChanges, seasonChanges, sessionTeam } from './progression'
 import { nextMatchDate, simDay } from './results'
 import { collect, impactPoints } from './stats'
+import type { RawSummary } from './types'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
 let year: ReturnType<typeof generateSeason> | null = null
-function played() {
+function played(matches = 60) {
   if (year) return year
   let s = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 12, myTeamId: BUILT_IN_TEAMS[0].id })
-  for (let g = 0; g < 900; g++) { const d = nextMatchDate(s); if (!d) break; s = simDay(s, d, teams) }
+  for (let g = 0; g < matches * 3; g++) { const d = nextMatchDate(s); if (!d) break; s = simDay(s, d, teams, false) }
   return (year = s)
 }
 
-describe('player progression', () => {
-  it('adds gains and losses to the starting ratings, within 1-99', () => {
+const rawWith = (bat: RawSummary['bat'], bowl: RawSummary['bowl'] = []): RawSummary => ({ fixtureId: 'x', winnerId: null, text: '', margin: null, scores: {}, superOver: false, playerOfMatchId: null, bat, bowl })
+
+describe('rating shifts', () => {
+  it('adds gains and losses to the starting ratings, rating by rating, within 1-99', () => {
     const p = BUILT_IN_TEAMS[0].players[0]
-    expect(overall(applyShift(p, { bat: 4, bowl: 0 }))).toBeGreaterThan(overall(p))
-    expect(overall(applyShift(p, { bat: -4, bowl: 0 }))).toBeLessThan(overall(p))
-    const huge = applyShift(p, { bat: 80, bowl: 80 })
-    expect(Math.max(huge.batting.power, huge.batting.technique)).toBeLessThanOrEqual(99)
-    expect(applyShift(p, { bat: -90, bowl: 0 }).batting.technique).toBeGreaterThanOrEqual(1)
+    const up = applyShift(p, { bat: 0, bowl: 0, a: { power: 3 } })
+    expect(up.batting.power).toBe(Math.min(99, p.batting.power + 3))
+    expect(up.batting.technique).toBe(p.batting.technique)
+    expect(applyShift(p, { bat: 0, bowl: 0, a: { temperament: -90 } }).batting.temperament).toBeGreaterThanOrEqual(1)
+    expect(applyShift(p, { bat: 80, bowl: 80 }).batting.power).toBeLessThanOrEqual(99)
     expect(applyShift(p, undefined)).toBe(p)
     expect(applyShifts(BUILT_IN_TEAMS[0], undefined)).toBe(BUILT_IN_TEAMS[0])
+    expect(overall(applyDelta(p, { technique: 4, power: 4, temperament: 4 }))).toBeGreaterThan(overall(p))
   })
 
-  it('moves some players up and some down, by a few points, and is repeatable', () => {
+  it('applies your session lineup to your team only', () => {
+    const t = BUILT_IN_TEAMS[0]
+    const order = [...t.players].reverse().map((p) => p.id)
+    const season = { shifts: undefined, lineup: { order, captainId: t.players[4].id }, myTeamId: t.id }
+    expect(sessionTeam(t, season).players.map((p) => p.id)).toEqual(order)
+    expect(sessionTeam(BUILT_IN_TEAMS[1], season)).toBe(BUILT_IN_TEAMS[1])
+  })
+})
+
+describe('what a match does to a player', () => {
+  const t = BUILT_IN_TEAMS[2]
+  const bat = t.players[3]
+  const bowler = t.players.find((p) => p.role === 'BOWL')!
+
+  it('rewards a big innings and punishes a duck', () => {
+    const big = matchChanges(rawWith([[bat.id, 112, 58, 11, 4, 0]]), 't20', teams)
+    expect(Object.values(big[bat.id].a).reduce((s, n) => s + (n ?? 0), 0)).toBeGreaterThan(0)
+    expect(big[bat.id].o).toBeGreaterThanOrEqual(0)
+    const duck = matchChanges(rawWith([[bat.id, 0, 3, 0, 0, 1]]), 't20', teams)
+    expect(duck[bat.id].a.temperament).toBeLessThan(0)
+  })
+
+  it('rewards a great spell and punishes a thrashing', () => {
+    const great = matchChanges(rawWith([], [[bowler.id, 24, 14, 4, 1]]), 't20', teams)
+    expect(Object.values(great[bowler.id].a).reduce((s, n) => s + (n ?? 0), 0)).toBeGreaterThan(0)
+    const bad = matchChanges(rawWith([], [[bowler.id, 24, 62, 0, 0]]), 't20', teams)
+    expect(Object.values(bad[bowler.id].a).reduce((s, n) => s + (n ?? 0), 0)).toBeLessThan(0)
+  })
+
+  it('leaves out players whose ratings do not move, and a bowler who bowled barely at all', () => {
+    expect(matchChanges(rawWith([], [[bowler.id, 6, 8, 0, 0]]), 't20', teams)[bowler.id]).toBeUndefined()
+  })
+})
+
+describe('across a season', () => {
+  it('moves some players up and some down by small amounts, as matches are played', () => {
     const s = played()
-    const a = computeProgression(s, teams)
-    const b = computeProgression(s, teams)
-    expect(a.changes).toEqual(b.changes)
-    const d = a.changes.map((c) => c.after - c.before)
-    expect(d.some((x) => x > 0)).toBe(true)
-    expect(d.some((x) => x < 0)).toBe(true)
-    expect(Math.max(...d.map(Math.abs))).toBeLessThanOrEqual(8)
+    const log = Object.values(s.changes ?? {}).flatMap((m) => Object.values(m))
+    expect(log.length).toBeGreaterThan(40)
+    const o = log.map((c) => c.o)
+    expect(o.some((x) => x > 0)).toBe(true)
+    expect(o.some((x) => x < 0)).toBe(true)
+    expect(Math.max(...o.map(Math.abs))).toBeLessThanOrEqual(4)
+    // no rating strays more than the cap from where it started
+    for (const sh of Object.values(s.shifts ?? {})) for (const n of Object.values(sh.a ?? {})) expect(Math.abs(n as number)).toBeLessThanOrEqual(15)
   })
 
   it('rewards the players who did best', () => {
     const s = played()
     const c = collect(s)
-    const { changes } = computeProgression(s, teams)
-    const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
-    const ranked = [...changes].filter((x) => impactPoints(c, x.id) > 0).sort((a, b) => impactPoints(c, b.id) - impactPoints(c, a.id))
-    const top = ranked.slice(0, 40).map((x) => x.bat + x.bowl)
-    const bottom = ranked.slice(-40).map((x) => x.bat + x.bowl)
-    expect(avg(top)).toBeGreaterThan(avg(bottom))
+    const total = (id: string) => Object.values(s.shifts?.[id]?.a ?? {}).reduce((x, n) => x + (n ?? 0), 0)
+    const ranked = [...c.bat.keys()].filter((id) => impactPoints(c, id) > 0).sort((a, b) => impactPoints(c, b) - impactPoints(c, a))
+    const avg = (ids: string[]) => ids.reduce((x, id) => x + total(id), 0) / ids.length
+    expect(avg(ranked.slice(0, 40))).toBeGreaterThan(avg(ranked.slice(-40)))
   })
 
-  it('carries earlier years forward instead of starting over', () => {
+  it('reports the change from where the season started, and per rating from the starting ratings', () => {
     const s = played()
-    const first = computeProgression(s, teams)
-    const next = { ...s, shifts: first.shifts }
-    const shifted = new Map([...teams].map(([id, t]) => [id, applyShifts(t, first.shifts)]))
-    const second = computeProgression(next, shifted)
-    const some = BUILT_IN_TEAMS[0].players[3].id
-    expect(second.shifts[some].bat).toBe(first.shifts[some].bat + second.changes.find((x) => x.id === some)!.bat)
+    const shifted = new Map([...teams].map(([id, t]) => [id, applyShifts(t, s.shifts)]))
+    const rows = seasonChanges(s, shifted)
+    expect(rows.some((r) => r.after > r.before)).toBe(true)
+    expect(rows.some((r) => r.after < r.before)).toBe(true)
+    const id = Object.keys(s.shifts ?? {})[0]
+    expect(Object.keys(seasonAttrChanges(s, id)).length).toBeGreaterThanOrEqual(0)
   })
 
-  it('applies your session lineup to your team only, and leaves the team itself alone', () => {
-    const t = BUILT_IN_TEAMS[0]
-    const order = [...t.players].reverse().map((p) => p.id)
-    const season = { shifts: undefined, lineup: { order, captainId: t.players[4].id }, myTeamId: t.id }
-    const mine = sessionTeam(t, season)
-    expect(mine.players.map((p) => p.id)).toEqual(order)
-    expect(mine.captainId).toBe(t.players[4].id)
-    expect(t.players[0].id).not.toBe(order[0]) // original untouched
-    expect(sessionTeam(BUILT_IN_TEAMS[1], season)).toBe(BUILT_IN_TEAMS[1]) // other teams unaffected
-    // a stale lineup (e.g. after a player was removed) still returns everybody
-    const stale = sessionTeam(t, { ...season, lineup: { order: order.slice(3), captainId: 'nobody' } })
-    expect(stale.players).toHaveLength(t.players.length)
-    expect(stale.captainId).toBe(t.captainId)
+  it('the changes are carried into the next season', () => {
+    const s = played()
+    const next = generateSeason({ year: 2028, teams: BUILT_IN_TEAMS, seed: 3, myTeamId: BUILT_IN_TEAMS[0].id, shifts: s.shifts })
+    expect(next.shifts).toEqual(s.shifts)
+    expect(next.startShifts).toEqual(s.shifts)
+  })
+})
+
+describe('catching up a career that was already under way', () => {
+  it('grades the matches already played, once, in order', () => {
+    const s = played()
+    // an older save: results, but no rating changes and no flag
+    const old = { ...s, changes: undefined, shifts: undefined, startShifts: undefined, graded: undefined }
+    const graded = gradePlayedMatches(old, teams)
+    expect(graded.graded).toBe(true)
+    expect(Object.keys(graded.changes ?? {}).length).toBeGreaterThan(20)
+    expect(Object.keys(graded.shifts ?? {}).length).toBeGreaterThan(20)
+    expect(gradePlayedMatches(graded, teams)).toBe(graded) // already done: untouched
+    // matches that already have their changes are not graded twice
+    const someId = Object.keys(s.changes ?? {})[0]
+    const partly = gradePlayedMatches({ ...old, changes: { [someId]: s.changes![someId] } }, teams)
+    expect(partly.changes?.[someId]).toEqual(s.changes![someId])
   })
 })

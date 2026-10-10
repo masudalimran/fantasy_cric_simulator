@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
-import { competitionColor, competitionName, fixtureTeams, FixtureRow, useTeamMap } from '../components/season/shared'
+import { competitionColor, competitionName, fixtureTeams, FixtureRow, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { paths } from '../routes'
 import { addDays, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
@@ -57,6 +57,8 @@ export function CalendarPage() {
   const session = useStore(selectSession)
   const allTeams = useTeams()
   const teams = useTeamMap()
+  const baseTeams = useBaseTeamMap()
+  const liveFixtureId = useStore((s) => (s.liveMatch && !s.liveMatch.finished ? (s.liveMatch.fixtureId ?? null) : null))
   const { ym } = useParams()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
@@ -95,7 +97,7 @@ export function CalendarPage() {
 
   // Sim forward, but never past one of your own matches: stop there so you can play it (or sim it) yourself.
   const simUntil = (date: string) => {
-    const r = simSeasonUntil(season, date, teams)
+    const r = simSeasonUntil(season, date, baseTeams)
     updateSeason(() => r.season)
     setStopped(r.stoppedAt)
     if (r.stoppedAt) navigate(paths.session(r.stoppedAt.date.slice(0, 7)) + `?day=${r.stoppedAt.date}`, { replace: true })
@@ -210,7 +212,7 @@ export function CalendarPage() {
                 <button
                   className="text-xs text-emerald-300 hover:underline disabled:opacity-40"
                   disabled={!dayFixtures.some((f) => !season.results[f.id] && f.homeId && f.awayId)}
-                  onClick={() => updateSeason((s) => ({ ...simDay(s, selected, teams), today: selected > s.today ? selected : s.today }))}
+                  onClick={() => updateSeason((s) => ({ ...simDay(s, selected, baseTeams, false, liveFixtureId), today: selected > s.today ? selected : s.today }))}
                 >
                   Sim this day
                 </button>

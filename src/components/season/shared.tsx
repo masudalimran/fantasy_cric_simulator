@@ -21,6 +21,12 @@ export function useTeamMap(): Map<string, Team> {
   return useMemo(() => new Map(teams.map((t) => [t.id, sessionTeam(t, { shifts, lineup, myTeamId })])), [teams, shifts, lineup, myTeamId])
 }
 
+/** The teams as they start out (before the career's rating changes): what the simulator is given, since it applies each match's current ratings itself. */
+export function useBaseTeamMap(): Map<string, Team> {
+  const teams = useTeams()
+  return useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams])
+}
+
 /** Colour used for a competition on the calendar: its founder's colour, or a neutral for friendlies. */
 export function competitionColor(comp: Competition, teams: Map<string, Team>): string {
   const origin = comp.originTeamId ? teams.get(comp.originTeamId) : null
@@ -56,6 +62,10 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
 }) {
   const navigate = useNavigate()
   const details = useDetails()
+  const baseTeams = useBaseTeamMap()
+  const liveMatch = useStore((s) => s.liveMatch)
+  // this very match is already under way: the only way forward is to carry on with it
+  const liveHere = !!liveMatch && !liveMatch.finished && liveMatch.fixtureId === fixture.id
   const updateSeason = useStore((s) => s.updateSeason)
   const home = fixture.homeId ? teams.get(fixture.homeId) : undefined
   const away = fixture.awayId ? teams.get(fixture.awayId) : undefined
@@ -71,8 +81,8 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
     updateSeason((s) => {
       const f = s.fixtures.find((x) => x.id === fixture.id)
       if (!f || !f.homeId || !f.awayId || s.results[f.id]) return s
-      const upTo = playEarlierMatches(s, f.date, teams) // earlier matches are played first
-      return upTo.results[f.id] ? upTo : recordResult(upTo, simulateFixture(upTo, f, teams))
+      const upTo = playEarlierMatches(s, f.date, baseTeams) // earlier matches are played first
+      return upTo.results[f.id] ? upTo : recordResult(upTo, simulateFixture(upTo, f, baseTeams), baseTeams)
     })
 
   const side = (team: Team | undefined, slot: Fixture['homeRef'], right = false) => (
@@ -121,7 +131,10 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         {!res && playable && waitFor && (
           <div className="text-xs font-semibold text-amber-300/90" title="Matches are played in order">Play your match on {formatDate(waitFor.date)} first</div>
         )}
-        {!res && playable && !waitFor && (
+        {!res && playable && liveHere && liveMatch && (
+          <div className="flex items-center gap-2"><span className="text-xs font-semibold text-emerald-300">In progress</span><button onClick={() => navigate(liveMatch.url)} className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-bold text-black hover:bg-emerald-400">Resume</button></div>
+        )}
+        {!res && playable && !waitFor && !liveHere && (
           <div className="flex gap-2">
             <button onClick={sim} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500">Sim</button>
             <button onClick={() => navigate(matchHref(season, fixture))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>

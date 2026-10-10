@@ -60,7 +60,7 @@ function Sweep({ color }: { color: string }) {
   return (
     <>
       <motion.div className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12 opacity-25" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} initial={{ left: '-60%' }} animate={{ left: '120%' }} transition={{ duration: 1.4, ease: 'easeInOut' }} />
-      <motion.div className="pointer-events-none absolute inset-x-0 bottom-0 h-1.5" style={{ background: color }} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: 0.1 }} />
+
     </>
   )
 }
@@ -100,6 +100,13 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       transition={{ duration: 0.28, delay: moment.delay / 1000 }}
       aria-label={wicket ? 'Wicket' : milestone ? 'Milestone' : moment.kind === 'bowler' ? 'Bowler introduction' : 'Batsman introduction'}
     >
+      {intro && (
+        <>
+          {/* time left, and a way out: click anywhere to carry on */}
+          <motion.div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 origin-left" style={{ background: accent }} initial={{ scaleX: 1 }} animate={{ scaleX: 0 }} transition={{ duration: moment.ms / 1000 + 0.35, delay: moment.delay / 1000, ease: 'linear' }} />
+          <div className="pointer-events-none absolute bottom-2.5 right-3 rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Click anywhere to continue</div>
+        </>
+      )}
       {wicket ? <Rain /> : milestone ? (
         <>
           <motion.div className="pointer-events-none absolute -left-[10%] top-[8%] h-[120%] w-[70%] opacity-30" style={{ background: 'conic-gradient(from 0deg, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400)', borderRadius: '50%' }} animate={{ rotate: 360 }} transition={{ duration: 14, repeat: Infinity, ease: 'linear' }} />

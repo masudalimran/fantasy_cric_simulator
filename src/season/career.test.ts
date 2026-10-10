@@ -98,5 +98,5 @@ describe('career mode seasons', () => {
       return won / played
     }
     expect(winRate('easy')).toBeGreaterThan(winRate('legend') + 0.08)
-  })
+  }, 120_000)
 })

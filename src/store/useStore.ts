@@ -45,6 +45,12 @@ export interface LiveMatch {
   phase: 'toss' | 'play'
   /** What you chose after winning the toss (unset until you do, or if the computer won it). */
   tossChoice?: 'bat' | 'bowl'
+  /** True once the coin has been flipped: from then on the match can't be cancelled. */
+  tossed?: boolean
+  /** Bumped whenever a squad is changed before the toss, so the match is built again from the new squads. */
+  squadVersion?: number
+  /** Who was in each side's XI when the toss screen first opened, so squad changes can be shown as in and out. */
+  startXI?: [string[], string[]]
   actions: Action[]
   finished: boolean
 }
@@ -79,6 +85,11 @@ interface State {
   liveAct: (a: Action) => void
   setLivePhase: (phase: 'toss' | 'play') => void
   setTossChoice: (c: 'bat' | 'bowl') => void
+  setTossed: () => void
+  /** For a match that was started before squad changes were tracked: take the XIs as they are now as the starting point. */
+  ensureStartXI: () => void
+  /** Changes one side's XI, batting order, captain and keeper for the match about to start (only before the toss). */
+  setLiveSquad: (side: 0 | 1, order: string[], captainId: string, keeperId: string | undefined) => void
   finishLive: () => void
   discardLive: () => void
   /** Saves a custom team, or an edit of a built-in team. */
@@ -125,7 +136,9 @@ export const useStore = create<State>()(
           sessions: st.sessions.map((x) => {
             const target = st.liveMatch?.fixtureId === summary.fixtureId && st.liveMatch.sessionId ? st.liveMatch.sessionId : st.activeSessionId
             if (x.id !== target || x.season.results[summary.fixtureId]) return x
-            const next = recordResult(x.season, summary)
+            // the match's players are graded on how they did, and their ratings move a little
+            const teams = new Map(resolveTeams(st.customTeams, st.overrides).map((t) => [t.id, t]))
+            const next = recordResult(x.season, summary, teams)
             return { ...x, season: { ...next, today: date > next.today ? date : next.today }, updatedAt: new Date().toISOString() }
           }),
         })),
@@ -134,7 +147,7 @@ export const useStore = create<State>()(
         const season = selectSeason(get())
         const live: LiveMatch = {
           id: `live-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
-          key: matchKey(format, teamA.id, teamB.id, seed), url, format, teamA, teamB, seed, fixtureId, news: news?.length ? news : undefined, sessionId: fixtureId && season ? (get().activeSessionId ?? undefined) : undefined,
+          key: matchKey(format, teamA.id, teamB.id, seed), url, format, teamA, teamB, seed, fixtureId, startXI: [teamA.players.slice(0, 11).map((p) => p.id), teamB.players.slice(0, 11).map((p) => p.id)], news: news?.length ? news : undefined, sessionId: fixtureId && season ? (get().activeSessionId ?? undefined) : undefined,
           // a session match is played as the team you manage; a friendly from the Play page has no 'you'
           myTeamId: fixtureId && season ? (season.myTeamId ?? null) : null,
           difficulty: fixtureId && season ? (season.difficulty ?? 'normal') : 'normal',
@@ -144,6 +157,19 @@ export const useStore = create<State>()(
       },
       liveAct: (a) => set((st) => (st.liveMatch ? { liveMatch: { ...st.liveMatch, actions: appendAction(st.liveMatch.actions, a) } } : st)),
       setLivePhase: (phase) => set((st) => (st.liveMatch ? { liveMatch: { ...st.liveMatch, phase } } : st)),
+      setLiveSquad: (side, order, captainId, keeperId) =>
+        set((st) => {
+          const live = st.liveMatch
+          if (!live || live.tossed || live.actions.length > 0) return st
+          const key = side === 0 ? 'teamA' : 'teamB'
+          const team = live[key]
+          const byId = new Map(team.players.map((p) => [p.id, p]))
+          const ordered = order.map((id) => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p)
+          const rest = team.players.filter((p) => !order.includes(p.id))
+          return { liveMatch: { ...live, [key]: { ...team, players: [...ordered, ...rest], captainId, keeperId }, squadVersion: (live.squadVersion ?? 0) + 1 } }
+        }),
+      ensureStartXI: () => set((st) => (st.liveMatch && !st.liveMatch.startXI ? { liveMatch: { ...st.liveMatch, startXI: [st.liveMatch.teamA.players.slice(0, 11).map((p) => p.id), st.liveMatch.teamB.players.slice(0, 11).map((p) => p.id)] } } : st)),
+      setTossed: () => set((st) => (st.liveMatch && !st.liveMatch.tossed ? { liveMatch: { ...st.liveMatch, tossed: true } } : st)),
       setTossChoice: (c) => set((st) => (st.liveMatch && st.liveMatch.actions.length === 0 ? { liveMatch: { ...st.liveMatch, tossChoice: c } } : st)),
       finishLive: () => set((st) => (st.liveMatch && !st.liveMatch.finished ? { liveMatch: { ...st.liveMatch, finished: true } } : st)),
       discardLive: () => set({ liveMatch: null }),

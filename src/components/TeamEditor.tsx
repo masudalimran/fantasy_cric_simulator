@@ -18,7 +18,7 @@ const MAX_PLAYERS = 20
 function Slider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <label className="flex items-center gap-2 text-xs text-slate-400">
-      <span className="w-24 shrink-0">{label}</span>
+      <span className="w-24 shrink-0 cursor-help" data-gloss={label}>{label}</span>
       <input type="range" min={1} max={100} value={value} onChange={(e) => onChange(+e.target.value)} className="flex-1" />
       <span className="w-7 text-right tabular-nums text-slate-200">{value}</span>
     </label>

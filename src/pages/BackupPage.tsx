@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
-  applyBackup, backupFileName, buildBackup, isEmpty, parseBackup, summarize,
+  applyBackup, backupFileName, buildBackup, isEmpty, parseBackup, summarize, teamsOnly,
   type BackupData, type BackupSummary, type ImportMode, type ImportReport,
 } from '../data/backup'
 import { paths } from '../routes'
@@ -42,14 +42,16 @@ export function BackupPage() {
   const [askReplace, setAskReplace] = useState(false)
   const [done, setDone] = useState<{ report: ImportReport; mode: ImportMode } | null>(null)
   const [downloaded, setDownloaded] = useState<string | null>(null)
+  const [scope, setScope] = useState<'all' | 'teams'>('all')
+  const exporting = scope === 'teams' ? teamsOnly(now) : now
 
   const doExport = () => {
     const stamp = new Date()
-    const text = JSON.stringify(buildBackup(currentData(), stamp))
+    const text = JSON.stringify(buildBackup(scope === 'teams' ? teamsOnly(currentData()) : currentData(), stamp))
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
     const a = document.createElement('a')
     a.href = url
-    a.download = backupFileName(stamp)
+    a.download = backupFileName(stamp, scope)
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -87,14 +89,25 @@ export function BackupPage() {
       {/* EXPORT */}
       <section className={card}>
         <h2 className="font-display text-3xl tracking-wide text-emerald-300">Export</h2>
-        <p className="mb-3 text-sm text-slate-400">Saves all of this into one file:</p>
-        <Summary s={summarize(now)} />
+        <div className="mb-3 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="What to export">
+          {([
+            ['all', 'Everything', 'Your teams, every career with its results and ratings, and any match in progress.'],
+            ['teams', 'Current teams only', 'Just the teams you created and your edits to built-in teams. No careers or results.'],
+          ] as const).map(([id, title, hint]) => (
+            <button key={id} role="radio" aria-checked={scope === id} onClick={() => { setScope(id); setDownloaded(null) }} className={`rounded-xl border-2 p-3 text-left transition ${scope === id ? 'border-emerald-400 bg-emerald-400/10' : 'border-line hover:border-slate-500'}`}>
+              <div className="flex items-center gap-2 font-bold text-white"><span className={`grid h-4 w-4 place-items-center rounded-full border-2 ${scope === id ? 'border-emerald-400' : 'border-slate-500'}`}>{scope === id && <span className="h-2 w-2 rounded-full bg-emerald-400" />}</span>{title}</div>
+              <div className="mt-0.5 text-xs text-slate-400">{hint}</div>
+            </button>
+          ))}
+        </div>
+        <p className="mb-2 text-sm text-slate-400">Saves this into one file:</p>
+        <Summary s={summarize(exporting)} />
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button onClick={doExport} disabled={isEmpty(now)} className={`${btn} bg-emerald-500 text-black hover:bg-emerald-400`}>
+          <button onClick={doExport} disabled={isEmpty(exporting)} className={`${btn} bg-emerald-500 text-black hover:bg-emerald-400`}>
             <svg className="mr-2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" /></svg>
-            Download backup
+            {scope === 'teams' ? 'Download teams' : 'Download backup'}
           </button>
-          {isEmpty(now) && <span className="text-sm text-slate-400">Nothing to back up yet. Create a career or edit a team first.</span>}
+          {isEmpty(exporting) && <span className="text-sm text-slate-400">{scope === 'teams' ? 'You have no created or edited teams yet.' : 'Nothing to back up yet. Create a career or edit a team first.'}</span>}
           {downloaded && <span className="text-sm text-emerald-300">Saved as {downloaded}. Check your Downloads folder.</span>}
         </div>
         <p className="mt-3 text-xs text-slate-500">Only image links you pasted travel with the backup. Portrait files stored with the game aren't part of it.</p>

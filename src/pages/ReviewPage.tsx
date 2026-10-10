@@ -7,7 +7,6 @@ import { DIFFICULTIES, type Difficulty } from '../engine/types'
 import { randomSeed } from '../engine/rng'
 import { paths } from '../routes'
 import { generateSeason } from '../season/generate'
-import { computeProgression } from '../season/progression'
 import { buildReview, winRate } from '../season/review'
 import { seasonComplete } from '../season/results'
 import type { PlayerChange, PlayerReview, SeasonReview } from '../season/types'
@@ -93,7 +92,7 @@ export function ReviewPage() {
 
   const startNextSeason = () => {
     const participants = season.teamIds.map((id) => teams.get(id)).filter((t): t is NonNullable<typeof t> => !!t)
-    const { shifts } = computeProgression(season, teams)
+    const shifts = season.shifts // everything earned in matches carries over into the new season
     const next = generateSeason({ year: season.year + 1, teams: participants, seed: randomSeed(), myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup })
     startNext(review, next)
     navigate(paths.session(`${next.year}-01`))

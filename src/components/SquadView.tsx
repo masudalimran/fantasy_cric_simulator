@@ -4,11 +4,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { overall, teamStrength } from '../data/builders'
 import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE } from '../data/squad'
 import { paths } from '../routes'
-import { applyShifts } from '../season/progression'
-import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
+import { applyShifts, ATTR_LABEL, playerChangeLog, ratingRows } from '../season/progression'
+import { selectSeason, useStore, useTeams } from '../store/useStore'
 import { useTeamMap } from './season/shared'
+import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
-import { accentOf, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
+import { accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
@@ -60,9 +61,7 @@ function SquadCard({
       >
         WK
       </button>
-      {change !== undefined && change !== 0 && (
-        <span title={`Last year ${change > 0 ? '+' : ''}${change} overall`} className={`text-xs font-bold tabular-nums ${change > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{change > 0 ? '▲' : '▼'}{Math.abs(change)}</span>
-      )}
+      {change !== undefined && change !== 0 && <span title="Change to his overall rating since the career began" className="text-xs"><Delta n={change} /></span>}
       <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
     </motion.div>
   )
@@ -72,6 +71,47 @@ function SquadCard({
  * The squad page. With `session` it manages your team inside the current session only: ratings
  * are the ones earned so far, and a new order is kept in the session, never in the team itself.
  */
+/** Every player's ratings from where they started to what they are now, with the change in green or red. */
+function RatingChanges({ team, base, season }: { team: Team; base: Team | undefined; season: Season }) {
+  const rows = team.players.map((p) => {
+    const b = base?.players.find((x) => x.id === p.id) ?? p
+    const r = ratingRows(b, p)
+    const last = playerChangeLog(season, p.id, 1)[0]
+    return { p, r, last, total: overall(p) - overall(b) }
+  }).sort((a, b) => b.total - a.total || overall(b.p) - overall(a.p))
+  const heads = ['Overall', 'Technique', 'Power', 'Temperament', 'Running', 'Accuracy', 'Variation', 'Stamina']
+  const th = 'px-2 py-2 text-right font-medium'
+  return (
+    <section className="mt-8">
+      <h2 className="mb-1 font-display text-3xl tracking-wide text-white">Rating changes</h2>
+      <p className="mb-3 text-sm text-slate-400">Every match moves ratings a little: players who play well gain, players who struggle lose. Each box shows where the rating started, what it is now, and the change. It carries across seasons.</p>
+      <div className="overflow-x-auto rounded-2xl border border-line bg-panel p-3">
+        <table className="w-full text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-2 text-left font-medium">Player</th>{heads.map((h) => <th key={h} className={th}>{h}</th>)}<th className={th}>Last match</th></tr></thead>
+          <tbody>
+            {rows.map(({ p, r, last }) => (
+              <tr key={p.id} className="border-t border-line/60">
+                <td className="px-2 py-1.5"><span className="flex items-center gap-2"><PlayerAvatar profile player={p} team={team} size={28} /><span className="font-medium text-slate-100">{p.name}</span></span></td>
+                {heads.map((h) => {
+                  const cell = r.find((x) => x.label === h)
+                  if (!cell) return <td key={h} className="px-2 text-right text-slate-600">-</td>
+                  const d = cell.now - cell.base
+                  return (
+                    <td key={h} className="px-2 text-right tabular-nums" title={d ? `Started at ${cell.base}, now ${cell.now}` : undefined}>
+                      {d ? <><span className="text-slate-500">{cell.base}→</span><span className="font-semibold text-white">{cell.now}</span> <Delta n={d} /></> : <span className="text-slate-300">{cell.now}</span>}
+                    </td>
+                  )
+                })}
+                <td className="px-2 text-right" title={last ? Object.entries(last.delta.a).map(([k, n]) => `${ATTR_LABEL[k as keyof typeof ATTR_LABEL]} ${(n as number) > 0 ? '+' : ''}${n}`).join(', ') : ''}>{last ? (last.delta.o ? <Delta n={last.delta.o} /> : <span className="text-slate-500">±0</span>) : <span className="text-slate-600">-</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 /** Shown when a squad is saved with no captain or no wicketkeeper in the XI: pick them from the playing XI. */
 function PicksPrompt({ xi, team, needCaptain, needKeeper, captainId, keeperId, onCancel, onDone }: {
   xi: Player[]; team: Team; needCaptain: boolean; needKeeper: boolean; captainId: string; keeperId: string | undefined
@@ -118,10 +158,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   const save = useStore((s) => s.saveTeam)
   const updateSeason = useStore((s) => s.updateSeason)
   const season = useStore(selectSeason)
-  const file = useStore(selectSession)
   const navigate = useNavigate()
   const team = session ? sessionTeams.get(id) : teams.find((t) => t.id === id)
-  const lastYear = useMemo(() => new Map((file?.reviews[file.reviews.length - 1]?.progress ?? []).map((c) => [c.id, c.after - c.before])), [file])
   const careerShift = (pid: string) => {
     const base = teams.find((t) => t.id === id)?.players.find((p) => p.id === pid)
     const now = team?.players.find((p) => p.id === pid)
@@ -185,7 +223,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
 
   const card = (p: Player, i: number) => (
     <SquadCard
-      key={p.id} player={p} team={team} index={i} change={session ? lastYear.get(p.id) : undefined} career={session ? careerShift(p.id) : undefined} selected={selected === i} dragging={dragIndex === i} isCaptain={captainId === p.id} isKeeper={effKeeper === p.id}
+      key={p.id} player={p} team={team} index={i} change={session ? careerShift(p.id) : undefined} career={session ? careerShift(p.id) : undefined} selected={selected === i} dragging={dragIndex === i} isCaptain={captainId === p.id} isKeeper={effKeeper === p.id}
       onSelect={() => clickCard(i)} onCaptain={() => setCaptainId(p.id)} onKeeper={() => setKeeperId(p.id)}
       onDragStart={() => setDragIndex(i)} onDragEnd={() => setDragIndex(null)}
       onDrop={() => { if (dragIndex !== null) swap(dragIndex, i); setDragIndex(null) }}
@@ -237,6 +275,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           </div>
         </section>
       </div>
+
+      {session && season && <RatingChanges team={team} base={teams.find((t) => t.id === id)} season={season} />}
 
       <div className="sticky bottom-0 mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
         <ul className="space-y-0.5 text-sm">

@@ -21,6 +21,8 @@ export interface BatStat {
   fifties: number
   hundreds: number
   ducks: number
+  /** In how many matches he batted. (`matches` counts every match he was in the XI for, batting or not.) */
+  batApps: number
 }
 
 export interface BowlStat {
@@ -33,6 +35,8 @@ export interface BowlStat {
   bestW: number
   bestR: number
   fiveW: number
+  /** In how many matches he bowled. (`matches` counts every match he was in the XI for.) */
+  bowlApps: number
 }
 
 export interface PlayerRef {
@@ -52,6 +56,8 @@ export interface Collected {
   bowl: Map<string, BowlStat>
   potm: Map<string, number>
   matches: number
+  /** Matches each player was in the XI for, whether or not he batted or bowled. */
+  played: Map<string, number>
 }
 
 const inScope = (f: Fixture, scope: Scope, winnerTeams: (string | null)[]) =>
@@ -66,14 +72,15 @@ export function collect(season: Season, scope: Scope = {}, ownTeamOf?: (playerId
   const potm = new Map<string, number>()
   const roster = season.roster ?? []
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
-  const seen = new Map<string, Set<string>>()
+  const seen = new Map<string, Set<string>>() // matches he was in the XI for
+  const batSeen = new Map<string, Set<string>>() // matches he batted in
+  const bowlSeen = new Map<string, Set<string>>() // matches he bowled in
   let matches = 0
 
-  const played = (id: string, fixtureId: string) => {
-    let set = seen.get(id)
-    if (!set) seen.set(id, (set = new Set()))
+  const note = (m: Map<string, Set<string>>, id: string, fixtureId: string) => {
+    let set = m.get(id)
+    if (!set) m.set(id, (set = new Set()))
     set.add(fixtureId)
-    return set.size
   }
 
   for (const res of Object.values(season.results)) {
@@ -81,14 +88,16 @@ export function collect(season: Season, scope: Scope = {}, ownTeamOf?: (playerId
     if (!f || !inScope(f, scope, [f.homeId, f.awayId])) continue
     matches++
     if (res.playerOfMatchId) potm.set(res.playerOfMatchId, (potm.get(res.playerOfMatchId) ?? 0) + 1)
+    // everyone in the XI was in the match (older saves only know about those who batted or bowled)
+    for (const i of res.played ?? []) { const id = roster[i]; if (id && !(scope.teamId && ownTeamOf && ownTeamOf(id) !== scope.teamId)) note(seen, id, res.fixtureId) }
 
     for (const line of res.bat ?? []) {
       const id = roster[line[0]]
       if (!id || (scope.teamId && ownTeamOf && ownTeamOf(id) !== scope.teamId)) continue
       const [, runs, balls, fours, sixes, out] = line
       let s = bat.get(id)
-      if (!s) bat.set(id, (s = { id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0 }))
-      s.matches = Math.max(s.matches, played(id, res.fixtureId))
+      if (!s) bat.set(id, (s = { id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0, batApps: 0 }))
+      note(seen, id, res.fixtureId); note(batSeen, id, res.fixtureId)
       s.innings++
       if (!out) s.notOuts++
       s.runs += runs; s.balls += balls; s.fours += fours; s.sixes += sixes
@@ -102,14 +111,16 @@ export function collect(season: Season, scope: Scope = {}, ownTeamOf?: (playerId
       if (!id || (scope.teamId && ownTeamOf && ownTeamOf(id) !== scope.teamId)) continue
       const [, balls, runs, wickets, maidens] = line
       let s = bowl.get(id)
-      if (!s) bowl.set(id, (s = { id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0 }))
-      s.matches = Math.max(s.matches, played(id, res.fixtureId))
+      if (!s) bowl.set(id, (s = { id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0, bowlApps: 0 }))
+      note(seen, id, res.fixtureId); note(bowlSeen, id, res.fixtureId)
       s.balls += balls; s.runs += runs; s.wickets += wickets; s.maidens += maidens
       if (wickets > s.bestW || (wickets === s.bestW && runs < s.bestR)) { s.bestW = wickets; s.bestR = runs }
       if (wickets >= 5) s.fiveW++
     }
   }
-  return { bat, bowl, potm, matches }
+  for (const [id, s] of bat) { s.matches = seen.get(id)?.size ?? 0; s.batApps = batSeen.get(id)?.size ?? 0 }
+  for (const [id, s] of bowl) { s.matches = seen.get(id)?.size ?? 0; s.bowlApps = bowlSeen.get(id)?.size ?? 0 }
+  return { bat, bowl, potm, matches, played: new Map([...seen].map(([id, set]) => [id, set.size])) }
 }
 
 export const topBatsmen = (c: Collected, n = 10) => [...c.bat.values()].sort((a, b) => b.runs - a.runs || (strikeRate(b) ?? 0) - (strikeRate(a) ?? 0)).slice(0, n)
@@ -225,3 +236,26 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
 }
 
 export const playerRef = (index: Map<string, PlayerRef>, id: string | undefined) => (id ? index.get(id) : undefined)
+
+/** Adds one player's batting lines from several seasons into a single career line. */
+export function mergeBat(list: BatStat[]): BatStat | undefined {
+  if (list.length === 0) return undefined
+  const out: BatStat = { id: list[0].id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0, batApps: 0 }
+  for (const s of list) {
+    out.batApps += s.batApps; out.matches += s.matches; out.innings += s.innings; out.notOuts += s.notOuts; out.runs += s.runs; out.balls += s.balls
+    out.fours += s.fours; out.sixes += s.sixes; out.fifties += s.fifties; out.hundreds += s.hundreds; out.ducks += s.ducks
+    if (s.high > out.high || (s.high === out.high && s.highNotOut)) { out.high = s.high; out.highNotOut = s.highNotOut }
+  }
+  return out
+}
+
+/** Adds one player's bowling lines from several seasons into a single career line. */
+export function mergeBowl(list: BowlStat[]): BowlStat | undefined {
+  if (list.length === 0) return undefined
+  const out: BowlStat = { id: list[0].id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0, bowlApps: 0 }
+  for (const s of list) {
+    out.bowlApps += s.bowlApps; out.matches += s.matches; out.balls += s.balls; out.runs += s.runs; out.wickets += s.wickets; out.maidens += s.maidens; out.fiveW += s.fiveW
+    if (s.bestW > out.bestW || (s.bestW === out.bestW && s.bestW > 0 && s.bestR < out.bestR)) { out.bestW = s.bestW; out.bestR = s.bestR }
+  }
+  return out
+}

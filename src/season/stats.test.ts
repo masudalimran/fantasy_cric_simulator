@@ -89,3 +89,23 @@ describe('most sixes record', () => {
     expect(rec.playerNote).toMatch(/hit \d+ of them/)
   })
 })
+
+describe('matches played versus batting and bowling appearances', () => {
+  it('counts every match in the XI as a match, and batting and bowling appearances separately', () => {
+    const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
+    let s = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 7, myTeamId: BUILT_IN_TEAMS[0].id })
+    for (let g = 0; g < 400; g++) { const d = nextMatchDate(s); if (!d || Object.keys(s.results).length >= 60) break; s = simDay(s, d, teams) }
+    const c = collect(s)
+    expect(Object.values(s.results).every((r) => (r.played ?? []).length === 22)).toBe(true) // both XIs are recorded
+    let someoneDidNeither = false
+    for (const [id, played] of c.played) {
+      const bat = c.bat.get(id), bowl = c.bowl.get(id)
+      expect(played).toBeGreaterThanOrEqual(Math.max(bat?.batApps ?? 0, bowl?.bowlApps ?? 0))
+      if (bat) { expect(bat.matches).toBe(played); expect(bat.batApps).toBe(bat.innings) }
+      if (bowl) expect(bowl.matches).toBe(played)
+      if (!bat && !bowl) someoneDidNeither = true
+    }
+    // a keeper or specialist who neither batted nor bowled in a match still has the match counted
+    expect([...c.played.entries()].some(([id, n]) => n > (c.bat.get(id)?.batApps ?? 0) && n > (c.bowl.get(id)?.bowlApps ?? 0)) || someoneDidNeither).toBe(true)
+  })
+})

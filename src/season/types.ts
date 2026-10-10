@@ -64,10 +64,14 @@ export interface MatchSummary {
   motmNote?: string
   bat: BatLine[]
   bowl: BowlLine[]
+  /** Everyone who was in either XI (roster positions), whether or not he batted or bowled. Missing in older saves. */
+  played?: number[]
 }
 
 /** A summary as the engine produces it, before player ids are swapped for roster indices. */
-export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl'> & {
+export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played'> & {
+  /** Ids of everyone in either XI. */
+  played?: string[]
   bat: [string, number, number, number, number, 0 | 1][]
   bowl: [string, number, number, number, number][]
 }
@@ -92,12 +96,28 @@ export interface Season {
   shifts?: Record<string, PlayerShift>
   /** Your own squad's batting order and captain for this session only; the team outside the session is untouched. */
   lineup?: { order: string[]; captainId: string; keeperId?: string }
+  /** Everybody's shifts when this season began, so "this season" changes can be told apart from earlier ones. */
+  startShifts?: Record<string, PlayerShift>
+  /** What each played match did to each player's ratings (only players whose ratings moved), by fixture. */
+  changes?: Record<string, Record<string, MatchDelta>>
+  /** True once matches played before rating changes existed have been graded (new seasons have nothing to catch up on). */
+  graded?: boolean
 }
 
-/** Rating points a player has gained (positive) or lost across his batting and bowling. */
+/** The ratings a match can move. */
+export type AttrKey = 'technique' | 'power' | 'temperament' | 'running' | 'accuracy' | 'variation' | 'stamina'
+
+/** Rating points a player has gained (positive) or lost. `bat` and `bowl` are older whole-skill shifts; `a` is per rating. */
 export interface PlayerShift {
   bat: number
   bowl: number
+  a?: Partial<Record<AttrKey, number>>
+}
+
+/** What one match did to one player's ratings: the change in his overall rating, and in each rating that moved. */
+export interface MatchDelta {
+  o: number
+  a: Partial<Record<AttrKey, number>>
 }
 
 /** How one player's ratings moved at the end of a year. */

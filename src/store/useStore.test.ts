@@ -52,3 +52,33 @@ describe('looking back at finished years', () => {
     if (parsed.ok) expect(parsed.backup.data.sessions[0].history?.map((h) => h.year)).toEqual([2026])
   })
 })
+
+describe('the toss', () => {
+  it('remembers that the coin has been flipped', () => {
+    const t = BUILT_IN_TEAMS
+    useStore.getState().startLive({ format: 't20', teamA: t[0], teamB: t[1], seed: 5, url: '/match/x' })
+    expect(useStore.getState().liveMatch?.tossed).toBeFalsy()
+    useStore.getState().setTossed()
+    expect(useStore.getState().liveMatch?.tossed).toBe(true)
+    useStore.getState().discardLive()
+  })
+})
+
+describe('changing a squad before the toss', () => {
+  it('reorders the XI and sets captain and keeper, but only before the coin is flipped', () => {
+    const t = BUILT_IN_TEAMS
+    useStore.getState().startLive({ format: 't20', teamA: t[0], teamB: t[1], seed: 9, url: '/match/x' })
+    const order = [...t[0].players].reverse().map((p) => p.id)
+    useStore.getState().setLiveSquad(0, order, order[2], order[3])
+    const live = useStore.getState().liveMatch!
+    expect(live.teamA.players.map((p) => p.id)).toEqual(order)
+    expect(live.teamA.captainId).toBe(order[2])
+    expect(live.teamA.keeperId).toBe(order[3])
+    expect(live.teamB.players[0].id).toBe(t[1].players[0].id) // the other side is untouched
+    expect(live.squadVersion).toBe(1)
+    useStore.getState().setTossed()
+    useStore.getState().setLiveSquad(0, t[0].players.map((p) => p.id), t[0].captainId, undefined)
+    expect(useStore.getState().liveMatch!.teamA.players.map((p) => p.id)).toEqual(order) // too late: unchanged
+    useStore.getState().discardLive()
+  })
+})

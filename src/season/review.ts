@@ -1,6 +1,6 @@
 import type { Team } from '../types'
 import { competitionStatus } from './results'
-import { computeProgression } from './progression'
+import { seasonChanges } from './progression'
 import { collect, impactPoints, teamRecords } from './stats'
 import type { PlayerReview, Season, SeasonReview } from './types'
 
@@ -36,7 +36,7 @@ export function buildReview(season: Season, teams: Map<string, Team>, now = new 
     }
   })
 
-  const { changes } = computeProgression(season, teams)
+  const changes = seasonChanges(season, teams)
   const gain = (x: { after: number; before: number }) => x.after - x.before
   const moved = changes.filter((x) => x.after !== x.before)
   return {

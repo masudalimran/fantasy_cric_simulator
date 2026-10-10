@@ -213,6 +213,8 @@ export interface GenerateOptions {
   lineup?: Season['lineup']
 }
 
+const structuredCloneShifts = (s: Record<string, PlayerShift>): Record<string, PlayerShift> => JSON.parse(JSON.stringify(s))
+
 export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, myTeamId = null, difficulty = 'normal', shifts, lineup }: GenerateOptions): Season {
   if (teams.length < 4) throw new Error('A season needs at least 4 teams.')
   const rng = new Rng(seed)
@@ -292,7 +294,7 @@ export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, m
     competitions.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id))
     return {
       id: `s${year}-${seed}`,
-      year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), ...(shifts ? { shifts } : {}), ...(lineup ? { lineup } : {}),
+      year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), graded: true, ...(shifts ? { shifts, startShifts: structuredCloneShifts(shifts) } : {}), ...(lineup ? { lineup } : {}),
     }
   }
   throw new Error('Could not fit the season into the year.')

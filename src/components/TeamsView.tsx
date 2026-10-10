@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { paths } from '../routes'
 import { overall, teamStrength } from '../data/builders'
 import { useTeams } from '../store/useStore'
 import type { Team, Universe } from '../types'
+import { ImportSeasonStats } from './ImportSeasonStats'
 import { accentOf, PlayerAvatar, RatingBadge, TeamBackdrop, TeamCrest } from './ui'
 
 const FILTERS: { id: 'all' | Universe; label: string }[] = [
@@ -53,6 +54,7 @@ function TeamCard({ team, index }: { team: Team; index: number }) {
 export function TeamsView() {
   const all = useTeams()
   const [params, setParams] = useSearchParams()
+  const [importing, setImporting] = useState(false)
   const filter = (FILTERS.find((f) => f.id === params.get('filter'))?.id ?? 'all') as 'all' | Universe
   const q = params.get('q') ?? ''
   const update = (key: string, value: string) =>
@@ -93,6 +95,7 @@ export function TeamsView() {
               {f.label}
             </button>
           ))}
+          <button onClick={() => setImporting(true)} className="rounded-full border border-sky-400/60 px-4 py-1.5 text-sm font-semibold text-sky-200 transition hover:bg-sky-400/10" title="Copy the ratings a career season ended with onto the teams">Import stats from a season</button>
           <Link to={paths.newTeam} className="rounded-full bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-400">
             + Create team
           </Link>
@@ -109,6 +112,7 @@ export function TeamsView() {
           ))}
         </div>
       )}
+      <ImportSeasonStats open={importing} onClose={() => setImporting(false)} />
     </div>
   )
 }

@@ -28,11 +28,11 @@ import { randomSeed } from '../engine/rng'
 import { FORMATS, type BallEvent } from '../engine/types'
 import { paths } from '../routes'
 import { hasEarlierUnplayed, mustPlayFirst, playEarlierMatches, summarizeMatch } from '../season/results'
-import { sessionTeam } from '../season/progression'
+import { ATTR_LABEL, sessionTeam } from '../season/progression'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
 import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../store/useStore'
-import { ROLE_LABEL, TeamCrest } from '../components/ui'
-import { competitionName, matchHref, useTeamMap } from '../components/season/shared'
+import { Delta, PlayerAvatar, ROLE_LABEL, TeamCrest } from '../components/ui'
+import { competitionName, matchHref, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
 import type { MatchFormat, Team } from '../types'
 
@@ -67,10 +67,15 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [, force] = useReducer((x: number) => x + 1, 0)
   // Built once per match from its saved actions; later actions are applied live and logged.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const match = useMemo(() => buildFromLive(live), [live.id, live.tossChoice])
+  const match = useMemo(() => buildFromLive(live), [live.id, live.tossChoice, live.squadVersion])
   const liveAct = useStore((s) => s.liveAct)
   const setLivePhase = useStore((s) => s.setLivePhase)
   const setTossChoice = useStore((s) => s.setTossChoice)
+  const setTossed = useStore((s) => s.setTossed)
+  const setLiveSquad = useStore((s) => s.setLiveSquad)
+  const ensureStartXI = useStore((s) => s.ensureStartXI)
+  useEffect(() => { if (!live.startXI) ensureStartXI() }, [live.startXI, ensureStartXI])
+  const updateSeasonForSquad = useStore((s) => s.updateSeason)
   const discardLive = useStore((s) => s.discardLive)
   const finishLive = useStore((s) => s.finishLive)
   // `?skip` opens straight into play (handy for links and testing)
@@ -113,6 +118,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const alreadyPlayed = live.replay
   const navigate = useNavigate()
   const finished = match.isOver
+  // Before the toss you can set your own XI: in a career only your team, in a friendly both sides.
+  const editableSides: [boolean, boolean] = live.myTeamId ? [match.mySide === 0, match.mySide === 1] : [true, true]
   // (hooks must all come before the early return for the toss screen below)
   const awards = useMemo(() => (finished ? computeAwards(match) : null), [finished, match])
   useEffect(() => {
@@ -175,7 +182,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (match.isOver) return
     const inn = match.current
     const sp = autoRef.current
-    const ms = sp === 4 ? 3200 : sp === 2 ? 3600 : 4200 // long enough to read
+    const ms = sp === 4 ? 7000 : sp === 2 ? 9000 : 12000 // long enough to read in full; a click moves on sooner
     const mk = (kind: 'batsman' | 'bowler', id: string): Moment => {
       const p = match.player(id)
       const team = (kind === 'batsman' ? match.battingSide() : match.bowlingSide()).team
@@ -186,14 +193,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const s = seasonStats?.bat.get(id)
         lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'left' : 'right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
         tiles = s
-          ? [t('Matches', s.matches), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`)]
+          ? [t('Bat apps', s.batApps + 1), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`)]
           : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
       } else {
         const s = seasonStats?.bowl.get(id)
         const w = p.bowling
         lines = [`${w?.type ?? ''} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
         tiles = s
-          ? [t('Matches', s.matches), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Average', bowlAverage(s) === null ? '-' : bowlAverage(s)!.toFixed(1)), t('Best', `${s.bestW}/${s.bestR}`), t('5-wicket hauls', s.fiveW)]
+          ? [t('Bowl apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Average', bowlAverage(s) === null ? '-' : bowlAverage(s)!.toFixed(1)), t('Best', `${s.bestW}/${s.bestR}`), t('5-wicket hauls', s.fiveW)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]
       }
       return { key: introSeq.current++, kind, player: p, team, title: kind === 'batsman' ? 'AT THE CREASE' : 'INTO THE ATTACK', lines, tiles, rating: overall(p), delay: 150, ms }
@@ -333,7 +340,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, match, act])
 
-  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
+  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
 
   const inn = match.current
   const batSide = match.battingSide()
@@ -353,7 +360,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const btn = 'inline-flex min-h-10 items-center justify-center rounded-xl border border-line bg-panel-2 px-4 text-sm font-bold text-white transition hover:border-indigo-400'
 
   return (
-    <PlayerCardProvider match={match}>
+    <PlayerCardProvider match={match} career={!!live.fixtureId}>
     <div className="space-y-4">
       <Fx fx={fx} />
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
@@ -385,6 +392,27 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <span className="text-slate-300">({pom.line})</span>
             </div>
           )}
+          {(() => {
+            // how this match moved your players' ratings (it is recorded when the match ends)
+            const mine = season?.myTeamId ? teamMap.get(season.myTeamId) : undefined
+            const log = fixture && !alreadyPlayed ? season?.changes?.[fixture.id] : undefined
+            const rows = mine && log ? mine.players.filter((p) => log[p.id]).map((p) => ({ p, d: log[p.id] })) : []
+            if (!mine || rows.length === 0) return null
+            return (
+              <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-line bg-black/20 p-3 text-left">
+                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-widest text-sky-300">Rating changes from this match</div>
+                <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                  {rows.map(({ p, d }) => (
+                    <span key={p.id} className="flex items-center gap-1.5 text-sm" title={Object.entries(d.a).map(([k, n]) => `${ATTR_LABEL[k as keyof typeof ATTR_LABEL]} ${(n as number) > 0 ? '+' : ''}${n}`).join(', ')}>
+                      <PlayerAvatar profile player={p} team={mine} size={22} />
+                      <span className="font-semibold text-white">{p.name}</span>
+                      {d.o !== 0 ? <Delta n={d.o} /> : <span className="text-xs text-slate-400">{Object.entries(d.a).map(([k, n]) => `${ATTR_LABEL[k as keyof typeof ATTR_LABEL]} ${(n as number) > 0 ? '+' : ''}${n}`).join(', ')}</span>}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {/* A session match is final: no rematch, no new match, just back to the career. */}
             {!fixture && <button className={btn} onClick={() => navigate(paths.match(match.sides[0].team.id, match.sides[1].team.id, match.format, randomSeed()))}>Rematch</button>}
@@ -436,7 +464,10 @@ function InProgress({ live, onDiscard, wanted }: { live: LiveMatch; onDiscard: (
       <p className="text-sm text-slate-400">{m.sides[inn.battingSide].team.name} are {inn.runs}/{inn.wickets} after {Math.floor(inn.legalBalls / 6)}.{inn.legalBalls % 6} overs{inn.index === 1 ? ' in the chase' : ''}.</p>
       <div className="mt-6 flex flex-col gap-2">
         <button onClick={() => navigate(live.url)} className="rounded-xl bg-emerald-500 px-5 py-3 text-base font-bold text-black hover:bg-emerald-400">Resume that match</button>
-        <button onClick={onDiscard} className="rounded-xl border-2 border-red-500/70 px-5 py-3 text-sm font-bold text-red-200 hover:bg-red-500/15">Discard it and start {wanted}</button>
+        {/* a career match can't be thrown away once the coin has been flipped: finish it, or forfeit it from inside */}
+        {live.fixtureId && (live.tossed || live.phase === 'play')
+          ? <p className="rounded-xl border border-line px-4 py-3 text-xs text-slate-400">This career match can't be abandoned once the toss is done. Finish it, or forfeit from the match controls.</p>
+          : <button onClick={onDiscard} className="rounded-xl border-2 border-red-500/70 px-5 py-3 text-sm font-bold text-red-200 hover:bg-red-500/15">Discard it and start {wanted}</button>}
       </div>
     </div>
   )
@@ -480,7 +511,7 @@ export function MatchPage() {
   const alreadyDone = !!fxId && !!season?.results[fxId] && !(ready && live && !live.replay)
   const details = useDetails()
   const updateSeason = useStore((s) => s.updateSeason)
-  const leagueTeams = useTeamMap()
+  const leagueTeams = useBaseTeamMap()
   // Matches go in order: you can't open a later one while a match of yours before it is still waiting.
   const waitFor = (() => {
     const fx = fxId && season ? season.fixtures.find((f) => f.id === fxId) : undefined

@@ -1,27 +1,31 @@
 import { Rng } from '../engine/rng'
 import { battingScore, bowlingScore, overall } from '../data/builders'
-import type { Player, Team } from '../types'
-import { collect } from './stats'
-import type { PlayerChange, PlayerShift, Season } from './types'
+import type { MatchFormat, Player, Team } from '../types'
+import type { AttrKey, Fixture, MatchDelta, PlayerChange, PlayerShift, RawSummary, Season } from './types'
 
-/** The most a player can drift from his starting ratings over a whole career. */
-const MAX_DRIFT = 25
+export const ATTRS: AttrKey[] = ['technique', 'power', 'temperament', 'running', 'accuracy', 'variation', 'stamina']
+export const ATTR_LABEL: Record<AttrKey, string> = { technique: 'Technique', power: 'Power', temperament: 'Temperament', running: 'Running', accuracy: 'Accuracy', variation: 'Variation', stamina: 'Stamina' }
+
+/** The most any one rating can drift, up or down, over a career. */
+const MAX_ATTR_DRIFT = 15
 const clampRating = (n: number) => Math.max(1, Math.min(99, Math.round(n)))
-const clampShift = (n: number) => Math.max(-MAX_DRIFT, Math.min(MAX_DRIFT, n))
 
-/** A player with his career gains and losses added to his starting ratings. */
+const get = (s: PlayerShift | undefined, k: AttrKey) => s?.a?.[k] ?? 0
+
+/** A player with everything he has earned (or lost) added to his starting ratings. */
 export function applyShift(p: Player, s: PlayerShift | undefined): Player {
-  if (!s || (!s.bat && !s.bowl)) return p
+  if (!s || (!s.bat && !s.bowl && !s.a)) return p
+  const bat = s.bat ?? 0, bowl = s.bowl ?? 0
   return {
     ...p,
     batting: {
-      technique: clampRating(p.batting.technique + s.bat),
-      power: clampRating(p.batting.power + s.bat),
-      temperament: clampRating(p.batting.temperament + s.bat),
-      running: clampRating(p.batting.running + Math.round(s.bat / 2)),
+      technique: clampRating(p.batting.technique + bat + get(s, 'technique')),
+      power: clampRating(p.batting.power + bat + get(s, 'power')),
+      temperament: clampRating(p.batting.temperament + bat + get(s, 'temperament')),
+      running: clampRating(p.batting.running + Math.round(bat / 2) + get(s, 'running')),
     },
     bowling: p.bowling
-      ? { ...p.bowling, accuracy: clampRating(p.bowling.accuracy + s.bowl), variation: clampRating(p.bowling.variation + s.bowl), stamina: clampRating(p.bowling.stamina + Math.round(s.bowl / 2)) }
+      ? { ...p.bowling, accuracy: clampRating(p.bowling.accuracy + bowl + get(s, 'accuracy')), variation: clampRating(p.bowling.variation + bowl + get(s, 'variation')), stamina: clampRating(p.bowling.stamina + Math.round(bowl / 2) + get(s, 'stamina')) }
       : null,
   }
 }
@@ -31,7 +35,7 @@ export function applyShifts(team: Team, shifts: Record<string, PlayerShift> | un
   return { ...team, players: team.players.map((p) => applyShift(p, shifts[p.id])) }
 }
 
-/** A team as it plays in the session: ratings carried over from earlier years, and your own lineup if you've set one. */
+/** A team as it plays in the career: ratings earned so far, and your own lineup if you've set one. */
 export function sessionTeam(team: Team, season: Pick<Season, 'shifts' | 'lineup' | 'myTeamId'>): Team {
   const t = applyShifts(team, season.shifts)
   const l = team.id === season.myTeamId ? season.lineup : undefined
@@ -42,82 +46,200 @@ export function sessionTeam(team: Team, season: Pick<Season, 'shifts' | 'lineup'
   return { ...t, players: [...ordered, ...rest], captainId: byId.has(l.captainId) ? l.captainId : t.captainId, keeperId: l.keeperId && byId.has(l.keeperId) ? l.keeperId : t.keeperId }
 }
 
-/** Straight-line fit y = a + b x, and the spread of what's left over. */
-function fit(points: { x: number; y: number }[]) {
-  const n = points.length
-  if (n < 5) return null
-  const mx = points.reduce((s, p) => s + p.x, 0) / n
-  const my = points.reduce((s, p) => s + p.y, 0) / n
-  const sxx = points.reduce((s, p) => s + (p.x - mx) ** 2, 0)
-  const b = sxx ? points.reduce((s, p) => s + (p.x - mx) * (p.y - my), 0) / sxx : 0
-  const a = my - b * mx
-  const sd = Math.sqrt(points.reduce((s, p) => s + (p.y - (a + b * p.x)) ** 2, 0) / n) || 1
-  return { a, b, sd }
+/** Add a few rating points to a player (for working out how much his overall moved). */
+export function applyDelta(p: Player, a: Partial<Record<AttrKey, number>>): Player {
+  return applyShift(p, { bat: 0, bowl: 0, a })
 }
 
-/** Seasons of form are noisy, so one big year moves a player a few points, not a dozen. */
-const MOVE = { max: 5, min: -4 }
+// ---- What one match does to a player ----------------------------------------------------------------
+// Calibrated against the engine: what a batsman or bowler of a given rating usually scores in each format,
+// and how much it varies. A player who beats that by a good margin gains; one who falls well short loses.
 
-function movement(z: number | null, rating: number, rng: Rng, weight: number): number {
-  // Good players slow down, poor ones have room to grow, and a bit of luck either way.
-  const settle = -(rating - 62) / 22
-  const form = z === null ? 0 : 1.7 * Math.max(-2, Math.min(2.2, z))
-  const luck = rng.normal() * 0.55
-  const raw = (z === null ? settle * 0.5 : settle + form) * weight + luck
-  return Math.max(MOVE.min, Math.min(MOVE.max, Math.round(raw)))
+const BAT_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number }> = { t20: { a: -34.2, b: 0.706, sd: 23.6 }, odi: { a: -37, b: 0.838, sd: 30.2 } }
+const BOWL_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number; par: number }> = { t20: { a: -9.8, b: 0.474, sd: 33.6, par: 8.2 }, odi: { a: 1.6, b: 0.167, sd: 18, par: 5.3 } }
+
+/** z of a performance, nudged back toward the middle for players already far from average (stars regress, journeymen can climb). */
+const grade = (z: number, rating: number) => z - (rating - 78) / 90
+const points = (z: number) => (Math.abs(z) >= 2 ? 2 : Math.abs(z) >= 0.9 ? 1 : 0) * Math.sign(z)
+
+type Delta = Partial<Record<AttrKey, number>>
+
+const BAT_SPREAD: [AttrKey, number][] = [['technique', 0.36], ['power', 0.36], ['temperament', 0.2], ['running', 0.08]]
+const BOWL_SPREAD: [AttrKey, number][] = [['accuracy', 0.45], ['variation', 0.4], ['stamina', 0.15]]
+const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
+const rngFor = (fixtureId: string, playerId: string) => new Rng(hash(`${fixtureId}|${playerId}`))
+/** A weighted draw, optionally skipping one rating. */
+function pick(r: Rng, spread: [AttrKey, number][], not?: AttrKey): AttrKey {
+  const list = spread.filter(([k]) => k !== not)
+  const total = list.reduce((x, [, w]) => x + w, 0)
+  let t = r.next() * total
+  for (const [k, w] of list) { t -= w; if (t <= 0) return k }
+  return list[list.length - 1][0]
+}
+const add = (d: Delta, k: AttrKey, n: number) => { d[k] = (d[k] ?? 0) + n }
+
+const indexCache = new WeakMap<Map<string, Team>, Map<string, Player>>()
+function playerIndex(teams: Map<string, Team>): Map<string, Player> {
+  let m = indexCache.get(teams)
+  if (!m) { m = new Map(); for (const t of teams.values()) for (const p of t.players) m.set(p.id, p); indexCache.set(teams, m) }
+  return m
 }
 
-export interface Progression {
-  /** Everybody's total gains and losses so far, including this year. */
-  shifts: Record<string, PlayerShift>
-  /** Every player whose ratings changed this year, in all teams. */
-  changes: PlayerChange[]
+/** Changes for the players in one match, from the match's own batting and bowling lines. Players whose ratings don't move are left out. */
+export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<string, Team>): Record<string, MatchDelta> {
+  const byId = playerIndex(teams)
+  const deltas = new Map<string, Delta>()
+  const put = (id: string) => { let d = deltas.get(id); if (!d) deltas.set(id, (d = {})); return d }
+
+  for (const [id, runs, balls, fours, sixes, out] of raw.bat) {
+    const p = byId.get(id)
+    if (!p || (balls === 0 && !out)) continue
+    const e = BAT_EXPECT[format]
+    const bs = battingScore(p.batting)
+    const bp = runs + fours * 0.5 + sixes
+    let n = points(grade((bp - (e.a + e.b * bs)) / e.sd, bs))
+    if (runs === 0 && out) n = Math.min(n, -1) // a duck always costs something
+    if (n === 0) continue
+    const d = put(id)
+    // which ratings move is spread by a seeded draw (the same for gains and losses, so no rating drifts one way);
+    // a duck is the one exception: it always dents temperament
+    const r = rngFor(raw.fixtureId, id)
+    const first: AttrKey = runs === 0 && out && n < 0 ? 'temperament' : pick(r, BAT_SPREAD)
+    add(d, first, Math.sign(n))
+    if (Math.abs(n) === 2) add(d, pick(r, BAT_SPREAD, first), Math.sign(n))
+  }
+
+  for (const [id, balls, runs, wickets, maidens] of raw.bowl) {
+    const p = byId.get(id)
+    if (!p || !p.bowling || balls < 12) continue
+    const e = BOWL_EXPECT[format]
+    const ws = bowlingScore(p.bowling)
+    const ov = balls / 6
+    const econ = runs / ov
+    const idx = ((wickets * 22 + maidens * 4) / ov) * 4 + (e.par - econ) * 8
+    const n = points(grade((idx - (e.a + e.b * ws)) / e.sd, ws) + 0.1)
+    if (n === 0) continue
+    const d = put(id)
+    const r = rngFor(raw.fixtureId, id)
+    const first = pick(r, BOWL_SPREAD)
+    add(d, first, Math.sign(n))
+    if (Math.abs(n) === 2) add(d, pick(r, BOWL_SPREAD, first), Math.sign(n))
+  }
+
+  const out: Record<string, MatchDelta> = {}
+  for (const [id, a] of deltas) {
+    const p = byId.get(id) as Player
+    const o = overall(applyDelta(p, a)) - overall(p)
+    out[id] = { o, a }
+  }
+  return out
+}
+
+/** Records a match's rating changes in the season: they take effect from the next match on. */
+export function applyMatchChanges(season: Season, fixture: Fixture, raw: RawSummary, teams: Map<string, Team>): Season {
+  const delta = matchChanges(raw, fixture.format, teams)
+  const ids = Object.keys(delta)
+  if (!ids.length) return season
+  const shifts: Record<string, PlayerShift> = { ...(season.shifts ?? {}) }
+  const log: Record<string, MatchDelta> = {}
+  for (const id of ids) {
+    const cur = shifts[id] ?? { bat: 0, bowl: 0 }
+    const a: Delta = { ...(cur.a ?? {}) }
+    const applied: Delta = {}
+    for (const [k, n] of Object.entries(delta[id].a) as [AttrKey, number][]) {
+      const next = Math.max(-MAX_ATTR_DRIFT, Math.min(MAX_ATTR_DRIFT, (a[k] ?? 0) + n))
+      const real = next - (a[k] ?? 0)
+      if (real !== 0) { a[k] = next; applied[k] = real }
+    }
+    if (!Object.keys(applied).length) continue
+    shifts[id] = { ...cur, a }
+    log[id] = { o: delta[id].o, a: applied }
+  }
+  return { ...season, shifts, changes: { ...(season.changes ?? {}), [fixture.id]: log } }
+}
+
+// ---- A season's changes ------------------------------------------------------------------------------
+
+/** How every player's ratings moved over the season so far, compared with where they started it. */
+export function seasonChanges(season: Season, teams: Map<string, Team>): PlayerChange[] {
+  const out: PlayerChange[] = []
+  const start = season.startShifts ?? {}
+  for (const id of season.teamIds) {
+    const t = teams.get(id)
+    if (!t) continue
+    // `t` already carries the current shifts; undo the season's by comparing against the start-of-season shifts on the base player
+    for (const p of t.players) {
+      const base = baseOf(p, season.shifts?.[p.id])
+      const before = applyShift(base, start[p.id])
+      out.push({ id: p.id, name: p.name, teamId: id, before: overall(before), after: overall(p), bat: Math.round(battingScore(p.batting) - battingScore(before.batting)), bowl: p.bowling && before.bowling ? Math.round(bowlingScore(p.bowling) - bowlingScore(before.bowling)) : 0 })
+    }
+  }
+  return out
+}
+
+/** The player without any shifts: undo `s` from a player that has it applied (ratings clamp, so this is approximate at the extremes). */
+function baseOf(p: Player, s: PlayerShift | undefined): Player {
+  if (!s) return p
+  const bat = s.bat ?? 0, bowl = s.bowl ?? 0
+  return {
+    ...p,
+    batting: {
+      technique: p.batting.technique - bat - get(s, 'technique'),
+      power: p.batting.power - bat - get(s, 'power'),
+      temperament: p.batting.temperament - bat - get(s, 'temperament'),
+      running: p.batting.running - Math.round(bat / 2) - get(s, 'running'),
+    },
+    bowling: p.bowling ? { ...p.bowling, accuracy: p.bowling.accuracy - bowl - get(s, 'accuracy'), variation: p.bowling.variation - bowl - get(s, 'variation'), stamina: p.bowling.stamina - Math.round(bowl / 2) - get(s, 'stamina') } : null,
+  }
+}
+
+/** Per-rating change of one player this season (what to show as +n or -n beside each bar). */
+export function seasonAttrChanges(season: Season, id: string): Delta {
+  const now = season.shifts?.[id], start = season.startShifts?.[id]
+  const out: Delta = {}
+  for (const k of ATTRS) { const d = get(now, k) - get(start, k); if (d) out[k] = d }
+  return out
+}
+
+/** What a player's ratings were when his team was made, side by side with what they are now. */
+export function ratingRows(base: Player, now: Player): { key: AttrKey | 'overall'; label: string; base: number; now: number }[] {
+  const rows: { key: AttrKey | 'overall'; label: string; base: number; now: number }[] = [{ key: 'overall', label: 'Overall', base: overall(base), now: overall(now) }]
+  for (const k of ['technique', 'power', 'temperament', 'running'] as const) rows.push({ key: k, label: ATTR_LABEL[k], base: base.batting[k], now: now.batting[k] })
+  if (base.bowling && now.bowling) for (const k of ['accuracy', 'variation', 'stamina'] as const) rows.push({ key: k, label: ATTR_LABEL[k], base: base.bowling[k], now: now.bowling[k] })
+  return rows
+}
+
+/** The player's most recent change from a match, newest first. */
+export function playerChangeLog(season: Season, playerId: string, limit = 8): { fixtureId: string; date: string; delta: MatchDelta }[] {
+  const out: { fixtureId: string; date: string; delta: MatchDelta }[] = []
+  for (const f of season.fixtures) {
+    const d = season.changes?.[f.id]?.[playerId]
+    if (d) out.push({ fixtureId: f.id, date: f.date, delta: d })
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit)
 }
 
 /**
- * At the end of a year, players who did better than their ratings suggest improve and players who did
- * worse lose points. Everyone also drifts a little toward the middle, and luck plays a part.
- * `teams` must already carry the shifts from earlier years.
+ * Catches a season up on matches that were played before ratings changed with every match: they are graded in date
+ * order from their saved batting and bowling lines, so the changes build up as if they had happened live.
+ * Matches that already have their changes are left alone. Base teams are the teams before any career changes.
  */
-export function computeProgression(season: Season, teams: Map<string, Team>): Progression {
-  const c = collect(season)
-  const rng = new Rng((season.seed ^ (season.year * 2654435761)) >>> 0)
-  const players: { p: Player; teamId: string }[] = []
-  for (const id of season.teamIds) {
-    const t = teams.get(id)
-    if (t) t.players.forEach((p) => players.push({ p, teamId: id }))
+export function gradePlayedMatches(season: Season, baseTeams: Map<string, Team>): Season {
+  if (season.graded) return season
+  let cur: Season = { ...season, graded: true, startShifts: season.startShifts ?? JSON.parse(JSON.stringify(season.shifts ?? {})) }
+  const roster = season.roster ?? []
+  const todo = season.fixtures.filter((f) => season.results[f.id] && !season.changes?.[f.id] && f.homeId && f.awayId).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+  for (const f of todo) {
+    const res = season.results[f.id]
+    const raw: RawSummary = {
+      ...res,
+      played: res.played?.map((i) => roster[i]),
+      bat: (res.bat ?? []).map(([i, ...rest]) => [roster[i], ...rest] as RawSummary['bat'][number]),
+      bowl: (res.bowl ?? []).map(([i, ...rest]) => [roster[i], ...rest] as RawSummary['bowl'][number]),
+    }
+    const pair = new Map<string, Team>()
+    for (const id of [f.homeId as string, f.awayId as string]) { const t = baseTeams.get(id); if (t) pair.set(id, sessionTeam(t, cur)) } // ratings as they stand as we go
+    if (pair.size === 2) cur = applyMatchChanges(cur, f, raw, pair)
   }
-
-  const batPts = (id: string) => {
-    const b = c.bat.get(id)
-    return b && b.innings >= 6 ? { v: (b.runs + b.fours * 0.5 + b.sixes + b.fifties * 10 + b.hundreds * 25) / b.innings } : null
-  }
-  const bowlPts = (id: string) => {
-    const w = c.bowl.get(id)
-    return w && w.balls >= 60 ? { v: ((w.wickets * 22 + w.maidens * 4 + w.fiveW * 15) / w.balls) * 24 } : null
-  }
-
-  const batFit = fit(players.flatMap(({ p }) => { const r = batPts(p.id); return r ? [{ x: battingScore(p.batting), y: r.v }] : [] }))
-  const bowlFit = fit(players.flatMap(({ p }) => { const r = bowlPts(p.id); return p.bowling && r ? [{ x: bowlingScore(p.bowling), y: r.v }] : [] }))
-
-  const shifts: Record<string, PlayerShift> = {}
-  const changes: PlayerChange[] = []
-  for (const { p, teamId } of players) {
-    const old = (season.shifts ?? {})[p.id] ?? { bat: 0, bowl: 0 }
-    // Specialists mostly move in their own discipline.
-    const batWeight = p.role === 'BOWL' ? 0.5 : 1
-    const bowlWeight = p.role === 'BAT' || p.role === 'WK' ? 0.5 : 1
-    const br = batPts(p.id)
-    const wr = bowlPts(p.id)
-    const bz = br && batFit ? (br.v - (batFit.a + batFit.b * battingScore(p.batting))) / batFit.sd : null
-    const wz = wr && bowlFit && p.bowling ? (wr.v - (bowlFit.a + bowlFit.b * bowlingScore(p.bowling))) / bowlFit.sd : null
-    const dBat = movement(bz, battingScore(p.batting), rng, batWeight)
-    const dBowl = p.bowling ? movement(wz, bowlingScore(p.bowling), rng, bowlWeight) : 0
-    const next = { bat: clampShift(old.bat + dBat), bowl: clampShift(old.bowl + dBowl) }
-    shifts[p.id] = next
-    const before = overall(p)
-    const after = overall(applyShift({ ...p, batting: p.batting, bowling: p.bowling }, { bat: next.bat - old.bat, bowl: next.bowl - old.bowl }))
-    changes.push({ id: p.id, name: p.name, teamId, before, after, bat: next.bat - old.bat, bowl: next.bowl - old.bowl })
-  }
-  return { shifts, changes }
+  return cur
 }

@@ -11,6 +11,7 @@ import { ResultsPage } from './pages/ResultsPage'
 import { CareerTeamPage } from './pages/CareerTeamPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { CareerLayout } from './components/CareerLayout'
+import { Glossary } from './components/Glossary'
 import { DetailsProvider } from './components/season/Details'
 import { CompetitionsPage } from './pages/CompetitionsPage'
 import { MatchPage } from './pages/MatchPage'
@@ -21,6 +22,7 @@ import { ReviewPage } from './pages/ReviewPage'
 import { BackupPage } from './pages/BackupPage'
 import { StatsPage } from './pages/StatsPage'
 import { isMuted, setMuted, sfx } from './audio/sfx'
+import { setHideImages, useHideImages } from './prefs'
 import { paths } from './routes'
 import { selectSeason, useStore, useTeams } from './store/useStore'
 
@@ -124,6 +126,25 @@ function PlayButton({ to, resuming, big = false }: { to: string; resuming: boole
   )
 }
 
+/** Hide or show every player's picture throughout the app (initials are shown instead). */
+function ImageToggle() {
+  const hidden = useHideImages()
+  return (
+    <button
+      onClick={() => setHideImages(!hidden)}
+      title={hidden ? 'Player images are hidden. Click to show them' : 'Hide all player images'}
+      aria-label={hidden ? 'Show player images' : 'Hide player images'}
+      aria-pressed={hidden}
+      className={`ml-2 grid h-9 w-9 place-items-center rounded-full border transition ${hidden ? 'border-amber-400/70 bg-amber-400/10 text-amber-200' : 'border-line text-slate-300 hover:border-slate-500 hover:text-white'}`}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.8" /><path d="m21 16-5-5-8 8" />
+        {hidden && <path d="M3 3l18 18" />}
+      </svg>
+    </button>
+  )
+}
+
 function SoundToggle() {
   const [muted, set] = useState(isMuted())
   return (
@@ -188,6 +209,7 @@ export default function App() {
 
   return (
     <DetailsProvider>
+    <Glossary />
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <header className="flex items-center justify-between py-5">
         <Link to={paths.teams} className="flex items-baseline gap-2">
@@ -203,6 +225,7 @@ export default function App() {
             <SessionButton />
             <PlayButton to={playTo} resuming={resuming} />
           </div>
+          <ImageToggle />
           <SoundToggle />
           <BackupIcon />
         </nav>
@@ -247,8 +270,8 @@ export default function App() {
                 ))}
               </nav>
               <div className="mt-auto flex items-center justify-between rounded-xl border border-line px-4 py-3">
-                <span className="text-sm font-semibold text-slate-200">Sound</span>
-                <SoundToggle />
+                <span className="text-sm font-semibold text-slate-200">Images &amp; sound</span>
+                <span className="flex"><ImageToggle /><SoundToggle /></span>
               </div>
             </motion.aside>
           </motion.div>

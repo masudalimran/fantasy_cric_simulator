@@ -4,12 +4,13 @@ import { Link, useLocation } from 'react-router'
 import { overall } from '../../data/builders'
 import { paths } from '../../routes'
 import { formatDate } from '../../season/dates'
+import { ATTR_LABEL } from '../../season/progression'
 import { average, bowlAverage, collect, economy as bowlEcon, strikeRate } from '../../season/stats'
-import type { BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
+import type { AttrKey, BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
 import { useTeams, useViewedSeason } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
-import { PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
+import { Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
 import { competitionName, usePlayerIndex, useTeamMap } from './shared'
 
 type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string }
@@ -67,12 +68,16 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
   const idOf = (i: number) => roster[i]
   const motm = res.playerOfMatchId ? index.get(res.playerOfMatchId) : undefined
 
-  const who = (id: string, team: Team, extra?: React.ReactNode) => (
-    <button onClick={() => api?.openPlayer(id)} className="flex min-w-0 cursor-pointer items-center gap-2 text-left hover:text-white">
-      {index.get(id) && <PlayerAvatar player={index.get(id)!.player} team={team} size={26} />}
-      <span className="min-w-0 truncate font-semibold text-white">{index.get(id)?.player.name ?? id}</span>{extra}
-    </button>
-  )
+  const who = (id: string, team: Team, extra?: React.ReactNode) => {
+    const d = season.changes?.[fixtureId]?.[id]
+    return (
+      <button onClick={() => api?.openPlayer(id)} className="flex min-w-0 cursor-pointer items-center gap-2 text-left hover:text-white">
+        {index.get(id) && <PlayerAvatar player={index.get(id)!.player} team={team} size={26} />}
+        <span className="min-w-0 truncate font-semibold text-white">{index.get(id)?.player.name ?? id}</span>{extra}
+        {d && d.o !== 0 && <span className="shrink-0 text-xs" title="Change to his overall rating from this match"><Delta n={d.o} /></span>}
+      </button>
+    )
+  }
 
   const panel = (i: number) => {
     const s = sides[i]
@@ -195,7 +200,9 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
 // ---- A player --------------------------------------------------------------
 
 function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null; playerId: string; z: number; onClose: () => void }) {
-  const inCareer = useLocation().pathname.startsWith('/career') && !!season
+  const loc = useLocation()
+  // a career match page counts too (it has ?fx=): its players carry the career's rating changes
+  const inCareer = !!season && (loc.pathname.startsWith('/career') || (loc.pathname.startsWith('/match/') && new URLSearchParams(loc.search).has('fx')))
   const careerIndex = usePlayerIndex()
   const careerTeams = useTeamMap()
   const baseTeams = useTeams()
@@ -215,7 +222,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
     const roster = season.roster ?? []
     const at = roster.indexOf(playerId)
     if (at < 0) return []
-    const out: { fixtureId: string; date: string; vs: Team | undefined; bat?: BatLine; bowl?: BowlLine }[] = []
+    const out: { fixtureId: string; date: string; vs: Team | undefined; bat?: BatLine; bowl?: BowlLine; change?: number; attrs?: Partial<Record<AttrKey, number>> }[] = []
     for (const f of season.fixtures) {
       const r = season.results[f.id]
       if (!r) continue
@@ -223,7 +230,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
       const bowl = (r.bowl ?? []).find((l) => l[0] === at)
       if (!bat && !bowl) continue
       const own = e?.team.id
-      out.push({ fixtureId: f.id, date: f.date, vs: teams.get((f.homeId === own ? f.awayId : f.homeId) as string), bat, bowl })
+      out.push({ fixtureId: f.id, date: f.date, vs: teams.get((f.homeId === own ? f.awayId : f.homeId) as string), bat, bowl, change: season.changes?.[f.id]?.[playerId]?.o, attrs: season.changes?.[f.id]?.[playerId]?.a })
     }
     return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
   }, [inCareer, season, playerId, teams, e])
@@ -231,11 +238,15 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
   const { player, team } = e
   const accent = accentOf(team)
   const ovr = overall(player)
+  // where his ratings started (when his team was made), to show what the career has done to them
+  const baseP = inCareer ? baseTeams.find((t) => t.id === team.id)?.players.find((p) => p.id === player.id) : undefined
+  const ovrBase = baseP ? overall(baseP) : ovr
   const b = c?.bat.get(player.id)
   const w = c?.bowl.get(player.id)
   const potm = c?.potm.get(player.id) ?? 0
+  const tPlayed = c ? (c.played.get(player.id) ?? Math.max(b?.matches ?? 0, w?.matches ?? 0)) : undefined
   const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
-  const stat = (label: string, value: React.ReactNode) => <div className="rounded-xl bg-white/5 px-3 py-2"><div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</div><div className="font-display text-2xl leading-tight text-white">{value}</div></div>
+  const stat = (label: string, value: React.ReactNode) => <div className="rounded-xl bg-white/5 px-3 py-2"><div className="cursor-help text-[10px] font-bold uppercase tracking-widest text-slate-500" data-gloss={label}>{label}</div><div className="font-display text-2xl leading-tight text-white">{value}</div></div>
 
   return (
     <Shell z={z} label={`${player.name}, player profile`} onClose={onClose}>
@@ -251,17 +262,27 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
               {player.bowling && <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.bowling.type}</span>}
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-2"><RatingBadge value={ovr} size="lg" /><div className="hidden text-xs text-slate-300 sm:block"><div className="font-display text-xl leading-none" style={{ color: tierOf(ovr).color }}>{tierOf(ovr).label}</div>overall</div></div>
+          <div className="ml-auto flex items-center gap-2"><RatingBadge value={ovr} size="lg" /><div className="text-xs text-slate-300"><div className="hidden font-display text-xl leading-none sm:block" style={{ color: tierOf(ovr).color }}>{tierOf(ovr).label}</div>overall{ovrBase !== ovr && <div className="mt-0.5 tabular-nums" title="Where he started, and what he is now"><span className="text-slate-400">{ovrBase}→</span><span className="text-white">{ovr}</span> <Delta n={ovr - ovrBase} className="text-sm" /></div>}</div></div>
         </div>
       </div>
       <div className="space-y-5 p-6">
         {inCareer && <section>
           <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">This season</h3>
-          {b || w || potm ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {b && <>{stat('Runs', b.runs)}{stat('Average', f1(average(b)))}{stat('Strike rate', f1(strikeRate(b)))}{stat('Best', `${b.high}${b.highNotOut ? '*' : ''}`)}{stat('50s / 100s', `${b.fifties} / ${b.hundreds}`)}{stat('Fours / sixes', `${b.fours} / ${b.sixes}`)}</>}
-              {w && <>{stat('Wickets', w.wickets)}{stat('Economy', f1(bowlEcon(w), 2))}{stat('Bowling avg', f1(bowlAverage(w)))}{stat('Best', `${w.bestW}/${w.bestR}`)}</>}
-              {potm > 0 && stat('Man of the Match', potm)}
+          {b || w || potm || tPlayed ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tPlayed !== undefined && stat('Matches', tPlayed)}{potm > 0 && stat('Man of the Match', potm)}</div>
+              {b && (
+                <div>
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bat apps', b.batApps)}{stat('Runs', b.runs)}{stat('Average', f1(average(b)))}{stat('Strike rate', f1(strikeRate(b)))}{stat('Best', `${b.high}${b.highNotOut ? '*' : ''}`)}{stat('50s / 100s', `${b.fifties} / ${b.hundreds}`)}{stat('Fours / sixes', `${b.fours} / ${b.sixes}`)}</div>
+                </div>
+              )}
+              {w && (
+                <div>
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bowl apps', w.bowlApps)}{stat('Wickets', w.wickets)}{stat('Economy', f1(bowlEcon(w), 2))}{stat('Bowling avg', f1(bowlAverage(w)))}{stat('Best', `${w.bestW}/${w.bestR}`)}{stat('5-wicket hauls', w.fiveW)}</div>
+                </div>
+              )}
             </div>
           ) : <p className="text-sm text-slate-500">Hasn't played a match this season yet.</p>}
         </section>}
@@ -269,11 +290,11 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
         <section className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
           <div className="space-y-1.5">
             <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Batting</h3>
-            <StatBar label="Technique" value={player.batting.technique} color={accent} /><StatBar label="Power" value={player.batting.power} color={accent} /><StatBar label="Temperament" value={player.batting.temperament} color={accent} /><StatBar label="Running" value={player.batting.running} color={accent} />
+            <StatBar label="Technique" value={player.batting.technique} base={baseP?.batting.technique} color={accent} /><StatBar label="Power" value={player.batting.power} base={baseP?.batting.power} color={accent} /><StatBar label="Temperament" value={player.batting.temperament} base={baseP?.batting.temperament} color={accent} /><StatBar label="Running" value={player.batting.running} base={baseP?.batting.running} color={accent} />
           </div>
           <div className="space-y-1.5">
             <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Bowling{player.bowling ? ` · ${player.bowling.type}` : ''} & fielding</h3>
-            {player.bowling ? <><StatBar label="Accuracy" value={player.bowling.accuracy} color={accent} /><StatBar label="Variation" value={player.bowling.variation} color={accent} /><StatBar label="Stamina" value={player.bowling.stamina} color={accent} /></> : <p className="text-sm text-slate-500">Does not bowl.</p>}
+            {player.bowling ? <><StatBar label="Accuracy" value={player.bowling.accuracy} base={baseP?.bowling?.accuracy} color={accent} /><StatBar label="Variation" value={player.bowling.variation} base={baseP?.bowling?.variation} color={accent} /><StatBar label="Stamina" value={player.bowling.stamina} base={baseP?.bowling?.stamina} color={accent} /></> : <p className="text-sm text-slate-500">Does not bowl.</p>}
             <StatBar label={player.role === 'WK' ? 'Keeping' : 'Fielding'} value={player.fielding} color={accent} />
           </div>
         </section>
@@ -282,13 +303,18 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
 
         {recent.length > 0 && (
           <section>
-            <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Recent matches</h3>
+            <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Recent matches <span className="font-normal normal-case tracking-normal text-slate-500">· the last column is what each match did to his ratings</span></h3>
             <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
               {recent.map((r) => (
                 <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
                   <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(r.date)}</span>
                   <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
                   <span className="shrink-0 tabular-nums text-white">{r.bat ? `${r.bat[1]}${r.bat[5] ? '' : '*'} (${r.bat[2]})` : ''}{r.bat && r.bowl ? ' · ' : ''}{r.bowl ? `${r.bowl[3]}/${r.bowl[2]}` : ''}</span>
+                  <span className="flex w-28 shrink-0 flex-wrap items-center justify-end gap-x-1.5 text-xs" title="How that match changed his ratings">
+                    {r.attrs && Object.keys(r.attrs).length > 0
+                      ? <>{r.change ? <Delta n={r.change} className="text-sm" /> : null}{Object.entries(r.attrs).map(([k, n]) => <span key={k} className="whitespace-nowrap text-slate-400">{ATTR_LABEL[k as AttrKey].slice(0, 3)} <Delta n={n as number} /></span>)}</>
+                      : <span className="text-slate-600">no change</span>}
+                  </span>
                 </button>
               ))}
             </div>
