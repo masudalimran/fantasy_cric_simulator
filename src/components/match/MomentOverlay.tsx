@@ -70,7 +70,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       onClick={onDismiss}
       className="absolute inset-0 z-[45] flex cursor-pointer items-center justify-center gap-[4%] overflow-hidden rounded-2xl px-[5%]"
       style={{ background: wicket ? 'linear-gradient(170deg,#1c0b10,#0a0a12 70%)' : `radial-gradient(ellipse at 28% 70%, ${accent}55, transparent 62%), linear-gradient(160deg,#0b1220,#1a1530)`, boxShadow: wicket ? 'inset 0 0 90px rgba(239,68,68,.38)' : 'inset 0 0 90px rgba(251,191,36,.3)' }}
-      initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+      initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18, delay: 0 } }}
       transition={{ duration: 0.28, delay: moment.delay / 1000 }}
       aria-label={wicket ? 'Wicket' : 'Milestone'}
     >

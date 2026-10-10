@@ -170,6 +170,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const show = (m: Moment) => {
           setMoment(m)
           window.clearTimeout(momentTimer.current)
+          // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
+          if (m.kind === 'wicket' && stopsRef.current.wickets) return
           momentTimer.current = window.setTimeout(() => setMoment(null), m.delay + m.ms + 350)
         }
         if (battingMilestone && outLine) {
@@ -196,12 +198,20 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     (a: Action) => {
       if (a.t === 'forfeit') sfx.sadTrombone()
       else if (a.t !== 'ball') sfx.tick()
+      if (a.t !== 'forfeit') { window.clearTimeout(momentTimer.current); setMoment(null) } // the next delivery takes over from any big moment
       const events = applyAction(match, a)
       liveAct(a)
       announce(events)
     },
     [match, liveAct, announce],
   )
+
+  // Starting auto-play again closes a dismissal that was being held on screen.
+  const wasAuto = useRef(auto)
+  useEffect(() => {
+    if (auto && !wasAuto.current) { window.clearTimeout(momentTimer.current); setMoment(null) }
+    wasAuto.current = auto
+  }, [auto])
 
   // Auto-play: one ball at a time at the chosen speed, but linger on the moments that matter
   // (wickets, boundaries, milestones) so the celebration, banner and sound have time to land.
