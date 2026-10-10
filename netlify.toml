@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Every page has its own URL (/session, /teams/zelda, /match/...), so unknown paths must load the app
+# and let the router handle them. Without this, refreshing any page except the home page gives a 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
