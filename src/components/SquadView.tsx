@@ -9,6 +9,7 @@ import { selectSeason, useStore, useTeams } from '../store/useStore'
 import { useTeamMap } from './season/shared'
 import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
+import { Sheet } from './Sheet'
 import { accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
@@ -135,8 +136,8 @@ function PicksPrompt({ xi, team, needCaptain, needKeeper, captainId, keeperId, o
     </section>
   )
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/65 p-4 backdrop-blur-sm" onClick={onCancel}>
-      <div role="dialog" aria-modal="true" aria-label="Choose captain and wicketkeeper" onClick={(e) => e.stopPropagation()} className="max-h-[90vh] w-full max-w-xl space-y-5 overflow-y-auto rounded-3xl border border-line bg-ink p-6 shadow-2xl">
+    <Sheet label="Choose captain and wicketkeeper" onClose={onCancel} size="md">
+      <div className="space-y-5 p-5 md:p-6">
         <div>
           <h2 className="font-display text-3xl tracking-wide text-white">Before you save</h2>
           <p className="text-sm text-slate-300">{needCaptain && needKeeper ? 'This squad has no captain or wicketkeeper in the playing XI. Pick both.' : needKeeper ? 'There is no wicketkeeper in the playing XI. Pick who will keep.' : 'Your captain is not in the playing XI. Pick a new one.'}</p>
@@ -148,7 +149,7 @@ function PicksPrompt({ xi, team, needCaptain, needKeeper, captainId, keeperId, o
           <button disabled={!cap || (needKeeper && !keep)} onClick={() => onDone(cap as string, needKeeper ? keep : keeperId)} className="rounded-full bg-indigo-500 px-6 py-2 font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40">Save squad</button>
         </div>
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -235,9 +236,9 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
       <Link to={session ? paths.session() : paths.team(team.id)} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← {session ? 'Back to the career' : team.name}</Link>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <TeamCrest team={team} size={64} />
+          <TeamCrest team={team} size={56} />
           <div>
-            <h1 className="font-display text-5xl leading-none tracking-wide">{session ? `${team.name} squad` : 'Squad'}</h1>
+            <h1 className="font-display text-3xl leading-none tracking-wide md:text-5xl">{session ? `${team.name} squad` : 'Squad'}</h1>
             {session && <p className="mt-1 text-sm font-semibold text-amber-300">Only for this career. Your team's own squad outside it doesn't change.</p>}
             <p className="mt-1 text-sm text-slate-400">Drag a player onto another to swap them, or click one and then another. Top 11 play, in batting order.</p>
           </div>
@@ -255,7 +256,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[3fr_2fr]">
         <section>
           <h2 className="mb-3 font-display text-3xl tracking-wide" style={{ color: accent }}>Playing XI</h2>
           <div className="space-y-2">
@@ -278,7 +279,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
 
       {session && season && <RatingChanges team={team} base={teams.find((t) => t.id === id)} season={season} />}
 
-      <div className="sticky bottom-0 mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
         <ul className="space-y-0.5 text-sm">
           {check.errors.map((e) => <li key={e} className="text-red-300">• {e}</li>)}
           {check.warnings.map((e) => <li key={e} className="text-amber-300">• {e}</li>)}

@@ -99,3 +99,69 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
     </div>
   )
 }
+
+/**
+ * The scoreboard for a phone: one tight card with the score and overs in big type, a single line of what matters
+ * (run rate and projection, or what the chase needs), and a thin innings-progress bar. A back button sits at its left.
+ */
+export function MobileScoreboard({ match, you, difficulty, onBack, backLabel }: {
+  match: Match; you?: 0 | 1 | null; difficulty?: Difficulty | null; onBack: () => void; backLabel: string
+}) {
+  const inn = match.current
+  const bat = match.battingSide()
+  const bowl = match.bowlingSide()
+  const cfg = FORMATS[match.format]
+  const total = cfg.overs * 6
+  const rrr = match.requiredRate()
+  const ballsLeft = total - inn.legalBalls
+  const projected = projectedScore(inn.runs, inn.legalBalls, total, parRunsPerOver(match.format, 'middle'))
+  const pp = cfg.phases.powerplay[1] + 1
+  const death = cfg.phases.death[0]
+  const accent = accentOf(bat.team)
+  return (
+    <div className="relative shrink-0 overflow-hidden border-b border-line bg-panel" style={{ paddingTop: 'var(--sat)' }}>
+      <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: `linear-gradient(100deg, ${bat.team.colors.primary}, transparent 60%)` }} />
+      <div className="relative flex items-center gap-2 px-2 pb-1 pt-1.5">
+        <button onClick={onBack} aria-label={backLabel} className="grid h-11 w-9 shrink-0 place-items-center rounded-xl text-slate-200 active:bg-white/10">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>
+        </button>
+        <TeamCrest team={bat.team} size={32} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <motion.span key={`${inn.runs}-${inn.wickets}`} className="inline-block font-display text-[28px] leading-none" style={{ color: accent }} initial={{ scale: 1.2, filter: 'brightness(1.8)' }} animate={{ scale: 1, filter: 'brightness(1)' }} transition={{ duration: 0.3 }}>
+              {inn.runs}<span className="text-slate-500">/</span>{inn.wickets}
+            </motion.span>
+            <span className="font-display text-base leading-none text-white">{oversText(inn.legalBalls)}<span className="text-xs text-slate-400"> / {cfg.overs}</span></span>
+          </div>
+          <div className="truncate text-[10px] font-semibold leading-tight text-slate-200">
+            {bat.team.name}<Who side={inn.battingSide} you={you} />
+            <span className="font-normal text-slate-400"> · {inn.index === 0 ? '1st' : '2nd'} inns · {match.format.toUpperCase()}</span>
+          </div>
+        </div>
+        <div className="shrink-0 pl-1 text-right">
+          {inn.target !== null ? (
+            <>
+              <div className="font-display text-base leading-none text-white">Need {Math.max(inn.target - inn.runs, 0)}</div>
+              <div className="text-[10px] text-slate-300">off {ballsLeft} · RRR <b className="text-white">{rrr !== null ? rrr.toFixed(2) : '-'}</b></div>
+            </>
+          ) : (
+            <>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Projected</div>
+              <div className="font-display text-base leading-none text-white">{projected}</div>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="relative flex items-center justify-between gap-2 px-3 pb-1.5 text-[10px] text-slate-300">
+        <span>CRR <b className="text-white">{runRate(inn)}</b>{inn.target !== null && <> · Target <b className="text-white">{inn.target}</b></>}</span>
+        <span className="truncate text-slate-400">vs {bowl.team.name}<Who side={(1 - inn.battingSide) as 0 | 1} you={you} />{difficulty && you !== null && you !== undefined && <span className="ml-1.5 font-bold" style={{ color: LEVEL_COLOR[difficulty] }}>{DIFFICULTIES[difficulty].label}</span>}</span>
+        {inn.freeHit && <span className="rounded bg-amber-400 px-1.5 py-px text-[10px] font-extrabold text-black">FREE HIT</span>}
+      </div>
+      <div className="relative h-1 bg-white/10">
+        <div className="absolute inset-y-0 left-0" style={{ width: `${(inn.legalBalls / total) * 100}%`, background: accent }} />
+        <div className="absolute inset-y-0 w-px bg-white/60" style={{ left: `${((pp * 6) / total) * 100}%` }} />
+        <div className="absolute inset-y-0 w-px bg-white/60" style={{ left: `${((death * 6) / total) * 100}%` }} />
+      </div>
+    </div>
+  )
+}

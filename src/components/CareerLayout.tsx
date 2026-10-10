@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useIsMobile } from '../hooks'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router'
 import { paths } from '../routes'
 import { DIFFICULTIES } from '../engine/types'
@@ -19,6 +20,7 @@ export function CareerLayout() {
   const session = useStore(selectSession)
   const teams = useTeamMap()
   const { pathname } = useLocation()
+  const mobile = useIsMobile()
   const viewYear = useStore((s) => s.viewYear)
   const setViewYear = useStore((s) => s.setViewYear)
   const viewed = useViewedSeason()
@@ -39,6 +41,43 @@ export function CareerLayout() {
     [paths.stats, 'Stats'],
     ...(mine ? ([[paths.sessionSquad, 'My squad'], [paths.review, 'Season review']] as [string, string][]) : []),
   ]
+
+  if (mobile) {
+    const short: Record<string, string> = { 'My squad': 'Squad', 'Season review': 'Review' }
+    return (
+      <div>
+        <div className="mb-2 flex items-center gap-2.5 rounded-2xl border border-line bg-panel px-3 py-2.5">
+          {mine && <TeamCrest team={mine} size={38} />}
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}</div>
+            <h1 className="truncate font-display text-2xl leading-none tracking-wide text-white">{session.name}</h1>
+            {mine && <div className="truncate text-xs text-slate-300">You manage <b className="text-white">{mine.name}</b></div>}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider" style={{ background: `${COLOR[diff]}26`, color: COLOR[diff] }}>{DIFFICULTIES[diff].label}</span>
+            {canLookBack && viewed.years.length > 1 && (
+              <select value={viewed.year ?? season.year} onChange={(e) => setViewYear(Number(e.target.value) === season.year ? null : Number(e.target.value))} className="rounded-lg border border-line bg-panel-2 px-2 py-1 text-xs font-semibold text-white" aria-label="Choose the year to look at">
+                {[...viewed.years].reverse().map((y) => <option key={y} value={y}>{y}{y === season.year ? ' (now)' : ''}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+        {canLookBack && !viewed.isCurrent && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
+            <span>Looking back at <b>{viewed.year}</b> (read-only)</span>
+            <button onClick={() => setViewYear(null)} className="rounded-lg bg-amber-400 px-2.5 py-1 text-[11px] font-extrabold text-black">Back to {season.year}</button>
+          </div>
+        )}
+        {/* the career's pages as a tab strip that stays in view while you scroll, like a native app */}
+        <nav className="sticky z-30 -mx-4 mb-3 grid gap-0.5 border-b border-line/70 bg-ink/95 px-2 py-1.5 backdrop-blur-xl" style={{ top: 'calc(var(--sat) + 49px)', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} aria-label="Career pages">
+          {tabs.map(([to, label]) => (
+            <NavLink key={to} to={to} className={({ isActive }) => `rounded-xl px-0.5 py-2 text-center text-[11.5px] font-bold tracking-tight transition ${isActive ? 'bg-indigo-500 text-white' : 'text-slate-400 active:bg-white/10'}`}>{short[label] ?? label}</NavLink>
+          ))}
+        </nav>
+        <Outlet />
+      </div>
+    )
+  }
 
   return (
     <div>

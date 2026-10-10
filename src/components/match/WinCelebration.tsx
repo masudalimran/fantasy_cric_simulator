@@ -63,7 +63,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
         <div className="relative mx-auto flex min-h-full max-w-4xl flex-col items-center justify-center px-4 py-8 text-center">
           <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="rounded-full bg-slate-600 px-8 py-1.5 font-display text-3xl tracking-[0.3em] text-white shadow-xl">DEFEAT</motion.div>
           <motion.div className="mt-5" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 0.9 }} transition={{ type: 'spring', delay: 0.2 }}><TeamCrest team={mine.team} size={120} /></motion.div>
-          <h1 className="mt-3 font-display text-5xl leading-none tracking-wide text-slate-200 md:text-6xl">{mine.team.name}</h1>
+          <h1 className="mt-3 font-display text-3xl leading-none tracking-wide text-slate-200 md:text-6xl">{mine.team.name}</h1>
           <div className="mt-2 text-lg font-semibold text-white">{r?.text}</div>
           <div className="mt-1 text-sm text-slate-400">{match.innings.map((i) => `${match.battingSide(i).team.name} ${i.runs}/${i.wickets}`).join('  ·  ')}</div>
           <p className="mt-3 text-slate-300">Chin up. There's always the next match.</p>
@@ -111,7 +111,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
           <div className="mt-5 flex items-center justify-center gap-6">{match.sides.map((s) => <TeamCrest key={s.team.id} team={s.team} size={110} />)}</div>
         )}
 
-        <motion.h1 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="mt-3 font-display text-5xl leading-none tracking-wide md:text-7xl" style={{ color: accent, textShadow: '0 4px 24px rgba(0,0,0,.6)' }}>
+        <motion.h1 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="mt-3 font-display text-3xl leading-none tracking-wide md:text-7xl" style={{ color: accent, textShadow: '0 4px 24px rgba(0,0,0,.6)' }}>
           {team ? team.name : 'THE MATCH IS TIED'}
         </motion.h1>
         {team && <div className="mt-1 text-base text-slate-200">{team.series}{final ? ` · ${final} champions` : ''}</div>}

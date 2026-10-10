@@ -6,6 +6,7 @@ import type { NewsItem } from '../../season/selection'
 import type { Side, TossResult } from '../../engine/types'
 import { PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../ui'
 import { sfx } from '../../audio/sfx'
+import { useIsMobile } from '../../hooks'
 import { SquadDialog } from './SquadDialog'
 
 /** A gold coin that spins six times and lands on the right face. */
@@ -143,6 +144,70 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
     onTossed?.() // from here on the match can't be cancelled, even after a refresh
     sfx.coin()
     setTimeout(() => setStage('done'), 2400)
+  }
+
+  const mobile = useIsMobile()
+  const [shown, setShown] = useState<0 | 1>(mySide ?? 0)
+
+  const result = (
+    <div className="min-w-0 flex-1">
+      {stage === 'idle' && (
+        <>
+          <p className="text-sm text-slate-300"><span className="font-semibold text-white">{caller.name}</span> call <span className="font-semibold uppercase text-amber-300">{toss.call}</span>.</p>
+          <p className="font-display text-2xl leading-tight tracking-wide text-amber-300">Tap the coin to toss</p>
+        </>
+      )}
+      {stage === 'flipping' && <p className="text-lg text-slate-300">Flipping…</p>}
+      {stage === 'done' && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <p className="text-sm text-slate-300">It's <span className="font-bold uppercase text-amber-300">{toss.coin}</span>.</p>
+          <p className="text-base font-bold leading-tight" style={{ color: accentOf(winner) }}>
+            {mustChoose && onChoose ? `${winner.name} won the toss. What will you do?` : `${winner.name} won the toss and chose to ${toss.decision === 'bat' ? 'bat first' : 'bowl first'}.`}
+          </p>
+        </motion.div>
+      )}
+    </div>
+  )
+
+  if (mobile) {
+    return (
+      <div className="fixed inset-0 z-30 flex flex-col bg-ink" style={{ paddingTop: 'var(--sat)' }}>
+        <div className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-2">
+          <h1 className="font-display text-2xl tracking-wider text-white">TEAM SHEETS</h1>
+          <span className="flex-1" />
+          {onCancel && stage === 'idle' && !tossed && <button onClick={onCancel} className="rounded-full border border-line px-3.5 py-1.5 text-xs font-bold text-slate-300 active:bg-white/10">Cancel match</button>}
+          {stage !== 'idle' && <span className="text-[11px] text-slate-500">No turning back</span>}
+        </div>
+        <div className="mx-3 mb-2 grid shrink-0 grid-cols-2 gap-1 rounded-2xl bg-panel p-1" role="tablist">
+          {sides.map((s, i) => (
+            <button key={s.team.id} role="tab" aria-selected={shown === i} onClick={() => setShown(i as 0 | 1)} className={`flex items-center justify-center gap-2 rounded-xl px-2 py-2 text-sm font-bold transition ${shown === i ? 'bg-indigo-500 text-white' : 'text-slate-300'}`}>
+              <TeamCrest team={s.team} size={22} /><span className="truncate">{s.team.short}</span>{mySide === i && <span className="rounded bg-amber-400 px-1 text-[9px] font-extrabold text-black">YOU</span>}
+            </button>
+          ))}
+        </div>
+        <div className="mx-3 flex min-h-0 flex-1 flex-col [&>section]:flex-1">
+          <TeamSheet key={shown} side={sides[shown]} mine={mySide === shown} news={items.filter((n) => n.teamId === sides[shown].team.id)} startXI={startXI?.[shown]} onEdit={editable[shown] && stage === 'idle' && !tossed && onSaveSquad ? () => setEditing(shown) : undefined} />
+        </div>
+        <div className="relative mt-2 flex shrink-0 items-center gap-3 border-t border-line bg-panel px-3 pt-2" style={{ paddingBottom: 'calc(var(--sab) + 10px)' }}>
+          <div className="relative z-10 -mt-7 h-[76px] w-[76px] shrink-0">
+            <button onClick={flip} disabled={stage !== 'idle'} aria-label="Flip the coin" className="block rounded-full active:scale-95"><Coin result={toss.coin} flipping={stage !== 'idle'} size={76} /></button>
+          </div>
+          {result}
+          <div className="flex shrink-0 flex-col gap-1.5">
+            {stage === 'done' && mustChoose && onChoose && (
+              <>
+                <button onClick={() => onChoose('bat')} className="rounded-full bg-emerald-500 px-4 py-2 font-display text-lg tracking-wide text-black active:bg-emerald-400">Bat first</button>
+                <button onClick={() => onChoose('bowl')} className="rounded-full bg-sky-500 px-4 py-2 font-display text-lg tracking-wide text-black active:bg-sky-400">Bowl first</button>
+              </>
+            )}
+            {stage === 'done' && !(mustChoose && onChoose) && <button onClick={onStart} className="rounded-full bg-indigo-500 px-6 py-3 font-display text-xl tracking-wide text-white active:bg-indigo-400">Play ball</button>}
+          </div>
+        </div>
+        {editing !== null && onSaveSquad && (
+          <SquadDialog team={sides[editing].team} scope={careerSquad ? 'for this career' : 'for this match only'} onClose={() => setEditing(null)} onSave={(order, cap, keep) => { onSaveSquad(editing, order, cap, keep); setEditing(null) }} />
+        )}
+      </div>
+    )
   }
 
   return (

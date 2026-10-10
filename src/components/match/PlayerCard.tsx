@@ -1,9 +1,10 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { overall } from '../../data/builders'
 import { keeperIn } from '../../data/squad'
 import type { Match } from '../../engine/match'
 import type { Player, Team } from '../../types'
+import { Sheet } from '../Sheet'
 import { selectSession, useStore, useTeams } from '../../store/useStore'
 import { OverallStats } from '../season/OverallStats'
 import type { BatStat, BowlStat } from '../../season/stats'
@@ -60,13 +61,8 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
   const keeper = keeperIn(match.sides.find((s) => s.team.id === team.id)?.xi ?? [], team.keeperId)?.id === player.id
 
   return (
-    <motion.div className="fixed inset-0 z-[70] grid place-items-center bg-black/65 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div
-        role="dialog" aria-modal="true" aria-label={`${player.name}, player card`}
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 24, scale: 0.94, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 16, scale: 0.96, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-        className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl border border-line bg-ink shadow-2xl"
-      >
+    <Sheet label={`${player.name}, player card`} onClose={onClose} size="sm">
+      <div>
         <div className="relative overflow-hidden px-6 pb-5 pt-6" style={{ background: `linear-gradient(135deg, ${team.colors.primary}cc, ${team.colors.secondary}55 55%, #10131c)` }}>
           <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 rounded-lg bg-black/40 px-2.5 py-1 text-sm font-bold text-white hover:bg-black/60">✕</button>
           <div className="flex items-center gap-4">
@@ -129,8 +125,8 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
             ))}
           </section>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </Sheet>
   )
 }
 

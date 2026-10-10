@@ -1,10 +1,10 @@
-import { motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { overall, teamStrength } from '../../data/builders'
 import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE } from '../../data/squad'
 import { ATTR_LABEL, ratingRows } from '../../season/progression'
 import { useTeams } from '../../store/useStore'
 import type { Player, Team } from '../../types'
+import { Sheet } from '../Sheet'
 import { Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from '../ui'
 
 /**
@@ -25,11 +25,6 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
   const [keeperId, setKeeperId] = useState<string | undefined>(keeperIn(team.players.slice(0, XI_SIZE), team.keeperId)?.id)
   const [selected, setSelected] = useState<number | null>(null)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [onClose])
 
   const check = useMemo(() => validateSquad(players, captainId, keeperId), [players, captainId, keeperId])
   const missing = missingPicks(players, captainId, keeperId)
@@ -65,8 +60,8 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
         </span>
         <button onClick={(e) => { e.stopPropagation(); setCaptainId(p.id) }} title={captainId === p.id ? 'Captain' : 'Make captain'} className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${captainId === p.id ? 'bg-amber-400/25 text-amber-300' : 'text-slate-600 hover:text-slate-200'}`}>C</button>
         <button onClick={(e) => { e.stopPropagation(); setKeeperId(p.id) }} title={effKeeper === p.id ? 'Wicketkeeper' : 'Make wicketkeeper'} className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${effKeeper === p.id ? 'bg-sky-400/25 text-sky-300' : 'text-slate-600 hover:text-slate-200'}`}>WK</button>
-        <span className="flex w-24 shrink-0 items-center justify-end gap-1.5 tabular-nums" title={o && o.now !== o.base ? `Started at ${o.base}, now ${o.now}` : undefined}>
-          {o && o.now !== o.base && <><span className="text-xs text-slate-500">{o.base}→</span><Delta n={o.now - o.base} className="text-xs" /></>}
+        <span className="flex shrink-0 items-center justify-end gap-1.5 tabular-nums md:w-24" title={o && o.now !== o.base ? `Started at ${o.base}, now ${o.now}` : undefined}>
+          {o && o.now !== o.base && <><span className="hidden text-xs text-slate-500 md:inline">{o.base}→</span><Delta n={o.now - o.base} className="text-xs" /></>}
           <RatingBadge value={overall(p)} size="sm" />
         </span>
       </li>
@@ -74,22 +69,19 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
   }
 
   return (
-    <motion.div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div
-        role="dialog" aria-modal="true" aria-label={`${team.name} squad`}
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 20, scale: 0.96, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }}
-        className="my-auto flex max-h-[94vh] w-full max-w-4xl flex-col rounded-3xl border border-line bg-ink shadow-2xl"
-      >
-        <div className="flex shrink-0 items-center gap-3 border-b border-line px-5 py-3">
+    <Sheet label={`${team.name} squad`} onClose={onClose} z={80} size="xl" scroll={false}>
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2.5 md:px-5 md:py-3">
           <TeamCrest team={team} size={44} />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-3xl leading-none tracking-wide text-white">{team.name} squad</h2>
-            <p className="text-xs text-slate-400">Click a player, then another, to swap them. The top 11 play in this batting order. Saved {scope}. Green and red show how a rating has moved since the player started.</p>
+            <h2 className="truncate font-display text-2xl leading-none tracking-wide text-white md:text-3xl">{team.name} squad</h2>
+            <p className="hidden text-xs text-slate-400 md:block">Click a player, then another, to swap them. The top 11 play in this batting order. Saved {scope}. Green and red show how a rating has moved since the player started.</p>
+            <p className="text-[11px] text-slate-400 md:hidden">Tap two players to swap them · saved {scope}</p>
           </div>
-          <div className="text-center"><RatingBadge value={teamStrength({ ...team, players: players.slice(0, XI_SIZE) })} size="md" /><div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">XI rating</div></div>
-          <button onClick={() => { const xi = autoPickXI(players); setPlayers(xi); setKeeperId(keeperIn(xi.slice(0, XI_SIZE))?.id); setSelected(null) }} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-indigo-400" title="A balanced XI: one keeper, five bowling options, the best of the rest">Auto-pick XI</button>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg border border-line px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400">✕</button>
+          <button onClick={onClose} aria-label="Close" className="order-2 rounded-lg border border-line px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400 md:order-none">✕</button>
+          <div className="order-3 flex w-full items-center gap-3 md:order-none md:w-auto">
+            <div className="text-center"><RatingBadge value={teamStrength({ ...team, players: players.slice(0, XI_SIZE) })} size="md" /><div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">XI rating</div></div>
+            <button onClick={() => { const xi = autoPickXI(players); setPlayers(xi); setKeeperId(keeperIn(xi.slice(0, XI_SIZE))?.id); setSelected(null) }} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-indigo-400" title="A balanced XI: one keeper, five bowling options, the best of the rest">Auto-pick XI</button>
+          </div>
         </div>
 
         <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 md:grid-cols-[3fr_2fr]">
@@ -116,7 +108,6 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
             <button disabled={!dirty || !canSave} onClick={() => onSave(players.map((p) => p.id), captainId, effKeeper)} className="rounded-full bg-indigo-500 px-6 py-2 font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40">Save squad</button>
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+    </Sheet>
   )
 }

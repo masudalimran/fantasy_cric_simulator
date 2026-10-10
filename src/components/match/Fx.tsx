@@ -10,11 +10,11 @@ export interface FxEvent {
 }
 
 const STYLE: Record<FxEvent['kind'], { color: string; size: string }> = {
-  four: { color: '#38bdf8', size: 'text-7xl md:text-8xl' },
-  six: { color: '#f472b6', size: 'text-8xl md:text-9xl' },
-  wicket: { color: '#f87171', size: 'text-8xl md:text-9xl' },
-  milestone: { color: '#fbbf24', size: 'text-7xl md:text-8xl' },
-  win: { color: '#fbbf24', size: 'text-6xl md:text-7xl' },
+  four: { color: '#38bdf8', size: 'text-4xl md:text-8xl' },
+  six: { color: '#f472b6', size: 'text-5xl md:text-9xl' },
+  wicket: { color: '#f87171', size: 'text-5xl md:text-9xl' },
+  milestone: { color: '#fbbf24', size: 'text-4xl md:text-8xl' },
+  win: { color: '#fbbf24', size: 'text-4xl md:text-7xl' },
 }
 
 function burst(fx: FxEvent) {
@@ -59,7 +59,7 @@ export function Fx({ fx }: { fx: FxEvent | null }) {
             animate={{ scale: [0.3, 1.25, 1], opacity: [0, 1, 1], rotate: [-6, 3, 0] }}
             exit={{ scale: 1.4, opacity: 0, transition: { duration: 0.35 } }}
             transition={{ duration: 0.5 }}
-            className={`font-display ${fx.text.length > 14 ? 'text-5xl md:text-6xl' : STYLE[fx.kind].size} max-w-[92vw] text-center tracking-wide`}
+            className={`font-display ${fx.text.length > 14 ? 'text-3xl md:text-6xl' : STYLE[fx.kind].size} max-w-[92vw] text-center tracking-wide`}
             style={{ color: STYLE[fx.kind].color, WebkitTextStroke: '3px #0b0d14', paintOrder: 'stroke fill', textShadow: `0 0 40px ${STYLE[fx.kind].color}99` }}
           >
             {fx.text}

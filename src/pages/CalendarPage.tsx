@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { competitionColor, competitionName, fixtureTeams, FixtureRow, useBaseTeamMap, useTeamMap } from '../components/season/shared'
+import { Sheet } from '../components/Sheet'
 import { PlayerAvatar, TeamCrest } from '../components/ui'
+import { useIsMobile } from '../hooks'
 import { paths } from '../routes'
 import { addDays, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
 import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
@@ -14,6 +17,27 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
   const teams = useTeamMap()
   const shown = fixtures.slice(0, 3)
   const compOf = (f: Fixture) => season.competitions.find((c) => c.id === f.competitionId)
+  const mobile = useIsMobile()
+  if (mobile) {
+    // a phone's day is small: its number, a dot per match in the tournament's colour, and a ring if one of yours is waiting
+    const mineWaiting = fixtures.some((f) => isMine(season, f) && !season.results[f.id])
+    const allPlayed = fixtures.length > 0 && fixtures.every((f) => season.results[f.id])
+    return (
+      <button
+        onClick={onSelect}
+        className={`flex min-h-[54px] flex-col items-center justify-between rounded-xl border px-0.5 py-1 transition active:scale-95 ${
+          selected ? 'border-indigo-400 bg-indigo-400/15' : mineWaiting ? 'border-amber-400 bg-amber-400/10' : today ? 'border-amber-400/70 bg-amber-400/5' : 'border-line bg-panel'
+        } ${inMonth ? '' : 'opacity-30'}`}
+        aria-label={`${formatDate(date)}, ${fixtures.length} match${fixtures.length === 1 ? '' : 'es'}`}
+      >
+        <span className={`text-[13px] font-bold leading-none ${today ? 'text-amber-300' : mineWaiting ? 'text-amber-200' : 'text-slate-300'}`}>{Number(date.slice(8))}</span>
+        <span className="flex max-w-full flex-wrap items-center justify-center gap-[3px] px-0.5">
+          {shown.map((f) => { const comp = compOf(f); return <span key={f.id} className={`h-1.5 w-1.5 rounded-full ${season.results[f.id] ? 'opacity-40' : ''}`} style={{ background: comp ? competitionColor(comp, teams) : '#94a3b8' }} /> })}
+        </span>
+        <span className="h-3 text-[9px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : allPlayed ? <span className="text-emerald-400">✓</span> : mineWaiting ? <span className="text-amber-300">●</span> : ''}</span>
+      </button>
+    )
+  }
   return (
     <button
       onClick={onSelect}
@@ -56,6 +80,7 @@ export function CalendarPage() {
   const updateSeason = useStore((s) => s.updateSeason)
   const session = useStore(selectSession)
   const allTeams = useTeams()
+  const mobile = useIsMobile()
   const teams = useTeamMap()
   const baseTeams = useBaseTeamMap()
   const liveFixtureId = useStore((s) => (s.liveMatch && !s.liveMatch.finished ? (s.liveMatch.fixtureId ?? null) : null))
@@ -204,7 +229,7 @@ export function CalendarPage() {
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-line bg-panel p-4 xl:sticky xl:top-4 xl:self-start">
+        {!mobile && <aside className="rounded-2xl border border-line bg-panel p-4 xl:sticky xl:top-4 xl:self-start">
           {selected ? (
             <>
               <div className="mb-3 flex items-center justify-between">
@@ -241,8 +266,29 @@ export function CalendarPage() {
               </div>
             </div>
           )}
-        </aside>
+        </aside>}
       </div>
+
+      {/* on a phone a tapped day opens as a bottom sheet */}
+      <AnimatePresence>
+        {mobile && selected && (
+          <Sheet label={formatDate(selected)} onClose={() => setParam('day', '')} size="sm">
+            <div className="p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="font-display text-2xl tracking-wide">{formatDate(selected)}</h2>
+                <button
+                  className="rounded-full border border-emerald-400/50 px-3 py-1.5 text-xs font-bold text-emerald-300 disabled:opacity-40"
+                  disabled={!dayFixtures.some((f) => !season.results[f.id] && f.homeId && f.awayId)}
+                  onClick={() => updateSeason((s) => ({ ...simDay(s, selected, baseTeams, false, liveFixtureId), today: selected > s.today ? selected : s.today }))}
+                >
+                  Sim this day
+                </button>
+              </div>
+              {dayFixtures.length === 0 ? <p className="text-sm text-slate-500">No matches on this day.</p> : <div className="space-y-2">{dayFixtures.map((f) => <FixtureRow key={f.id} season={season} fixture={f} teams={teams} showCompetition />)}</div>}
+            </div>
+          </Sheet>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -83,7 +83,7 @@ export function MotmOverlay({ match, awards, onClose, onScorecard }: { match: Ma
 
         {revealed ? (
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <h2 className="font-display text-5xl leading-none tracking-wide text-white md:text-6xl">{entry.p.name}</h2>
+            <h2 className="font-display text-3xl leading-none tracking-wide text-white md:text-6xl">{entry.p.name}</h2>
             <div className="mt-2 flex items-center justify-center gap-2 text-base text-slate-200">
               <TeamCrest team={entry.team} size={30} />
               <span className="font-semibold">{entry.team.name}</span>

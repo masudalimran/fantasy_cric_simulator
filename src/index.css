@@ -13,8 +13,17 @@
   color-scheme: dark;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* no 300ms tap delay or double-tap zoom on buttons and controls, like a native app */
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
+  /* a pull on the page edge shouldn't refresh it or bounce the whole app */
+  overscroll-behavior-y: none;
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, rgba(244, 114, 182, 0.08), transparent 60%),
@@ -22,6 +31,7 @@ body {
   color: #e7e9f1;
   font-family: var(--font-sans);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 input[type='range'] {
@@ -71,5 +81,117 @@ button:disabled {
   * {
     scrollbar-width: thin;
     scrollbar-color: rgb(148 163 184 / 0.35) transparent;
+  }
+}
+
+/* ---- Feels like an app on a phone ------------------------------------------------------------------ */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/* Controls aren't text to select, and long-press shouldn't pop the browser's image/link menu on them. */
+button,
+a,
+[role='button'],
+[role='tab'],
+nav,
+summary,
+img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+@media (max-width: 767px) {
+  /* 16px stops iOS zooming into a field when it is focused */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Pressed feedback on touch screens (hover doesn't exist there) */
+@media (hover: none) {
+  button:not(:disabled):active,
+  a:active,
+  [role='button']:active {
+    transform: scale(0.97);
+    transition: transform 0.08s;
+  }
+}
+
+/* When installed, the app is the whole window: no browser chrome to account for. */
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* A phone never scrolls sideways: anything too wide is clipped at the edge rather than shrinking the whole page. */
+@media (max-width: 767px) {
+  #root {
+    overflow-x: clip;
+  }
+}
+
+/* Big page titles are a size down on a phone so they don't take half the screen. */
+@media (max-width: 767px) {
+  main h1.text-5xl,
+  main h1.md\:text-6xl {
+    font-size: 2.3rem;
+    line-height: 1;
+  }
+}
+
+/* On a phone a grid with no columns named is one column that may shrink (not one that grows to fit its widest child).
+   Written in the base layer so any grid-cols utility still wins. */
+@layer base {
+  @media (max-width: 767px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+/* Tap targets on touch screens stay at least ~32px, except in table headings and tiny inline controls. */
+@media (pointer: coarse) {
+  button:not([aria-label]):not(th button):not([role='tab']):not([role='radio']):not(summary):not(.tap-small),
+  a.rounded-lg,
+  a.rounded-full,
+  a.rounded-xl {
+    min-height: 32px;
+  }
+}
+
+/* Buttons are trimmed on a phone: Tailwind's padding, gaps and heights all come from one spacing unit, so giving
+   buttons a smaller unit makes them tighter all round (about 24% less) without touching the cards around them. */
+@media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
+  button:not([aria-label]):not([role='tab']):not([role='radio']):not([role='switch']):not(.tap-large),
+  a.rounded-lg,
+  a.rounded-full,
+  a.rounded-xl {
+    --spacing: 0.19rem;
+  }
+}
+
+/* Type and spacing are sized in rem, so a smaller root makes the whole interface a touch denser on a phone
+   (about 12% down from 16px). Desktop keeps the browser default. */
+@media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
+  html {
+    font-size: 14px;
   }
 }

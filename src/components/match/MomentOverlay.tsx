@@ -79,8 +79,10 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
   const milestone = moment.kind === 'milestone'
   const intro = moment.kind === 'batsman' || moment.kind === 'bowler'
   const accent = accentOf(moment.team)
-  const fig = Math.max(110, Math.min(w * 0.3, 210))
-  const scale = Math.max(0.62, Math.min(w / 730, 1.1))
+  // narrow (a phone): the portrait goes on top and the words below it; wide: side by side as before
+  const stacked = w < 520
+  const fig = stacked ? Math.max(84, Math.min(w * 0.3, 118)) : Math.max(110, Math.min(w * 0.3, 210))
+  const scale = stacked ? Math.max(0.5, Math.min(w / 640, 0.66)) : Math.max(0.62, Math.min(w / 730, 1.1))
   const mood: Mood = wicket ? 'sad' : milestone ? (moment.big ? 'victory' : 'cheer') : 'intro'
   const titleColor = wicket ? '#f87171' : milestone ? '#fbbf24' : accent
   const Badge = wicket ? StumpsIcon : milestone ? StarIcon : moment.kind === 'bowler' ? BallIcon : BatIcon
@@ -94,7 +96,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       ref={box}
       data-moment={moment.kind}
       onClick={onDismiss}
-      className="absolute inset-0 z-[45] flex cursor-pointer items-center justify-center gap-[4%] overflow-hidden rounded-2xl px-[5%]"
+      className={`absolute inset-0 z-[45] flex cursor-pointer justify-center overflow-hidden rounded-2xl ${stacked ? 'flex-col items-center gap-1.5 px-3 text-center' : 'items-center gap-[4%] px-[5%]'}`}
       style={{ background: bg, boxShadow: wicket ? 'inset 0 0 90px rgba(239,68,68,.38)' : milestone ? 'inset 0 0 90px rgba(251,191,36,.3)' : `inset 0 0 80px ${accent}44` }}
       initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18, delay: 0 } }}
       transition={{ duration: 0.28, delay: moment.delay / 1000 }}
@@ -104,7 +106,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         <>
           {/* time left, and a way out: click anywhere to carry on */}
           <motion.div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 origin-left" style={{ background: accent }} initial={{ scaleX: 1 }} animate={{ scaleX: 0 }} transition={{ duration: moment.ms / 1000 + 0.35, delay: moment.delay / 1000, ease: 'linear' }} />
-          <div className="pointer-events-none absolute bottom-2.5 right-3 rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Click anywhere to continue</div>
+          <div className={`pointer-events-none absolute right-3 rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 ${stacked ? 'top-2' : 'bottom-2.5'}`}>{stacked ? 'Tap to continue' : 'Click anywhere to continue'}</div>
         </>
       )}
       {wicket ? <Rain /> : milestone ? (
@@ -126,7 +128,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </div>
 
       <motion.div
-        className="relative min-w-0 max-w-[56%]"
+        className={`relative min-w-0 ${stacked ? 'w-full max-w-full' : 'max-w-[56%]'}`}
         initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: moment.delay / 1000 + 0.15, type: 'spring', stiffness: 200, damping: 18 }}
       >
         <div
@@ -135,18 +137,18 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         >
           {moment.title}
         </div>
-        <div className="mt-1 flex items-center gap-2">
+        <div className={`mt-1 flex items-center gap-2 ${stacked ? 'justify-center' : ''}`}>
           <div className="font-bold leading-tight text-white" style={{ fontSize: (intro ? 28 : 22) * scale }}>{moment.player.name}</div>
           {moment.rating !== undefined && <RatingBadge value={moment.rating} size="sm" />}
         </div>
         <div className="text-slate-300" style={{ fontSize: 13 * scale }}>{moment.team.name}</div>
-        <div className="mt-2 space-y-0.5">
+        <div className="mt-1 space-y-0.5">
           {moment.lines.map((l, i) => (
             <div key={i} className={i === 0 ? 'font-extrabold text-white' : 'text-slate-300'} style={{ fontSize: (i === 0 ? 19 : 14) * scale }}>{l}</div>
           ))}
         </div>
         {moment.tiles && moment.tiles.length > 0 && (
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <div className={`grid grid-cols-3 gap-1.5 ${stacked ? 'mt-2 mx-auto max-w-sm' : 'mt-3'}`}>
             {moment.tiles.map((t, i) => (
               <motion.div key={t.label} className="rounded-lg bg-white/10 px-2 py-1 text-center" initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: moment.delay / 1000 + 0.35 + i * 0.07 }}>
                 <div className="font-display leading-none text-white" style={{ fontSize: 22 * scale }}>{t.value}</div>

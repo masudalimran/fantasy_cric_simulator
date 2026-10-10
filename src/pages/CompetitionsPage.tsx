@@ -255,7 +255,7 @@ export function CompetitionsPage() {
     <div>
       <h2 className="font-display text-4xl tracking-wide">Tournaments <span className="text-slate-500">{season.year}</span></h2>
       <p className="mb-4 text-sm text-slate-400">Every tournament was founded by one team. Friendly series fill the gaps so everyone meets everyone.</p>
-      <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* phones: a drop-down; wide screens: the list stays beside the table */}
         <select value={showAll ? 'all' : comp?.id ?? ''} onChange={(e) => navigate(paths.competition(e.target.value))} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm lg:hidden" aria-label="Choose a tournament">
           <option value="all">All tournaments</option>

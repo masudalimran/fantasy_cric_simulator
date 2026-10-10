@@ -26,12 +26,12 @@ export function Scorecard({ match }: { match: Match }) {
             <div className="text-[11px] font-bold uppercase tracking-widest text-slate-300">
               {inn.index === 0 ? '1st innings' : '2nd innings'}{live && <span className="ml-2 rounded bg-red-500 px-1.5 py-px text-[9px] font-extrabold tracking-wider text-white">LIVE</span>}
             </div>
-            <div className="truncate text-base font-bold leading-tight text-white">{bat.team.name}</div>
-            <div className="truncate text-xs text-slate-400">{bat.team.series}</div>
+            <div className="truncate text-sm font-bold leading-tight text-white md:text-base">{bat.team.name}</div>
+            <div className="truncate text-[11px] text-slate-400 md:text-xs">{bat.team.series}</div>
           </div>
           <div className="ml-auto shrink-0 text-right">
-            <div className="font-display text-4xl leading-none" style={{ color: accentOf(bat.team) }}>{inn.runs}<span className="text-slate-500">/</span>{inn.wickets}</div>
-            <div className="mt-0.5 text-xs text-slate-300">{oversText(inn.legalBalls)} ov · RR {runRate(inn)}</div>
+            <div className="font-display text-2xl leading-none md:text-4xl" style={{ color: accentOf(bat.team) }}>{inn.runs}<span className="text-slate-500">/</span>{inn.wickets}</div>
+            <div className="mt-0.5 text-[11px] text-slate-300 md:text-xs">{oversText(inn.legalBalls)} ov · RR {runRate(inn)}</div>
           </div>
         </div>
         {match.innings.length > 1 && (

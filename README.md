@@ -115,6 +115,34 @@ a screen that mentions a match, player or team, link it the same way.
 
 ---
 
+## On a phone
+
+The app is built to feel like a native app on a phone (the desktop layout is unchanged):
+
+- **Installable (PWA)**: `public/manifest.webmanifest`, icons in `public/icons`, and a small service worker
+  (`public/sw.js`, registered only in the built app) so it opens instantly and works offline after the first visit.
+  Android/Chrome offer a real install prompt; on an iPhone use Share, then Add to Home Screen. The **More** sheet
+  explains it. `index.html` sets the theme colour, safe-area handling (`viewport-fit=cover`) and the iOS app meta tags.
+- **Shell**: a slim top bar and a bottom tab bar (Teams, Career, a big Play button, More). The More sheet holds Backup,
+  Sound, Player images and Install. While a match is on, both bars go away: the match is a full-screen game.
+- **The match screen** is its own layout on a phone: compact scoreboard with a back button, the field, batsman, non-striker
+  and bowler cells, the over and partnership line, then a scrolling Scorecard / Commentary / Stats panel, and a thumb bar
+  at the bottom (controls, a big NEXT BALL, auto-play). Wickets, boundaries and milestones buzz on phones that support
+  it. Held sideways, the field fills the left and everything else sits beside it. Introductions and big moments stack
+  portrait-over-text and say "Tap to continue".
+- **Toss screen**: the two team sheets are tabs; the coin sits in a bar at the bottom, in thumb reach.
+- **Popups are bottom sheets** (`components/Sheet.tsx`): they slide up, have a grab handle, and drag down to dismiss.
+  On a computer the same component is a centred card.
+- **Career pages**: a compact header with a sticky tab strip, a calendar of dots (tap a day for a sheet of its matches),
+  tables with a sticky first column, and a team chooser sheet on the Play page.
+- Layout helpers: `useIsMobile` / `useIsLandscapePhone` in `src/hooks.ts`, safe-area variables (`--sat`, `--sab`) in
+  `index.css`, and `max-md:` classes. Anything phone-specific is behind these so the desktop view stays as it was.
+- On a phone the root font size is 14px (browser default 16px on a computer), so every rem-based size and gap is about
+  12% tighter; the match screen's big numbers are smaller again on top of that.
+- Buttons are trimmed on a phone too: they get a smaller spacing unit (`--spacing: 0.19rem` in `index.css`), so their
+  padding, gaps and heights are about a quarter tighter, with a 32px minimum height for touch.
+- Test it on a real phone with `npm run dev -- --host` (same Wi-Fi) or the Netlify deploy.
+
 ## How it works
 
 - **Stack**: Vite, React 19, TypeScript, Tailwind v4, Zustand (persisted), React Router, Framer Motion, Recharts,

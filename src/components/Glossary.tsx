@@ -27,12 +27,23 @@ export function Glossary() {
       setTip({ text, x: Math.max(130, Math.min(window.innerWidth - 130, rect.left + rect.width / 2)), y: below ? rect.bottom + 8 : rect.top - 8, below })
     }
     const hide = () => setTip(null)
+    // touch screens have no hover: a tap on a heading or rating name shows its meaning for a few seconds
+    let timer = 0
+    const tap = (e: Event) => {
+      if (!window.matchMedia('(hover: none)').matches) return
+      const found = textFor(e.target instanceof Element ? e.target : null)
+      window.clearTimeout(timer)
+      if (!found) return setTip(null)
+      show(e)
+      timer = window.setTimeout(() => setTip(null), 3500)
+    }
+    document.addEventListener('click', tap)
     document.addEventListener('mouseover', show)
     document.addEventListener('focusin', show)
     document.addEventListener('mouseleave', hide)
     window.addEventListener('scroll', hide, true)
     document.addEventListener('keydown', hide)
-    return () => { document.removeEventListener('mouseover', show); document.removeEventListener('focusin', show); document.removeEventListener('mouseleave', hide); window.removeEventListener('scroll', hide, true); document.removeEventListener('keydown', hide) }
+    return () => { window.clearTimeout(timer); document.removeEventListener('click', tap); document.removeEventListener('mouseover', show); document.removeEventListener('focusin', show); document.removeEventListener('mouseleave', hide); window.removeEventListener('scroll', hide, true); document.removeEventListener('keydown', hide) }
   }, [])
   if (!tip) return null
   return (

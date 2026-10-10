@@ -173,7 +173,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
       <section className="bg-black/20 px-3 py-2">
         {!askForfeit ? (
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] leading-tight text-slate-500">Keys: Space next ball · O finish over · P auto-play · C this panel</p>
+            <p className="hidden text-[11px] leading-tight text-slate-500 [@media(hover:hover)]:block">Keys: Space next ball · O finish over · P auto-play · C this panel</p>
             {!spectating && <button className="shrink-0 rounded-lg border border-red-500/60 px-2.5 py-1.5 text-[12px] font-bold text-red-300 hover:bg-red-500/15" onClick={() => setAskForfeit(true)}>Forfeit…</button>}
           </div>
         ) : (

@@ -1,16 +1,10 @@
-import { motion } from 'framer-motion'
-import { useEffect } from 'react'
 import type { Match } from '../../engine/match'
+import { Sheet } from '../Sheet'
 import { PlayerAvatar, TeamCrest, accentOf } from '../ui'
 import { oversText } from './format'
 
 /** The result in the style of a TV graphic: each team's score, its two best batsmen and its two best bowlers. */
 export function MatchSummary({ match, onClose }: { match: Match; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'Enter') { e.stopPropagation(); onClose() } }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [onClose])
 
   const firstSide = (match.innings[0]?.battingSide ?? 0) as 0 | 1
   const panel = (side: 0 | 1) => {
@@ -60,13 +54,8 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
   }
 
   return (
-    <motion.div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div
-        role="dialog" aria-modal="true" aria-label="Match summary" data-match-summary
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 24, scale: 0.95, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 16, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-        className="w-full max-w-3xl rounded-3xl border border-line bg-ink p-5 shadow-2xl"
-      >
+    <Sheet label="Match summary" onClose={onClose} size="lg">
+      <div data-match-summary className="p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <div className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">Match summary</div>
@@ -75,7 +64,7 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
           <button onClick={onClose} aria-label="Close" className="rounded-lg border border-line px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400">✕</button>
         </div>
         <div className="grid gap-4 md:grid-cols-2">{[firstSide, (1 - firstSide) as 0 | 1].map(panel)}</div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </Sheet>
   )
 }

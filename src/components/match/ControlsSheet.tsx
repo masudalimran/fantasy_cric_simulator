@@ -2,6 +2,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect } from 'react'
 import type { Match } from '../../engine/match'
 import type { Action } from '../../engine/replay'
+import { useIsMobile } from '../../hooks'
+import { Sheet } from '../Sheet'
 import { ControlDeck, type AutoStops } from './ControlDeck'
 
 type Auto = 0 | 1 | 2 | 4
@@ -39,13 +41,16 @@ interface DockProps {
   spectating?: boolean
   stops: AutoStops
   setStops: (s: AutoStops) => void
+  /** On a phone the bottom bar has the buttons, so the floating ones are left out. */
+  hideDock?: boolean
 }
 
 /**
  * The match controls live in a panel you open on demand, so the field and scorecard get the screen.
  * A small floating dock keeps the two things you do most within reach: the next ball and the panel.
  */
-export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops }: DockProps) {
+export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops, hideDock = false }: DockProps) {
+  const mobile = useIsMobile()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -58,7 +63,7 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
   return (
     <>
       {/* floating dock: round icon buttons in a row, each explained by a tooltip */}
-      <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
+      {!hideDock && <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
         <Tip label="Next ball" hint="Space">
           <button onClick={() => act({ t: 'ball' })} aria-label="Next ball" className="grid h-12 w-12 place-items-center rounded-full bg-emerald-500 text-black transition hover:bg-emerald-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
@@ -83,11 +88,16 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
             <Gear />
           </button>
         </Tip>
-      </div>
+      </div>}
 
       {/* the panel */}
       <AnimatePresence>
-        {open && (
+        {open && mobile && (
+          <Sheet label="Match controls" onClose={() => setOpen(false)} z={80} size="sm">
+            <div className="p-2.5"><ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={mySide} spectating={spectating} stops={stops} setStops={setStops} /></div>
+          </Sheet>
+        )}
+        {open && !mobile && (
           <motion.div className="fixed inset-0 z-[60] bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)}>
             <motion.aside
               role="dialog" aria-modal="true" aria-label="Match controls"

@@ -95,3 +95,51 @@ export function NowPlaying({ match, displayOver }: { match: Match; displayOver: 
     </div>
   )
 }
+
+/** Batsman, non-striker and bowler as three small cells in a row (a phone has no room for three tall cards). */
+export function MobileNowPlaying({ match, displayOver }: { match: Match; displayOver: number }) {
+  const inn = match.current
+  const bat = match.battingSide()
+  const bowl = match.bowlingSide()
+  const strikerLine = inn.batters.find((b) => b.id === inn.strikerId)
+  const nonLine = inn.batters.find((b) => b.id === inn.nonStrikerId)
+  const bowlerId = inn.bowlerId ?? inn.prevBowlerId
+  const bowler = bowlerId ? match.player(bowlerId) : null
+  const bowlerLine = bowlerId ? inn.bowlers.get(bowlerId) : undefined
+  const overEvents = inn.log.filter((e) => e.over === displayOver)
+  const lastWicket = [...inn.log].reverse().findIndex((e) => e.wicket)
+  const sinceWicket = lastWicket === -1 ? inn.log : inn.log.slice(inn.log.length - lastWicket)
+  const partnership = { runs: sinceWicket.reduce((s, e) => s + e.total, 0), balls: sinceWicket.filter((e) => e.legal).length }
+
+  const cell = (kind: keyof typeof ACCENT, avatar: React.ReactNode, name: string, big: React.ReactNode, small: React.ReactNode) => (
+    <div className="relative min-w-0 overflow-hidden rounded-xl border border-line bg-panel-2 px-2 pb-1.5 pt-2">
+      <div className="absolute inset-x-0 top-0 h-1" style={{ background: ACCENT[kind].bar }} />
+      <div className="flex items-center gap-1.5">
+        {avatar}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[11px] font-bold leading-tight text-white">{name}</div>
+          <div className="font-display text-base leading-tight text-white">{big}</div>
+        </div>
+      </div>
+      <div className="mt-0.5 truncate text-[9px] text-slate-400">{small}</div>
+    </div>
+  )
+
+  return (
+    <div className="shrink-0 space-y-1.5 border-b border-line bg-ink px-2 py-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
+        {strikerLine && cell('striker', <ClickAvatar player={match.player(strikerLine.id)} team={bat.team} size={30} />, match.player(strikerLine.id).name, <>{strikerLine.runs}<span className="ml-0.5 font-sans text-[10px] text-slate-300">({strikerLine.balls})</span></>, <><b className="text-amber-300">ON STRIKE</b> · SR {strikeRate(strikerLine.runs, strikerLine.balls)}</>)}
+        {nonLine && cell('nonstriker', <ClickAvatar player={match.player(nonLine.id)} team={bat.team} size={30} />, match.player(nonLine.id).name, <>{nonLine.runs}<span className="ml-0.5 font-sans text-[10px] text-slate-300">({nonLine.balls})</span></>, <>Non-striker · 4s {nonLine.fours} 6s {nonLine.sixes}</>)}
+        {bowler && cell('bowler', <ClickAvatar player={bowler} team={bowl.team} size={30} />, bowler.name, bowlerLine ? `${oversText(bowlerLine.legalBalls)}-${bowlerLine.maidens}-${bowlerLine.runs}-${bowlerLine.wickets}` : '0-0-0-0', <><b className="text-red-300">BOWLING</b> · {bowlerLine ? `Econ ${economy(bowlerLine)}` : bowler.bowling?.type ?? ''}</>)}
+      </div>
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="mr-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">Over {displayOver + 1}</span>
+          {overEvents.length === 0 && <span className="text-[11px] text-slate-500">no balls yet</span>}
+          {overEvents.map((e) => { const c = chip(e); return <motion.span key={e.seq} initial={{ scale: 0 }} animate={{ scale: 1 }} className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold ${c.c}`}>{c.t}</motion.span> })}
+        </div>
+        <div className="shrink-0 text-[10px] text-slate-300">Partnership <b className="text-white">{partnership.runs}</b> <span className="text-slate-500">({partnership.balls})</span></div>
+      </div>
+    </div>
+  )
+}

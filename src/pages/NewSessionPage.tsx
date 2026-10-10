@@ -140,7 +140,7 @@ export function NewSessionPage() {
         </div>
       </Step>
 
-      <div className="sticky bottom-0 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
         <div className="text-sm">
           {!me ? (
             <span className="text-amber-300">Choose the team you'll manage.</span>

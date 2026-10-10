@@ -212,8 +212,8 @@ export function StatsPage() {
       <p className="mb-5 text-sm text-slate-400">{collected.matches} matches counted{competitionId ? ` in ${season.competitions.find((c) => c.id === competitionId)?.name}` : ' across the whole season'}.</p>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex overflow-hidden rounded-full border border-line text-sm">
-          {TABS.map((t) => <button key={t.id} onClick={() => set('tab', t.id === 'batting' ? '' : t.id)} className={`px-4 py-1.5 transition ${tab === t.id ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>{t.label}</button>)}
+        <div className="grid w-full grid-cols-3 gap-1 text-sm md:flex md:w-auto md:gap-0 md:overflow-hidden md:rounded-full md:border md:border-line">
+          {TABS.map((t) => <button key={t.id} onClick={() => set('tab', t.id === 'batting' ? '' : t.id)} className={`rounded-xl px-4 py-2.5 transition md:rounded-none md:py-1.5 ${tab === t.id ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-300 hover:text-white md:bg-transparent md:text-slate-400'}`}>{t.label}</button>)}
         </div>
         <select value={competitionId} onChange={(e) => set('scope', e.target.value)} className={sel}>
           <option value="">Whole season</option>

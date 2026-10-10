@@ -17,7 +17,7 @@ export function ResultsPage() {
   const all = useMemo(() => (season ? season.fixtures.filter((f) => season.results[f.id]).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)) : []), [season])
   const list = useMemo(() => all.filter((f) => (!comp || f.competitionId === comp) && (!team || f.homeId === team || f.awayId === team)), [all, comp, team])
   if (!season) return null
-  const sel = 'rounded-lg border border-line bg-panel px-3 py-2 text-sm'
+  const sel = 'w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm sm:w-auto'
   const comps = season.competitions.filter((c) => all.some((f) => f.competitionId === c.id))
   const clubs = season.teamIds.map((id) => teams.get(id)).filter((t): t is NonNullable<typeof t> => !!t).sort((a, b) => a.name.localeCompare(b.name))
 

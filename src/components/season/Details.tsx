@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { overall } from '../../data/builders'
@@ -10,6 +10,7 @@ import type { AttrKey, BatLine, BowlLine, MatchSummary, Season } from '../../sea
 import { useTeams, useViewedSeason } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
+import { Sheet } from '../Sheet'
 import { Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
 import { competitionName, usePlayerIndex, useTeamMap } from './shared'
 
@@ -24,17 +25,10 @@ const overs = (balls: number) => oversText(balls)
 
 function Shell({ z, label, onClose, children }: { z: number; label: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <motion.div className="fixed inset-0 grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" style={{ zIndex: z }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div
-        role="dialog" aria-modal="true" aria-label={label}
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 24, scale: 0.95, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 16, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-        className="relative my-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-line bg-ink shadow-2xl"
-      >
-        <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-lg border border-line bg-black/40 px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400">✕</button>
-        {children}
-      </motion.div>
-    </motion.div>
+    <Sheet z={z} label={label} onClose={onClose} size="lg">
+      <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 hidden rounded-lg border border-line bg-black/40 px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400 md:block">✕</button>
+      {children}
+    </Sheet>
   )
 }
 

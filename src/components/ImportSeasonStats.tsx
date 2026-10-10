@@ -1,8 +1,9 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import { overall } from '../data/builders'
 import { applyShifts } from '../season/progression'
 import { useStore, useTeams } from '../store/useStore'
+import { Sheet } from './Sheet'
 import { Delta, PlayerAvatar } from './ui'
 
 /**
@@ -22,13 +23,7 @@ export function ImportSeasonStats({ open, onClose }: { open: boolean; onClose: (
   const seasons = useMemo(() => (session ? [...(session.history ?? []), session.season] : []), [session])
   const season = seasons.find((s) => s.year === year) ?? seasons[seasons.length - 1]
 
-  useEffect(() => {
-    if (!open) return
-    setDone(null)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  useEffect(() => { if (open) setDone(null) }, [open])
 
   const preview = useMemo(() => {
     if (!season) return { teams: [] as { id: string; after: typeof teams[number] }[], rows: [] as { teamId: string; player: typeof teams[number]['players'][number]; team: typeof teams[number]; before: number; after: number }[] }
@@ -58,13 +53,8 @@ export function ImportSeasonStats({ open, onClose }: { open: boolean; onClose: (
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-black/75 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-          <motion.div
-            role="dialog" aria-modal="true" aria-label="Import stats from a season"
-            onClick={(e) => e.stopPropagation()}
-            initial={{ scale: 0.94, y: 16, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
-            className="my-auto w-full max-w-2xl rounded-3xl border border-line bg-ink p-6 shadow-2xl"
-          >
+        <Sheet label="Import stats from a season" onClose={onClose} z={80} size="md">
+          <div className="p-5 md:p-6">
             <h2 className="font-display text-3xl tracking-wide text-white">Import stats from a season</h2>
             <p className="mt-1 text-sm text-slate-300">Players' ratings move as a career is played. This copies the ratings a season ended with onto the teams themselves, so those players start that way in friendlies and new careers.</p>
 
@@ -112,8 +102,8 @@ export function ImportSeasonStats({ open, onClose }: { open: boolean; onClose: (
               <button onClick={onClose} className="rounded-full border border-line px-4 py-2 text-sm text-slate-300 hover:border-slate-500">{done !== null ? 'Close' : 'Cancel'}</button>
               {done === null && <button disabled={preview.rows.length === 0} onClick={apply} className="rounded-full bg-indigo-500 px-6 py-2 font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40">Apply to my teams</button>}
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </Sheet>
       )}
     </AnimatePresence>
   )

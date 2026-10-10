@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router'
 import { SquadView } from './components/SquadView'
@@ -12,6 +12,8 @@ import { CareerTeamPage } from './pages/CareerTeamPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { CareerLayout } from './components/CareerLayout'
 import { Glossary } from './components/Glossary'
+import { BottomNav, MobileHeader, MoreSheet } from './components/MobileChrome'
+import { useIsMobile } from './hooks'
 import { DetailsProvider } from './components/season/Details'
 import { CompetitionsPage } from './pages/CompetitionsPage'
 import { MatchPage } from './pages/MatchPage'
@@ -168,7 +170,10 @@ export default function App() {
   const live = useStore((s) => s.liveMatch)
   const resuming = !!live && !live.finished
   const playTo = resuming && live ? live.url : paths.play
-  const [menuOpen, setMenuOpen] = useState(false)
+  const mobile = useIsMobile()
+  const [moreOpen, setMoreOpen] = useState(false)
+  // on a phone a match is a full-screen game: no top bar, no tab bar
+  const showChrome = !(mobile && pathname.startsWith('/match/'))
   const lastPath = useRef(pathname)
   useEffect(() => {
     // Flipping between months on the career calendar stays where you are; any other page starts at the top.
@@ -176,14 +181,8 @@ export default function App() {
     const sameCalendar = month.test(lastPath.current) && month.test(pathname)
     lastPath.current = pathname
     if (!sameCalendar) window.scrollTo(0, 0)
-    setMenuOpen(false) // landing on a page closes the drawer
+    setMoreOpen(false) // landing on a page closes the sheet
   }, [pathname])
-  useEffect(() => {
-    if (!menuOpen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [menuOpen])
 
   // While any popup is open (anything marked aria-modal, or data-scroll-lock) the page behind it doesn't scroll.
   useEffect(() => {
@@ -210,8 +209,9 @@ export default function App() {
   return (
     <DetailsProvider>
     <Glossary />
-    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-      <header className="flex items-center justify-between py-5">
+    <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${mobile ? (showChrome ? '' : 'px-2.5') : 'pb-16'}`} style={mobile ? { paddingBottom: showChrome ? 'calc(var(--sab) + 84px)' : 'var(--sab)', paddingLeft: 'max(var(--sal), 1rem)', paddingRight: 'max(var(--sar), 1rem)' } : undefined}>
+      {mobile && showChrome && <MobileHeader resuming={resuming} playTo={playTo} />}
+      <header className="hidden items-center justify-between py-5 md:flex">
         <Link to={paths.teams} className="flex items-baseline gap-2">
           <span className="font-display text-3xl tracking-wider text-white">FANTASY CRIC</span>
           <span className="font-display text-3xl tracking-wider text-indigo-400">SIM</span>
@@ -230,54 +230,9 @@ export default function App() {
           <BackupIcon />
         </nav>
 
-        {/* Phones and small tablets: a menu button that opens a drawer */}
-        <div className="flex items-center gap-2 md:hidden">
-          {resuming && (
-            <NavLink to={playTo} aria-label="Back to your live match" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1.5 font-display text-base leading-none tracking-wide text-black">
-              LIVE <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" /></span>
-            </NavLink>
-          )}
-          <button onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} className="grid h-11 w-11 place-items-center rounded-xl border border-line text-white transition hover:border-slate-400">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-          </button>
-        </div>
       </header>
 
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div className="fixed inset-0 z-[90] bg-black/70 md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenuOpen(false)}>
-            <motion.aside
-              role="dialog" aria-modal="true" aria-label="Menu"
-              onClick={(e) => e.stopPropagation()}
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-              className="absolute right-0 top-0 flex h-full w-[min(86vw,340px)] flex-col bg-ink p-5 shadow-2xl ring-1 ring-line"
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <span className="font-display text-2xl tracking-wider text-white">MENU</span>
-                <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="grid h-11 w-11 place-items-center rounded-xl border border-line text-white">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                <PlayButton to={playTo} resuming={resuming} big />
-                <SessionButton big />
-              </div>
-              <nav className="mt-5 flex flex-col divide-y divide-line border-y border-line">
-                {[[paths.teams, 'Teams'], [paths.backup, 'Backup & transfer']].map(([to, label]) => (
-                  <NavLink key={to} to={to} className={({ isActive }) => `py-3.5 text-lg font-semibold transition ${isActive ? 'text-white' : 'text-slate-300 hover:text-white'}`}>
-                    {({ isActive }) => <span className="flex items-center justify-between">{label}{isActive && <span className="h-2 w-2 rounded-full bg-indigo-400" />}</span>}
-                  </NavLink>
-                ))}
-              </nav>
-              <div className="mt-auto flex items-center justify-between rounded-xl border border-line px-4 py-3">
-                <span className="text-sm font-semibold text-slate-200">Images &amp; sound</span>
-                <span className="flex"><ImageToggle /><SoundToggle /></span>
-              </div>
-            </motion.aside>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <motion.main key={pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+      <motion.main key={pathname} className={mobile && showChrome ? 'pt-3' : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
         <Routes>
           <Route path="/" element={<Navigate to={paths.teams} replace />} />
           <Route path="/teams" element={<TeamsView />} />
@@ -312,6 +267,8 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.main>
+      {mobile && showChrome && <BottomNav resuming={resuming} playTo={playTo} onMore={() => setMoreOpen(true)} />}
+      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </div>
     </DetailsProvider>
   )

@@ -6,8 +6,11 @@ import { Fx, type FxEvent } from '../components/match/Fx'
 import { Commentary, type Tab } from '../components/match/Commentary'
 import { ControlsSheet } from '../components/match/ControlsSheet'
 import type { AutoStops } from '../components/match/ControlDeck'
-import { NowPlaying } from '../components/match/NowPlaying'
-import { Scoreboard } from '../components/match/Scoreboard'
+import { MobileNowPlaying, NowPlaying } from '../components/match/NowPlaying'
+import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
+import { MobileDock } from '../components/match/MobileDock'
+import { MomentOverlay } from '../components/match/MomentOverlay'
+import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
@@ -118,6 +121,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const alreadyPlayed = live.replay
   const navigate = useNavigate()
   const finished = match.isOver
+  const mobile = useIsMobile()
+  const landscape = useIsLandscapePhone()
   // Before the toss you can set your own XI: in a career only your team, in a friendly both sides.
   const editableSides: [boolean, boolean] = live.myTeamId ? [match.mySide === 0, match.mySide === 1] : [true, true]
   // (hooks must all come before the early return for the toss screen below)
@@ -219,6 +224,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (match.isOver) {
         // the celebration (or defeat) screen has its own sound
       } else if (lastEv && events.length <= 12) {
+        if (lastEv.wicket) haptic([40, 50, 40])
+        else if (lastEv.boundary === 6) haptic([20, 30, 20])
+        else if (lastEv.boundary === 4) haptic(18)
         if (lastEv.tags.includes('hat-trick')) sfx.hatTrick()
         else if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'five-wickets')) sfx.milestone()
         else if (lastEv.wicket) sfx.wicket()
@@ -359,32 +367,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const finalName = fixture?.stage === 'Final' ? (() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : undefined })() : undefined
   const btn = 'inline-flex min-h-10 items-center justify-center rounded-xl border border-line bg-panel-2 px-4 text-sm font-bold text-white transition hover:border-indigo-400'
 
-  return (
-    <PlayerCardProvider match={match} career={!!live.fixtureId}>
-    <div className="space-y-4">
-      <Fx fx={fx} />
-      <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting={!auto} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
-      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} />
-      <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
-      <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
-      <Scoreboard match={match} you={match.mySide} difficulty={match.difficulty} />
-
-      {fixture && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-4 py-2 text-sm text-slate-200">
-          <span>{(() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : '' })()} · {fixture.stage}{alreadyPlayed && <span className="ml-2 font-semibold text-amber-300">Already played. This replay doesn't change the record.</span>}</span>
-          <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className="font-semibold text-indigo-300 hover:underline">Back to the career</Link>
-        </div>
-      )}
-
-      {inningsBreak && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-indigo-400/50 bg-indigo-500/15 p-3 text-center text-sm font-semibold text-indigo-100">
-          Innings break. {batSide.team.name} need <b>{inn.target}</b> to win{inn.target ? ` (${(inn.target / cfg.overs).toFixed(2)} an over)` : ''}.
-        </motion.div>
-      )}
-
-      {match.isOver && match.result && (
-        <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-fuchsia-500/10 p-5 text-center">
+  const resultCard = match.isOver && match.result ? (
+<motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-fuchsia-500/10 p-5 text-center">
           <div className="font-display text-4xl tracking-wide text-amber-300">{match.result.text}</div>
           {pom && (
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-100">
@@ -424,7 +408,99 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               : <Link to={paths.play} className={btn}>New match</Link>}
           </div>
         </motion.div>
+  ) : null
+
+  const leave = () => navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play)
+
+  // the same overlays serve the phone and the desktop layout
+  const overlays = (
+    <>
+      <Fx fx={fx} />
+      <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting={!auto} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
+      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} />
+      <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
+      <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
+    </>
+  )
+
+  if (mobile && landscape) {
+    // a phone held sideways: the field on the left, everything else beside it
+    return (
+      <PlayerCardProvider match={match} career={!!live.fixtureId}>
+        {overlays}
+        <div className="fixed inset-0 z-30 flex bg-ink" data-scroll-lock style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
+          <div className="flex min-w-0 flex-[1.3] flex-col">
+            <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the career' : 'Back to Play'} />
+            <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
+              <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
+                <Stage
+                  event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note}
+                />
+              </div>
+              <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col border-l border-line" style={{ paddingTop: 'var(--sat)' }}>
+            <MobileNowPlaying match={match} displayOver={displayOver} />
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
+              {resultCard}
+              <Commentary match={match} tab={tab} setTab={setTab} />
+            </div>
+            {!finished && <MobileDock onBall={() => act({ t: 'ball' })} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+          </div>
+        </div>
+      </PlayerCardProvider>
+    )
+  }
+
+  if (mobile) {
+    return (
+      <PlayerCardProvider match={match} career={!!live.fixtureId}>
+        {overlays}
+        <div className="fixed inset-0 z-30 flex flex-col bg-ink" data-scroll-lock>
+          <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the career' : 'Back to Play'} />
+          <div className="relative shrink-0">
+            <div className="px-2 pb-1 pt-2">
+              <Stage
+                event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note}
+              />
+            </div>
+            <MobileNowPlaying match={match} displayOver={displayOver} />
+            <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
+          </div>
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-2 py-2">
+            {resultCard}
+            <Commentary match={match} tab={tab} setTab={setTab} />
+          </div>
+          {!finished && <MobileDock onBall={() => act({ t: 'ball' })} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+        </div>
+      </PlayerCardProvider>
+    )
+  }
+
+  return (
+    <PlayerCardProvider match={match} career={!!live.fixtureId}>
+    <div className="space-y-4">
+      {overlays}
+      <Scoreboard match={match} you={match.mySide} difficulty={match.difficulty} />
+
+      {fixture && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-4 py-2 text-sm text-slate-200">
+          <span>{(() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : '' })()} · {fixture.stage}{alreadyPlayed && <span className="ml-2 font-semibold text-amber-300">Already played. This replay doesn't change the record.</span>}</span>
+          <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className="font-semibold text-indigo-300 hover:underline">Back to the career</Link>
+        </div>
       )}
+
+      {inningsBreak && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-indigo-400/50 bg-indigo-500/15 p-3 text-center text-sm font-semibold text-indigo-100">
+          Innings break. {batSide.team.name} need <b>{inn.target}</b> to win{inn.target ? ` (${(inn.target / cfg.overs).toFixed(2)} an over)` : ''}.
+        </motion.div>
+      )}
+
+      {resultCard}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* The field and the live mini-scorecard stay pinned in view while the rest of the page scrolls. */}

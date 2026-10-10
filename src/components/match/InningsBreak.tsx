@@ -55,7 +55,7 @@ export function InningsBreak({ match, waiting, onContinue }: { match: Match; wai
               <div className="truncate font-display text-2xl leading-none tracking-wide text-white">{bat.team.name}</div>
               <div className="text-xs text-slate-300">{oversText(inn.legalBalls)} overs · run rate {runRate(inn)} · extras {inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legByes}</div>
             </div>
-            <div className="font-display text-6xl leading-none text-white">{inn.runs}<span className="text-3xl text-slate-400">/{inn.wickets}</span></div>
+            <div className="font-display text-4xl leading-none text-white md:text-6xl">{inn.runs}<span className="text-3xl text-slate-400">/{inn.wickets}</span></div>
           </div>
         </div>
 
