@@ -16,7 +16,7 @@ function currentData(): BackupData {
 
 function Summary({ s }: { s: BackupSummary }) {
   const rows: string[] = []
-  for (const x of s.sessions) rows.push(`Session “${x.name}” (${x.year}): ${x.played} of ${x.total} matches played`)
+  for (const x of s.sessions) rows.push(`Career “${x.name}” (${x.year}): ${x.played} of ${x.total} matches played`)
   if (s.customTeams) rows.push(`${s.customTeams} team${s.customTeams > 1 ? 's' : ''} you created`)
   if (s.editedTeams) rows.push(`${s.editedTeams} built-in team${s.editedTeams > 1 ? 's' : ''} you edited (players, ratings, logos)`)
   if (s.liveMatch) rows.push(`A match in progress: ${s.liveMatch.teams} (${s.liveMatch.format})`)
@@ -94,7 +94,7 @@ export function BackupPage() {
             <svg className="mr-2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" /></svg>
             Download backup
           </button>
-          {isEmpty(now) && <span className="text-sm text-slate-400">Nothing to back up yet. Create a session or edit a team first.</span>}
+          {isEmpty(now) && <span className="text-sm text-slate-400">Nothing to back up yet. Create a career or edit a team first.</span>}
           {downloaded && <span className="text-sm text-emerald-300">Saved as {downloaded}. Check your Downloads folder.</span>}
         </div>
         <p className="mt-3 text-xs text-slate-500">Only image links you pasted travel with the backup. Portrait files stored with the game aren't part of it.</p>
@@ -131,7 +131,7 @@ export function BackupPage() {
             <fieldset className="space-y-2">
               <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">How to bring it in</legend>
               {([
-                ['merge', 'Add to what is on this device (recommended)', 'Keeps everything you have now and adds what is new. Nothing is overwritten: a session with the same name comes in as a separate copy.'],
+                ['merge', 'Add to what is on this device (recommended)', 'Keeps everything you have now and adds what is new. Nothing is overwritten: a career with the same name comes in as a separate copy.'],
                 ['replace', 'Replace everything on this device', 'Makes this device match the file exactly. Anything here that is not in the file is lost.'],
               ] as const).map(([v, title, text]) => (
                 <label key={v} className={`flex cursor-pointer gap-3 rounded-xl border-2 p-3 transition ${mode === v ? (v === 'replace' ? 'border-red-400/70 bg-red-500/10' : 'border-sky-400 bg-sky-400/10') : 'border-line hover:border-slate-500'}`}>
@@ -160,7 +160,7 @@ export function BackupPage() {
               done.report.teamsKept + done.report.editsKept ? `${done.report.teamsKept + done.report.editsKept} already here, so yours were kept` : '',
               done.report.liveMatch === 'taken' ? 'match in progress brought over' : done.report.liveMatch === 'kept' ? 'a match in progress was not brought over because you already have one' : '',
             ].filter(Boolean).join(', ') + '.'}
-            <div className="mt-2 flex gap-4"><Link to={paths.sessions} className="font-semibold text-emerald-300 hover:underline">Go to sessions</Link><Link to={paths.teams} className="font-semibold text-emerald-300 hover:underline">Go to teams</Link></div>
+            <div className="mt-2 flex gap-4"><Link to={paths.sessions} className="font-semibold text-emerald-300 hover:underline">Go to careers</Link><Link to={paths.teams} className="font-semibold text-emerald-300 hover:underline">Go to teams</Link></div>
           </div>
         )}
       </section>

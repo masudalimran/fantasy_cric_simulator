@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { competitionColor, competitionName, fixtureTeams, FixtureRow, useTeamMap } from '../components/season/shared'
-import { DIFFICULTIES } from '../engine/types'
 import { TeamCrest } from '../components/ui'
 import { paths } from '../routes'
 import { addDays, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
@@ -116,15 +115,7 @@ export function CalendarPage() {
     <div>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-5xl tracking-wide">Session <span className="text-slate-500">{session?.name}</span></h1>
-          {myTeam && (
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-              <TeamCrest team={myTeam} size={26} />
-              <span className="text-slate-300">You manage <b className="text-white">{myTeam.name}</b></span>
-              <span className="rounded px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider" style={{ background: { easy: '#34d39926', normal: '#38bdf826', hard: '#fbbf2426', legend: '#fb718526' }[season.difficulty ?? 'normal'], color: { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' }[season.difficulty ?? 'normal'] }} title="Chosen when the session started and fixed for the whole session">{DIFFICULTIES[season.difficulty ?? 'normal'].label} difficulty</span>
-              {(session?.reviews?.length ?? 0) > 0 && <span className="text-xs text-slate-500">· season {session!.reviews.length + 1}</span>}
-            </div>
-          )}
+          <h2 className="font-display text-4xl tracking-wide">Calendar</h2>
           <p className="text-sm text-slate-400">{season.year} · 
             Today is <b className="text-amber-300">{formatDate(season.today)}</b> · {Object.keys(season.results).length}/{season.fixtures.length} matches played · {doneComps}/{season.competitions.length} competitions finished
           </p>
@@ -134,9 +125,6 @@ export function CalendarPage() {
           <button className={btn} disabled={!pending} onClick={simNextDay}>Sim next match day</button>
           <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 7))}>Sim a week</button>
           <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 30))}>Sim 30 days</button>
-          {myTeam && <Link to={paths.sessionSquad} className={btn}>My squad</Link>}
-          {myTeam && <Link to={paths.review} className={btn}>Season review</Link>}
-          <Link to={paths.sessions} className={btn}>Sessions</Link>
         </div>
       </div>
 

@@ -62,8 +62,6 @@ interface State {
   startNextSeason: (review: SeasonReview, next: Season) => void
   openSession: (id: string) => void
   renameSession: (id: string, name: string) => void
-  /** Copies a session, so you can branch from it ("save as"). */
-  duplicateSession: (id: string) => void
   deleteSession: (id: string) => void
   /** Replace the active session's season with the result of `fn`. */
   updateSeason: (fn: (s: Season) => Season) => void
@@ -105,14 +103,6 @@ export const useStore = create<State>()(
         })),
       openSession: (id) => set((st) => (st.sessions.some((x) => x.id === id) ? { activeSessionId: id } : st)),
       renameSession: (id, name) => set((st) => ({ sessions: st.sessions.map((x) => (x.id === id ? { ...x, name: name.trim() || x.name } : x)) })),
-      duplicateSession: (id) =>
-        set((st) => {
-          const src = st.sessions.find((x) => x.id === id)
-          if (!src) return st
-          const now = new Date().toISOString()
-          const copy: SessionFile = { ...src, reviews: [...(src.reviews ?? [])], id: `session-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, name: `${src.name} (copy)`, createdAt: now, updatedAt: now }
-          return { sessions: [...st.sessions, copy] }
-        }),
       deleteSession: (id) =>
         set((st) => {
           const sessions = st.sessions.filter((x) => x.id !== id)

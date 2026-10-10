@@ -174,6 +174,8 @@ export interface RecordEntry {
   fixtureId: string
   teamId?: string
   playerId?: string
+  /** An extra line about the player, e.g. how many of the sixes he hit. */
+  playerNote?: string
 }
 
 export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] {
@@ -204,12 +206,14 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
       }
     }
     let sixes = 0
+    let topSix = { id: '', n: 0 }
     for (const line of res.bat ?? []) {
       const id = roster[line[0]]
       sixes += line[4]
+      if (line[4] > topSix.n) topSix = { id, n: line[4] }
       if (line[1] > highRuns) { highRuns = line[1]; topScore = { label: 'Highest individual score', value: `${line[1]}${line[5] ? '' : '*'} (${line[2]})`, detail: f.stage, fixtureId: f.id, playerId: id } }
     }
-    if (sixes > highSixes) { highSixes = sixes; mostSixes = { label: 'Most sixes in a match', value: `${sixes}`, detail: f.stage, fixtureId: f.id } }
+    if (sixes > highSixes) { highSixes = sixes; mostSixes = { label: 'Most sixes in a match', value: `${sixes}`, detail: f.stage, fixtureId: f.id, playerId: topSix.id || undefined, playerNote: topSix.id ? `hit ${topSix.n} of them` : undefined } }
     for (const line of res.bowl ?? []) {
       const id = roster[line[0]]
       const [, , runs, wk] = line

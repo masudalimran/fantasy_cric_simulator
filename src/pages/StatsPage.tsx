@@ -3,11 +3,13 @@ import { Link, useSearchParams } from 'react-router'
 import { PlayerCell, competitionName, usePlayerIndex, useTeamMap, type PlayerEntry } from '../components/season/shared'
 import { TeamCrest } from '../components/ui'
 import { paths } from '../routes'
+import { formatDate } from '../season/dates'
 import { oversText } from '../components/match/format'
 import {
   average, bowlAverage, bowlStrikeRate, collect, economy, mostValuable, seasonRecords, strikeRate, teamRecords,
-  type Collected, type Scope,
+  type BatStat, type BowlStat, type Collected, type Scope,
 } from '../season/stats'
+import { SortTable, type Col } from '../components/season/SortTable'
 import { selectSeason, useStore } from '../store/useStore'
 import type { MatchFormat, Team } from '../types'
 
@@ -21,8 +23,6 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 
 const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
-const th = 'px-2 py-2 text-right font-medium'
-const td = 'px-2 py-2 text-right tabular-nums text-slate-300'
 
 function Rank({ i, cap }: { i: number; cap?: 'orange' | 'purple' }) {
   return (
@@ -36,89 +36,87 @@ function Rank({ i, cap }: { i: number; cap?: 'orange' | 'purple' }) {
   )
 }
 
+const num = 'font-bold text-white'
+
 function Batting({ c, index }: { c: Collected; index: Map<string, PlayerEntry> }) {
   const rows = [...c.bat.values()].sort((a, b) => b.runs - a.runs || (strikeRate(b) ?? 0) - (strikeRate(a) ?? 0)).slice(0, 30)
-  return (
-    <table className="w-full text-sm">
-      <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-2" /><th className="px-2 py-2 text-left font-medium">Player</th><th className={th}>M</th><th className={th}>Inns</th><th className={th}>Runs</th><th className={th}>HS</th><th className={th}>Avg</th><th className={th}>SR</th><th className={th}>50</th><th className={th}>100</th><th className={th}>4s</th><th className={th}>6s</th></tr></thead>
-      <tbody>
-        {rows.map((s, i) => (
-          <tr key={s.id} className="border-t border-line/60">
-            <Rank i={i} cap="orange" />
-            <td className="px-2 py-1.5"><PlayerCell id={s.id} index={index} /></td>
-            <td className={td}>{s.matches}</td><td className={td}>{s.innings}</td>
-            <td className="px-2 text-right font-bold tabular-nums text-white">{s.runs}</td>
-            <td className={td}>{s.high}{s.highNotOut ? '*' : ''}</td><td className={td}>{f1(average(s))}</td><td className={td}>{f1(strikeRate(s))}</td>
-            <td className={td}>{s.fifties}</td><td className={td}>{s.hundreds}</td><td className={td}>{s.fours}</td><td className={td}>{s.sixes}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
+  const cols: Col<BatStat>[] = [
+    { key: 'player', label: 'Player', align: 'left', get: (s) => index.get(s.id)?.player.name ?? s.id, cell: (s) => <PlayerCell id={s.id} index={index} /> },
+    { key: 'm', label: 'M', get: (s) => s.matches, cell: (s) => s.matches },
+    { key: 'inns', label: 'Inns', get: (s) => s.innings, cell: (s) => s.innings },
+    { key: 'runs', label: 'Runs', get: (s) => s.runs, cell: (s) => <span className={num}>{s.runs}</span> },
+    { key: 'hs', label: 'HS', get: (s) => s.high + (s.highNotOut ? 0.5 : 0), cell: (s) => `${s.high}${s.highNotOut ? '*' : ''}` },
+    { key: 'avg', label: 'Avg', get: (s) => average(s), cell: (s) => f1(average(s)) },
+    { key: 'sr', label: 'SR', get: (s) => strikeRate(s), cell: (s) => f1(strikeRate(s)) },
+    { key: '50', label: '50', get: (s) => s.fifties, cell: (s) => s.fifties },
+    { key: '100', label: '100', get: (s) => s.hundreds, cell: (s) => s.hundreds },
+    { key: '4s', label: '4s', get: (s) => s.fours, cell: (s) => s.fours },
+    { key: '6s', label: '6s', get: (s) => s.sixes, cell: (s) => s.sixes },
+  ]
+  return <SortTable rows={rows} cols={cols} rowKey={(s) => s.id} lead={(i, def) => <Rank i={i} cap={def ? 'orange' : undefined} />} />
 }
 
 function Bowling({ c, index }: { c: Collected; index: Map<string, PlayerEntry> }) {
   const rows = [...c.bowl.values()].sort((a, b) => b.wickets - a.wickets || (economy(a) ?? 99) - (economy(b) ?? 99)).slice(0, 30)
-  return (
-    <table className="w-full text-sm">
-      <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-2" /><th className="px-2 py-2 text-left font-medium">Player</th><th className={th}>M</th><th className={th}>Ov</th><th className={th}>Mdn</th><th className={th}>Runs</th><th className={th}>Wkts</th><th className={th}>Best</th><th className={th}>Avg</th><th className={th}>Econ</th><th className={th}>SR</th><th className={th}>5W</th></tr></thead>
-      <tbody>
-        {rows.map((s, i) => (
-          <tr key={s.id} className="border-t border-line/60">
-            <Rank i={i} cap="purple" />
-            <td className="px-2 py-1.5"><PlayerCell id={s.id} index={index} /></td>
-            <td className={td}>{s.matches}</td><td className={td}>{oversText(s.balls)}</td><td className={td}>{s.maidens}</td><td className={td}>{s.runs}</td>
-            <td className="px-2 text-right font-bold tabular-nums text-white">{s.wickets}</td>
-            <td className={td}>{s.bestW}/{s.bestR}</td><td className={td}>{f1(bowlAverage(s))}</td><td className={td}>{f1(economy(s), 2)}</td><td className={td}>{f1(bowlStrikeRate(s))}</td><td className={td}>{s.fiveW}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
+  const cols: Col<BowlStat>[] = [
+    { key: 'player', label: 'Player', align: 'left', get: (s) => index.get(s.id)?.player.name ?? s.id, cell: (s) => <PlayerCell id={s.id} index={index} /> },
+    { key: 'm', label: 'M', get: (s) => s.matches, cell: (s) => s.matches },
+    { key: 'ov', label: 'Ov', get: (s) => s.balls, cell: (s) => oversText(s.balls) },
+    { key: 'mdn', label: 'Mdn', get: (s) => s.maidens, cell: (s) => s.maidens },
+    { key: 'runs', label: 'Runs', get: (s) => s.runs, cell: (s) => s.runs },
+    { key: 'wkts', label: 'Wkts', get: (s) => s.wickets, cell: (s) => <span className={num}>{s.wickets}</span> },
+    { key: 'best', label: 'Best', get: (s) => s.bestW * 1000 - s.bestR, cell: (s) => `${s.bestW}/${s.bestR}` },
+    { key: 'avg', label: 'Avg', first: 'asc', get: (s) => bowlAverage(s), cell: (s) => f1(bowlAverage(s)) },
+    { key: 'econ', label: 'Econ', first: 'asc', get: (s) => economy(s), cell: (s) => f1(economy(s), 2) },
+    { key: 'sr', label: 'SR', first: 'asc', get: (s) => bowlStrikeRate(s), cell: (s) => f1(bowlStrikeRate(s)) },
+    { key: '5w', label: '5W', get: (s) => s.fiveW, cell: (s) => s.fiveW },
+  ]
+  return <SortTable rows={rows} cols={cols} rowKey={(s) => s.id} lead={(i, def) => <Rank i={i} cap={def ? 'purple' : undefined} />} />
 }
 
 function Awards({ c, index }: { c: Collected; index: Map<string, PlayerEntry> }) {
   const mvp = mostValuable(c, 10)
-  const potm = [...c.potm.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
+  const potm = [...c.potm.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, n]) => ({ id, n }))
   const box = 'rounded-2xl border border-line bg-panel p-4'
+  const name = (id: string) => index.get(id)?.player.name ?? id
+  const mvpCols: Col<{ id: string; points: number }>[] = [
+    { key: 'player', label: 'Player', align: 'left', get: (m) => name(m.id), cell: (m) => <PlayerCell id={m.id} index={index} /> },
+    { key: 'pts', label: 'Points', get: (m) => m.points, cell: (m) => <span className={num}>{Math.round(m.points)}</span> },
+  ]
+  const potmCols: Col<{ id: string; n: number }>[] = [
+    { key: 'player', label: 'Player', align: 'left', get: (m) => name(m.id), cell: (m) => <PlayerCell id={m.id} index={index} /> },
+    { key: 'n', label: 'Awards', get: (m) => m.n, cell: (m) => <span className={num}>{m.n}</span> },
+  ]
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className={box}>
         <h3 className="mb-3 font-display text-2xl tracking-wide text-amber-300">Most valuable players</h3>
-        <table className="w-full text-sm"><tbody>
-          {mvp.map((m, i) => <tr key={m.id} className="border-t border-line/60 first:border-0"><td className="w-8 py-2 text-slate-500">{i + 1}</td><td className="py-1.5"><PlayerCell id={m.id} index={index} /></td><td className="py-2 text-right font-bold tabular-nums text-white">{Math.round(m.points)} <span className="text-[11px] font-normal text-slate-500">pts</span></td></tr>)}
-        </tbody></table>
+        <SortTable rows={mvp} cols={mvpCols} rowKey={(m) => m.id} lead={(i) => <td className="w-8 px-2 text-center text-slate-500">{i + 1}</td>} />
       </section>
       <section className={box}>
         <h3 className="mb-3 font-display text-2xl tracking-wide text-sky-300">Man of the Match awards</h3>
-        <table className="w-full text-sm"><tbody>
-          {potm.map(([id, n], i) => <tr key={id} className="border-t border-line/60 first:border-0"><td className="w-8 py-2 text-slate-500">{i + 1}</td><td className="py-1.5"><PlayerCell id={id} index={index} /></td><td className="py-2 text-right font-bold tabular-nums text-white">{n}</td></tr>)}
-        </tbody></table>
+        <SortTable rows={potm} cols={potmCols} rowKey={(m) => m.id} lead={(i) => <td className="w-8 px-2 text-center text-slate-500">{i + 1}</td>} />
       </section>
     </div>
   )
 }
 
 function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: Map<string, Team> }) {
-  return (
-    <table className="w-full text-sm">
-      <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-2" /><th className="px-2 py-2 text-left font-medium">Team</th><th className={th}>P</th><th className={th}>W</th><th className={th}>L</th><th className={th}>T</th><th className={th}>Win %</th><th className={th}>Titles</th></tr></thead>
-      <tbody>
-        {rows.map((r, i) => {
-          const t = teams.get(r.teamId)
-          return (
-            <tr key={r.teamId} className="border-t border-line/60">
-              <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>
-              <td className="px-2 py-1.5"><Link to={t ? paths.team(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className="font-medium text-slate-100">{t?.name ?? r.teamId}</span></Link></td>
-              <td className={td}>{r.played}</td><td className={td}>{r.won}</td><td className={td}>{r.lost}</td><td className={td}>{r.tied}</td>
-              <td className={td}>{((r.won / Math.max(r.played, 1)) * 100).toFixed(0)}%</td>
-              <td className="px-2 text-right font-bold tabular-nums text-amber-300">{r.titles || ''}</td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  )
+  type Row = (typeof rows)[number]
+  const winPct = (r: Row) => (r.won / Math.max(r.played, 1)) * 100
+  const cols: Col<Row>[] = [
+    { key: 'team', label: 'Team', align: 'left', get: (r) => teams.get(r.teamId)?.name ?? r.teamId, cell: (r) => {
+      const t = teams.get(r.teamId)
+      return <Link to={t ? paths.team(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className="font-medium text-slate-100">{t?.name ?? r.teamId}</span></Link>
+    } },
+    { key: 'p', label: 'P', get: (r) => r.played, cell: (r) => r.played },
+    { key: 'w', label: 'W', get: (r) => r.won, cell: (r) => r.won },
+    { key: 'l', label: 'L', first: 'asc', get: (r) => r.lost, cell: (r) => r.lost },
+    { key: 't', label: 'T', get: (r) => r.tied, cell: (r) => r.tied },
+    { key: 'pct', label: 'Win %', get: winPct, cell: (r) => `${winPct(r).toFixed(0)}%` },
+    { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <span className="font-bold text-amber-300">{r.titles || ''}</span> },
+  ]
+  return <SortTable rows={rows} cols={cols} rowKey={(r) => r.teamId} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} />
 }
 
 export function StatsPage() {
@@ -139,7 +137,7 @@ export function StatsPage() {
   if (!season || !collected) {
     return (
       <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">
-        No session yet. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Create one</Link>.
+        No career yet. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Create one</Link>.
       </div>
     )
   }
@@ -177,6 +175,9 @@ export function StatsPage() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {records.map((r) => {
                 const team = r.teamId ? teams.get(r.teamId) : undefined
+                const fx = season.fixtures.find((f) => f.id === r.fixtureId)
+                const home = fx?.homeId ? teams.get(fx.homeId) : undefined
+                const away = fx?.awayId ? teams.get(fx.awayId) : undefined
                 return (
                   <div key={r.label} className="rounded-2xl border border-line bg-panel p-4">
                     <div className="text-[11px] uppercase tracking-widest text-slate-500">{r.label}</div>
@@ -184,7 +185,14 @@ export function StatsPage() {
                     <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
                       {team && <><TeamCrest team={team} size={22} />{team.name}</>}
                       {r.playerId && <PlayerCell id={r.playerId} index={index} size={26} />}
+                      {r.playerNote && <span className="text-xs text-slate-400">{r.playerNote}</span>}
                     </div>
+                    {home && away && fx && (
+                      <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1.5 text-xs text-slate-200" title="The match it happened in">
+                        <TeamCrest team={home} size={18} /><span className="font-semibold">{home.name}</span><span className="text-slate-500">v</span><TeamCrest team={away} size={18} /><span className="font-semibold">{away.name}</span>
+                        <span className="ml-auto shrink-0 text-slate-500">{formatDate(fx.date)}</span>
+                      </div>
+                    )}
                     <Link to={`${paths.competition(r.fixtureId.split(':')[0])}`} className="mt-2 inline-block text-xs text-indigo-300 hover:underline">{(() => { const c = season.competitions.find((x) => x.id === r.fixtureId.split(':')[0]); return c ? competitionName(c, teams) : '' })()} · {r.detail}</Link>
                   </div>
                 )

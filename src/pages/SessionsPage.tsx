@@ -12,7 +12,7 @@ import { useStore, type SessionFile } from '../store/useStore'
 function SessionCard({ session, active }: { session: SessionFile; active: boolean }) {
   const navigate = useNavigate()
   const teams = useTeamMap()
-  const { openSession, renameSession, duplicateSession, deleteSession } = useStore.getState()
+  const { openSession, renameSession, deleteSession } = useStore.getState()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(session.name)
   const [askDelete, setAskDelete] = useState(false)
@@ -43,7 +43,7 @@ function SessionCard({ session, active }: { session: SessionFile; active: boolea
             <div className="mt-1 flex items-center gap-2 text-sm text-slate-200">
               <TeamCrest team={teams.get(s.myTeamId)!} size={24} />
               <span>You manage <b className="text-white">{teams.get(s.myTeamId)!.name}</b></span>
-              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-200" title="Fixed when the session started">{DIFFICULTIES[s.difficulty ?? 'normal'].label}</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-200" title="Fixed when the career started">{DIFFICULTIES[s.difficulty ?? 'normal'].label}</span>
             </div>
           )}
           <div className="mt-0.5 text-xs text-slate-500">
@@ -65,7 +65,6 @@ function SessionCard({ session, active }: { session: SessionFile; active: boolea
       <div className="mt-4 flex flex-wrap gap-2">
         <button onClick={open} className="rounded-lg bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-400">{active ? 'Continue' : 'Open'}</button>
         <button onClick={() => setEditing(true)} className={btn}>Rename</button>
-        <button onClick={() => duplicateSession(session.id)} className={btn} title="Make a copy to branch from">Duplicate</button>
         <button
           onClick={() => setAskDelete(true)}
           className="rounded-lg border border-red-900 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-950/50"
@@ -73,7 +72,7 @@ function SessionCard({ session, active }: { session: SessionFile; active: boolea
           Delete
         </button>
       </div>
-      <ConfirmDialog open={askDelete} tone="danger" title="Delete this session?" confirmLabel="Delete session" cancelLabel="Keep it" onCancel={() => setAskDelete(false)} onConfirm={() => { deleteSession(session.id); setAskDelete(false) }}>
+      <ConfirmDialog open={askDelete} tone="danger" title="Delete this career?" confirmLabel="Delete career" cancelLabel="Keep it" onCancel={() => setAskDelete(false)} onConfirm={() => { deleteSession(session.id); setAskDelete(false) }}>
         <p><b>{session.name}</b> and all its results ({played} matches played) will be removed. This can't be undone.</p>
       </ConfirmDialog>
     </div>
@@ -89,16 +88,16 @@ export function SessionsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-5xl tracking-wide">Sessions</h1>
-          <p className="text-sm text-slate-400">Each session is its own save file: a year of cricket with its own teams, calendar and results.</p>
+          <h1 className="font-display text-5xl tracking-wide">Careers</h1>
+          <p className="text-sm text-slate-400">Each career is its own save file: you manage one team through year after year of cricket. Continue one, or start a new career.</p>
         </div>
-        <Link to={paths.newSession} className="rounded-full bg-emerald-500 px-6 py-2 font-display text-xl tracking-wide text-black transition hover:bg-emerald-400">+ New session</Link>
+        <Link to={paths.newSession} className="rounded-full bg-emerald-500 px-6 py-2 font-display text-xl tracking-wide text-black transition hover:bg-emerald-400">+ New career</Link>
       </div>
       {sorted.length === 0 ? (
         <div className="mx-auto max-w-xl rounded-3xl border border-dashed border-line p-12 text-center">
-          <div className="font-display text-4xl tracking-wide text-slate-200">No sessions yet</div>
+          <div className="font-display text-4xl tracking-wide text-slate-200">No careers yet</div>
           <p className="mt-2 text-sm text-slate-400">Start one to get a full year of tournaments for the teams you choose.</p>
-          <Link to={paths.newSession} className="mt-5 inline-block rounded-full bg-emerald-500 px-7 py-2.5 font-display text-2xl tracking-wide text-black hover:bg-emerald-400">Start a session</Link>
+          <Link to={paths.newSession} className="mt-5 inline-block rounded-full bg-emerald-500 px-7 py-2.5 font-display text-2xl tracking-wide text-black hover:bg-emerald-400">Start a career</Link>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">{sorted.map((s) => <SessionCard key={s.id} session={s} active={s.id === activeId} />)}</div>

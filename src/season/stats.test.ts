@@ -76,3 +76,16 @@ describe('season stats', () => {
     for (const want of ['Highest team total', 'Highest individual score', 'Best bowling figures']) expect(labels).toContain(want)
   })
 })
+
+describe('most sixes record', () => {
+  it('names the match and the player who hit the most of them', () => {
+    const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
+    let s = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 5 })
+    for (let g = 0; g < 400; g++) { const d = nextMatchDate(s); if (!d || g > 40) break; s = simDay(s, d, teams) }
+    const rec = seasonRecords(s).find((r) => r.label === 'Most sixes in a match')!
+    expect(rec).toBeTruthy()
+    expect(s.fixtures.some((f) => f.id === rec.fixtureId)).toBe(true)
+    expect(rec.playerId).toBeTruthy()
+    expect(rec.playerNote).toMatch(/hit \d+ of them/)
+  })
+})

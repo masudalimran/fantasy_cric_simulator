@@ -73,8 +73,8 @@ export function ReviewPage() {
   const navigate = useNavigate()
   const review = useMemo(() => (season ? buildReview(season, teams) : null), [season, teams])
 
-  if (!season || !session) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">No session yet. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Create one</Link>.</div>
-  if (!review) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">Season reviews are for sessions where you manage a team. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Start a new session</Link> to try it.</div>
+  if (!season || !session) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">No career yet. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Create one</Link>.</div>
+  if (!review) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">Season reviews are for careers where you manage a team. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Start a new career</Link> to try it.</div>
 
   const team = teams.get(review.teamId)!
   const complete = seasonComplete(season)
@@ -97,7 +97,7 @@ export function ReviewPage() {
 
   return (
     <div>
-      <Link to={paths.session()} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← Back to the session</Link>
+      <Link to={paths.session()} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← Back to the career</Link>
       <div className="relative overflow-hidden rounded-3xl border border-line bg-panel p-6" style={{ background: `linear-gradient(110deg, ${team.colors.primary}99, #10131c 65%)` }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-5">
@@ -109,7 +109,7 @@ export function ReviewPage() {
             </div>
           </div>
           <div className="text-right">
-            <div className="rounded-xl px-4 py-2 font-display text-3xl tracking-wide" style={{ background: `${COLOR[review.difficulty]}22`, color: COLOR[review.difficulty] }} title="The difficulty chosen at the start of the session">{DIFFICULTIES[review.difficulty].label}</div>
+            <div className="rounded-xl px-4 py-2 font-display text-3xl tracking-wide" style={{ background: `${COLOR[review.difficulty]}22`, color: COLOR[review.difficulty] }} title="The difficulty chosen at the start of the career">{DIFFICULTIES[review.difficulty].label}</div>
             <div className="mt-1 text-xs text-slate-300">difficulty {complete ? 'you finished on' : 'you are playing on'}</div>
             <div className={`mt-2 inline-block rounded-full px-3 py-0.5 text-xs font-bold ${complete ? 'bg-emerald-500 text-black' : 'bg-amber-400 text-black'}`}>{complete ? 'Season complete' : 'In progress'}</div>
           </div>

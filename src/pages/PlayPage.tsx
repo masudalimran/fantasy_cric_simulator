@@ -72,7 +72,7 @@ export function PlayPage() {
         </div>
       )}
       <ConfirmDialog open={askDiscard} tone="danger" title="Discard this match?" confirmLabel="Discard match" cancelLabel="Keep playing" onCancel={() => setAskDiscard(false)} onConfirm={() => { discardLive(); setAskDiscard(false) }}>
-        <p>The match in progress will be thrown away. It won't count towards any session.</p>
+        <p>The match in progress will be thrown away. It won't count towards any career.</p>
       </ConfirmDialog>
       <h1 className="font-display text-5xl tracking-wide">Play a match</h1>
       <p className="mb-6 text-sm text-slate-400">Choose the format and head to the toss. Pick the two teams below.</p>

@@ -8,7 +8,7 @@ import { TeamView } from './components/TeamView'
 import { TeamCrest } from './components/ui'
 import { BUILT_IN_TEAMS } from './data/teams'
 import { CalendarPage } from './pages/CalendarPage'
-import { CompetitionPage } from './pages/CompetitionPage'
+import { CareerLayout } from './components/CareerLayout'
 import { CompetitionsPage } from './pages/CompetitionsPage'
 import { MatchPage } from './pages/MatchPage'
 import { NewSessionPage } from './pages/NewSessionPage'
@@ -90,7 +90,7 @@ function BackupIcon() {
 function SessionButton({ big = false }: { big?: boolean }) {
   return (
     <NavLink
-      to={paths.session()}
+      to={paths.sessions}
       className={({ isActive }) =>
         `inline-flex items-center justify-center gap-2 rounded-full border-2 font-semibold transition ${big ? 'px-5 py-3 text-base' : 'px-4 py-1.5'} ${
           isActive ? 'border-indigo-300 bg-indigo-500 text-white shadow-[0_0_18px_#6366f188]' : 'border-indigo-400/60 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/25 hover:text-white'
@@ -98,7 +98,7 @@ function SessionButton({ big = false }: { big?: boolean }) {
       }
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="3" /><path d="M8 2v4M16 2v4M3 10h18" /></svg>
-      Session
+      Career
     </NavLink>
   )
 }
@@ -147,8 +147,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const lastPath = useRef(pathname)
   useEffect(() => {
-    // Flipping between months on the session calendar stays where you are; any other page starts at the top.
-    const month = /^\/session\/\d{4}-\d{2}$/
+    // Flipping between months on the career calendar stays where you are; any other page starts at the top.
+    const month = /^\/career\/calendar\/\d{4}-\d{2}$/
     const sameCalendar = month.test(lastPath.current) && month.test(pathname)
     lastPath.current = pathname
     if (!sameCalendar) window.scrollTo(0, 0)
@@ -173,8 +173,6 @@ export default function App() {
         {/* Wide screens: the full bar */}
         <nav className="hidden gap-1 text-sm md:flex">
           <NavLink to={paths.teams} className={navClass}>Teams</NavLink>
-          <NavLink to={paths.competitions} className={navClass}>Tournaments</NavLink>
-          <NavLink to={paths.stats} className={navClass}>Stats</NavLink>
           {/* The two things you do most, side by side at the end, each with its own look */}
           <div className="ml-3 flex items-center gap-2">
             <SessionButton />
@@ -217,7 +215,7 @@ export default function App() {
                 <SessionButton big />
               </div>
               <nav className="mt-5 flex flex-col divide-y divide-line border-y border-line">
-                {[[paths.teams, 'Teams'], [paths.competitions, 'Tournaments'], [paths.stats, 'Stats'], [paths.backup, 'Backup & transfer']].map(([to, label]) => (
+                {[[paths.teams, 'Teams'], [paths.backup, 'Backup & transfer']].map(([to, label]) => (
                   <NavLink key={to} to={to} className={({ isActive }) => `py-3.5 text-lg font-semibold transition ${isActive ? 'text-white' : 'text-slate-300 hover:text-white'}`}>
                     {({ isActive }) => <span className="flex items-center justify-between">{label}{isActive && <span className="h-2 w-2 rounded-full bg-indigo-400" />}</span>}
                   </NavLink>
@@ -240,17 +238,25 @@ export default function App() {
           <Route path="/teams/:id/squad" element={<SquadPage />} />
           <Route path="/teams/:id/edit" element={<EditTeamPage />} />
           <Route path="/play" element={<PlayPage />} />
-          <Route path="/session" element={<CalendarPage />} />
-          <Route path="/session/squad" element={<SessionSquadPage />} />
-          <Route path="/session/review" element={<ReviewPage />} />
-          <Route path="/session/:ym" element={<CalendarPage />} />
-          <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/sessions/new" element={<NewSessionPage />} />
+          {/* Careers: the list of saves, then everything inside the one you open */}
+          <Route path="/career" element={<SessionsPage />} />
+          <Route path="/career/new" element={<NewSessionPage />} />
+          <Route element={<CareerLayout />}>
+            <Route path="/career/calendar" element={<CalendarPage />} />
+            <Route path="/career/calendar/:ym" element={<CalendarPage />} />
+            <Route path="/career/tournaments" element={<CompetitionsPage />} />
+            <Route path="/career/tournaments/:id" element={<CompetitionsPage />} />
+            <Route path="/career/stats" element={<StatsPage />} />
+            <Route path="/career/squad" element={<SessionSquadPage />} />
+            <Route path="/career/review" element={<ReviewPage />} />
+          </Route>
+          {/* old addresses still work */}
+          <Route path="/session/*" element={<Navigate to={paths.session()} replace />} />
+          <Route path="/sessions/*" element={<Navigate to={paths.sessions} replace />} />
           <Route path="/calendar/*" element={<Navigate to={paths.session()} replace />} />
-          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/stats" element={<Navigate to={paths.stats} replace />} />
+          <Route path="/competitions/*" element={<Navigate to={paths.competitions} replace />} />
           <Route path="/backup" element={<BackupPage />} />
-          <Route path="/competitions" element={<CompetitionsPage />} />
-          <Route path="/competitions/:id" element={<CompetitionPage />} />
           <Route path="/match/:format/:pair/:seed" element={<MatchPage />} />
           <Route path="/crests" element={<CrestGallery />} />
           <Route path="*" element={<NotFound />} />

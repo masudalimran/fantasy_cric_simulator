@@ -283,7 +283,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       {fixture && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-4 py-2 text-sm text-slate-200">
           <span>{(() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : '' })()} · {fixture.stage}{alreadyPlayed && <span className="ml-2 font-semibold text-amber-300">Already played. This replay doesn't change the record.</span>}</span>
-          <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className="font-semibold text-indigo-300 hover:underline">Back to the session</Link>
+          <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className="font-semibold text-indigo-300 hover:underline">Back to the career</Link>
         </div>
       )}
 
@@ -303,13 +303,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             </div>
           )}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {/* A session match is final: no rematch, no new match, just back to the session. */}
+            {/* A session match is final: no rematch, no new match, just back to the career. */}
             {!fixture && <button className={btn} onClick={() => navigate(paths.match(match.sides[0].team.id, match.sides[1].team.id, match.format, randomSeed()))}>Rematch</button>}
             <button className={`${btn} border-amber-400/70 text-amber-200`} onClick={() => setMotmOpen(true)}>Man of the Match</button>
             <button className={btn} onClick={() => setWinOpen(true)}>Celebrate again</button>
             <button className={btn} onClick={() => setSummaryOpen(true)}>Match summary</button>
             {fixture
-              ? <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className={`${btn} border-emerald-400/70 text-emerald-200`}>Back to the session</Link>
+              ? <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className={`${btn} border-emerald-400/70 text-emerald-200`}>Back to the career</Link>
               : <Link to={paths.play} className={btn}>New match</Link>}
           </div>
         </motion.div>
@@ -349,7 +349,7 @@ function InProgress({ live, onDiscard, wanted }: { live: LiveMatch; onDiscard: (
         <TeamCrest team={live.teamB} size={56} />
       </div>
       <p className="mt-3 text-slate-200"><b>{live.teamA.name}</b> <span className="text-slate-400">({live.teamA.series})</span> v <b>{live.teamB.name}</b> <span className="text-slate-400">({live.teamB.series})</span></p>
-      <p className="text-xs text-slate-500">{live.format.toUpperCase()} · {live.fixtureId ? 'a session match, its result counts when it finishes' : 'a friendly from the Play page'}</p>
+      <p className="text-xs text-slate-500">{live.format.toUpperCase()} · {live.fixtureId ? 'a career match, its result counts when it finishes' : 'a friendly from the Play page'}</p>
       <p className="text-sm text-slate-400">{m.sides[inn.battingSide].team.name} are {inn.runs}/{inn.wickets} after {Math.floor(inn.legalBalls / 6)}.{inn.legalBalls % 6} overs{inn.index === 1 ? ' in the chase' : ''}.</p>
       <div className="mt-6 flex flex-col gap-2">
         <button onClick={() => navigate(live.url)} className="rounded-xl bg-emerald-500 px-5 py-3 text-base font-bold text-black hover:bg-emerald-400">Resume that match</button>

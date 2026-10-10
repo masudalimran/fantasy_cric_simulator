@@ -63,7 +63,7 @@ function SquadCard({
       {change !== undefined && change !== 0 && (
         <span title={`Last year ${change > 0 ? '+' : ''}${change} overall`} className={`text-xs font-bold tabular-nums ${change > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{change > 0 ? '▲' : '▼'}{Math.abs(change)}</span>
       )}
-      <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the session began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
+      <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
     </motion.div>
   )
 }
@@ -194,13 +194,13 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
 
   return (
     <div>
-      <Link to={session ? paths.session() : paths.team(team.id)} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← {session ? 'Back to the session' : team.name}</Link>
+      <Link to={session ? paths.session() : paths.team(team.id)} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← {session ? 'Back to the career' : team.name}</Link>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <TeamCrest team={team} size={64} />
           <div>
             <h1 className="font-display text-5xl leading-none tracking-wide">{session ? `${team.name} squad` : 'Squad'}</h1>
-            {session && <p className="mt-1 text-sm font-semibold text-amber-300">Only for this session. Your team's own squad outside it doesn't change.</p>}
+            {session && <p className="mt-1 text-sm font-semibold text-amber-300">Only for this career. Your team's own squad outside it doesn't change.</p>}
             <p className="mt-1 text-sm text-slate-400">Drag a player onto another to swap them, or click one and then another. Top 11 play, in batting order.</p>
           </div>
         </div>

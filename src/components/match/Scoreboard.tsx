@@ -71,7 +71,7 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
             <div className="absolute inset-y-0 w-px bg-white/60" style={{ left: `${((death * 6) / total) * 100}%` }} />
           </div>
           <div className="mx-auto mt-1 flex max-w-xs justify-between text-[10px] uppercase tracking-wider text-slate-400"><span>Powerplay</span><span>Middle</span><span>Death</span></div>
-          {difficulty && you !== null && you !== undefined && <div className="mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ background: `${LEVEL_COLOR[difficulty]}26`, color: LEVEL_COLOR[difficulty] }} title="The difficulty you chose for this session">{DIFFICULTIES[difficulty].label} difficulty</div>}
+          {difficulty && you !== null && you !== undefined && <div className="mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ background: `${LEVEL_COLOR[difficulty]}26`, color: LEVEL_COLOR[difficulty] }} title="The difficulty you chose for this career">{DIFFICULTIES[difficulty].label} difficulty</div>}
           {inn.freeHit && <div className="mt-2 inline-block rounded bg-amber-400 px-2 py-0.5 text-xs font-extrabold text-black">FREE HIT NEXT</div>}
         </div>
 

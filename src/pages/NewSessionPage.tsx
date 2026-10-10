@@ -31,7 +31,7 @@ export function NewSessionPage() {
   const createSession = useStore((s) => s.createSession)
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const [name, setName] = useState(`Session ${sessions.length + 1}`)
+  const [name, setName] = useState(`Career ${sessions.length + 1}`)
   const [year, setYear] = useState(new Date().getFullYear())
   const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   // coming back from "create your own team" brings the new team's id along
@@ -67,11 +67,11 @@ export function NewSessionPage() {
 
   return (
     <div>
-      <Link to={paths.sessions} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← Sessions</Link>
-      <h1 className="font-display text-5xl tracking-wide">New session</h1>
-      <p className="mb-6 text-sm text-slate-400">You manage one team for the whole session. The computer runs every other team, including its batting plans and bowling changes.</p>
+      <Link to={paths.sessions} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← Careers</Link>
+      <h1 className="font-display text-5xl tracking-wide">New career</h1>
+      <p className="mb-6 text-sm text-slate-400">You manage one team for the whole career. The computer runs every other team, including its batting plans and bowling changes.</p>
 
-      <Step n={1} title="Your team" hint="You'll stay with this team for the whole session">
+      <Step n={1} title="Your team" hint="You'll stay with this team for the whole career">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           <button
             onClick={() => navigate(`${paths.newTeam}?next=${encodeURIComponent(paths.newSession)}`)}
@@ -93,7 +93,7 @@ export function NewSessionPage() {
         </div>
       </Step>
 
-      <Step n={2} title="Difficulty" hint="Chosen now and kept for the whole session. It's shown on your session and in your season reviews">
+      <Step n={2} title="Difficulty" hint="Chosen now and kept for the whole career. It's shown on your career and in your season reviews">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {LEVELS.map((l) => {
             const d = DIFFICULTIES[l]
@@ -110,9 +110,9 @@ export function NewSessionPage() {
         <p className="mt-2 text-xs text-slate-500">Difficulty only affects matches that involve your team. Games between two computer teams play out normally.</p>
       </Step>
 
-      <Step n={3} title="Session">
+      <Step n={3} title="Career">
         <div className="grid gap-3 rounded-2xl border border-line bg-panel p-4 sm:grid-cols-[2fr_1fr]">
-          <label><div className="mb-1 text-xs text-slate-400">Session name</div><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-line bg-panel-2 px-3 py-2 text-sm outline-none focus:border-indigo-400" /></label>
+          <label><div className="mb-1 text-xs text-slate-400">Career name</div><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-line bg-panel-2 px-3 py-2 text-sm outline-none focus:border-indigo-400" /></label>
           <label><div className="mb-1 text-xs text-slate-400">Starting year</div><input type="number" min={1900} max={2999} value={year} onChange={(e) => setYear(+e.target.value || year)} className="w-full rounded-lg border border-line bg-panel-2 px-3 py-2 text-sm outline-none focus:border-indigo-400" /></label>
         </div>
       </Step>
@@ -153,7 +153,7 @@ export function NewSessionPage() {
             </span>
           ) : null}
         </div>
-        <button disabled={!me || chosen.length < MIN_TEAMS || !name.trim()} onClick={create} className="rounded-full bg-emerald-500 px-7 py-2 font-display text-2xl tracking-wide text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40">Start session</button>
+        <button disabled={!me || chosen.length < MIN_TEAMS || !name.trim()} onClick={create} className="rounded-full bg-emerald-500 px-7 py-2 font-display text-2xl tracking-wide text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40">Start career</button>
       </div>
     </div>
   )
