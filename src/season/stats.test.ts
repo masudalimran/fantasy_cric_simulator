@@ -71,6 +71,9 @@ describe('season stats', () => {
     const rows = teamRecords(done)
     expect(rows).toHaveLength(20)
     for (const r of rows) expect(r.won + r.lost + r.tied).toBe(r.played)
+    for (const r of rows) expect(r.points).toBe(r.won * 2 + r.tied)
+    // standings order: points first, then net run rate for teams level on points
+    for (let i = 1; i < rows.length; i++) expect(rows[i - 1].points > rows[i].points || (rows[i - 1].points === rows[i].points && rows[i - 1].nrr >= rows[i].nrr)).toBe(true)
     expect(rows.reduce((s, r) => s + r.titles, 0)).toBe(done.competitions.filter((c) => c.kind !== 'series').length)
     const labels = seasonRecords(done).map((r) => r.label)
     for (const want of ['Highest team total', 'Highest individual score', 'Best bowling figures']) expect(labels).toContain(want)

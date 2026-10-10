@@ -59,7 +59,7 @@ export function simulateFixture(season: Season, fixture: Fixture, teams: Map<str
 
 // ---- Tables ------------------------------------------------------------
 
-/** Standings for a league, a cup group, or a whole series (win 2, tie 1, ties broken by wins then NRR). */
+/** Standings for a league, a cup group, or a whole series (win 2, tie 1, level teams split by NRR). */
 export function tableFor(season: Season, comp: Competition, group: string | null = null): TableRow[] {
   const quota = FORMATS[comp.format].overs * 6
   const teamIds = group && comp.groups ? comp.groups[group] : comp.teamIds
@@ -90,7 +90,7 @@ export function tableFor(season: Season, comp: Competition, group: string | null
     }
   }
   const rows = [...acc.values()].map(({ row, rf, bf, ra, ba }) => ({ ...row, nrr: bf && ba ? (rf / bf - ra / ba) * 6 : 0 }))
-  return rows.sort((a, b) => b.points - a.points || b.won - a.won || b.nrr - a.nrr || a.teamId.localeCompare(b.teamId))
+  return rows.sort((a, b) => b.points - a.points || b.nrr - a.nrr || a.teamId.localeCompare(b.teamId))
 }
 
 // ---- Bracket progression -----------------------------------------------

@@ -116,6 +116,8 @@ function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: M
     { key: 'w', label: 'W', get: (r) => r.won, cell: (r) => r.won },
     { key: 'l', label: 'L', first: 'asc', get: (r) => r.lost, cell: (r) => r.lost },
     { key: 't', label: 'T', get: (r) => r.tied, cell: (r) => r.tied },
+    { key: 'nrr', label: 'NRR', get: (r) => r.nrr, cell: (r) => <span className="text-slate-400">{r.nrr >= 0 ? '+' : ''}{r.nrr.toFixed(2)}</span> },
+    { key: 'pts', label: 'Pts', get: (r) => r.points, cell: (r) => <span className="font-bold text-white">{r.points}</span> },
     { key: 'pct', label: 'Win %', get: winPct, cell: (r) => `${winPct(r).toFixed(0)}%` },
     { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <span className="font-bold text-amber-300">{r.titles || ''}</span> },
   ]

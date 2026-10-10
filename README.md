@@ -68,6 +68,11 @@ Rules of a career:
 - Seasons run strictly year to year.
 - A career can't be duplicated (that would allow save-scumming).
 
+### Standings
+A win is worth 2 points and a tie 1. Every table (a tournament's league or group table, a series, and the team tables on
+Tournaments > All and Stats > Teams) is sorted by points, and teams level on points are split by **net run rate**
+(NRR). Computed in `tableFor` (`season/results.ts`) and `teamRecords` (`season/stats.ts`).
+
 ### Ratings change as you play
 After every match each player who batted or bowled is graded against what a player of his rating normally does in
 that format. Beat it and a rating goes up by 1 or 2; fall well short and it goes down (a duck always costs a

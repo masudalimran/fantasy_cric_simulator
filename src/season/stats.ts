@@ -1,3 +1,4 @@
+import { FORMATS } from '../engine/types'
 import type { MatchFormat, Team } from '../types'
 import type { Fixture, Season } from './types'
 
@@ -152,28 +153,46 @@ export interface TeamRecord {
   lost: number
   tied: number
   titles: number
+  /** 2 for a win, 1 for a tie. */
+  points: number
+  /** Net run rate across every match counted. */
+  nrr: number
 }
 
 export function teamRecords(season: Season, scope: Scope = {}): TeamRecord[] {
-  const rows = new Map<string, TeamRecord>(season.teamIds.map((id) => [id, { teamId: id, played: 0, won: 0, lost: 0, tied: 0, titles: 0 }]))
+  const rows = new Map<string, TeamRecord>(season.teamIds.map((id) => [id, { teamId: id, played: 0, won: 0, lost: 0, tied: 0, titles: 0, points: 0, nrr: 0 }]))
+  const runs = new Map<string, { rf: number; bf: number; ra: number; ba: number }>(season.teamIds.map((id) => [id, { rf: 0, bf: 0, ra: 0, ba: 0 }]))
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   for (const res of Object.values(season.results)) {
     const f = byId.get(res.fixtureId)
     if (!f || !f.homeId || !f.awayId || !inScope(f, scope, [f.homeId, f.awayId])) continue
-    for (const id of [f.homeId, f.awayId]) {
+    const quota = FORMATS[f.format].overs * 6
+    const sides = [f.homeId, f.awayId]
+    for (const [i, id] of sides.entries()) {
       const r = rows.get(id)
       if (!r) continue
       r.played++
-      if (res.winnerId === id) r.won++
-      else if (res.winnerId === null) r.tied++
+      if (res.winnerId === id) { r.won++; r.points += 2 }
+      else if (res.winnerId === null) { r.tied++; r.points += 1 }
       else r.lost++
+      const me = res.scores[id]
+      const opp = res.scores[sides[1 - i]]
+      const a = runs.get(id)
+      if (a && me && opp) {
+        a.rf += me.runs
+        a.bf += me.allOut ? quota : me.balls
+        a.ra += opp.runs
+        a.ba += opp.allOut ? quota : opp.balls
+      }
     }
     if (f.stage === 'Final' && res.winnerId) {
       const r = rows.get(res.winnerId)
       if (r) r.titles++
     }
   }
-  return [...rows.values()].filter((r) => r.played > 0).sort((a, b) => b.titles - a.titles || b.won / b.played - a.won / a.played || b.played - a.played)
+  for (const [id, a] of runs) { const r = rows.get(id); if (r) r.nrr = a.bf && a.ba ? (a.rf / a.bf - a.ra / a.ba) * 6 : 0 }
+  // Standings order: most points first; teams level on points are split by net run rate.
+  return [...rows.values()].filter((r) => r.played > 0).sort((a, b) => b.points - a.points || b.nrr - a.nrr || a.teamId.localeCompare(b.teamId))
 }
 
 // ---- Records --------------------------------------------------------------

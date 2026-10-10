@@ -13,8 +13,8 @@ export function buildReview(season: Season, teams: Map<string, Team>, now = new 
   if (!teamId || !team) return null
 
   const rows = teamRecords(season)
-  const ranked = [...rows].sort((a, b) => winRate(b) - winRate(a) || b.won - a.won || b.played - a.played)
-  const mine = rows.find((r) => r.teamId === teamId) ?? { teamId, played: 0, won: 0, lost: 0, tied: 0, titles: 0 }
+  const ranked = rows // already in standings order: points, then net run rate
+  const mine = rows.find((r) => r.teamId === teamId) ?? { teamId, played: 0, won: 0, lost: 0, tied: 0, titles: 0, points: 0, nrr: 0 }
   const rank = Math.max(1, ranked.findIndex((r) => r.teamId === teamId) + 1)
 
   const titles = season.competitions
