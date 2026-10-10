@@ -24,12 +24,14 @@ function Coin({ result, flipping }: { result: 'heads' | 'tails'; flipping: boole
   )
 }
 
-export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [] }: {
+export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel }: {
   sides: [Side, Side]; toss: TossResult; onStart: () => void
   /** The toss winner is a person, who hasn't picked yet. */
   mustChoose?: boolean; onChoose?: (c: 'bat' | 'bowl') => void
   /** Changes the computer made to its XI. */
   news?: string[]
+  /** Leave before a ball is bowled. Nothing is recorded. */
+  onCancel?: () => void
 }) {
   const [stage, setStage] = useState<'idle' | 'flipping' | 'done'>('idle')
   const caller = sides[toss.callerSide].team
@@ -55,10 +57,14 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
         ))}
       </div>
       {news.length > 0 && (
-        <div className="mx-auto mt-5 max-w-md rounded-xl border border-line bg-panel-2 p-3 text-left">
-          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-300">Team news</div>
-          <ul className="space-y-0.5 text-sm text-slate-200">{news.map((n) => <li key={n}>• {n}</li>)}</ul>
-        </div>
+        <details className="group mx-auto mt-5 max-w-md rounded-xl border border-line bg-panel-2 text-left">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-widest text-sky-300 [&::-webkit-details-marker]:hidden">
+            Team news
+            <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] text-sky-200">{news.length}</span>
+            <svg className="ml-auto h-4 w-4 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
+          </summary>
+          <ul className="space-y-0.5 border-t border-line px-3 py-2 text-sm text-slate-200">{news.map((n) => <li key={n}>• {n}</li>)}</ul>
+        </details>
       )}
       <div className="my-6 font-display text-4xl tracking-wide text-slate-300">The toss</div>
 
@@ -93,6 +99,12 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
             </>
           )}
         </motion.div>
+      )}
+      {onCancel && (
+        <div className="mt-6 border-t border-line pt-4">
+          <button onClick={onCancel} className="rounded-full border border-line px-5 py-1.5 text-sm font-semibold text-slate-300 transition hover:border-red-400 hover:text-red-200">Cancel match</button>
+          <p className="mt-1 text-xs text-slate-500">Before the first ball you can walk away. Nothing is recorded and there is no penalty.</p>
+        </div>
       )}
     </div>
   )

@@ -90,7 +90,11 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         </span>
         {showDate && <span>{formatDate(fixture.date)}</span>}
       </div>
-      <div className="flex items-center gap-3">
+      <div
+        className={`flex items-center gap-3 ${res && details ? 'cursor-pointer' : ''}`}
+        onClick={(e) => { if (res && details && !(e.target as HTMLElement).closest('a')) details.openMatch(fixture.id) }}
+        title={res && details ? 'Open the match: summary and scorecards' : undefined}
+      >
         {side(home, fixture.homeRef)}
         <span className="font-display text-xl text-slate-600">V</span>
         {side(away, fixture.awayRef, true)}

@@ -8,6 +8,7 @@ import { ControlsSheet } from '../components/match/ControlsSheet'
 import type { AutoStops } from '../components/match/ControlDeck'
 import { NowPlaying } from '../components/match/NowPlaying'
 import { Scoreboard } from '../components/match/Scoreboard'
+import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { InningsBreak } from '../components/match/InningsBreak'
@@ -67,6 +68,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const liveAct = useStore((s) => s.liveAct)
   const setLivePhase = useStore((s) => s.setLivePhase)
   const setTossChoice = useStore((s) => s.setTossChoice)
+  const discardLive = useStore((s) => s.discardLive)
   const finishLive = useStore((s) => s.finishLive)
   // `?skip` opens straight into play (handy for links and testing)
   const [phase, setPhase] = useState<'toss' | 'play'>(() => (live.phase === 'play' || new URLSearchParams(location.search).has('skip') ? 'play' : 'toss'))
@@ -250,7 +252,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, match, act])
 
-  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onStart={() => { setPhase('play'); setLivePhase('play') }} />
+  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
 
   const inn = match.current
   const batSide = match.battingSide()
@@ -389,10 +391,14 @@ export function MatchPage() {
   const key = matchKey(format, aId, bId, Number(seed) || 1)
   const ready = live?.key === key
   const blocked = !ready && !!live && !live.finished // another match is still being played
+  // A career match that already has a result is final: it can be looked at, never played again.
+  const alreadyDone = !!fxId && !!season?.results[fxId] && !(ready && live && !live.replay)
+  const details = useDetails()
 
   // Opening a match (from Play, the session, or a link) makes it the live one, unless another is mid-way.
   useEffect(() => {
-    if (valid && !ready && !blocked) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
+    // (if we're already on our way out of this page, e.g. after cancelling, don't start anything)
+    if (valid && !ready && !blocked && !alreadyDone && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valid, ready, blocked, key])
 
@@ -400,6 +406,19 @@ export function MatchPage() {
     return (
       <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">
         That match can't be set up. <Link to={paths.play} className="text-indigo-300 hover:underline">Pick two teams</Link>
+      </div>
+    )
+  }
+  if (alreadyDone) {
+    const fx = season?.fixtures.find((f) => f.id === fxId)
+    return (
+      <div className="mx-auto max-w-xl rounded-3xl border border-line bg-panel p-8 text-center">
+        <div className="font-display text-4xl tracking-wide text-amber-300">This match has been played</div>
+        <p className="mt-2 text-sm text-slate-300">{a?.name} v {b?.name}. A career match is final: the result stands and it can't be played again.</p>
+        <div className="mt-6 flex flex-col gap-2">
+          {fxId && <button onClick={() => details?.openMatch(fxId)} className="rounded-xl bg-sky-400 px-5 py-3 text-base font-bold text-black hover:bg-sky-300">See the match summary and scorecards</button>}
+          <Link to={fx ? `${paths.session(fx.date.slice(0, 7))}?day=${fx.date}` : paths.session()} className="rounded-xl border border-line px-5 py-3 text-sm font-bold text-slate-200 hover:border-slate-400">Back to the career</Link>
+        </div>
       </div>
     )
   }
