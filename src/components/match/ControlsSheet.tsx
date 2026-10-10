@@ -58,7 +58,7 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
   return (
     <>
       {/* floating dock: round icon buttons in a row, each explained by a tooltip */}
-      <div className="fixed bottom-5 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
+      <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
         <Tip label="Next ball" hint="Space">
           <button onClick={() => act({ t: 'ball' })} aria-label="Next ball" className="grid h-12 w-12 place-items-center rounded-full bg-emerald-500 text-black transition hover:bg-emerald-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
