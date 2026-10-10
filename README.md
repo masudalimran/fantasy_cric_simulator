@@ -71,7 +71,7 @@ Rules of a career:
 ### Standings
 A win is worth 2 points and a tie 1. Every table (a tournament's league or group table, a series, and the team tables on
 Tournaments > All and Stats > Teams) is sorted by points, and teams level on points are split by **net run rate**
-(NRR). Computed in `tableFor` (`season/results.ts`) and `teamRecords` (`season/stats.ts`).
+(NRR). In the Titles column, click a number to see which tournaments those titles were (`TitlesButton`); teams with none show a grey 0. Computed in `tableFor` (`season/results.ts`) and `teamRecords` (`season/stats.ts`).
 
 ### Ratings change as you play
 After every match each player who batted or bowled is graded against what a player of his rating normally does in

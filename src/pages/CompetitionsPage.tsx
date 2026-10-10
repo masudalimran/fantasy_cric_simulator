@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { TitlesButton } from '../components/season/TitlesButton'
 import { Link, useNavigate, useParams } from 'react-router'
 import { FixtureRow, PlayerCell, competitionColor, competitionName, usePlayerIndex, useTeamMap } from '../components/season/shared'
 import { TeamCrest } from '../components/ui'
@@ -183,7 +184,7 @@ function AllTournaments({ season, teams }: { season: Season; teams: Map<string, 
     { key: 'nrr', label: 'NRR', get: (r) => r.nrr, cell: (r) => <span className="text-slate-400">{r.nrr >= 0 ? '+' : ''}{r.nrr.toFixed(2)}</span> },
     { key: 'pts', label: 'Pts', get: (r) => r.points, cell: (r) => <span className="font-bold text-white">{r.points}</span> },
     { key: 'pct', label: 'Win %', get: winPct, cell: (r) => <span className="font-bold text-white">{winPct(r).toFixed(0)}%</span> },
-    { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <span className="font-bold text-amber-300">{r.titles || ''}</span> },
+    { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <TitlesButton season={season} team={teams.get(r.teamId)} fixtureIds={r.titleFixtures} teams={teams} /> },
   ]
   return (
     <div className="min-w-0 space-y-5">

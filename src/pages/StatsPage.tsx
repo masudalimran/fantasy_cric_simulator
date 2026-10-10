@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { TitlesButton } from '../components/season/TitlesButton'
 import { Link, useSearchParams } from 'react-router'
 import { PlayerCell, competitionName, usePlayerIndex, useTeamMap, type PlayerEntry } from '../components/season/shared'
 import { Delta, RatingBadge, TeamCrest } from '../components/ui'
@@ -12,6 +13,7 @@ import {
 import { useDetails } from '../components/season/Details'
 import { SortTable, type Col } from '../components/season/SortTable'
 import { overall } from '../data/builders'
+import type { Season } from '../season/types'
 import { useTeams, useViewedSeason } from '../store/useStore'
 import type { MatchFormat, Player, Team } from '../types'
 
@@ -104,7 +106,7 @@ function Awards({ c, index }: { c: Collected; index: Map<string, PlayerEntry> })
   )
 }
 
-function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: Map<string, Team> }) {
+function Teams({ rows, teams, season }: { rows: ReturnType<typeof teamRecords>; teams: Map<string, Team>; season: Season }) {
   type Row = (typeof rows)[number]
   const winPct = (r: Row) => (r.won / Math.max(r.played, 1)) * 100
   const cols: Col<Row>[] = [
@@ -119,7 +121,7 @@ function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: M
     { key: 'nrr', label: 'NRR', get: (r) => r.nrr, cell: (r) => <span className="text-slate-400">{r.nrr >= 0 ? '+' : ''}{r.nrr.toFixed(2)}</span> },
     { key: 'pts', label: 'Pts', get: (r) => r.points, cell: (r) => <span className="font-bold text-white">{r.points}</span> },
     { key: 'pct', label: 'Win %', get: winPct, cell: (r) => `${winPct(r).toFixed(0)}%` },
-    { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <span className="font-bold text-amber-300">{r.titles || ''}</span> },
+    { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <TitlesButton season={season} team={teams.get(r.teamId)} fixtureIds={r.titleFixtures} teams={teams} /> },
   ]
   return <SortTable rows={rows} cols={cols} rowKey={(r) => r.teamId} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} />
 }
@@ -234,7 +236,7 @@ export function StatsPage() {
           {tab === 'bowling' && <Bowling c={collected} index={index} />}
           {tab === 'awards' && <Awards c={collected} index={index} />}
           {tab === 'ratings' && <Ratings index={index} />}
-          {tab === 'teams' && <Teams rows={teamRows} teams={teams} />}
+          {tab === 'teams' && <Teams rows={teamRows} teams={teams} season={season} />}
           {tab === 'records' && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {records.map((r) => {

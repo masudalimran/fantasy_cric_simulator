@@ -153,6 +153,8 @@ export interface TeamRecord {
   lost: number
   tied: number
   titles: number
+  /** The finals those titles were won in (fixture ids). */
+  titleFixtures: string[]
   /** 2 for a win, 1 for a tie. */
   points: number
   /** Net run rate across every match counted. */
@@ -160,7 +162,7 @@ export interface TeamRecord {
 }
 
 export function teamRecords(season: Season, scope: Scope = {}): TeamRecord[] {
-  const rows = new Map<string, TeamRecord>(season.teamIds.map((id) => [id, { teamId: id, played: 0, won: 0, lost: 0, tied: 0, titles: 0, points: 0, nrr: 0 }]))
+  const rows = new Map<string, TeamRecord>(season.teamIds.map((id) => [id, { teamId: id, played: 0, won: 0, lost: 0, tied: 0, titles: 0, titleFixtures: [], points: 0, nrr: 0 }]))
   const runs = new Map<string, { rf: number; bf: number; ra: number; ba: number }>(season.teamIds.map((id) => [id, { rf: 0, bf: 0, ra: 0, ba: 0 }]))
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   for (const res of Object.values(season.results)) {
@@ -187,7 +189,7 @@ export function teamRecords(season: Season, scope: Scope = {}): TeamRecord[] {
     }
     if (f.stage === 'Final' && res.winnerId) {
       const r = rows.get(res.winnerId)
-      if (r) r.titles++
+      if (r) { r.titles++; r.titleFixtures.push(f.id) }
     }
   }
   for (const [id, a] of runs) { const r = rows.get(id); if (r) r.nrr = a.bf && a.ba ? (a.rf / a.bf - a.ra / a.ba) * 6 : 0 }
