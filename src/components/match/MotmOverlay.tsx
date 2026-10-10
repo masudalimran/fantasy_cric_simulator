@@ -115,7 +115,7 @@ export function MotmOverlay({ match, awards, onClose, onScorecard }: { match: Ma
 
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <button onClick={onClose} className="rounded-xl bg-amber-400 px-6 py-2.5 text-sm font-extrabold text-black hover:bg-amber-300">Continue</button>
-              <button onClick={() => { onClose(); onScorecard() }} className="rounded-xl border border-line bg-panel-2 px-5 py-2.5 text-sm font-bold text-white hover:border-indigo-400">Full scorecard</button>
+              <button onClick={() => { onClose(); onScorecard() }} className="rounded-xl border border-line bg-panel-2 px-5 py-2.5 text-sm font-bold text-white hover:border-indigo-400">Match summary</button>
             </div>
           </motion.div>
         ) : (

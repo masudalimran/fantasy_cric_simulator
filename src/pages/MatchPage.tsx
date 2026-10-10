@@ -9,6 +9,7 @@ import type { AutoStops } from '../components/match/ControlDeck'
 import { NowPlaying } from '../components/match/NowPlaying'
 import { Scoreboard } from '../components/match/Scoreboard'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
+import { MatchSummary } from '../components/match/MatchSummary'
 import { InningsBreak } from '../components/match/InningsBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
@@ -92,6 +93,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [note, setNote] = useState<StageNote | null>(null)
   const [motmOpen, setMotmOpen] = useState(false)
   const [winOpen, setWinOpen] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const [moment, setMoment] = useState<Moment | null>(null)
   const momentTimer = useRef<number | undefined>(undefined)
   const autoRef = useRef(auto)
@@ -271,10 +273,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     <PlayerCardProvider match={match}>
     <div className="space-y-4">
       <Fx fx={fx} />
+      <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting={!auto} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} />
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
-      <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setTab('scorecard')} />}</AnimatePresence>
+      <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
       <Scoreboard match={match} you={match.mySide} difficulty={match.difficulty} />
 
       {fixture && (
@@ -304,7 +307,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             {!fixture && <button className={btn} onClick={() => navigate(paths.match(match.sides[0].team.id, match.sides[1].team.id, match.format, randomSeed()))}>Rematch</button>}
             <button className={`${btn} border-amber-400/70 text-amber-200`} onClick={() => setMotmOpen(true)}>Man of the Match</button>
             <button className={btn} onClick={() => setWinOpen(true)}>Celebrate again</button>
-            <button className={btn} onClick={() => setTab('scorecard')}>Full scorecard</button>
+            <button className={btn} onClick={() => setSummaryOpen(true)}>Match summary</button>
             {fixture
               ? <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className={`${btn} border-emerald-400/70 text-emerald-200`}>Back to the session</Link>
               : <Link to={paths.play} className={btn}>New match</Link>}
