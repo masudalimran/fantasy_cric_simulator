@@ -96,8 +96,8 @@ export function SessionsPage() {
       {sorted.length === 0 ? (
         <div className="mx-auto max-w-xl rounded-3xl border border-dashed border-line p-12 text-center">
           <div className="font-display text-4xl tracking-wide text-slate-200">No careers yet</div>
-          <p className="mt-2 text-sm text-slate-400">Start one to get a full year of tournaments for the teams you choose.</p>
-          <Link to={paths.newSession} className="mt-5 inline-block rounded-full bg-emerald-500 px-7 py-2.5 font-display text-2xl tracking-wide text-black hover:bg-emerald-400">Start a career</Link>
+          <p className="mt-2 text-sm text-slate-400">A career is your own cricket story. Pick a team, then press the glowing button.</p>
+          <Link to={paths.newSession} className="cta-pulse mt-5 inline-block rounded-full bg-emerald-500 px-7 py-2.5 font-display text-2xl tracking-wide text-black hover:bg-emerald-400">Start a career</Link>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">{sorted.map((s) => <SessionCard key={s.id} session={s} active={s.id === activeId} />)}</div>

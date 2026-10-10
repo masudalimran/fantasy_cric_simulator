@@ -1,3 +1,4 @@
+import { TipBanner } from '../components/TipBanner'
 import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -147,13 +148,15 @@ export function CalendarPage() {
             Today is <b className="text-amber-300">{formatDate(season.today)}</b> · {Object.keys(season.results).length}/{season.fixtures.length} matches played · {doneComps}/{season.competitions.length} competitions finished
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {myTeam && <button className={`${btn} border-amber-400/70 bg-amber-400/10 text-amber-200`} disabled={!myNext} onClick={() => myNext && simUntil(myNext.date)} title="Simulates everything up to your next match, then stops">Sim to my next match</button>}
-          <button className={btn} disabled={!pending} onClick={simNextDay}>Sim next match day</button>
-          <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 7))}>Sim a week</button>
-          <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 30))}>Sim 30 days</button>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {myTeam && <button className={`${myNext && myNext.date > season.today ? 'cta-pulse cta-pulse-gold ' : ''}w-full rounded-full border-2 border-amber-200 bg-gradient-to-b from-amber-300 to-amber-500 px-6 py-3 font-display text-2xl leading-none tracking-wide text-black shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:animate-none sm:w-auto`} disabled={!myNext} onClick={() => myNext && simUntil(myNext.date)} title="Plays every other team's matches up to yours, then stops so you can play it">Skip to my next match</button>}
+          <button className={btn} disabled={!pending} onClick={simNextDay}>Skip to next match day</button>
+          <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 7))}>Skip a week</button>
+          <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 30))}>Skip 30 days</button>
         </div>
       </div>
+      {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
+      <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Skip</b> to let the other teams catch up first.</TipBanner>
 
       {myTeam && (myNext || done) && (
         <div className="mb-4 rounded-2xl border-2 border-amber-400/60 bg-amber-400/5 p-3">
@@ -239,7 +242,7 @@ export function CalendarPage() {
                   disabled={!dayFixtures.some((f) => !season.results[f.id] && f.homeId && f.awayId)}
                   onClick={() => updateSeason((s) => ({ ...simDay(s, selected, baseTeams, false, liveFixtureId), today: selected > s.today ? selected : s.today }))}
                 >
-                  Sim this day
+                  Skip this day
                 </button>
               </div>
               {dayFixtures.length === 0 ? (
@@ -281,7 +284,7 @@ export function CalendarPage() {
                   disabled={!dayFixtures.some((f) => !season.results[f.id] && f.homeId && f.awayId)}
                   onClick={() => updateSeason((s) => ({ ...simDay(s, selected, baseTeams, false, liveFixtureId), today: selected > s.today ? selected : s.today }))}
                 >
-                  Sim this day
+                  Skip this day
                 </button>
               </div>
               {dayFixtures.length === 0 ? <p className="text-sm text-slate-500">No matches on this day.</p> : <div className="space-y-2">{dayFixtures.map((f) => <FixtureRow key={f.id} season={season} fixture={f} teams={teams} showCompetition />)}</div>}

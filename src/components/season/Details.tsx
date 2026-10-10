@@ -193,26 +193,11 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
 
 // ---- A player --------------------------------------------------------------
 
-function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null; playerId: string; z: number; onClose: () => void }) {
-  const loc = useLocation()
-  // a career match page counts too (it has ?fx=): its players carry the career's rating changes
-  const inCareer = !!season && (loc.pathname.startsWith('/career') || (loc.pathname.startsWith('/match/') && new URLSearchParams(loc.search).has('fx')))
-  const careerIndex = usePlayerIndex()
-  const careerTeams = useTeamMap()
-  const baseTeams = useTeams()
+/** The player's last matches in this career, and what each one did to his ratings. */
+export function RecentMatches({ season, playerId, teamId, teams }: { season: Season | null; playerId: string; teamId: string; teams: Map<string, Team> }) {
   const api = useDetails()
-  // outside a career a player shows with his starting ratings and no season to speak of
-  const teams = useMemo(() => (inCareer ? careerTeams : new Map(baseTeams.map((t) => [t.id, t]))), [inCareer, careerTeams, baseTeams])
-  const index = useMemo(() => {
-    if (inCareer) return careerIndex
-    const m = new Map<string, { player: Player; team: Team }>()
-    for (const t of teams.values()) for (const p of t.players) m.set(p.id, { player: p, team: t })
-    return m
-  }, [inCareer, careerIndex, teams])
-  const e = index.get(playerId)
-  const c = useMemo(() => (inCareer && season ? collect(season) : null), [inCareer, season])
   const recent = useMemo(() => {
-    if (!inCareer || !season) return []
+    if (!season) return []
     const roster = season.roster ?? []
     const at = roster.indexOf(playerId)
     if (at < 0) return []
@@ -223,11 +208,52 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
       const bat = (r.bat ?? []).find((l) => l[0] === at)
       const bowl = (r.bowl ?? []).find((l) => l[0] === at)
       if (!bat && !bowl) continue
-      const own = e?.team.id
-      out.push({ fixtureId: f.id, date: f.date, vs: teams.get((f.homeId === own ? f.awayId : f.homeId) as string), bat, bowl, change: season.changes?.[f.id]?.[playerId]?.o, attrs: season.changes?.[f.id]?.[playerId]?.a })
+      out.push({ fixtureId: f.id, date: f.date, vs: teams.get((f.homeId === teamId ? f.awayId : f.homeId) as string), bat, bowl, change: season.changes?.[f.id]?.[playerId]?.o, attrs: season.changes?.[f.id]?.[playerId]?.a })
     }
     return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
-  }, [inCareer, season, playerId, teams, e])
+  }, [season, playerId, teams, teamId])
+  return (
+    <>
+      {recent.length > 0 && (
+        <section>
+          <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Recent matches <span className="font-normal normal-case tracking-normal text-slate-500">· the last column is what each match did to his ratings</span></h3>
+          <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
+            {recent.map((r) => (
+              <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
+                <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(r.date)}</span>
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
+                <span className="shrink-0 tabular-nums text-white">{r.bat ? `${r.bat[1]}${r.bat[5] ? '' : '*'} (${r.bat[2]})` : ''}{r.bat && r.bowl ? ' · ' : ''}{r.bowl ? `${r.bowl[3]}/${r.bowl[2]}` : ''}</span>
+                <span className="flex w-28 shrink-0 flex-wrap items-center justify-end gap-x-1.5 text-xs" title="How that match changed his ratings">
+                  {r.attrs && Object.keys(r.attrs).length > 0
+                    ? <>{r.change ? <Delta n={r.change} className="text-sm" /> : null}{Object.entries(r.attrs).map(([k, n]) => <span key={k} className="whitespace-nowrap text-slate-400">{ATTR_LABEL[k as AttrKey].slice(0, 3)} <Delta n={n as number} /></span>)}</>
+                    : <span className="text-slate-600">no change</span>}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  )
+}
+
+function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null; playerId: string; z: number; onClose: () => void }) {
+  const loc = useLocation()
+  // a career match page counts too (it has ?fx=): its players carry the career's rating changes
+  const inCareer = !!season && (loc.pathname.startsWith('/career') || (loc.pathname.startsWith('/match/') && new URLSearchParams(loc.search).has('fx')))
+  const careerIndex = usePlayerIndex()
+  const careerTeams = useTeamMap()
+  const baseTeams = useTeams()
+  // outside a career a player shows with his starting ratings and no season to speak of
+  const teams = useMemo(() => (inCareer ? careerTeams : new Map(baseTeams.map((t) => [t.id, t]))), [inCareer, careerTeams, baseTeams])
+  const index = useMemo(() => {
+    if (inCareer) return careerIndex
+    const m = new Map<string, { player: Player; team: Team }>()
+    for (const t of teams.values()) for (const p of t.players) m.set(p.id, { player: p, team: t })
+    return m
+  }, [inCareer, careerIndex, teams])
+  const e = index.get(playerId)
+  const c = useMemo(() => (inCareer && season ? collect(season) : null), [inCareer, season])
   if (!e) return null
   const { player, team } = e
   const accent = accentOf(team)
@@ -295,25 +321,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
 
         {player.traits.length > 0 && <div className="flex flex-wrap gap-1.5">{player.traits.map((t) => <span key={t} className="rounded-full border border-line bg-panel-2 px-2.5 py-1 text-xs capitalize text-slate-200">{t.replace(/-/g, ' ')}</span>)}</div>}
 
-        {recent.length > 0 && (
-          <section>
-            <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Recent matches <span className="font-normal normal-case tracking-normal text-slate-500">· the last column is what each match did to his ratings</span></h3>
-            <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
-              {recent.map((r) => (
-                <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
-                  <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(r.date)}</span>
-                  <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
-                  <span className="shrink-0 tabular-nums text-white">{r.bat ? `${r.bat[1]}${r.bat[5] ? '' : '*'} (${r.bat[2]})` : ''}{r.bat && r.bowl ? ' · ' : ''}{r.bowl ? `${r.bowl[3]}/${r.bowl[2]}` : ''}</span>
-                  <span className="flex w-28 shrink-0 flex-wrap items-center justify-end gap-x-1.5 text-xs" title="How that match changed his ratings">
-                    {r.attrs && Object.keys(r.attrs).length > 0
-                      ? <>{r.change ? <Delta n={r.change} className="text-sm" /> : null}{Object.entries(r.attrs).map(([k, n]) => <span key={k} className="whitespace-nowrap text-slate-400">{ATTR_LABEL[k as AttrKey].slice(0, 3)} <Delta n={n as number} /></span>)}</>
-                      : <span className="text-slate-600">no change</span>}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+        {inCareer && <RecentMatches season={season} playerId={playerId} teamId={team.id} teams={teams} />}
       </div>
     </Shell>
   )

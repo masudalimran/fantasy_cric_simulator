@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { formatDate } from '../../season/dates'
-import { fixtureSeed, isMine, mustPlayFirst, playEarlierMatches, recordResult, simulateFixture } from '../../season/results'
+import { fixtureSeed, isMine, myNextFixture, mustPlayFirst, playEarlierMatches, recordResult, simulateFixture } from '../../season/results'
 import type { Competition, Fixture, Season } from '../../season/types'
 import { paths } from '../../routes'
 import { sessionTeam } from '../../season/progression'
@@ -136,8 +136,8 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         )}
         {!res && playable && !waitFor && !liveHere && (
           <div className="flex gap-2">
-            <button onClick={sim} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500">Sim</button>
-            <button onClick={() => navigate(matchHref(season, fixture))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
+            <button onClick={sim} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Play this match for you, without watching">Skip</button>
+            <button onClick={() => navigate(matchHref(season, fixture))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? `bg-amber-400 text-black hover:bg-amber-300 ${season && myNextFixture(season)?.id === fixture.id ? 'cta-pulse cta-pulse-gold' : ''}` : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
           </div>
         )}
         {res && playable && details && (

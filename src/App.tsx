@@ -20,6 +20,9 @@ import { MatchPage } from './pages/MatchPage'
 import { NewSessionPage } from './pages/NewSessionPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { PlayPage } from './pages/PlayPage'
+import { HomePage } from './pages/HomePage'
+import { HowToPlay } from './components/HowToPlay'
+import { openHelp } from './tips'
 import { ReviewPage } from './pages/ReviewPage'
 import { BackupPage } from './pages/BackupPage'
 import { StatsPage } from './pages/StatsPage'
@@ -147,6 +150,13 @@ function ImageToggle() {
   )
 }
 
+/** The "?" that opens How to play from anywhere. */
+function HelpButton() {
+  return (
+    <button onClick={openHelp} title="How to play" aria-label="How to play" className="ml-2 grid h-9 w-9 place-items-center rounded-full border border-line font-display text-xl leading-none text-slate-300 transition hover:border-slate-500 hover:text-white">?</button>
+  )
+}
+
 function SoundToggle() {
   const [muted, set] = useState(isMuted())
   return (
@@ -212,19 +222,21 @@ export default function App() {
     <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${mobile ? (showChrome ? '' : 'px-2.5') : 'pb-16'}`} style={mobile ? { paddingBottom: showChrome ? 'calc(var(--sab) + 84px)' : 'var(--sab)', paddingLeft: 'max(var(--sal), 1rem)', paddingRight: 'max(var(--sar), 1rem)' } : undefined}>
       {mobile && showChrome && <MobileHeader resuming={resuming} playTo={playTo} />}
       <header className="hidden items-center justify-between py-5 md:flex">
-        <Link to={paths.teams} className="flex items-baseline gap-2">
+        <Link to={paths.home} className="flex items-baseline gap-2">
           <span className="font-display text-3xl tracking-wider text-white">FANTASY CRIC</span>
           <span className="font-display text-3xl tracking-wider text-indigo-400">SIM</span>
         </Link>
 
         {/* Wide screens: the full bar */}
         <nav className="hidden gap-1 text-sm md:flex">
+          <NavLink to={paths.home} end className={navClass}>Home</NavLink>
           <NavLink to={paths.teams} className={navClass}>Teams</NavLink>
           {/* The two things you do most, side by side at the end, each with its own look */}
           <div className="ml-3 flex items-center gap-2">
             <SessionButton />
             <PlayButton to={playTo} resuming={resuming} />
           </div>
+          <HelpButton />
           <ImageToggle />
           <SoundToggle />
           <BackupIcon />
@@ -234,7 +246,7 @@ export default function App() {
 
       <motion.main key={pathname} className={mobile && showChrome ? 'pt-3' : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
         <Routes>
-          <Route path="/" element={<Navigate to={paths.teams} replace />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/teams" element={<TeamsView />} />
           <Route path="/teams/new" element={<EditTeamPage />} />
           <Route path="/teams/:id" element={<TeamPage />} />
@@ -268,6 +280,7 @@ export default function App() {
         </Routes>
       </motion.main>
       {mobile && showChrome && <BottomNav resuming={resuming} playTo={playTo} onMore={() => setMoreOpen(true)} />}
+      <HowToPlay />
       <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </div>
     </DetailsProvider>

@@ -115,6 +115,23 @@ a screen that mentions a match, player or team, link it the same way.
 
 ---
 
+## Easy for beginners
+
+The app is built so someone who has never seen it can follow the shiny things:
+- **Home** (`/`, `pages/HomePage.tsx`): one big glowing button that always says the next step: start a career, play your
+  next match, carry on with a live match, see the season review, or skip ahead. Below it are a few quiet tiles
+  (Calendar, Quick match, Teams, How to play). Before any career exists it shows a three-step strip.
+- **How to play** (`components/HowToPlay.tsx`): a picture-led six-step sheet opened by the **?** button on the desktop bar,
+  the Home tile or the phone's More sheet. It can also bring the first-time tips back.
+- **First-time tips** (`components/TipBanner.tsx`, state in `src/tips.ts`, saved as `fcs.tips`): a small floating card
+  with a **Got it** button on the Calendar, the toss and the match screen. Each shows once.
+- **The glow**: `.cta-pulse` (green) and `.cta-pulse-gold` in `index.css` mark the one thing to press: Start career,
+  your next match's Play button, NEXT BALL (not while auto-play runs), and Got it. It stops for people who prefer reduced motion.
+- **Plain words**: "Sim" is now **Skip** (it plays the other teams' matches and always stops before yours), with a line
+  of explanation under the Calendar buttons.
+- **New career** asks only for a team (with a **Pick one for me** button); difficulty, name, year and the teams in the
+  competition are folded under "Change the rules" with sensible defaults.
+
 ## On a phone
 
 The app is built to feel like a native app on a phone (the desktop layout is unchanged):
@@ -123,7 +140,7 @@ The app is built to feel like a native app on a phone (the desktop layout is unc
   (`public/sw.js`, registered only in the built app) so it opens instantly and works offline after the first visit.
   Android/Chrome offer a real install prompt; on an iPhone use Share, then Add to Home Screen. The **More** sheet
   explains it. `index.html` sets the theme colour, safe-area handling (`viewport-fit=cover`) and the iOS app meta tags.
-- **Shell**: a slim top bar and a bottom tab bar (Teams, Career, a big Play button, More). The More sheet holds Backup,
+- **Shell**: a slim top bar and a bottom tab bar (Home, Teams, a big Play button, Career, More). The More sheet holds Backup,
   Sound, Player images and Install. While a match is on, both bars go away: the match is a full-screen game.
 - **The match screen** is its own layout on a phone: compact scoreboard with a back button, the field, batsman, non-striker
   and bowler cells, the over and partnership line, then a scrolling Scorecard / Commentary / Stats panel, and a thumb bar

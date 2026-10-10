@@ -7,6 +7,8 @@ import type { Player, Team } from '../../types'
 import { Sheet } from '../Sheet'
 import { selectSession, useStore, useTeams } from '../../store/useStore'
 import { OverallStats } from '../season/OverallStats'
+import { RecentMatches } from '../season/Details'
+import { useTeamMap } from '../season/shared'
 import type { BatStat, BowlStat } from '../../season/stats'
 import { accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, tierOf } from '../ui'
 import { dismissalText, economy, oversText, strikeRate } from './format'
@@ -36,6 +38,7 @@ function Line({ label, children }: { label: string; children: React.ReactNode })
 
 function Card({ match, player, team, career, onClose }: { match: Match; player: Player; team: Team; career: boolean; onClose: () => void }) {
   const baseTeams = useTeams()
+  const careerTeams = useTeamMap()
   const session = useStore(selectSession)
   // every season of the career, oldest first, the last being the one being played (this match isn't recorded in it yet)
   const seasons = useMemo(() => (session ? [...(session.history ?? []), session.season] : []), [session])
@@ -113,6 +116,8 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
             <h3 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-widest text-sky-300">Overall stats</h3>
             {career && seasons.length > 0 ? <OverallStats playerId={player.id} seasons={seasons} live={liveStats} /> : <p className="text-sm text-slate-500">Season and career numbers are kept in a career. This is a friendly.</p>}
           </section>
+
+          {career && seasons.length > 0 && <RecentMatches season={seasons[seasons.length - 1]} playerId={player.id} teamId={team.id} teams={careerTeams} />}
 
           <section className="rounded-2xl border border-line bg-panel p-3">
             <h3 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">In this match</h3>

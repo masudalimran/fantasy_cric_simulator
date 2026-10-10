@@ -69,9 +69,10 @@ export function NewSessionPage() {
     <div>
       <Link to={paths.sessions} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← Careers</Link>
       <h1 className="font-display text-5xl tracking-wide">New career</h1>
-      <p className="mb-6 text-sm text-slate-400">You manage one team for the whole career. The computer runs every other team, including its batting plans and bowling changes.</p>
+      <p className="mb-4 text-sm text-slate-300">Pick the team you want to look after, then press the glowing button at the bottom. Everything else is already set up for you.</p>
 
       <Step n={1} title="Your team" hint="You'll stay with this team for the whole career">
+        <button onClick={() => setMyTeamId(teams[Math.floor(Math.random() * teams.length)].id)} className="mb-2 rounded-full border border-indigo-400/70 bg-indigo-500/10 px-4 py-2 text-sm font-semibold text-indigo-200 hover:bg-indigo-500/25">🎲 Pick one for me</button>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           <button
             onClick={() => navigate(`${paths.newTeam}?next=${encodeURIComponent(paths.newSession)}`)}
@@ -93,6 +94,9 @@ export function NewSessionPage() {
         </div>
       </Step>
 
+      <details className="group mb-6 rounded-2xl border border-line bg-panel/40 p-3">
+        <summary className="cursor-pointer list-none text-sm font-semibold text-slate-200">Change the rules <span className="font-normal text-slate-400">(optional: difficulty is {DIFFICULTIES[difficulty].label}, {chosen.length} teams, starts {year})</span></summary>
+      <div className="mt-4">
       <Step n={2} title="Difficulty" hint="Chosen now and kept for the whole career. It's shown on your career and in your season reviews">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {LEVELS.map((l) => {
@@ -139,11 +143,13 @@ export function NewSessionPage() {
           })}
         </div>
       </Step>
+      </div>
+      </details>
 
       <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
         <div className="text-sm">
           {!me ? (
-            <span className="text-amber-300">Choose the team you'll manage.</span>
+            <span className="font-semibold text-amber-300">Tap a team above to choose it.</span>
           ) : chosen.length < MIN_TEAMS ? (
             <span className="text-red-300">Pick at least {MIN_TEAMS} teams.</span>
           ) : preview ? (
@@ -153,7 +159,7 @@ export function NewSessionPage() {
             </span>
           ) : null}
         </div>
-        <button disabled={!me || chosen.length < MIN_TEAMS || !name.trim()} onClick={create} className="rounded-full bg-emerald-500 px-7 py-2 font-display text-2xl tracking-wide text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40">Start career</button>
+        <button disabled={!me || chosen.length < MIN_TEAMS || !name.trim()} onClick={create} className={`${me && chosen.length >= MIN_TEAMS && name.trim() ? 'cta-pulse ' : ''}rounded-full bg-emerald-500 px-7 py-2 font-display text-2xl tracking-wide text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40`}>Start career</button>
       </div>
     </div>
   )

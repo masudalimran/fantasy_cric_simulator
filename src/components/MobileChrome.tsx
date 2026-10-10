@@ -5,10 +5,12 @@ import { isMuted, setMuted, sfx } from '../audio/sfx'
 import { useInstall } from '../hooks'
 import { setHideImages, useHideImages } from '../prefs'
 import { paths } from '../routes'
+import { openHelp } from '../tips'
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
 const Icon = {
+  home: <svg width="24" height="24" viewBox="0 0 24 24" {...stroke}><path d="M3 11 12 3l9 8M5 9.5V20h5v-6h4v6h5V9.5" /></svg>,
   teams: <svg width="24" height="24" viewBox="0 0 24 24" {...stroke}><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></svg>,
   career: <svg width="24" height="24" viewBox="0 0 24 24" {...stroke}><rect x="3" y="4" width="18" height="17" rx="3" /><path d="M8 2v4M16 2v4M3 10h18M8 15h3" /></svg>,
   more: <svg width="24" height="24" viewBox="0 0 24 24" {...stroke}><circle cx="5" cy="12" r="1.4" fill="currentColor" /><circle cx="12" cy="12" r="1.4" fill="currentColor" /><circle cx="19" cy="12" r="1.4" fill="currentColor" /></svg>,
@@ -19,7 +21,7 @@ const Icon = {
 export function MobileHeader({ resuming, playTo }: { resuming: boolean; playTo: string }) {
   return (
     <header className="sticky top-0 z-40 -mx-4 flex items-center justify-between border-b border-line/60 bg-ink/90 px-4 pb-2 backdrop-blur-xl" style={{ paddingTop: 'calc(var(--sat) + 8px)' }}>
-      <Link to={paths.teams} className="flex items-baseline gap-1.5" aria-label="Fantasy Cric Sim home">
+      <Link to={paths.home} className="flex items-baseline gap-1.5" aria-label="Fantasy Cric Sim home">
         <span className="font-display text-2xl tracking-wider text-white">FANTASY CRIC</span>
         <span className="font-display text-2xl tracking-wider text-indigo-400">SIM</span>
       </Link>
@@ -40,11 +42,11 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-[60] border-t border-line/70 bg-ink/92 backdrop-blur-xl" style={{ paddingBottom: 'var(--sab)', paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
       <div className="mx-auto flex h-[58px] max-w-md items-stretch">
+        <NavLink to={paths.home} end className={() => item(pathname === '/')}>
+          <span className={pathname === '/' ? 'text-indigo-300' : ''}>{Icon.home}</span>Home
+        </NavLink>
         <NavLink to={paths.teams} className={() => item(pathname.startsWith('/teams'))}>
           <span className={pathname.startsWith('/teams') ? 'text-indigo-300' : ''}>{Icon.teams}</span>Teams
-        </NavLink>
-        <NavLink to={paths.sessions} className={() => item(pathname.startsWith('/career'))}>
-          <span className={pathname.startsWith('/career') ? 'text-indigo-300' : ''}>{Icon.career}</span>Career
         </NavLink>
         <NavLink to={playTo} className="relative flex flex-1 items-start justify-center" aria-label={resuming ? 'Back to your live match' : 'Play a match'}>
           <span className={`-mt-4 grid h-14 w-14 place-items-center rounded-full text-black shadow-[0_6px_20px_rgba(16,185,129,.45)] ring-4 ring-ink transition ${playActive || resuming ? 'bg-emerald-300' : 'bg-emerald-500'}`}>
@@ -52,6 +54,9 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
             {resuming && <span className="absolute right-3.5 top-0.5 h-3 w-3 animate-pulse rounded-full bg-red-500 ring-2 ring-ink" />}
           </span>
           <span className={`absolute bottom-1.5 text-[10px] font-bold tracking-wide ${playActive || resuming ? 'text-emerald-300' : 'text-slate-500'}`}>{resuming ? 'Live' : 'Play'}</span>
+        </NavLink>
+        <NavLink to={paths.sessions} className={() => item(pathname.startsWith('/career'))}>
+          <span className={pathname.startsWith('/career') ? 'text-indigo-300' : ''}>{Icon.career}</span>Career
         </NavLink>
         <button onClick={onMore} className={item(pathname.startsWith('/backup'))} aria-label="More">
           <span className={pathname.startsWith('/backup') ? 'text-indigo-300' : ''}>{Icon.more}</span>More
@@ -85,6 +90,11 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
           >
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-600" aria-hidden />
             <div className="space-y-2">
+              <button onClick={() => { onClose(); openHelp() }} className={row}>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-400/15 font-display text-2xl text-indigo-300">?</span>
+                <span className="flex-1"><span className="block font-semibold text-white">How to play</span><span className="block text-xs text-slate-400">Six easy steps</span></span>
+                <span className="text-slate-500">›</span>
+              </button>
               <Link to={paths.backup} onClick={onClose} className={row}>
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-400/15 text-sky-300"><svg width="22" height="22" viewBox="0 0 24 24" {...stroke}><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z" /><path d="M4 7v5c0 1.7 3.6 3 8 3m8-8v3" /><path d="M4 12v5c0 1.7 3.6 3 8 3m5-4v6m0 0 3-3m-3 3-3-3" /></svg></span>
                 <span className="flex-1"><span className="block font-semibold text-white">Backup & transfer</span><span className="block text-xs text-slate-400">Save a copy, or move to another device</span></span>

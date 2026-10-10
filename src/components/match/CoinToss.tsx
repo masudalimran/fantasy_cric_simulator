@@ -7,6 +7,7 @@ import type { Side, TossResult } from '../../engine/types'
 import { PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../ui'
 import { sfx } from '../../audio/sfx'
 import { useIsMobile } from '../../hooks'
+import { TipBanner } from '../TipBanner'
 import { SquadDialog } from './SquadDialog'
 
 /** A gold coin that spins six times and lands on the right face. */
@@ -172,6 +173,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
   if (mobile) {
     return (
       <div className="fixed inset-0 z-30 flex flex-col bg-ink" style={{ paddingTop: 'var(--sat)' }}>
+        <TipBanner id="toss" title="Time for the toss" lift={96}>Tap the coin to flip it. Want a different team? Press <b>Edit squad</b> first, because it locks once the coin is flipped.</TipBanner>
         <div className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-2">
           <h1 className="font-display text-2xl tracking-wider text-white">TEAM SHEETS</h1>
           <span className="flex-1" />
@@ -213,6 +215,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
   return (
     // on a desktop screen this is exactly one screen tall; on a phone it simply flows and scrolls
     <div className="mx-auto flex max-w-6xl flex-col gap-3 md:h-[calc(100dvh-142px)] md:min-h-[520px]">
+      <TipBanner id="toss" title="Time for the toss" lift={96}>Tap the coin to flip it. Want a different team? Press <b>Edit squad</b> first, because it locks once the coin is flipped.</TipBanner>
       <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2">
         {sides.map((s, i) => <TeamSheet key={s.team.id} side={s} mine={mySide === i} news={items.filter((n) => n.teamId === s.team.id)} startXI={startXI?.[i]} onEdit={editable[i] && stage === 'idle' && !tossed && onSaveSquad ? () => setEditing(i as 0 | 1) : undefined} />)}
       </div>

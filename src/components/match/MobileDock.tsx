@@ -16,7 +16,7 @@ export function MobileDock({ onBall, auto, setAuto, onControls, over }: { onBall
         </button>
         <button
           onClick={() => { haptic(10); onBall() }} disabled={over} aria-label="Next ball"
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-500 font-display text-lg tracking-wider text-black shadow-[0_6px_20px_rgba(16,185,129,.35)] transition active:scale-[0.98] active:bg-emerald-400 disabled:opacity-40"
+          className={`${!auto && !over ? 'cta-pulse ' : ''}flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-500 font-display text-lg tracking-wider text-black shadow-[0_6px_20px_rgba(16,185,129,.35)] transition active:scale-[0.98] active:bg-emerald-400 disabled:opacity-40`}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
           NEXT BALL
