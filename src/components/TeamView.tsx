@@ -60,7 +60,7 @@ function PlayerRow({ player, team, pos }: { player: Player; team: Team; pos?: nu
     <div className="overflow-hidden rounded-xl border border-line bg-panel">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 p-3 text-left transition hover:bg-white/5">
         <span className="w-5 text-center font-display text-xl text-slate-600">{pos ?? ''}</span>
-        <PlayerAvatar player={player} team={team} />
+        <PlayerAvatar profile player={player} team={team} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-white">
             {player.name}

@@ -40,7 +40,7 @@ function TeamCard({ team, index }: { team: Team; index: number }) {
       <div className="relative mt-4 flex items-center justify-between">
         <div className="flex -space-x-2">
           {stars.map((p) => (
-            <PlayerAvatar key={p.id} player={p} team={team} size={34} />
+            <PlayerAvatar key={p.id} profile player={p} team={team} size={34} />
           ))}
         </div>
         <span className="text-[11px] uppercase tracking-wider text-slate-300">{team.players.length} players</span>

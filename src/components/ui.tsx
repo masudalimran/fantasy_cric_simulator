@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { playerImage, teamArt } from '../data/images'
 import { frameFor, frameShape, GLYPHS } from './emblems'
 import type { Player, Role, Team } from '../types'
@@ -40,14 +40,20 @@ export function RatingBadge({ value, size = 'md' }: { value: number; size?: 'sm'
   )
 }
 
-export function PlayerAvatar({ player, team, size = 44 }: { player: Pick<Player, 'id' | 'name' | 'imageUrl'>; team: Pick<Team, 'colors'>; size?: number }) {
+/** Lets a portrait open that player's profile popup. Provided once, near the top of the app. */
+export const ProfileContext = createContext<((playerId: string) => void) | null>(null)
+
+/** `profile`: clicking the portrait opens the player's profile (when the app offers one). */
+export function PlayerAvatar({ player, team, size = 44, profile = false }: { player: Pick<Player, 'id' | 'name' | 'imageUrl'>; team: Pick<Team, 'colors'>; size?: number; profile?: boolean }) {
+  const open = useContext(ProfileContext)
   const [failed, setFailed] = useState(false)
   const initials = player.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
   const src = player.imageUrl ?? playerImage(player.id)
   const accent = accentOf(team)
   return (
     <div
-      className="relative shrink-0 overflow-hidden rounded-full"
+      {...(profile && open ? { role: 'button', tabIndex: 0, title: `${player.name}: view profile`, onClick: (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); open(player.id) }, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); open(player.id) } } } : {})}
+      className={`relative shrink-0 overflow-hidden rounded-full ${profile && open ? 'cursor-pointer transition hover:scale-110 hover:brightness-110' : ''}`}
       style={{ width: size, height: size, background: `linear-gradient(135deg, ${team.colors.primary}, ${team.colors.secondary})`, boxShadow: `0 0 0 2px ${accent}66` }}
     >
       {failed ? (

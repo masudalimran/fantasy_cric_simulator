@@ -9,6 +9,7 @@ import { TeamCrest } from './components/ui'
 import { BUILT_IN_TEAMS } from './data/teams'
 import { CalendarPage } from './pages/CalendarPage'
 import { CareerLayout } from './components/CareerLayout'
+import { DetailsProvider } from './components/season/Details'
 import { CompetitionsPage } from './pages/CompetitionsPage'
 import { MatchPage } from './pages/MatchPage'
 import { NewSessionPage } from './pages/NewSessionPage'
@@ -163,6 +164,7 @@ export default function App() {
   }, [menuOpen])
 
   return (
+    <DetailsProvider>
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <header className="flex items-center justify-between py-5">
         <Link to={paths.teams} className="flex items-baseline gap-2">
@@ -263,5 +265,6 @@ export default function App() {
         </Routes>
       </motion.main>
     </div>
+    </DetailsProvider>
   )
 }

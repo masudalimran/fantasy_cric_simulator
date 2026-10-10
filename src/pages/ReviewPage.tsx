@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { PlayerAvatar, TeamCrest } from '../components/ui'
+import { useDetails } from '../components/season/Details'
 import { useTeamMap } from '../components/season/shared'
 import { DIFFICULTIES, type Difficulty } from '../engine/types'
 import { randomSeed } from '../engine/rng'
@@ -30,13 +31,14 @@ function Tile({ label, value, sub, accent }: { label: string; value: React.React
 
 function Award({ title, color, p, line, teamId }: { title: string; color: string; p: PlayerReview | undefined; line: string; teamId: string }) {
   const teams = useTeamMap()
+  const details = useDetails()
   const team = teams.get(teamId)
   const player = team?.players.find((x) => x.id === p?.id)
   return (
     <div className="rounded-2xl border border-line bg-panel p-4">
       <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest" style={{ color }}><span className="h-3 w-3 rounded-full" style={{ background: color }} />{title}</div>
       {p && player && team ? (
-        <div className="flex items-center gap-3"><PlayerAvatar player={player} team={team} size={46} /><div className="min-w-0"><div className="truncate font-bold text-white">{p.name}</div><div className="text-sm text-slate-300">{line}</div></div></div>
+        <button onClick={() => details?.openPlayer(player.id)} className="flex w-full cursor-pointer items-center gap-3 text-left transition hover:opacity-90" title="View profile"><PlayerAvatar player={player} team={team} size={46} /><div className="min-w-0"><div className="truncate font-bold text-white">{p.name}</div><div className="text-sm text-slate-300">{line}</div></div></button>
       ) : <div className="text-sm text-slate-500">Nobody yet</div>}
     </div>
   )
@@ -71,6 +73,7 @@ export function ReviewPage() {
   const startNext = useStore((s) => s.startNextSeason)
   const teams = useTeamMap()
   const navigate = useNavigate()
+  const details = useDetails()
   const review = useMemo(() => (season ? buildReview(season, teams) : null), [season, teams])
 
   if (!season || !session) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">No career yet. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Create one</Link>.</div>
@@ -154,7 +157,7 @@ export function ReviewPage() {
               const avg = b && b.innings - b.notOuts > 0 ? b.runs / (b.innings - b.notOuts) : null
               return (
                 <tr key={p.id} className="border-t border-line/60">
-                  <td className="px-2 py-1.5"><span className="flex items-center gap-2.5"><PlayerAvatar player={player} team={team} size={30} /><span className="font-medium text-slate-100">{p.name}</span></span></td>
+                  <td className="px-2 py-1.5"><button onClick={() => details?.openPlayer(player.id)} className="flex cursor-pointer items-center gap-2.5 text-left hover:text-white" title="View profile"><PlayerAvatar player={player} team={team} size={30} /><span className="font-medium text-slate-100">{p.name}</span></button></td>
                   <td className={td}>{p.matches}</td>
                   <td className="px-2 text-right font-bold tabular-nums text-white">{b?.runs ?? '-'}</td>
                   <td className={td}>{f1(avg)}</td>
@@ -187,7 +190,7 @@ export function ReviewPage() {
                   const d = c.after - c.before
                   return (
                     <tr key={c.id} className={`border-t border-line/60 ${d > 0 ? 'bg-emerald-500/5' : d < 0 ? 'bg-rose-500/5' : ''}`}>
-                      <td className="px-2 py-1.5"><span className="flex items-center gap-2.5">{player && <PlayerAvatar player={player} team={team} size={30} />}<span className="font-medium text-slate-100">{c.name}</span></span></td>
+                      <td className="px-2 py-1.5"><span className="flex items-center gap-2.5">{player && <PlayerAvatar profile player={player} team={team} size={30} />}<span className="font-medium text-slate-100">{c.name}</span></span></td>
                       <td className={td}>{c.before} → <b className="text-white">{c.after}</b></td>
                       <td className="px-2 text-right"><Delta n={d} big /></td>
                       <td className="px-2 text-right"><Delta n={c.bat} /></td>

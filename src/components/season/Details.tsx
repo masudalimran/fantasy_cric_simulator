@@ -1,0 +1,330 @@
+import { AnimatePresence, motion } from 'framer-motion'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router'
+import { overall } from '../../data/builders'
+import { paths } from '../../routes'
+import { formatDate } from '../../season/dates'
+import { average, bowlAverage, collect, economy as bowlEcon, strikeRate } from '../../season/stats'
+import type { BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
+import { selectSeason, useStore, useTeams } from '../../store/useStore'
+import type { Player, Team } from '../../types'
+import { oversText } from '../match/format'
+import { PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
+import { competitionName, usePlayerIndex, useTeamMap } from './shared'
+
+type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string }
+interface Api { openMatch: (fixtureId: string) => void; openPlayer: (playerId: string) => void }
+const Ctx = createContext<Api | null>(null)
+
+/** Open a finished match or a player from anywhere inside a career. Returns null outside one. */
+export const useDetails = () => useContext(Ctx)
+
+const overs = (balls: number) => oversText(balls)
+
+function Shell({ z, label, onClose, children }: { z: number; label: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <motion.div className="fixed inset-0 grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" style={{ zIndex: z }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div
+        role="dialog" aria-modal="true" aria-label={label}
+        onClick={(e) => e.stopPropagation()}
+        initial={{ y: 24, scale: 0.95, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: 16, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+        className="relative my-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-line bg-ink shadow-2xl"
+      >
+        <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-lg border border-line bg-black/40 px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400">✕</button>
+        {children}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ---- A finished match ------------------------------------------------------
+
+function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtureId: string; z: number; onClose: () => void }) {
+  const [tab, setTab] = useState<'summary' | 'scorecard'>('summary')
+  const teams = useTeamMap()
+  const index = usePlayerIndex()
+  const api = useDetails()
+  const fixture = season.fixtures.find((f) => f.id === fixtureId)
+  const res: MatchSummary | undefined = season.results[fixtureId]
+  const comp = fixture ? season.competitions.find((c) => c.id === fixture.competitionId) : undefined
+  const roster = season.roster ?? []
+  const sides = useMemo(() => {
+    if (!fixture || !res) return []
+    return [fixture.homeId, fixture.awayId].map((id) => {
+      const team = teams.get(id as string)
+      const own = new Set(team?.players.map((p) => p.id))
+      const bat = (res.bat ?? []).filter((l: BatLine) => own.has(roster[l[0]]))
+      const bowl = (res.bowl ?? []).filter((l: BowlLine) => own.has(roster[l[0]]))
+      return { team, score: res.scores[id as string], bat, bowl }
+    })
+  }, [fixture, res, teams, roster])
+  if (!fixture || !res || sides.some((s) => !s.team)) return null
+
+  const nameOf = (i: number) => index.get(roster[i])?.player.name ?? roster[i]
+  const idOf = (i: number) => roster[i]
+  const motm = res.playerOfMatchId ? index.get(res.playerOfMatchId) : undefined
+
+  const who = (id: string, team: Team, extra?: React.ReactNode) => (
+    <button onClick={() => api?.openPlayer(id)} className="flex min-w-0 cursor-pointer items-center gap-2 text-left hover:text-white">
+      {index.get(id) && <PlayerAvatar player={index.get(id)!.player} team={team} size={26} />}
+      <span className="min-w-0 truncate font-semibold text-white">{index.get(id)?.player.name ?? id}</span>{extra}
+    </button>
+  )
+
+  const panel = (i: number) => {
+    const s = sides[i]
+    const team = s.team as Team
+    const won = res.winnerId === team.id
+    const bats = [...s.bat].sort((a, b) => b[1] - a[1] || a[2] - b[2]).slice(0, 2)
+    const bowls = [...s.bowl].sort((a, b) => b[3] - a[3] || a[2] - b[2]).slice(0, 2)
+    return (
+      <div key={team.id} className="overflow-hidden rounded-2xl border-2 bg-panel" style={{ borderColor: won ? '#fbbf24' : '#2b3145' }}>
+        <div className="flex items-center gap-3 px-4 py-3" style={{ background: `linear-gradient(110deg, ${team.colors.primary}cc, #10131c 75%)` }}>
+          <Link to={paths.team(team.id)} onClick={onClose}><TeamCrest team={team} size={46} /></Link>
+          <div className="min-w-0 flex-1">
+            <Link to={paths.team(team.id)} onClick={onClose} className="block truncate font-display text-xl leading-none tracking-wide text-white hover:underline">{team.name}</Link>
+            <div className="text-xs text-slate-300">{s.score ? `${overs(s.score.balls)} overs` : ''}{won ? ' · Winner' : ''}</div>
+          </div>
+          <div className="font-display text-5xl leading-none text-white">{s.score?.runs ?? '-'}<span className="text-2xl text-slate-400">/{s.score?.wickets ?? '-'}</span></div>
+        </div>
+        <div className="grid gap-3 p-3">
+          <div>
+            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Batting</div>
+            {bats.map((l) => (
+              <div key={l[0]} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
+                {who(idOf(l[0]), team)}
+                <span className="ml-auto shrink-0 font-bold tabular-nums text-white">{l[1]}{l[5] ? '' : '*'} <span className="text-xs font-normal text-slate-400">({l[2]})</span></span>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Bowling</div>
+            {bowls.map((l) => (
+              <div key={l[0]} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
+                {who(idOf(l[0]), team)}
+                <span className="ml-auto shrink-0 font-bold tabular-nums text-white">{l[3]}/{l[2]} <span className="text-xs font-normal text-slate-400">({overs(l[1])})</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const th = 'px-2 py-1.5 text-right font-medium'
+  const td = 'px-2 py-1.5 text-right tabular-nums text-slate-300'
+  const card = (i: number) => {
+    const s = sides[i]
+    const team = s.team as Team
+    return (
+      <section key={team.id} className="rounded-2xl border border-line bg-panel p-3">
+        <h3 className="mb-1 flex items-center gap-2 font-display text-2xl tracking-wide text-white"><TeamCrest team={team} size={26} />{team.name} <span className="ml-auto text-xl text-slate-300">{s.score?.runs}/{s.score?.wickets} <span className="text-sm text-slate-500">({s.score ? overs(s.score.balls) : ''} ov)</span></span></h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-1.5 text-left font-medium">Batting</th><th className={th}>R</th><th className={th}>B</th><th className={th}>4s</th><th className={th}>6s</th><th className={th}>SR</th></tr></thead>
+            <tbody>
+              {s.bat.map((l) => (
+                <tr key={l[0]} className="border-t border-line/60">
+                  <td className="px-2 py-1.5">{who(idOf(l[0]), team, !l[5] ? <span className="text-xs text-slate-500">not out</span> : undefined)}</td>
+                  <td className="px-2 text-right font-bold tabular-nums text-white">{l[1]}</td><td className={td}>{l[2]}</td><td className={td}>{l[3]}</td><td className={td}>{l[4]}</td><td className={td}>{l[2] ? ((l[1] / l[2]) * 100).toFixed(1) : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* the bowlers who bowled at this team's batsmen are the other side's */}
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-1.5 text-left font-medium">Bowling · {sides[1 - i].team?.name}</th><th className={th}>O</th><th className={th}>M</th><th className={th}>R</th><th className={th}>W</th><th className={th}>Econ</th></tr></thead>
+            <tbody>
+              {sides[1 - i].bowl.map((l) => (
+                <tr key={l[0]} className="border-t border-line/60">
+                  <td className="px-2 py-1.5">{who(idOf(l[0]), sides[1 - i].team as Team)}</td>
+                  <td className={td}>{overs(l[1])}</td><td className={td}>{l[4]}</td><td className={td}>{l[2]}</td><td className="px-2 text-right font-bold tabular-nums text-white">{l[3]}</td><td className={td}>{l[1] ? ((l[2] / l[1]) * 6).toFixed(1) : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+  void nameOf
+
+  return (
+    <Shell z={z} label="Match details" onClose={onClose}>
+      <div className="px-6 pb-3 pt-5">
+        <div className="pr-14 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">
+          {comp ? <Link to={paths.competition(comp.id)} onClick={onClose} className="hover:underline">{competitionName(comp, teams)}</Link> : 'Match'} · {fixture.stage} · {fixture.format.toUpperCase()} · {formatDate(fixture.date)}
+        </div>
+        <h2 className="mt-1 font-display text-3xl leading-tight tracking-wide text-white">{res.text}</h2>
+        <div className="mt-3 flex gap-1.5" role="tablist">
+          {([['summary', 'Match summary'], ['scorecard', 'Scorecards']] as const).map(([id, label]) => (
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${tab === id ? 'bg-sky-400 text-black' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'}`}>{label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-4 px-6 pb-6">
+        {tab === 'summary' ? (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">{[0, 1].map(panel)}</div>
+            {motm && (
+              <button onClick={() => api?.openPlayer(motm.player.id)} className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-amber-400/50 bg-amber-400/10 p-3 text-left transition hover:bg-amber-400/15">
+                <PlayerAvatar player={motm.player} team={motm.team} size={48} />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">Man of the Match</div>
+                  <div className="truncate text-lg font-bold text-white">{motm.player.name} <span className="text-sm font-normal text-slate-300">· {motm.team.name}</span></div>
+                  {res.motmNote && <div className="text-sm text-slate-300">{res.motmNote}</div>}
+                </div>
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="grid gap-4">{[0, 1].map(card)}</div>
+        )}
+      </div>
+    </Shell>
+  )
+}
+
+// ---- A player --------------------------------------------------------------
+
+function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null; playerId: string; z: number; onClose: () => void }) {
+  const inCareer = useLocation().pathname.startsWith('/career') && !!season
+  const careerIndex = usePlayerIndex()
+  const careerTeams = useTeamMap()
+  const baseTeams = useTeams()
+  const api = useDetails()
+  // outside a career a player shows with his starting ratings and no season to speak of
+  const teams = useMemo(() => (inCareer ? careerTeams : new Map(baseTeams.map((t) => [t.id, t]))), [inCareer, careerTeams, baseTeams])
+  const index = useMemo(() => {
+    if (inCareer) return careerIndex
+    const m = new Map<string, { player: Player; team: Team }>()
+    for (const t of teams.values()) for (const p of t.players) m.set(p.id, { player: p, team: t })
+    return m
+  }, [inCareer, careerIndex, teams])
+  const e = index.get(playerId)
+  const c = useMemo(() => (inCareer && season ? collect(season) : null), [inCareer, season])
+  const recent = useMemo(() => {
+    if (!inCareer || !season) return []
+    const roster = season.roster ?? []
+    const at = roster.indexOf(playerId)
+    if (at < 0) return []
+    const out: { fixtureId: string; date: string; vs: Team | undefined; bat?: BatLine; bowl?: BowlLine }[] = []
+    for (const f of season.fixtures) {
+      const r = season.results[f.id]
+      if (!r) continue
+      const bat = (r.bat ?? []).find((l) => l[0] === at)
+      const bowl = (r.bowl ?? []).find((l) => l[0] === at)
+      if (!bat && !bowl) continue
+      const own = e?.team.id
+      out.push({ fixtureId: f.id, date: f.date, vs: teams.get((f.homeId === own ? f.awayId : f.homeId) as string), bat, bowl })
+    }
+    return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
+  }, [inCareer, season, playerId, teams, e])
+  if (!e) return null
+  const { player, team } = e
+  const accent = accentOf(team)
+  const ovr = overall(player)
+  const b = c?.bat.get(player.id)
+  const w = c?.bowl.get(player.id)
+  const potm = c?.potm.get(player.id) ?? 0
+  const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
+  const stat = (label: string, value: React.ReactNode) => <div className="rounded-xl bg-white/5 px-3 py-2"><div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</div><div className="font-display text-2xl leading-tight text-white">{value}</div></div>
+
+  return (
+    <Shell z={z} label={`${player.name}, player profile`} onClose={onClose}>
+      <div className="px-6 pb-4 pt-6" style={{ background: `linear-gradient(135deg, ${team.colors.primary}cc, ${team.colors.secondary}55 55%, #10131c)` }}>
+        <div className="flex items-center gap-4 pr-12">
+          <div className="rounded-full" style={{ boxShadow: `0 0 0 4px ${accent}, 0 10px 30px rgba(0,0,0,.5)` }}><PlayerAvatar player={player} team={team} size={96} /></div>
+          <div className="min-w-0">
+            <h2 className="font-display text-4xl leading-none tracking-wide text-white">{player.name}</h2>
+            <Link to={paths.team(team.id)} onClick={onClose} className="mt-1 flex items-center gap-2 text-sm text-slate-100 hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="rounded-full bg-black/40 px-2 py-0.5 font-bold text-white">{ROLE_LABEL[player.role]}</span>
+              <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.hand === 'L' ? 'Left' : 'Right'}-hand bat</span>
+              {player.bowling && <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.bowling.type}</span>}
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2"><RatingBadge value={ovr} size="lg" /><div className="hidden text-xs text-slate-300 sm:block"><div className="font-display text-xl leading-none" style={{ color: tierOf(ovr).color }}>{tierOf(ovr).label}</div>overall</div></div>
+        </div>
+      </div>
+      <div className="space-y-5 p-6">
+        {inCareer && <section>
+          <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">This season</h3>
+          {b || w || potm ? (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {b && <>{stat('Runs', b.runs)}{stat('Average', f1(average(b)))}{stat('Strike rate', f1(strikeRate(b)))}{stat('Best', `${b.high}${b.highNotOut ? '*' : ''}`)}{stat('50s / 100s', `${b.fifties} / ${b.hundreds}`)}{stat('Fours / sixes', `${b.fours} / ${b.sixes}`)}</>}
+              {w && <>{stat('Wickets', w.wickets)}{stat('Economy', f1(bowlEcon(w), 2))}{stat('Bowling avg', f1(bowlAverage(w)))}{stat('Best', `${w.bestW}/${w.bestR}`)}</>}
+              {potm > 0 && stat('Man of the Match', potm)}
+            </div>
+          ) : <p className="text-sm text-slate-500">Hasn't played a match this season yet.</p>}
+        </section>}
+
+        <section className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Batting</h3>
+            <StatBar label="Technique" value={player.batting.technique} color={accent} /><StatBar label="Power" value={player.batting.power} color={accent} /><StatBar label="Temperament" value={player.batting.temperament} color={accent} /><StatBar label="Running" value={player.batting.running} color={accent} />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Bowling{player.bowling ? ` · ${player.bowling.type}` : ''} & fielding</h3>
+            {player.bowling ? <><StatBar label="Accuracy" value={player.bowling.accuracy} color={accent} /><StatBar label="Variation" value={player.bowling.variation} color={accent} /><StatBar label="Stamina" value={player.bowling.stamina} color={accent} /></> : <p className="text-sm text-slate-500">Does not bowl.</p>}
+            <StatBar label={player.role === 'WK' ? 'Keeping' : 'Fielding'} value={player.fielding} color={accent} />
+          </div>
+        </section>
+
+        {player.traits.length > 0 && <div className="flex flex-wrap gap-1.5">{player.traits.map((t) => <span key={t} className="rounded-full border border-line bg-panel-2 px-2.5 py-1 text-xs capitalize text-slate-200">{t.replace(/-/g, ' ')}</span>)}</div>}
+
+        {recent.length > 0 && (
+          <section>
+            <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Recent matches</h3>
+            <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
+              {recent.map((r) => (
+                <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
+                  <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(r.date)}</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
+                  <span className="shrink-0 tabular-nums text-white">{r.bat ? `${r.bat[1]}${r.bat[5] ? '' : '*'} (${r.bat[2]})` : ''}{r.bat && r.bowl ? ' · ' : ''}{r.bowl ? `${r.bowl[3]}/${r.bowl[2]}` : ''}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </Shell>
+  )
+}
+
+// ---- The host --------------------------------------------------------------
+
+/** Wrap a career's pages in this so matches and players anywhere in them can open their details in a popup. */
+export function DetailsProvider({ children }: { children: React.ReactNode }) {
+  const season = useStore(selectSeason)
+  const [stack, setStack] = useState<Entry[]>([])
+  const openMatch = useCallback((id: string) => setStack((s) => [...s, { kind: 'match', id }]), [])
+  const openPlayer = useCallback((id: string) => setStack((s) => [...s, { kind: 'player', id }]), [])
+  const api = useMemo(() => ({ openMatch, openPlayer }), [openMatch, openPlayer])
+  const close = useCallback(() => setStack((s) => s.slice(0, -1)), [])
+  // following a link (a team, a tournament) leaves every popup behind
+  const { pathname } = useLocation()
+  useEffect(() => setStack([]), [pathname])
+
+  useEffect(() => {
+    if (!stack.length) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close() } }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [stack.length, close])
+
+  return (
+    <ProfileContext.Provider value={openPlayer}>
+    <Ctx.Provider value={api}>
+      {children}
+      <AnimatePresence>
+        {stack.map((e, i) => e.kind === 'match'
+          ? (season ? <MatchDialog key={`${i}-${e.id}`} season={season} fixtureId={e.id} z={80 + i} onClose={close} /> : null)
+          : <PlayerDialog key={`${i}-${e.id}`} season={season} playerId={e.id} z={80 + i} onClose={close} />)}
+      </AnimatePresence>
+    </Ctx.Provider>
+    </ProfileContext.Provider>
+  )
+}

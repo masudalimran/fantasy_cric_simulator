@@ -9,6 +9,7 @@ import {
   average, bowlAverage, bowlStrikeRate, collect, economy, mostValuable, seasonRecords, strikeRate, teamRecords,
   type BatStat, type BowlStat, type Collected, type Scope,
 } from '../season/stats'
+import { useDetails } from '../components/season/Details'
 import { SortTable, type Col } from '../components/season/SortTable'
 import { selectSeason, useStore } from '../store/useStore'
 import type { MatchFormat, Team } from '../types'
@@ -124,6 +125,7 @@ export function StatsPage() {
   const [params, setParams] = useSearchParams()
   const index = usePlayerIndex()
   const teams = useTeamMap()
+  const details = useDetails()
   const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'batting') as Tab
   const competitionId = params.get('scope') ?? ''
   const format = (params.get('format') ?? '') as MatchFormat | ''
@@ -183,15 +185,16 @@ export function StatsPage() {
                     <div className="text-[11px] uppercase tracking-widest text-slate-500">{r.label}</div>
                     <div className="mt-1 font-display text-4xl text-amber-300">{r.value}</div>
                     <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
-                      {team && <><TeamCrest team={team} size={22} />{team.name}</>}
+                      {team && <Link to={paths.team(team.id)} className="flex items-center gap-2 hover:text-white hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>}
                       {r.playerId && <PlayerCell id={r.playerId} index={index} size={26} />}
                       {r.playerNote && <span className="text-xs text-slate-400">{r.playerNote}</span>}
                     </div>
                     {home && away && fx && (
-                      <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1.5 text-xs text-slate-200" title="The match it happened in">
+                      <button onClick={() => details?.openMatch(fx.id)} className="mt-2 flex w-full cursor-pointer items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1.5 text-left text-xs text-slate-200 transition hover:bg-sky-400/15 hover:ring-1 hover:ring-sky-400/60" title="Open the match: summary and scorecards">
                         <TeamCrest team={home} size={18} /><span className="font-semibold">{home.name}</span><span className="text-slate-500">v</span><TeamCrest team={away} size={18} /><span className="font-semibold">{away.name}</span>
                         <span className="ml-auto shrink-0 text-slate-500">{formatDate(fx.date)}</span>
-                      </div>
+                        <span className="shrink-0 font-bold text-sky-300">View ›</span>
+                      </button>
                     )}
                     <Link to={`${paths.competition(r.fixtureId.split(':')[0])}`} className="mt-2 inline-block text-xs text-indigo-300 hover:underline">{(() => { const c = season.competitions.find((x) => x.id === r.fixtureId.split(':')[0]); return c ? competitionName(c, teams) : '' })()} · {r.detail}</Link>
                   </div>

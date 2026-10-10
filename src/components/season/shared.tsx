@@ -7,6 +7,7 @@ import { paths } from '../../routes'
 import { sessionTeam } from '../../season/progression'
 import { selectSeason, useStore, useTeams } from '../../store/useStore'
 import type { Team } from '../../types'
+import { useDetails } from './Details'
 import { accentOf, PlayerAvatar, TeamCrest } from '../ui'
 import type { Player } from '../../types'
 
@@ -51,6 +52,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
   season: Season; fixture: Fixture; teams: Map<string, Team>; showDate?: boolean; showCompetition?: boolean
 }) {
   const navigate = useNavigate()
+  const details = useDetails()
   const updateSeason = useStore((s) => s.updateSeason)
   const home = fixture.homeId ? teams.get(fixture.homeId) : undefined
   const away = fixture.awayId ? teams.get(fixture.awayId) : undefined
@@ -69,9 +71,9 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
 
   const side = (team: Team | undefined, slot: Fixture['homeRef'], right = false) => (
     <div className={`flex min-w-0 flex-1 items-center gap-2 ${right ? 'flex-row-reverse text-right' : ''}`}>
-      {team ? <TeamCrest team={team} size={32} /> : <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-line" />}
+      {team ? <Link to={paths.team(team.id)} title={`Go to ${team.name}`} className="shrink-0"><TeamCrest team={team} size={32} /></Link> : <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-line" />}
       <div className="min-w-0">
-        <div className={`truncate text-sm font-semibold ${res?.winnerId === team?.id && team ? 'text-white' : team ? 'text-slate-200' : 'text-slate-500'}`}>{team ? team.name : 'To be decided'}</div>
+        <div className={`truncate text-sm font-semibold ${res?.winnerId === team?.id && team ? 'text-white' : team ? 'text-slate-200' : 'text-slate-500'}`}>{team ? <Link to={paths.team(team.id)} className="hover:underline">{team.name}</Link> : 'To be decided'}</div>
         {!team && <div className="truncate text-[11px] text-slate-600">{slotText(slot)}</div>}
         {team && res && <div className="text-xs tabular-nums text-slate-400">{res.scores[team.id]?.runs}/{res.scores[team.id]?.wickets}</div>}
       </div>
@@ -108,8 +110,8 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
             <button onClick={() => navigate(matchHref(season, fixture))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
           </div>
         )}
-        {res && playable && (
-          <button onClick={() => navigate(matchHref(season, fixture))} className="rounded-lg border border-line px-3 py-1 text-xs text-slate-300 hover:border-indigo-400">Replay</button>
+        {res && playable && details && (
+          <button onClick={() => details.openMatch(fixture.id)} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-sky-400">Match details</button>
         )}
       </div>
     </div>
@@ -120,24 +122,28 @@ export interface PlayerEntry { player: Player; team: Team }
 
 /** Every player in every team, by id, so stats can show names, faces and crests. */
 export function usePlayerIndex(): Map<string, PlayerEntry> {
-  const teams = useTeams()
+  const teamMap = useTeamMap() // the career's own ratings
   return useMemo(() => {
     const m = new Map<string, PlayerEntry>()
-    for (const team of teams) for (const player of team.players) m.set(player.id, { player, team })
+    for (const team of teamMap.values()) for (const player of team.players) m.set(player.id, { player, team })
     return m
-  }, [teams])
+  }, [teamMap])
 }
 
 export function PlayerCell({ id, index, size = 32 }: { id: string; index: Map<string, PlayerEntry>; size?: number }) {
   const e = index.get(id)
+  const details = useDetails()
   if (!e) return <span className="text-slate-500">{id}</span>
+  // the portrait and name open the player's profile; the team underneath goes to the team's page
   return (
-    <Link to={paths.team(e.team.id)} className="flex items-center gap-2.5 hover:text-white">
-      <PlayerAvatar player={e.player} team={e.team} size={size} />
+    <span className="flex items-center gap-2.5">
+      <PlayerAvatar profile player={e.player} team={e.team} size={size} />
       <span className="min-w-0">
-        <span className="block truncate font-medium text-slate-100">{e.player.name}</span>
-        <span className="flex items-center gap-1 text-[11px] text-slate-500"><TeamCrest team={e.team} size={14} />{e.team.name}</span>
+        {details
+          ? <button type="button" onClick={() => details.openPlayer(id)} className="block max-w-full cursor-pointer truncate text-left font-medium text-slate-100 hover:text-white hover:underline" title={`${e.player.name}: view profile`}>{e.player.name}</button>
+          : <span className="block truncate font-medium text-slate-100">{e.player.name}</span>}
+        <Link to={paths.team(e.team.id)} className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-200 hover:underline" title={`Go to ${e.team.name}`}><TeamCrest team={e.team} size={14} />{e.team.name}</Link>
       </span>
-    </Link>
+    </span>
   )
 }

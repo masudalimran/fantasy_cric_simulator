@@ -39,7 +39,7 @@ function SquadCard({
       } ${dragging ? 'opacity-40' : ''}`}
     >
       <span className="w-6 text-center font-display text-xl text-slate-500">{inXI ? index + 1 : '·'}</span>
-      <PlayerAvatar player={player} team={team} size={40} />
+      <PlayerAvatar profile player={player} team={team} size={40} />
       <div className="pointer-events-none min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-white">{player.name}</div>
         <div className="truncate text-xs text-slate-400">
