@@ -300,11 +300,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             </div>
           )}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <button className={btn} onClick={() => navigate(paths.match(match.sides[0].team.id, match.sides[1].team.id, match.format, randomSeed()))}>Rematch</button>
+            {/* A session match is final: no rematch, no new match, just back to the session. */}
+            {!fixture && <button className={btn} onClick={() => navigate(paths.match(match.sides[0].team.id, match.sides[1].team.id, match.format, randomSeed()))}>Rematch</button>}
             <button className={`${btn} border-amber-400/70 text-amber-200`} onClick={() => setMotmOpen(true)}>Man of the Match</button>
             <button className={btn} onClick={() => setWinOpen(true)}>Celebrate again</button>
             <button className={btn} onClick={() => setTab('scorecard')}>Full scorecard</button>
-            <Link to={paths.play} className={btn}>New match</Link>
+            {fixture
+              ? <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className={`${btn} border-emerald-400/70 text-emerald-200`}>Back to the session</Link>
+              : <Link to={paths.play} className={btn}>New match</Link>}
           </div>
         </motion.div>
       )}
