@@ -1,0 +1,158 @@
+import type { Difficulty } from '../engine/types'
+import type { MatchFormat } from '../types'
+
+/** Where a fixture's team comes from: known at kickoff, or decided by earlier results. */
+export type Slot =
+  | { kind: 'team'; teamId: string }
+  | { kind: 'winner'; of: string } // winner of another fixture
+  | { kind: 'rank'; competitionId: string; group: string | null; rank: number } // nth in a table
+
+export interface Fixture {
+  id: string
+  date: string
+  format: MatchFormat
+  competitionId: string
+  /** e.g. "Round 3", "Group A", "Semi-final 1", "Final", "Match 2 of 2" */
+  stage: string
+  /** Stage family, used to work out when a table is complete. */
+  phase: 'league' | 'group' | 'knockout' | 'series'
+  group: string | null
+  homeRef: Slot
+  awayRef: Slot
+  homeId: string | null
+  awayId: string | null
+}
+
+export type CompetitionKind = 'league' | 'cup' | 'knockout' | 'series'
+
+export interface Competition {
+  id: string
+  name: string
+  kind: CompetitionKind
+  format: MatchFormat
+  originTeamId: string | null
+  teamIds: string[]
+  /** Groups for cups: group name -> team ids. */
+  groups: Record<string, string[]> | null
+  blurb: string
+  startDate: string
+  endDate: string
+}
+
+export interface TeamScore {
+  runs: number
+  wickets: number
+  balls: number
+  allOut: boolean
+}
+
+/** Compact per-match lines. The first number indexes `Season.roster`. */
+export type BatLine = [player: number, runs: number, balls: number, fours: number, sixes: number, out: 0 | 1]
+export type BowlLine = [player: number, balls: number, runs: number, wickets: number, maidens: number]
+
+export interface MatchSummary {
+  fixtureId: string
+  winnerId: string | null // null = tie or no result
+  text: string
+  /** How the match was won; null for ties and super overs. */
+  margin: 'runs' | 'wickets' | null
+  scores: Record<string, TeamScore>
+  /** True if the match was tied and settled by a super over (knockouts only). */
+  superOver: boolean
+  playerOfMatchId: string | null
+  /** What earned the Man of the Match award, e.g. "112 (58) · 2 catches". */
+  motmNote?: string
+  bat: BatLine[]
+  bowl: BowlLine[]
+}
+
+/** A summary as the engine produces it, before player ids are swapped for roster indices. */
+export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl'> & {
+  bat: [string, number, number, number, number, 0 | 1][]
+  bowl: [string, number, number, number, number][]
+}
+
+export interface Season {
+  id: string
+  year: number
+  seed: number
+  teamIds: string[]
+  /** The team the player manages through this session (null in older saves, where you control both sides). */
+  myTeamId: string | null
+  /** How hard the computer plays against you. Chosen when the session starts. */
+  difficulty: Difficulty
+  /** Player ids that appear in results; match lines refer to them by position. */
+  roster: string[]
+  competitions: Competition[]
+  fixtures: Fixture[]
+  results: Record<string, MatchSummary>
+  /** The in-game "today". Matches on or before this date are due. */
+  today: string
+  /** Career gains and losses of every player, added to his starting ratings. Empty in the first year. */
+  shifts?: Record<string, PlayerShift>
+  /** Your own squad's batting order and captain for this session only; the team outside the session is untouched. */
+  lineup?: { order: string[]; captainId: string; keeperId?: string }
+}
+
+/** Rating points a player has gained (positive) or lost across his batting and bowling. */
+export interface PlayerShift {
+  bat: number
+  bowl: number
+}
+
+/** How one player's ratings moved at the end of a year. */
+export interface PlayerChange {
+  id: string
+  name: string
+  teamId: string
+  /** Overall rating before and after. */
+  before: number
+  after: number
+  bat: number
+  bowl: number
+}
+
+export interface TableRow {
+  teamId: string
+  played: number
+  won: number
+  lost: number
+  tied: number
+  points: number
+  nrr: number
+}
+
+/** One finished year, for the player's own team. Kept in the session so the career can be looked back on. */
+export interface SeasonReview {
+  year: number
+  difficulty: Difficulty
+  teamId: string
+  teamName: string
+  played: number
+  won: number
+  lost: number
+  tied: number
+  /** Where the team ranked among all teams by win rate (1 = best). */
+  rank: number
+  teams: number
+  titles: string[]
+  players: PlayerReview[]
+  /** The five best teams of the year by win rate, for context. */
+  table: { teamId: string; teamName: string; won: number; played: number }[]
+  /** How your players' ratings changed at the end of the year. */
+  progress?: PlayerChange[]
+  /** The biggest risers and fallers across the whole league. */
+  risers?: PlayerChange[]
+  fallers?: PlayerChange[]
+  finishedAt: string
+}
+
+export interface PlayerReview {
+  id: string
+  name: string
+  matches: number
+  bat: { innings: number; runs: number; balls: number; high: number; highNotOut: boolean; fifties: number; hundreds: number; fours: number; sixes: number; notOuts: number } | null
+  bowl: { balls: number; runs: number; wickets: number; best: string; fiveW: number; maidens: number } | null
+  potm: number
+  impact: number
+}

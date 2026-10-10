@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Bebas Neue', 'Impact', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --color-ink: #07080d;
+  --color-panel: #10131c;
+  --color-panel-2: #171b27;
+  --color-line: #252a3a;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(244, 114, 182, 0.08), transparent 60%),
+    var(--color-ink);
+  color: #e7e9f1;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+input[type='range'] {
+  accent-color: var(--accent, #818cf8);
+}
+
+/* Tailwind v4 no longer sets a pointer cursor on buttons */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+select,
+input[type='range'],
+input[type='color'],
+label:has(input[type='range']) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

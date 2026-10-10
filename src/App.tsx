@@ -1,0 +1,261 @@
+import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router'
+import { SquadView } from './components/SquadView'
+import { TeamEditor } from './components/TeamEditor'
+import { TeamsView } from './components/TeamsView'
+import { TeamView } from './components/TeamView'
+import { TeamCrest } from './components/ui'
+import { BUILT_IN_TEAMS } from './data/teams'
+import { CalendarPage } from './pages/CalendarPage'
+import { CompetitionPage } from './pages/CompetitionPage'
+import { CompetitionsPage } from './pages/CompetitionsPage'
+import { MatchPage } from './pages/MatchPage'
+import { NewSessionPage } from './pages/NewSessionPage'
+import { SessionsPage } from './pages/SessionsPage'
+import { PlayPage } from './pages/PlayPage'
+import { ReviewPage } from './pages/ReviewPage'
+import { BackupPage } from './pages/BackupPage'
+import { StatsPage } from './pages/StatsPage'
+import { isMuted, setMuted, sfx } from './audio/sfx'
+import { paths } from './routes'
+import { selectSeason, useStore, useTeams } from './store/useStore'
+
+function NotFound({ what = 'page' }: { what?: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">
+      We couldn't find that {what}. <Link to={paths.teams} className="text-indigo-300 hover:underline">Back to all teams</Link>
+    </div>
+  )
+}
+
+function TeamPage() {
+  const { id = '' } = useParams()
+  return <TeamView id={id} />
+}
+
+function SquadPage() {
+  const { id = '' } = useParams()
+  return <SquadView key={id} id={id} />
+}
+
+function SessionSquadPage() {
+  const season = useStore(selectSeason)
+  if (!season?.myTeamId) return <NotFound what="squad" />
+  return <SquadView key={season.myTeamId} id={season.myTeamId} session />
+}
+
+function EditTeamPage() {
+  const { id } = useParams()
+  const teams = useTeams()
+  if (id && !teams.some((t) => t.id === id)) return <NotFound what="team" />
+  // key: switching between teams must not carry editor state over
+  return <TeamEditor key={id ?? 'new'} id={id} />
+}
+
+function CrestGallery() {
+  return (
+    <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+      {BUILT_IN_TEAMS.map((t) => (
+        <Link key={t.id} to={paths.team(t.id)} className="flex flex-col items-center gap-2 text-xs text-slate-300">
+          <TeamCrest team={t} size={120} />
+          {t.name}
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  `rounded-full px-4 py-1.5 transition ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'}`
+
+/** Backup & transfer, as an icon at the far right of the bar. */
+function BackupIcon() {
+  return (
+    <NavLink
+      to={paths.backup}
+      aria-label="Backup and transfer"
+      className={({ isActive }) =>
+        `group relative ml-2 grid h-9 w-9 place-items-center rounded-full border transition ${isActive ? 'border-sky-400 bg-sky-400/15 text-sky-200' : 'border-line text-slate-300 hover:border-slate-500 hover:text-white'}`
+      }
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z" /><path d="M4 7v5c0 1.7 3.6 3 8 3m8-8v3" /><path d="M4 12v5c0 1.7 3.6 3 8 3m5-4v6m0 0 3-3m-3 3-3-3" />
+      </svg>
+      <span role="tooltip" className="pointer-events-none absolute right-0 top-full z-50 mt-2 whitespace-nowrap rounded-lg bg-black px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/20 transition-opacity group-focus-visible:opacity-100 group-hover:opacity-100">Backup & transfer</span>
+    </NavLink>
+  )
+}
+
+function SessionButton({ big = false }: { big?: boolean }) {
+  return (
+    <NavLink
+      to={paths.session()}
+      className={({ isActive }) =>
+        `inline-flex items-center justify-center gap-2 rounded-full border-2 font-semibold transition ${big ? 'px-5 py-3 text-base' : 'px-4 py-1.5'} ${
+          isActive ? 'border-indigo-300 bg-indigo-500 text-white shadow-[0_0_18px_#6366f188]' : 'border-indigo-400/60 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/25 hover:text-white'
+        }`
+      }
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="3" /><path d="M8 2v4M16 2v4M3 10h18" /></svg>
+      Session
+    </NavLink>
+  )
+}
+
+function PlayButton({ to, resuming, big = false }: { to: string; resuming: boolean; big?: boolean }) {
+  return (
+    <NavLink
+      to={to}
+      title={resuming ? 'A match is live. Click to go back to it' : 'Play a match'}
+      className={({ isActive }) =>
+        `inline-flex items-center justify-center gap-2 rounded-full font-display leading-none tracking-wide text-black transition ${big ? 'px-5 py-3 text-2xl' : 'px-5 py-1.5 text-xl'} ${
+          isActive ? 'bg-emerald-300 shadow-[0_0_20px_#34d39988]' : 'bg-emerald-500 hover:bg-emerald-400'
+        }`
+      }
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
+      {resuming ? 'LIVE' : 'PLAY'}
+      {resuming && <span className="relative ml-0.5 flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" /></span>}
+    </NavLink>
+  )
+}
+
+function SoundToggle() {
+  const [muted, set] = useState(isMuted())
+  return (
+    <button
+      onClick={() => { const next = !muted; setMuted(next); set(next); if (!next) sfx.tick() }}
+      title={muted ? 'Sound is off' : 'Sound is on'}
+      aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+      className="ml-2 grid h-9 w-9 place-items-center rounded-full border border-line text-slate-300 transition hover:border-slate-500 hover:text-white"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 5 6 9H2v6h4l5 4z" fill="currentColor" />
+        {muted ? <path d="m16 9 6 6M22 9l-6 6" /> : <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />}
+      </svg>
+    </button>
+  )
+}
+
+export default function App() {
+  const { pathname } = useLocation()
+  // A match in progress: Play takes you straight back to it.
+  const live = useStore((s) => s.liveMatch)
+  const resuming = !!live && !live.finished
+  const playTo = resuming && live ? live.url : paths.play
+  const [menuOpen, setMenuOpen] = useState(false)
+  const lastPath = useRef(pathname)
+  useEffect(() => {
+    // Flipping between months on the session calendar stays where you are; any other page starts at the top.
+    const month = /^\/session\/\d{4}-\d{2}$/
+    const sameCalendar = month.test(lastPath.current) && month.test(pathname)
+    lastPath.current = pathname
+    if (!sameCalendar) window.scrollTo(0, 0)
+    setMenuOpen(false) // landing on a page closes the drawer
+  }, [pathname])
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden' // don't scroll the page behind the drawer
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+  }, [menuOpen])
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+      <header className="flex items-center justify-between py-5">
+        <Link to={paths.teams} className="flex items-baseline gap-2">
+          <span className="font-display text-3xl tracking-wider text-white">FANTASY CRIC</span>
+          <span className="font-display text-3xl tracking-wider text-indigo-400">SIM</span>
+        </Link>
+
+        {/* Wide screens: the full bar */}
+        <nav className="hidden gap-1 text-sm md:flex">
+          <NavLink to={paths.teams} className={navClass}>Teams</NavLink>
+          <NavLink to={paths.competitions} className={navClass}>Tournaments</NavLink>
+          <NavLink to={paths.stats} className={navClass}>Stats</NavLink>
+          {/* The two things you do most, side by side at the end, each with its own look */}
+          <div className="ml-3 flex items-center gap-2">
+            <SessionButton />
+            <PlayButton to={playTo} resuming={resuming} />
+          </div>
+          <SoundToggle />
+          <BackupIcon />
+        </nav>
+
+        {/* Phones and small tablets: a menu button that opens a drawer */}
+        <div className="flex items-center gap-2 md:hidden">
+          {resuming && (
+            <NavLink to={playTo} aria-label="Back to your live match" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1.5 font-display text-base leading-none tracking-wide text-black">
+              LIVE <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" /></span>
+            </NavLink>
+          )}
+          <button onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} className="grid h-11 w-11 place-items-center rounded-xl border border-line text-white transition hover:border-slate-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div className="fixed inset-0 z-[90] bg-black/70 md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenuOpen(false)}>
+            <motion.aside
+              role="dialog" aria-modal="true" aria-label="Menu"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+              className="absolute right-0 top-0 flex h-full w-[min(86vw,340px)] flex-col bg-ink p-5 shadow-2xl ring-1 ring-line"
+            >
+              <div className="mb-5 flex items-center justify-between">
+                <span className="font-display text-2xl tracking-wider text-white">MENU</span>
+                <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="grid h-11 w-11 place-items-center rounded-xl border border-line text-white">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                <PlayButton to={playTo} resuming={resuming} big />
+                <SessionButton big />
+              </div>
+              <nav className="mt-5 flex flex-col divide-y divide-line border-y border-line">
+                {[[paths.teams, 'Teams'], [paths.competitions, 'Tournaments'], [paths.stats, 'Stats'], [paths.backup, 'Backup & transfer']].map(([to, label]) => (
+                  <NavLink key={to} to={to} className={({ isActive }) => `py-3.5 text-lg font-semibold transition ${isActive ? 'text-white' : 'text-slate-300 hover:text-white'}`}>
+                    {({ isActive }) => <span className="flex items-center justify-between">{label}{isActive && <span className="h-2 w-2 rounded-full bg-indigo-400" />}</span>}
+                  </NavLink>
+                ))}
+              </nav>
+              <div className="mt-auto flex items-center justify-between rounded-xl border border-line px-4 py-3">
+                <span className="text-sm font-semibold text-slate-200">Sound</span>
+                <SoundToggle />
+              </div>
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.main key={pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+        <Routes>
+          <Route path="/" element={<Navigate to={paths.teams} replace />} />
+          <Route path="/teams" element={<TeamsView />} />
+          <Route path="/teams/new" element={<EditTeamPage />} />
+          <Route path="/teams/:id" element={<TeamPage />} />
+          <Route path="/teams/:id/squad" element={<SquadPage />} />
+          <Route path="/teams/:id/edit" element={<EditTeamPage />} />
+          <Route path="/play" element={<PlayPage />} />
+          <Route path="/session" element={<CalendarPage />} />
+          <Route path="/session/squad" element={<SessionSquadPage />} />
+          <Route path="/session/review" element={<ReviewPage />} />
+          <Route path="/session/:ym" element={<CalendarPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/sessions/new" element={<NewSessionPage />} />
+          <Route path="/calendar/*" element={<Navigate to={paths.session()} replace />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/backup" element={<BackupPage />} />
+          <Route path="/competitions" element={<CompetitionsPage />} />
+          <Route path="/competitions/:id" element={<CompetitionPage />} />
+          <Route path="/match/:format/:pair/:seed" element={<MatchPage />} />
+          <Route path="/crests" element={<CrestGallery />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </motion.main>
+    </div>
+  )
+}
