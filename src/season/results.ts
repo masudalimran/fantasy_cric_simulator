@@ -216,6 +216,24 @@ export function simUntil(season: Season, date: string, teams: Map<string, Team>)
   return { season: { ...cur, today: date > cur.today ? date : cur.today }, stoppedAt: null }
 }
 
+/** Is there any match before this date that hasn't been played yet? */
+export const hasEarlierUnplayed = (season: Season, date: string) => season.fixtures.some((f) => f.date < date && !season.results[f.id] && isPlayable(f))
+
+/**
+ * Before a match is played, every match dated before it is played first (the computer plays them out), so the
+ * season goes on in order. Matches on the same day are left alone.
+ */
+export function playEarlierMatches(season: Season, date: string, teams: Map<string, Team>): Season {
+  let cur = season
+  for (let guard = 0; guard < 600; guard++) {
+    const next = nextMatchDate(cur)
+    if (!next || next >= date) break
+    cur = simDay(cur, next, teams, true)
+  }
+  const last = cur.fixtures.filter((f) => f.date < date && cur.results[f.id]).reduce((m, f) => (f.date > m ? f.date : m), cur.today)
+  return { ...cur, today: last > cur.today ? last : cur.today }
+}
+
 export type CompetitionStatus = 'upcoming' | 'live' | 'done'
 
 export function competitionStatus(season: Season, comp: Competition) {

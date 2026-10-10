@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { competitionStatus, isMine, mustPlayFirst, myNextFixture, nextMatchDate, recordResult, resolveSeason, simDay, simulateFixture, tableFor } from './results'
+import { competitionStatus, isMine, hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, nextMatchDate, recordResult, resolveSeason, simDay, simulateFixture, tableFor } from './results'
 import type { Season } from './types'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
@@ -98,5 +98,17 @@ describe('playing in order', () => {
     // once it's played, the next of yours becomes the one that's allowed
     const next = recordResult(s, simulateFixture(s, first, teams))
     expect(mustPlayFirst(next, later)?.id ?? 'free').not.toBe(first.id)
+  })
+
+  it('plays every earlier match before a later one, and leaves same-day matches and yours alone', () => {
+    const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
+    const s = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 3, myTeamId: BUILT_IN_TEAMS[0].id })
+    const mine = myNextFixture(s)!
+    expect(hasEarlierUnplayed(s, mine.date)).toBe(true)
+    const done = playEarlierMatches(s, mine.date, teams)
+    expect(hasEarlierUnplayed(done, mine.date)).toBe(false)
+    expect(done.fixtures.filter((f) => f.date < mine.date && f.homeId && f.awayId).every((f) => done.results[f.id])).toBe(true)
+    expect(done.results[mine.id]).toBeUndefined()
+    expect(done.fixtures.filter((f) => f.date >= mine.date).every((f) => !done.results[f.id])).toBe(true)
   })
 })

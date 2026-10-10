@@ -1,18 +1,25 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
-import { accentOf } from '../ui'
-import { StickFigure } from './StickFigure'
+import { RatingBadge, accentOf } from '../ui'
+import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from './Portrait'
 
-/** A big moment for one batsman that takes over the whole field: a milestone or a dismissal. */
+/**
+ * A big moment that takes over the field for a few seconds, TV-graphic style: a milestone, a dismissal, or the
+ * introduction of a batsman or bowler the first time he gets going in the match.
+ */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'wicket'
+  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler'
   player: Player
   team: Team
   title: string
   /** Lines under the name: the score, or how he got out. */
   lines: string[]
+  /** Little stat boxes (an introduction): label and value. */
+  tiles?: { label: string; value: string }[]
+  /** Overall rating, shown as a badge. */
+  rating?: number
   /** A hundred or more gets the full golden treatment. */
   big?: boolean
   duck?: boolean
@@ -48,6 +55,16 @@ function Stars({ color }: { color: string }) {
   )
 }
 
+/** A sweep of team colour across the screen, for introductions. */
+function Sweep({ color }: { color: string }) {
+  return (
+    <>
+      <motion.div className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12 opacity-25" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} initial={{ left: '-60%' }} animate={{ left: '120%' }} transition={{ duration: 1.4, ease: 'easeInOut' }} />
+      <motion.div className="pointer-events-none absolute inset-x-0 bottom-0 h-1.5" style={{ background: color }} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: 0.1 }} />
+    </>
+  )
+}
+
 export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss: () => void }) {
   const box = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(700)
@@ -59,9 +76,18 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
     return () => ro.disconnect()
   }, [])
   const wicket = moment.kind === 'wicket'
+  const milestone = moment.kind === 'milestone'
+  const intro = moment.kind === 'batsman' || moment.kind === 'bowler'
   const accent = accentOf(moment.team)
-  const fig = Math.max(120, Math.min(w * 0.34, 250))
+  const fig = Math.max(110, Math.min(w * 0.3, 210))
   const scale = Math.max(0.62, Math.min(w / 730, 1.1))
+  const mood: Mood = wicket ? 'sad' : milestone ? (moment.big ? 'victory' : 'cheer') : 'intro'
+  const titleColor = wicket ? '#f87171' : milestone ? '#fbbf24' : accent
+  const Badge = wicket ? StumpsIcon : milestone ? StarIcon : moment.kind === 'bowler' ? BallIcon : BatIcon
+  const bg = wicket
+    ? 'linear-gradient(170deg,#1c0b10,#0a0a12 70%)'
+    : milestone ? `radial-gradient(ellipse at 28% 70%, ${accent}55, transparent 62%), linear-gradient(160deg,#0b1220,#1a1530)`
+    : `radial-gradient(ellipse at 25% 50%, ${accent}66, transparent 60%), linear-gradient(160deg,#0b1220,#10131c)`
 
   return (
     <motion.div
@@ -69,39 +95,59 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       data-moment={moment.kind}
       onClick={onDismiss}
       className="absolute inset-0 z-[45] flex cursor-pointer items-center justify-center gap-[4%] overflow-hidden rounded-2xl px-[5%]"
-      style={{ background: wicket ? 'linear-gradient(170deg,#1c0b10,#0a0a12 70%)' : `radial-gradient(ellipse at 28% 70%, ${accent}55, transparent 62%), linear-gradient(160deg,#0b1220,#1a1530)`, boxShadow: wicket ? 'inset 0 0 90px rgba(239,68,68,.38)' : 'inset 0 0 90px rgba(251,191,36,.3)' }}
+      style={{ background: bg, boxShadow: wicket ? 'inset 0 0 90px rgba(239,68,68,.38)' : milestone ? 'inset 0 0 90px rgba(251,191,36,.3)' : `inset 0 0 80px ${accent}44` }}
       initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18, delay: 0 } }}
       transition={{ duration: 0.28, delay: moment.delay / 1000 }}
-      aria-label={wicket ? 'Wicket' : 'Milestone'}
+      aria-label={wicket ? 'Wicket' : milestone ? 'Milestone' : moment.kind === 'bowler' ? 'Bowler introduction' : 'Batsman introduction'}
     >
-      {wicket ? <Rain /> : (
+      {wicket ? <Rain /> : milestone ? (
         <>
           <motion.div className="pointer-events-none absolute -left-[10%] top-[8%] h-[120%] w-[70%] opacity-30" style={{ background: 'conic-gradient(from 0deg, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400)', borderRadius: '50%' }} animate={{ rotate: 360 }} transition={{ duration: 14, repeat: Infinity, ease: 'linear' }} />
           <Stars color={moment.big ? '#fde68a' : accent} />
         </>
-      )}
+      ) : <Sweep color={accent} />}
 
-      <div className="relative shrink-0" style={{ width: fig }}>
-        <StickFigure player={moment.player} team={moment.team} pose={wicket ? 'sad' : moment.big ? 'victory' : 'cheer'} width={fig} bat delay={moment.delay / 1000} />
+      <div className="relative shrink-0" style={{ width: fig, height: fig }}>
+        <MoodPortrait player={moment.player} team={moment.team} size={fig} mood={mood} delay={moment.delay / 1000} />
+        <motion.div
+          className="absolute -bottom-1 -right-1 grid place-items-center rounded-full border-2 bg-ink shadow-lg"
+          style={{ width: fig * 0.3, height: fig * 0.3, borderColor: titleColor }}
+          initial={{ scale: 0, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 14, delay: moment.delay / 1000 + 0.25 }}
+        >
+          <Badge size={Math.round(fig * 0.17)} />
+        </motion.div>
       </div>
 
       <motion.div
-        className="relative min-w-0 max-w-[52%]"
+        className="relative min-w-0 max-w-[56%]"
         initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: moment.delay / 1000 + 0.15, type: 'spring', stiffness: 200, damping: 18 }}
       >
         <div
           className="font-display leading-none tracking-wide"
-          style={{ fontSize: 66 * scale, color: wicket ? '#f87171' : '#fbbf24', WebkitTextStroke: `${2 * scale}px #0b0d14`, paintOrder: 'stroke fill', textShadow: wicket ? '0 0 30px #ef444488' : '0 0 34px #fbbf2488' }}
+          style={{ fontSize: (intro ? 34 : 66) * scale, color: titleColor, WebkitTextStroke: `${2 * scale}px #0b0d14`, paintOrder: 'stroke fill', textShadow: `0 0 30px ${titleColor}88` }}
         >
           {moment.title}
         </div>
-        <div className="mt-1 font-bold leading-tight text-white" style={{ fontSize: 22 * scale }}>{moment.player.name}</div>
+        <div className="mt-1 flex items-center gap-2">
+          <div className="font-bold leading-tight text-white" style={{ fontSize: (intro ? 28 : 22) * scale }}>{moment.player.name}</div>
+          {moment.rating !== undefined && <RatingBadge value={moment.rating} size="sm" />}
+        </div>
         <div className="text-slate-300" style={{ fontSize: 13 * scale }}>{moment.team.name}</div>
         <div className="mt-2 space-y-0.5">
           {moment.lines.map((l, i) => (
             <div key={i} className={i === 0 ? 'font-extrabold text-white' : 'text-slate-300'} style={{ fontSize: (i === 0 ? 19 : 14) * scale }}>{l}</div>
           ))}
         </div>
+        {moment.tiles && moment.tiles.length > 0 && (
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
+            {moment.tiles.map((t, i) => (
+              <motion.div key={t.label} className="rounded-lg bg-white/10 px-2 py-1 text-center" initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: moment.delay / 1000 + 0.35 + i * 0.07 }}>
+                <div className="font-display leading-none text-white" style={{ fontSize: 22 * scale }}>{t.value}</div>
+                <div className="font-bold uppercase tracking-wider text-slate-400" style={{ fontSize: Math.max(8, 9 * scale) }}>{t.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        )}
         {moment.duck && <div className="mt-2 inline-block -rotate-6 rounded border-2 border-red-400 px-2 py-0.5 font-display tracking-widest text-red-300" style={{ fontSize: 22 * scale }}>DUCK</div>}
       </motion.div>
     </motion.div>

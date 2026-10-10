@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { competitionColor, competitionName, fixtureTeams, FixtureRow, useTeamMap } from '../components/season/shared'
-import { TeamCrest } from '../components/ui'
+import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { paths } from '../routes'
 import { addDays, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
 import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
@@ -155,6 +155,7 @@ export function CalendarPage() {
               const d = c.after - c.before
               return (
                 <div key={c.id} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm">
+                  {myTeam.players.find((x) => x.id === c.id) && <PlayerAvatar profile player={myTeam.players.find((x) => x.id === c.id)!} team={myTeam} size={24} />}
                   <span className="min-w-0 flex-1 truncate text-slate-100">{c.name}</span>
                   <span className="tabular-nums text-slate-400">{c.before} → <b className="text-white">{c.after}</b></span>
                   <span className={`w-9 text-right text-xs font-bold tabular-nums ${d > 0 ? 'text-emerald-400' : d < 0 ? 'text-rose-400' : 'text-slate-500'}`}>{d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : '–'}</span>

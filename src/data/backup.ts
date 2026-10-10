@@ -75,6 +75,10 @@ export function isTeam(t: unknown): t is Team {
     Array.isArray(t.players) && t.players.length >= 11 && t.players.every(isPlayer) && isStr(t.captainId)
 }
 
+function isSeasonLike(x: unknown): boolean {
+  return isObj(x) && isNum(x.year) && isStr(x.today) && Array.isArray(x.fixtures) && Array.isArray(x.competitions) && Array.isArray(x.teamIds) && isObj(x.results)
+}
+
 function isSession(s: unknown): s is SessionFile {
   if (!isObj(s) || !isStr(s.id) || !isStr(s.name) || !isObj(s.season)) return false
   const x = s.season
@@ -123,6 +127,7 @@ export function parseBackup(text: string): ParseResult {
         data.sessions.push({
           ...s,
           reviews: Array.isArray((s as unknown as { reviews?: unknown }).reviews) ? s.reviews : [],
+          history: Array.isArray(s.history) ? s.history.filter((h) => isSeasonLike(h)) : [],
           season: { ...s.season, roster: Array.isArray(s.season.roster) ? s.season.roster : [], myTeamId: isStr(x.myTeamId) ? x.myTeamId : null, difficulty },
         })
       }

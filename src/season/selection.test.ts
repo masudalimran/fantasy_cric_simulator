@@ -40,7 +40,7 @@ describe('computer squad selection', () => {
       if (!hurt.length) continue
       const { team, news } = pickCpuXI(t, season, { date }, form)
       for (const h of hurt) expect(team.players.slice(0, 11).some((p) => p.id === h.id)).toBe(false)
-      expect(news.join(' ')).toMatch(/injured/)
+      expect(news.some((n) => n.kind === 'out' && n.why === 'injured')).toBe(true)
       seen = true
     }
     expect(seen).toBe(true)
@@ -65,6 +65,6 @@ describe('computer squad selection', () => {
     const names = (x: typeof team) => x.players.slice(0, 11).map((p) => p.id)
     expect(names(team)).toContain(bench.id)
     expect(names(none.team).length).toBe(11)
-    expect(news.join(' ')).toMatch(/comes in/)
+    expect(news.some((n) => n.kind === 'in' && n.playerId === bench.id)).toBe(true)
   })
 })

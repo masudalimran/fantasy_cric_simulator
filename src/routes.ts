@@ -16,6 +16,10 @@ export const paths = {
   sessions: '/career',
   newSession: '/career/new',
   competitions: '/career/tournaments',
+  /** Every match played so far in the career year you're looking at. */
+  results: '/career/results',
+  /** A team as it is in the career you have open: its current squad and this season's results. */
+  careerTeam: (id: string) => `/career/team/${encodeURIComponent(id)}`,
   stats: '/career/stats',
   backup: '/backup',
   competition: (id: string) => `/career/tournaments/${encodeURIComponent(id)}`,

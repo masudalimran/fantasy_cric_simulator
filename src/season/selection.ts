@@ -59,10 +59,20 @@ export function isInjured(season: Pick<Season, 'seed'>, playerId: string, date: 
   return new Rng((season.seed ^ hash(playerId) ^ Math.imul(window, 7919)) >>> 0).next() < INJURY_RATE
 }
 
+/** One change to a computer team's XI. */
+export interface NewsItem {
+  playerId: string
+  teamId: string
+  /** Out (dropped or injured) or in (called up). */
+  kind: 'out' | 'in'
+  /** Why, in a few words: "injured", "dropped after poor form", "in good form"… */
+  why: string
+}
+
 export interface CpuXI {
   team: Team
-  /** Plain-words changes from the usual XI: who was dropped, who came in and why. */
-  news: string[]
+  /** Who was dropped or came in, compared with the usual XI. */
+  news: NewsItem[]
 }
 
 /**
@@ -89,14 +99,12 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
   const xi = ordered.slice(0, XI_SIZE)
   const bench = [...ordered.slice(XI_SIZE), ...team.players.filter((p) => injured.has(p.id) && !ordered.includes(p))]
 
-  const news: string[] = []
+  const news: NewsItem[] = []
   for (const p of usual) {
     if (xi.some((x) => x.id === p.id)) continue
-    if (injured.has(p.id)) news.push(`${p.name} is injured`)
-    else if (adj(p) <= -2) news.push(`${p.name} is dropped after poor form`)
-    else news.push(`${p.name} is left out`)
+    news.push({ playerId: p.id, teamId: team.id, kind: 'out', why: injured.has(p.id) ? 'injured' : adj(p) <= -2 ? 'dropped after poor form' : 'left out' })
   }
-  for (const p of xi) if (!usualIds.has(p.id)) news.push(`${p.name} comes in${adj(p) >= 2 ? ', in good form' : ''}`)
+  for (const p of xi) if (!usualIds.has(p.id)) news.push({ playerId: p.id, teamId: team.id, kind: 'in', why: adj(p) >= 2 ? 'called up, in good form' : 'called up' })
   // if the keeper is out, the best fielder in the XI puts on the gloves
   const keeper = keeperIn(xi, team.keeperId) ?? [...xi].sort((a, b) => b.fielding - a.fielding)[0]
   return { team: { ...team, players: [...xi, ...bench], keeperId: keeper?.id }, news }

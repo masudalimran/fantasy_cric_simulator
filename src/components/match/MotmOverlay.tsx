@@ -54,7 +54,7 @@ export function MotmOverlay({ match, awards, onClose, onScorecard }: { match: Ma
 
   return (
     <motion.div
-      className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/85 p-4"
+      data-scroll-lock className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto overscroll-contain bg-black/85 p-4"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
     >
       {/* spotlight */}

@@ -11,7 +11,7 @@ import {
 } from '../season/stats'
 import { useDetails } from '../components/season/Details'
 import { SortTable, type Col } from '../components/season/SortTable'
-import { selectSeason, useStore } from '../store/useStore'
+import { useViewedSeason } from '../store/useStore'
 import type { MatchFormat, Team } from '../types'
 
 const TABS = [
@@ -108,7 +108,7 @@ function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: M
   const cols: Col<Row>[] = [
     { key: 'team', label: 'Team', align: 'left', get: (r) => teams.get(r.teamId)?.name ?? r.teamId, cell: (r) => {
       const t = teams.get(r.teamId)
-      return <Link to={t ? paths.team(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className="font-medium text-slate-100">{t?.name ?? r.teamId}</span></Link>
+      return <Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className="font-medium text-slate-100">{t?.name ?? r.teamId}</span></Link>
     } },
     { key: 'p', label: 'P', get: (r) => r.played, cell: (r) => r.played },
     { key: 'w', label: 'W', get: (r) => r.won, cell: (r) => r.won },
@@ -121,7 +121,7 @@ function Teams({ rows, teams }: { rows: ReturnType<typeof teamRecords>; teams: M
 }
 
 export function StatsPage() {
-  const season = useStore(selectSeason)
+  const { season } = useViewedSeason()
   const [params, setParams] = useSearchParams()
   const index = usePlayerIndex()
   const teams = useTeamMap()
@@ -185,7 +185,7 @@ export function StatsPage() {
                     <div className="text-[11px] uppercase tracking-widest text-slate-500">{r.label}</div>
                     <div className="mt-1 font-display text-4xl text-amber-300">{r.value}</div>
                     <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
-                      {team && <Link to={paths.team(team.id)} className="flex items-center gap-2 hover:text-white hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>}
+                      {team && <Link to={paths.careerTeam(team.id)} className="flex items-center gap-2 hover:text-white hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>}
                       {r.playerId && <PlayerCell id={r.playerId} index={index} size={26} />}
                       {r.playerNote && <span className="text-xs text-slate-400">{r.playerNote}</span>}
                     </div>

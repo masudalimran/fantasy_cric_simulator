@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { TeamCrest, accentOf } from '../ui'
-import { StickFigure } from './StickFigure'
+import { MoodPortrait } from './Portrait'
 
 function Trophy({ size = 120 }: { size?: number }) {
   return (
@@ -56,7 +56,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
 
   if (lost && mine) {
     return (
-      <motion.div data-defeat className="fixed inset-0 z-[75] overflow-y-auto" style={{ background: 'linear-gradient(170deg,#1a1118,#07080d 70%)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div data-defeat data-scroll-lock className="fixed inset-0 z-[75] overflow-y-auto overscroll-contain" style={{ background: 'linear-gradient(170deg,#1a1118,#07080d 70%)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         <svg className="pointer-events-none fixed inset-0 h-full w-full opacity-30" preserveAspectRatio="none" viewBox="0 0 100 100">
           {Array.from({ length: 50 }, (_, i) => <motion.line key={i} x1={(i * 23) % 100} y1={-10} x2={((i * 23) % 100) - 3} y2={-4} stroke="#94a3b8" strokeWidth="0.2" animate={{ y: [0, 120] }} transition={{ duration: 0.9 + (i % 5) * 0.12, repeat: Infinity, ease: 'linear', delay: (i % 9) * 0.1 }} />)}
         </svg>
@@ -67,11 +67,11 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
           <div className="mt-2 text-lg font-semibold text-white">{r?.text}</div>
           <div className="mt-1 text-sm text-slate-400">{match.innings.map((i) => `${match.battingSide(i).team.name} ${i.runs}/${i.wickets}`).join('  ·  ')}</div>
           <p className="mt-3 text-slate-300">Chin up. There's always the next match.</p>
-          <div className="mt-6 flex max-w-4xl flex-wrap items-end justify-center gap-x-1 gap-y-3">
+          <div className="mt-6 flex max-w-4xl flex-wrap items-end justify-center gap-x-3 gap-y-5 pt-4">
             {mine.xi.map((p, i) => (
               <div key={p.id} className="text-center">
-                <StickFigure player={p} team={mine.team} pose="sad" width={78} delay={(i % 5) * 0.2} bat={false} />
-                <div className="mx-auto -mt-1 w-[78px] truncate text-[10px] font-semibold text-slate-400">{p.name.split(' ')[0]}</div>
+                <MoodPortrait player={p} team={mine.team} size={64} mood="sad" delay={(i % 5) * 0.15} />
+                <div className="mx-auto mt-1.5 w-[72px] truncate text-[10px] font-semibold text-slate-400">{p.name.split(' ')[0]}</div>
               </div>
             ))}
           </div>
@@ -86,7 +86,8 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
   return (
     <motion.div
       data-win
-      className="fixed inset-0 z-[75] overflow-y-auto"
+      data-scroll-lock
+      className="fixed inset-0 z-[75] overflow-y-auto overscroll-contain"
       style={{ background: `radial-gradient(ellipse at 50% 30%, ${team ? team.colors.primary : '#334155'}cc, #07080d 75%)` }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
@@ -118,11 +119,11 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
         <div className="mt-1 text-sm text-slate-300">{scores}</div>
 
         {side && (
-          <div className="mt-6 flex max-w-4xl flex-wrap items-end justify-center gap-x-1 gap-y-3">
+          <div className="mt-6 flex max-w-4xl flex-wrap items-end justify-center gap-x-3 gap-y-5 pt-4">
             {side.xi.map((p, i) => (
               <div key={p.id} className="text-center">
-                <StickFigure player={p} team={side.team} pose={i % 4 === 0 ? 'victory' : 'cheer'} width={84} delay={(i % 6) * 0.09} bat={p.role === 'BAT'} />
-                <div className="mx-auto -mt-1 w-[84px] truncate text-[10px] font-semibold text-slate-200">{p.name.split(' ')[0]}</div>
+                <MoodPortrait player={p} team={side.team} size={72} mood={i % 4 === 0 ? 'victory' : 'cheer'} delay={(i % 6) * 0.09} />
+                <div className="mx-auto mt-2 w-[80px] truncate text-[10px] font-semibold text-slate-200">{p.name.split(' ')[0]}</div>
               </div>
             ))}
           </div>

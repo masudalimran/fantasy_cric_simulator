@@ -6,7 +6,7 @@ import { paths } from '../../routes'
 import { formatDate } from '../../season/dates'
 import { average, bowlAverage, collect, economy as bowlEcon, strikeRate } from '../../season/stats'
 import type { BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
-import { selectSeason, useStore, useTeams } from '../../store/useStore'
+import { useTeams, useViewedSeason } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
@@ -50,13 +50,16 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
   const roster = season.roster ?? []
   const sides = useMemo(() => {
     if (!fixture || !res) return []
-    return [fixture.homeId, fixture.awayId].map((id) => {
+    const built = [fixture.homeId, fixture.awayId].map((id) => {
       const team = teams.get(id as string)
       const own = new Set(team?.players.map((p) => p.id))
       const bat = (res.bat ?? []).filter((l: BatLine) => own.has(roster[l[0]]))
       const bowl = (res.bowl ?? []).filter((l: BowlLine) => own.has(roster[l[0]]))
-      return { team, score: res.scores[id as string], bat, bowl }
+      return { team, score: res.scores[id as string], bat, bowl, first: res.bat?.[0] ? own.has(roster[res.bat[0][0]]) : false }
     })
+    // the side that batted first comes first, as in a TV graphic
+    const firstIdx = built.some((s) => s.first) ? built.findIndex((s) => s.first) : Object.keys(res.scores)[0] === fixture.awayId ? 1 : 0
+    return firstIdx === 1 ? [built[1], built[0]] : built
   }, [fixture, res, teams, roster])
   if (!fixture || !res || sides.some((s) => !s.team)) return null
 
@@ -76,14 +79,16 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
     const team = s.team as Team
     const won = res.winnerId === team.id
     const bats = [...s.bat].sort((a, b) => b[1] - a[1] || a[2] - b[2]).slice(0, 2)
-    const bowls = [...s.bowl].sort((a, b) => b[3] - a[3] || a[2] - b[2]).slice(0, 2)
+    // the bowlers who bowled at this side's batsmen are the opposition's
+    const opp = sides[1 - i]
+    const bowls = [...opp.bowl].sort((a, b) => b[3] - a[3] || a[2] - b[2]).slice(0, 2)
     return (
       <div key={team.id} className="overflow-hidden rounded-2xl border-2 bg-panel" style={{ borderColor: won ? '#fbbf24' : '#2b3145' }}>
         <div className="flex items-center gap-3 px-4 py-3" style={{ background: `linear-gradient(110deg, ${team.colors.primary}cc, #10131c 75%)` }}>
-          <Link to={paths.team(team.id)} onClick={onClose}><TeamCrest team={team} size={46} /></Link>
+          <Link to={paths.careerTeam(team.id)} onClick={onClose}><TeamCrest team={team} size={46} /></Link>
           <div className="min-w-0 flex-1">
-            <Link to={paths.team(team.id)} onClick={onClose} className="block truncate font-display text-xl leading-none tracking-wide text-white hover:underline">{team.name}</Link>
-            <div className="text-xs text-slate-300">{s.score ? `${overs(s.score.balls)} overs` : ''}{won ? ' · Winner' : ''}</div>
+            <Link to={paths.careerTeam(team.id)} onClick={onClose} className="block truncate font-display text-xl leading-none tracking-wide text-white hover:underline">{team.name}</Link>
+            <div className="text-xs text-slate-300"><span className="font-bold text-slate-100">{i === 0 ? '1st innings' : '2nd innings'}</span> · {s.score ? `${overs(s.score.balls)} overs` : ''}{won ? ' · Winner' : ''}</div>
           </div>
           <div className="font-display text-5xl leading-none text-white">{s.score?.runs ?? '-'}<span className="text-2xl text-slate-400">/{s.score?.wickets ?? '-'}</span></div>
         </div>
@@ -98,10 +103,10 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
             ))}
           </div>
           <div>
-            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Bowling</div>
+            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Bowling · {opp.team?.name}</div>
             {bowls.map((l) => (
               <div key={l[0]} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
-                {who(idOf(l[0]), team)}
+                {who(idOf(l[0]), opp.team as Team)}
                 <span className="ml-auto shrink-0 font-bold tabular-nums text-white">{l[3]}/{l[2]} <span className="text-xs font-normal text-slate-400">({overs(l[1])})</span></span>
               </div>
             ))}
@@ -118,7 +123,7 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
     const team = s.team as Team
     return (
       <section key={team.id} className="rounded-2xl border border-line bg-panel p-3">
-        <h3 className="mb-1 flex items-center gap-2 font-display text-2xl tracking-wide text-white"><TeamCrest team={team} size={26} />{team.name} <span className="ml-auto text-xl text-slate-300">{s.score?.runs}/{s.score?.wickets} <span className="text-sm text-slate-500">({s.score ? overs(s.score.balls) : ''} ov)</span></span></h3>
+        <h3 className="mb-1 flex items-center gap-2 font-display text-2xl tracking-wide text-white"><TeamCrest team={team} size={26} />{team.name} <span className="rounded bg-white/10 px-1.5 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wider text-slate-300">{i === 0 ? '1st innings' : '2nd innings'}</span> <span className="ml-auto text-xl text-slate-300">{s.score?.runs}/{s.score?.wickets} <span className="text-sm text-slate-500">({s.score ? overs(s.score.balls) : ''} ov)</span></span></h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-1.5 text-left font-medium">Batting</th><th className={th}>R</th><th className={th}>B</th><th className={th}>4s</th><th className={th}>6s</th><th className={th}>SR</th></tr></thead>
@@ -239,7 +244,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
           <div className="rounded-full" style={{ boxShadow: `0 0 0 4px ${accent}, 0 10px 30px rgba(0,0,0,.5)` }}><PlayerAvatar player={player} team={team} size={96} /></div>
           <div className="min-w-0">
             <h2 className="font-display text-4xl leading-none tracking-wide text-white">{player.name}</h2>
-            <Link to={paths.team(team.id)} onClick={onClose} className="mt-1 flex items-center gap-2 text-sm text-slate-100 hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>
+            <Link to={inCareer ? paths.careerTeam(team.id) : paths.team(team.id)} onClick={onClose} className="mt-1 flex items-center gap-2 text-sm text-slate-100 hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
               <span className="rounded-full bg-black/40 px-2 py-0.5 font-bold text-white">{ROLE_LABEL[player.role]}</span>
               <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.hand === 'L' ? 'Left' : 'Right'}-hand bat</span>
@@ -298,7 +303,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
 
 /** Wrap a career's pages in this so matches and players anywhere in them can open their details in a popup. */
 export function DetailsProvider({ children }: { children: React.ReactNode }) {
-  const season = useStore(selectSeason)
+  const { season } = useViewedSeason()
   const [stack, setStack] = useState<Entry[]>([])
   const openMatch = useCallback((id: string) => setStack((s) => [...s, { kind: 'match', id }]), [])
   const openPlayer = useCallback((id: string) => setStack((s) => [...s, { kind: 'player', id }]), [])

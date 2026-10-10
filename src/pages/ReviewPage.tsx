@@ -58,6 +58,7 @@ function LeagueMovers({ title, rows, teams }: { title: string; rows: PlayerChang
       {rows.length === 0 && <p className="text-sm text-slate-500">Nobody.</p>}
       {rows.map((r) => (
         <div key={r.id} className="flex items-center gap-2.5 border-t border-line/60 py-1.5 text-sm first:border-0">
+          {(() => { const t = teams.get(r.teamId); const p = t?.players.find((x) => x.id === r.id); return p && t ? <PlayerAvatar profile player={p} team={t} size={28} /> : null })()}
           <span className="min-w-0 flex-1 truncate text-slate-100">{r.name} <span className="text-slate-500">· {teams.get(r.teamId)?.short ?? ''}</span></span>
           <span className="tabular-nums text-slate-400">{r.before} → <b className="text-white">{r.after}</b></span>
           <Delta n={r.after - r.before} big />

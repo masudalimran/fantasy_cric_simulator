@@ -7,6 +7,8 @@ import { TeamsView } from './components/TeamsView'
 import { TeamView } from './components/TeamView'
 import { TeamCrest } from './components/ui'
 import { BUILT_IN_TEAMS } from './data/teams'
+import { ResultsPage } from './pages/ResultsPage'
+import { CareerTeamPage } from './pages/CareerTeamPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { CareerLayout } from './components/CareerLayout'
 import { DetailsProvider } from './components/season/Details'
@@ -159,9 +161,30 @@ export default function App() {
     if (!menuOpen) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
     window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden' // don't scroll the page behind the drawer
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+    return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
+
+  // While any popup is open (anything marked aria-modal, or data-scroll-lock) the page behind it doesn't scroll.
+  useEffect(() => {
+    const body = document.body
+    const sync = () => {
+      const open = !!document.querySelector('[aria-modal="true"], [data-scroll-lock]')
+      if (open && body.dataset.locked !== '1') {
+        const gap = window.innerWidth - document.documentElement.clientWidth // keep the layout from jumping when the scrollbar goes
+        body.dataset.locked = '1'
+        body.style.overflow = 'hidden'
+        if (gap > 0) body.style.paddingRight = `${gap}px`
+      } else if (!open && body.dataset.locked === '1') {
+        delete body.dataset.locked
+        body.style.overflow = ''
+        body.style.paddingRight = ''
+      }
+    }
+    const mo = new MutationObserver(sync)
+    mo.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-modal', 'data-scroll-lock'] })
+    sync()
+    return () => { mo.disconnect(); body.style.overflow = ''; body.style.paddingRight = ''; delete body.dataset.locked }
+  }, [])
 
   return (
     <DetailsProvider>
@@ -248,6 +271,8 @@ export default function App() {
             <Route path="/career/calendar/:ym" element={<CalendarPage />} />
             <Route path="/career/tournaments" element={<CompetitionsPage />} />
             <Route path="/career/tournaments/:id" element={<CompetitionsPage />} />
+            <Route path="/career/team/:id" element={<CareerTeamPage />} />
+            <Route path="/career/results" element={<ResultsPage />} />
             <Route path="/career/stats" element={<StatsPage />} />
             <Route path="/career/squad" element={<SessionSquadPage />} />
             <Route path="/career/review" element={<ReviewPage />} />

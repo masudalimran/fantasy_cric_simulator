@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { formatDate } from '../../season/dates'
-import { fixtureSeed, isMine, mustPlayFirst, recordResult, simulateFixture } from '../../season/results'
+import { fixtureSeed, isMine, mustPlayFirst, playEarlierMatches, recordResult, simulateFixture } from '../../season/results'
 import type { Competition, Fixture, Season } from '../../season/types'
 import { paths } from '../../routes'
 import { sessionTeam } from '../../season/progression'
-import { selectSeason, useStore, useTeams } from '../../store/useStore'
+import { useStore, useTeams, useViewedSeason } from '../../store/useStore'
 import type { Team } from '../../types'
 import { useDetails } from './Details'
 import { accentOf, PlayerAvatar, TeamCrest } from '../ui'
@@ -14,9 +14,10 @@ import type { Player } from '../../types'
 /** Teams as they are in the active session: starting ratings plus every year's gains and losses. */
 export function useTeamMap(): Map<string, Team> {
   const teams = useTeams()
-  const shifts = useStore((s) => selectSeason(s)?.shifts)
-  const lineup = useStore((s) => selectSeason(s)?.lineup)
-  const myTeamId = useStore((s) => selectSeason(s)?.myTeamId ?? null)
+  const { season } = useViewedSeason() // a past year shows the ratings and lineup it had
+  const shifts = season?.shifts
+  const lineup = season?.lineup
+  const myTeamId = season?.myTeamId ?? null
   return useMemo(() => new Map(teams.map((t) => [t.id, sessionTeam(t, { shifts, lineup, myTeamId })])), [teams, shifts, lineup, myTeamId])
 }
 
@@ -48,8 +49,10 @@ export function competitionName(c: Competition, teams: Map<string, Team>): strin
   return a && b ? `${a.name} v ${b.name} ${c.format.toUpperCase()} Series` : c.name
 }
 
-export function FixtureRow({ season, fixture, teams, showDate = false, showCompetition = false }: {
+export function FixtureRow({ season, fixture, teams, showDate = false, showCompetition = false, perspective }: {
   season: Season; fixture: Fixture; teams: Map<string, Team>; showDate?: boolean; showCompetition?: boolean
+  /** Look at the match from one team's side: a green border if it won, red if it lost, yellow if it hasn't been played. */
+  perspective?: string
 }) {
   const navigate = useNavigate()
   const details = useDetails()
@@ -67,14 +70,16 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
   const sim = () =>
     updateSeason((s) => {
       const f = s.fixtures.find((x) => x.id === fixture.id)
-      return f && f.homeId && f.awayId && !s.results[f.id] ? recordResult(s, simulateFixture(s, f, teams)) : s
+      if (!f || !f.homeId || !f.awayId || s.results[f.id]) return s
+      const upTo = playEarlierMatches(s, f.date, teams) // earlier matches are played first
+      return upTo.results[f.id] ? upTo : recordResult(upTo, simulateFixture(upTo, f, teams))
     })
 
   const side = (team: Team | undefined, slot: Fixture['homeRef'], right = false) => (
     <div className={`flex min-w-0 flex-1 items-center gap-2 ${right ? 'flex-row-reverse text-right' : ''}`}>
-      {team ? <Link to={paths.team(team.id)} title={`Go to ${team.name}`} className="shrink-0"><TeamCrest team={team} size={32} /></Link> : <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-line" />}
+      {team ? <Link to={paths.careerTeam(team.id)} title={`Go to ${team.name}`} className="shrink-0"><TeamCrest team={team} size={32} /></Link> : <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-line" />}
       <div className="min-w-0">
-        <div className={`truncate text-sm font-semibold ${res?.winnerId === team?.id && team ? 'text-white' : team ? 'text-slate-200' : 'text-slate-500'}`}>{team ? <Link to={paths.team(team.id)} className="hover:underline">{team.name}</Link> : 'To be decided'}</div>
+        <div className={`truncate text-sm font-semibold ${res?.winnerId === team?.id && team ? 'text-white' : team ? 'text-slate-200' : 'text-slate-500'}`}>{team ? <Link to={paths.careerTeam(team.id)} className="hover:underline">{team.name}</Link> : 'To be decided'}</div>
         {!team && <div className="truncate text-[11px] text-slate-600">{slotText(slot)}</div>}
         {team && res && <div className="text-xs tabular-nums text-slate-400">{res.scores[team.id]?.runs}/{res.scores[team.id]?.wickets}</div>}
       </div>
@@ -82,7 +87,11 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
   )
 
   return (
-    <div className={`rounded-xl border p-3 ${mine ? 'border-amber-400/60 bg-amber-400/5' : 'border-line bg-panel'}`}>
+    <div className={`rounded-xl border p-3 ${
+      perspective
+        ? !res ? 'border-amber-400/70 bg-amber-400/5' : res.winnerId === perspective ? 'border-emerald-500/60 bg-emerald-500/5' : res.winnerId === null ? 'border-slate-500/70 bg-panel' : 'border-rose-500/60 bg-rose-500/5'
+        : mine ? 'border-amber-400/60 bg-amber-400/5' : 'border-line bg-panel'
+    }`}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-wider text-slate-500">
         <span>
           {mine && <span className="mr-2 rounded bg-amber-400 px-1.5 py-0.5 font-extrabold text-black">YOUR MATCH</span>}
@@ -104,7 +113,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         {res ? (
           <div className="text-xs text-amber-200/90">
             {res.text}
-            {res.playerOfMatchId && (() => { const p = [...teams.values()].flatMap((t) => t.players).find((x) => x.id === res.playerOfMatchId); return p ? <div className="mt-0.5 text-slate-300">Man of the Match: <b className="text-white">{p.name}</b>{res.motmNote ? ` (${res.motmNote})` : ''}</div> : null })()}
+            {res.playerOfMatchId && (() => { const t = [...teams.values()].find((x) => x.players.some((y) => y.id === res.playerOfMatchId)); const p = t?.players.find((x) => x.id === res.playerOfMatchId); return p && t ? <div className="mt-1 flex items-center gap-1.5 text-slate-300"><PlayerAvatar profile player={p} team={t} size={22} />Man of the Match: <b className="text-white">{p.name}</b>{res.motmNote ? ` (${res.motmNote})` : ''}</div> : null })()}
           </div>
         ) : (
           <div className="text-xs text-slate-600">{playable ? 'Not played yet' : 'Waiting on earlier results'}</div>
@@ -150,7 +159,7 @@ export function PlayerCell({ id, index, size = 32 }: { id: string; index: Map<st
         {details
           ? <button type="button" onClick={() => details.openPlayer(id)} className="block max-w-full cursor-pointer truncate text-left font-medium text-slate-100 hover:text-white hover:underline" title={`${e.player.name}: view profile`}>{e.player.name}</button>
           : <span className="block truncate font-medium text-slate-100">{e.player.name}</span>}
-        <Link to={paths.team(e.team.id)} className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-200 hover:underline" title={`Go to ${e.team.name}`}><TeamCrest team={e.team} size={14} />{e.team.name}</Link>
+        <Link to={paths.careerTeam(e.team.id)} className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-200 hover:underline" title={`Go to ${e.team.name}`}><TeamCrest team={e.team} size={14} />{e.team.name}</Link>
       </span>
     </span>
   )

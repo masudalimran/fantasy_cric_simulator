@@ -1,7 +1,8 @@
-import { NavLink, Navigate, Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router'
 import { paths } from '../routes'
 import { DIFFICULTIES } from '../engine/types'
-import { selectSeason, selectSession, useStore } from '../store/useStore'
+import { selectSeason, selectSession, useStore, useViewedSeason } from '../store/useStore'
 import { useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
 
@@ -16,6 +17,13 @@ export function CareerLayout() {
   const season = useStore(selectSeason)
   const session = useStore(selectSession)
   const teams = useTeamMap()
+  const { pathname } = useLocation()
+  const viewYear = useStore((s) => s.viewYear)
+  const setViewYear = useStore((s) => s.setViewYear)
+  const viewed = useViewedSeason()
+  // Only these pages can look back at a past year; the others always show the year being played.
+  const canLookBack = /^\/career\/(tournaments|stats|team|results)/.test(pathname)
+  useEffect(() => { if (!canLookBack && viewYear !== null) setViewYear(null) }, [canLookBack, viewYear, setViewYear])
   if (!season || !session) return <Navigate to={paths.sessions} replace />
 
   const mine = season.myTeamId ? teams.get(season.myTeamId) : undefined
@@ -39,8 +47,27 @@ export function CareerLayout() {
               {mine && <div className="mt-0.5 text-sm text-slate-300">You manage <b className="text-white">{mine.name}</b></div>}
             </div>
           </div>
+          {canLookBack && viewed.years.length > 1 && (
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Year</span>
+              <select
+                value={viewed.year ?? season.year}
+                onChange={(e) => setViewYear(Number(e.target.value) === season.year ? null : Number(e.target.value))}
+                className="cursor-pointer rounded-lg border border-line bg-panel-2 px-3 py-1.5 text-sm font-semibold text-white"
+                aria-label="Choose the year to look at"
+              >
+                {[...viewed.years].reverse().map((y) => <option key={y} value={y}>{y}{y === season.year ? ' (current)' : ''}</option>)}
+              </select>
+            </label>
+          )}
           <span className="rounded px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider" style={{ background: `${COLOR[diff]}26`, color: COLOR[diff] }} title="Chosen when the career started and fixed for the whole career">{DIFFICULTIES[diff].label} difficulty</span>
         </div>
+        {canLookBack && !viewed.isCurrent && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+            <span>Looking back at <b>{viewed.year}</b>. This is a finished season, so it is read-only.</span>
+            <button onClick={() => setViewYear(null)} className="rounded-lg bg-amber-400 px-3 py-1 text-xs font-extrabold text-black hover:bg-amber-300">Back to {season.year}</button>
+          </div>
+        )}
         <nav className="mt-3 flex flex-wrap gap-1.5" aria-label="Career pages">
           {tabs.map(([to, label]) => (
             <NavLink key={to} to={to} className={({ isActive }) => `rounded-full px-4 py-1.5 text-sm font-semibold transition ${isActive ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'}`}>{label}</NavLink>

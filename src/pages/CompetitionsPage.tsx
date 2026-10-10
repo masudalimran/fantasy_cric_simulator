@@ -5,9 +5,10 @@ import { TeamCrest } from '../components/ui'
 import { paths } from '../routes'
 import { formatDate } from '../season/dates'
 import { competitionStatus, tableFor } from '../season/results'
-import { collect, mostValuable, topBatsmen, topBowlers } from '../season/stats'
+import { collect, mostValuable, teamRecords, topBatsmen, topBowlers } from '../season/stats'
+import { SortTable, type Col } from '../components/season/SortTable'
 import type { Competition, Fixture, Season } from '../season/types'
-import { selectSeason, useStore } from '../store/useStore'
+import { useViewedSeason } from '../store/useStore'
 import type { Team } from '../types'
 
 const STATUS_STYLE: Record<string, string> = { upcoming: 'text-slate-400 border-line', live: 'text-emerald-300 border-emerald-500/50', done: 'text-amber-300 border-amber-500/50' }
@@ -47,7 +48,7 @@ function Standings({ title, season, comp, group, teams, form }: { title: string;
             return (
               <tr key={r.teamId} className={`border-t border-line/60 ${mine ? 'bg-amber-400/10' : ''} ${i < qualifiers || r.played === 0 ? '' : 'text-slate-400'}`} style={i === qualifiers - 1 && qualifiers ? { borderBottom: '2px dashed #3b4258' } : undefined}>
                 <td className="px-2 py-1.5 tabular-nums text-slate-500">{i + 1}</td>
-                <td className="px-2 py-1.5"><Link to={t ? paths.team(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={26} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[9px] font-extrabold text-black">YOU</span>}</Link></td>
+                <td className="px-2 py-1.5"><Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={26} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[9px] font-extrabold text-black">YOU</span>}</Link></td>
                 <td className="px-2 text-right tabular-nums">{r.played}</td>
                 <td className="px-2 text-right tabular-nums">{r.won}</td>
                 <td className="px-2 text-right tabular-nums">{r.lost}</td>
@@ -96,7 +97,7 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
             {origin && <TeamCrest team={origin} size={72} />}
             <div>
               <h2 className="font-display text-4xl leading-none tracking-wide text-white">{competitionName(comp, teams)}</h2>
-              <div className="mt-1.5 text-sm text-slate-300">{origin ? <>Founded by <Link to={paths.team(origin.id)} className="text-indigo-300 hover:underline">{origin.name}</Link> <span className="text-slate-400">({origin.series})</span></> : 'Friendly series'} · {comp.format.toUpperCase()} · {comp.kind}</div>
+              <div className="mt-1.5 text-sm text-slate-300">{origin ? <>Founded by <Link to={paths.careerTeam(origin.id)} className="text-indigo-300 hover:underline">{origin.name}</Link> <span className="text-slate-400">({origin.series})</span></> : 'Friendly series'} · {comp.format.toUpperCase()} · {comp.kind}</div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">{formatDate(comp.startDate)} – {formatDate(comp.endDate)} · {st.played}/{st.total} played <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${STATUS_STYLE[st.status]}`}>{st.status}</span></div>
             </div>
           </div>
@@ -162,11 +163,65 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
   )
 }
 
+/** Every tournament and series together: how each team has done across all of them, and the latest matches. */
+function AllTournaments({ season, teams }: { season: Season; teams: Map<string, Team> }) {
+  const rows = useMemo(() => teamRecords(season), [season])
+  const played = season.fixtures.filter((f) => season.results[f.id]).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+  const upcoming = season.fixtures.filter((f) => !season.results[f.id] && f.homeId && f.awayId).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8)
+  type Row = (typeof rows)[number]
+  const winPct = (r: Row) => (r.won / Math.max(r.played, 1)) * 100
+  const cols: Col<Row>[] = [
+    { key: 'team', label: 'Team', align: 'left', get: (r) => teams.get(r.teamId)?.name ?? r.teamId, cell: (r) => {
+      const t = teams.get(r.teamId)
+      const mine = r.teamId === season.myTeamId
+      return <Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[9px] font-extrabold text-black">YOU</span>}</Link>
+    } },
+    { key: 'p', label: 'P', get: (r) => r.played, cell: (r) => r.played },
+    { key: 'w', label: 'W', get: (r) => r.won, cell: (r) => r.won },
+    { key: 'l', label: 'L', first: 'asc', get: (r) => r.lost, cell: (r) => r.lost },
+    { key: 't', label: 'T', get: (r) => r.tied, cell: (r) => r.tied },
+    { key: 'pct', label: 'Win %', get: winPct, cell: (r) => <span className="font-bold text-white">{winPct(r).toFixed(0)}%</span> },
+    { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <span className="font-bold text-amber-300">{r.titles || ''}</span> },
+  ]
+  return (
+    <div className="min-w-0 space-y-5">
+      <div className="rounded-3xl border border-line bg-panel p-5 md:p-6" style={{ borderTop: '4px solid #94a3b8' }}>
+        <h2 className="font-display text-4xl leading-none tracking-wide text-white">All tournaments</h2>
+        <p className="mt-1.5 text-sm text-slate-300">Every tournament and friendly series put together. {played.length} of {season.fixtures.length} matches played.</p>
+      </div>
+      <section>
+        <h3 className="mb-2 font-display text-3xl tracking-wide">Team record, all competitions</h3>
+        <div className="overflow-x-auto rounded-2xl border border-line bg-panel p-3">
+          {rows.length === 0
+            ? <p className="p-6 text-center text-sm text-slate-400">No matches have been played yet.</p>
+            : <SortTable rows={rows} cols={cols} rowKey={(r) => r.teamId} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} rowClass={(r) => (r.teamId === season.myTeamId ? 'bg-amber-400/10' : '')} />}
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Click a column to sort. Titles count tournament finals won.</p>
+      </section>
+      {played.length > 0 && (
+        <section>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-3xl tracking-wide">Latest results</h3>
+            {played.length > 12 && <Link to={paths.results} className="rounded-full border border-line px-4 py-1.5 text-sm font-semibold text-slate-200 transition hover:border-indigo-400 hover:text-white">Show all {played.length} →</Link>}
+          </div>
+          <div className="grid gap-2 lg:grid-cols-2">{played.slice(0, 12).map((f) => <FixtureRow key={f.id} season={season} fixture={f} teams={teams} showDate showCompetition />)}</div>
+        </section>
+      )}
+      {upcoming.length > 0 && (
+        <section>
+          <h3 className="mb-2 font-display text-3xl tracking-wide">Coming up</h3>
+          <div className="grid gap-2 lg:grid-cols-2">{upcoming.map((f) => <FixtureRow key={f.id} season={season} fixture={f} teams={teams} showDate showCompetition />)}</div>
+        </section>
+      )}
+    </div>
+  )
+}
+
 /** A tournament with its standings. A list of every tournament in the career sits beside it. */
 export function CompetitionsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const season = useStore(selectSeason)
+  const { season } = useViewedSeason()
   const teams = useTeamMap()
   if (!season) return null
 
@@ -174,9 +229,9 @@ export function CompetitionsPage() {
   const series = season.competitions.filter((c) => c.kind === 'series')
   const involves = (c: Competition) => !!season.myTeamId && c.teamIds.includes(season.myTeamId)
   const statusOf = new Map(season.competitions.map((c) => [c.id, competitionStatus(season, c)]))
-  // With no tournament chosen, open the one your team is in right now, else any that is under way.
-  const fallback = tournaments.find((c) => involves(c) && statusOf.get(c.id)?.status === 'live') ?? tournaments.find((c) => statusOf.get(c.id)?.status === 'live') ?? tournaments.find((c) => involves(c) && statusOf.get(c.id)?.status === 'upcoming') ?? tournaments[0]
-  const comp = season.competitions.find((c) => c.id === id) ?? fallback
+  // With no tournament chosen, "All tournaments" is what you see.
+  const showAll = !id || id === 'all' || !season.competitions.some((c) => c.id === id)
+  const comp = showAll ? undefined : season.competitions.find((c) => c.id === id)
 
   const dot: Record<string, string> = { upcoming: 'bg-slate-500', live: 'bg-emerald-400', done: 'bg-amber-400' }
   const item = (c: Competition) => {
@@ -202,18 +257,23 @@ export function CompetitionsPage() {
       <p className="mb-4 text-sm text-slate-400">Every tournament was founded by one team. Friendly series fill the gaps so everyone meets everyone.</p>
       <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* phones: a drop-down; wide screens: the list stays beside the table */}
-        <select value={comp?.id ?? ''} onChange={(e) => navigate(paths.competition(e.target.value))} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm lg:hidden" aria-label="Choose a tournament">
+        <select value={showAll ? 'all' : comp?.id ?? ''} onChange={(e) => navigate(paths.competition(e.target.value))} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm lg:hidden" aria-label="Choose a tournament">
+          <option value="all">All tournaments</option>
           <optgroup label="Tournaments">{tournaments.map((c) => <option key={c.id} value={c.id}>{competitionName(c, teams)}</option>)}</optgroup>
           <optgroup label="Friendly series">{series.map((c) => <option key={c.id} value={c.id}>{competitionName(c, teams)}</option>)}</optgroup>
         </select>
         <aside className="hidden space-y-1.5 lg:block lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto lg:pr-1">
+          <Link to={paths.competition('all')} className={`flex items-center gap-2.5 rounded-xl border px-2.5 py-2.5 transition ${showAll ? 'border-indigo-400 bg-indigo-500/15' : 'border-line bg-panel hover:border-slate-500'}`}>
+            <span className="grid h-[34px] w-[34px] place-items-center rounded-lg bg-white/10 font-display text-lg text-white">ALL</span>
+            <div className="min-w-0 flex-1"><div className="text-sm font-semibold leading-tight text-white">All tournaments</div><div className="text-[11px] text-slate-500">Team record across everything</div></div>
+          </Link>
           {tournaments.map(item)}
           <details className="pt-2" open={comp?.kind === 'series'}>
             <summary className="cursor-pointer px-1 py-1 text-sm font-semibold text-slate-300">Friendly series <span className="font-normal text-slate-500">{series.length}</span></summary>
             <div className="mt-1.5 space-y-1.5">{series.map(item)}</div>
           </details>
         </aside>
-        {comp ? <Tournament key={comp.id} season={season} comp={comp} teams={teams} /> : <p className="text-slate-400">No tournaments in this career.</p>}
+        {showAll ? <AllTournaments season={season} teams={teams} /> : comp ? <Tournament key={comp.id} season={season} comp={comp} teams={teams} /> : <p className="text-slate-400">No tournaments in this career.</p>}
       </div>
     </div>
   )

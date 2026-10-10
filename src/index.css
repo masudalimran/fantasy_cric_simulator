@@ -41,3 +41,35 @@ label:has(input[type='range']) {
 button:disabled {
   cursor: not-allowed;
 }
+
+/* Slim, quiet scrollbars everywhere (Windows and Linux browsers draw fat grey ones by default). */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(148 163 184 / 0.28);
+  border-radius: 999px;
+  border: 0;
+  transition: background 0.15s;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(148 163 184 / 0.55);
+}
+*::-webkit-scrollbar-thumb:active {
+  background: rgb(129 140 248 / 0.8);
+}
+/* Firefox has no pseudo-elements: it gets the standard properties (Chrome would ignore the ones above if it saw these). */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(148 163 184 / 0.35) transparent;
+  }
+}

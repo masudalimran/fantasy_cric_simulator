@@ -37,6 +37,7 @@ export function InningsBreak({ match, waiting, onContinue }: { match: Match; wai
 
   return (
     <motion.div
+      {...(waiting ? { 'data-scroll-lock': true } : {})}
       className={`fixed inset-0 z-[55] grid place-items-center p-4 ${waiting ? 'bg-black/60 backdrop-blur-sm' : 'pointer-events-none items-start pt-24'}`}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >

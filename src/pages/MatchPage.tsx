@@ -10,6 +10,8 @@ import { NowPlaying } from '../components/match/NowPlaying'
 import { Scoreboard } from '../components/match/Scoreboard'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
+import { overall } from '../data/builders'
+import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { InningsBreak } from '../components/match/InningsBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
@@ -25,11 +27,11 @@ import { computeAwards } from '../engine/awards'
 import { randomSeed } from '../engine/rng'
 import { FORMATS, type BallEvent } from '../engine/types'
 import { paths } from '../routes'
-import { mustPlayFirst, summarizeMatch } from '../season/results'
+import { hasEarlierUnplayed, mustPlayFirst, playEarlierMatches, summarizeMatch } from '../season/results'
 import { sessionTeam } from '../season/progression'
-import { cpuSelections, formTable } from '../season/selection'
+import { cpuSelections, formTable, type NewsItem } from '../season/selection'
 import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../store/useStore'
-import { TeamCrest } from '../components/ui'
+import { ROLE_LABEL, TeamCrest } from '../components/ui'
 import { competitionName, matchHref, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
 import type { MatchFormat, Team } from '../types'
@@ -132,7 +134,77 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     noteTimer.current = window.setTimeout(() => setNote(null), 3000)
   }, [])
 
-  const announce = useCallback(
+  // Big moments (a wicket, a fifty, a batsman or bowler being introduced) wait their turn: one on the field at a time.
+  const queue = useRef<Moment[]>([])
+  const current = useRef<Moment | null>(null)
+  const busyUntil = useRef(0)
+  const startNextMoment = useCallback(() => {
+    window.clearTimeout(momentTimer.current)
+    const m = queue.current.shift() ?? null
+    current.current = m
+    setMoment(m)
+    if (!m) { busyUntil.current = 0; return }
+    // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
+    if (m.kind === 'wicket' && stopsRef.current.wickets) { busyUntil.current = Infinity; return }
+    const total = m.delay + m.ms + 350
+    busyUntil.current = Date.now() + total
+    momentTimer.current = window.setTimeout(startNextMoment, total)
+  }, [])
+  const enqueueMoment = useCallback((m: Moment) => {
+    queue.current.push(m)
+    if (!current.current) startNextMoment()
+  }, [startNextMoment])
+  /** Close what's showing; the next one in line (if any) takes its place. */
+  const dismissMoment = useCallback(() => startNextMoment(), [startNextMoment])
+  /** Drop everything: the next delivery is what matters now. */
+  const clearMoments = useCallback(() => { queue.current = []; startNextMoment() }, [startNextMoment])
+
+  // First time a batsman faces or a bowler bowls in this match: a few seconds of who he is.
+  const seasonStats = useMemo(() => (fixture && season ? collect(season) : null), [fixture, season])
+  const seen = useRef<Set<string> | null>(null)
+  if (seen.current === null) {
+    const s = new Set<string>()
+    for (const i of match.innings) {
+      for (const b of i.batters) if (b.balls > 0 || b.dismissal) s.add(`bat:${b.id}`)
+      for (const [id, l] of i.bowlers) if (l.legalBalls > 0) s.add(`bowl:${id}`)
+    }
+    seen.current = s
+  }
+  const introSeq = useRef(1_000_000)
+  const enqueueIntros = useCallback(() => {
+    if (match.isOver) return
+    const inn = match.current
+    const sp = autoRef.current
+    const ms = sp === 4 ? 3200 : sp === 2 ? 3600 : 4200 // long enough to read
+    const mk = (kind: 'batsman' | 'bowler', id: string): Moment => {
+      const p = match.player(id)
+      const team = (kind === 'batsman' ? match.battingSide() : match.bowlingSide()).team
+      const t = (label: string, value: string | number) => ({ label, value: String(value) })
+      let tiles: { label: string; value: string }[]
+      let lines: string[]
+      if (kind === 'batsman') {
+        const s = seasonStats?.bat.get(id)
+        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'left' : 'right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
+        tiles = s
+          ? [t('Matches', s.matches), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`)]
+          : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
+      } else {
+        const s = seasonStats?.bowl.get(id)
+        const w = p.bowling
+        lines = [`${w?.type ?? ''} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
+        tiles = s
+          ? [t('Matches', s.matches), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Average', bowlAverage(s) === null ? '-' : bowlAverage(s)!.toFixed(1)), t('Best', `${s.bestW}/${s.bestR}`), t('5-wicket hauls', s.fiveW)]
+          : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]
+      }
+      return { key: introSeq.current++, kind, player: p, team, title: kind === 'batsman' ? 'AT THE CREASE' : 'INTO THE ATTACK', lines, tiles, rating: overall(p), delay: 150, ms }
+    }
+    const striker = inn.batters.find((b) => b.id === inn.strikerId)
+    if (striker && striker.balls === 0 && !seen.current!.has(`bat:${striker.id}`)) { seen.current!.add(`bat:${striker.id}`); enqueueMoment(mk('batsman', striker.id)) }
+    const bowlerId = inn.bowlerId
+    if (bowlerId && (inn.bowlers.get(bowlerId)?.legalBalls ?? 0) === 0 && !seen.current!.has(`bowl:${bowlerId}`)) { seen.current!.add(`bowl:${bowlerId}`); enqueueMoment(mk('bowler', bowlerId)) }
+  }, [match, seasonStats, fixture, enqueueMoment])
+
+  const announceEvents = useCallback(
     (events: BallEvent[]) => {
       force()
       // Sound for the last delivery (or the final result). The crowd "awws" at wickets and roars at boundaries.
@@ -151,7 +223,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (match.isOver) {
         // The match is over: the field has nothing left to show, so the whole screen becomes a celebration.
         setAuto(0)
-        setMoment(null)
+        clearMoments()
         setWinOpen(true)
         return
       }
@@ -172,13 +244,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const sp = autoRef.current
         const delay = sp === 4 ? 350 : sp === 2 ? 500 : 800
         const ms = sp === 4 ? 1300 : sp === 2 ? 1800 : 2600
-        const show = (m: Moment) => {
-          setMoment(m)
-          window.clearTimeout(momentTimer.current)
-          // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
-          if (m.kind === 'wicket' && stopsRef.current.wickets) return
-          momentTimer.current = window.setTimeout(() => setMoment(null), m.delay + m.ms + 350)
-        }
+        const show = (m: Moment) => enqueueMoment(m)
         if (battingMilestone && outLine) {
           show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms,
             lines: [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`] })
@@ -195,28 +261,39 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       else if (notable.boundary === 6) showFx({ key: notable.seq, kind: 'six', text: 'SIX!', colors })
       else showFx({ key: notable.seq, kind: 'four', text: 'FOUR!', colors })
     },
-    [match, showFx, showNote],
+    [match, showFx, showNote, enqueueMoment, clearMoments],
   )
+  const breakRef = useRef(false)
+  breakRef.current = breakOpen
+  const announce = useCallback(
+    (events: BallEvent[]) => {
+      announceEvents(events)
+      if (!match.isOver && events.length <= 12 && !breakRef.current) enqueueIntros() // whoever has just come on gets introduced
+    },
+    [match, announceEvents, enqueueIntros],
+  )
+  // The openers and the first bowler are introduced as play begins; the batsman and bowler of the chase, once the break is over.
+  useEffect(() => { if (phase === 'play' && !breakOpen) enqueueIntros() }, [phase, breakOpen, enqueueIntros])
 
   /** Every player action goes through here: do it, save it (so the match can be resumed), then react to it. */
   const act = useCallback(
     (a: Action) => {
       if (a.t === 'forfeit') sfx.sadTrombone()
       else if (a.t !== 'ball') sfx.tick()
-      if (a.t !== 'forfeit') { window.clearTimeout(momentTimer.current); setMoment(null) } // the next delivery takes over from any big moment
+      if (a.t !== 'forfeit') clearMoments() // the next delivery takes over from any big moment
       const events = applyAction(match, a)
       liveAct(a)
       announce(events)
     },
-    [match, liveAct, announce],
+    [match, liveAct, announce, clearMoments],
   )
 
   // Starting auto-play again closes a dismissal that was being held on screen.
   const wasAuto = useRef(auto)
   useEffect(() => {
-    if (auto && !wasAuto.current) { window.clearTimeout(momentTimer.current); setMoment(null) }
+    if (auto && !wasAuto.current) dismissMoment()
     wasAuto.current = auto
-  }, [auto])
+  }, [auto, dismissMoment])
 
   // Auto-play: one ball at a time at the chosen speed, but linger on the moments that matter
   // (wickets, boundaries, milestones) so the celebration, banner and sound have time to land.
@@ -224,6 +301,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (!auto || phase !== 'play' || match.isOver) return
     let timer = 0
     const step = () => {
+      // wait while a wicket, milestone or introduction is on screen
+      const wait = busyUntil.current - Date.now()
+      if (wait > 0) { timer = window.setTimeout(step, Math.min(wait, 500)); return }
       const innings = match.current.index
       act({ t: 'ball' })
       if (match.isOver) return
@@ -236,7 +316,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     timer = window.setTimeout(step, 1300 / auto)
     return () => window.clearTimeout(timer)
   }, [auto, phase, match, act])
-  useEffect(() => () => { window.clearTimeout(fxTimer.current); window.clearTimeout(noteTimer.current); window.clearTimeout(motmTimer.current); window.clearTimeout(momentTimer.current) }, [])
+  useEffect(() => () => { window.clearTimeout(fxTimer.current); window.clearTimeout(noteTimer.current); window.clearTimeout(motmTimer.current) }, []) // (the moment timer is left to finish: it only walks the queue)
 
   // Keyboard: Space = next ball, O = finish the over, P = pause or resume auto-play.
   useEffect(() => {
@@ -324,7 +404,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} moment={moment} onDismissMoment={() => setMoment(null)}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />
@@ -382,9 +462,9 @@ export function MatchPage() {
   // In a session the computer picks its own XI for the other team (form, injuries, batting order) and says what changed.
   const picked = useMemo(() => {
     const fixture = fxId ? season?.fixtures.find((f) => f.id === fxId) : undefined
-    if (!a0 || !b0 || !season || !fixture || !season.myTeamId) return { a: a0, b: b0, news: [] as string[] }
+    if (!a0 || !b0 || !season || !fixture || !season.myTeamId) return { a: a0, b: b0, news: [] as NewsItem[] }
     const [pa, pb] = cpuSelections(season, fixture, [a0, b0], season.myTeamId, formTable(season, new Map(teams.map((t) => [t.id, t])))) 
-    return { a: pa.team, b: pb.team, news: [...pa.news.map((n) => `${a0.name}: ${n}`), ...pb.news.map((n) => `${b0.name}: ${n}`)] }
+    return { a: pa.team, b: pb.team, news: [...pa.news, ...pb.news] }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a0, b0, fxId, season?.results, season?.myTeamId])
   const { a, b } = picked
@@ -394,8 +474,13 @@ export function MatchPage() {
   const ready = live?.key === key
   const blocked = !ready && !!live && !live.finished // another match is still being played
   // A career match that already has a result is final: it can be looked at, never played again.
+  const fixtureNow = fxId && season ? season.fixtures.find((f) => f.id === fxId) : undefined
+  // Every match dated before this one is played first (the computer plays them out) so the season goes on in order.
+  const catchUp = !!fixtureNow && !!season && !season.results[fixtureNow.id] && !ready && hasEarlierUnplayed(season, fixtureNow.date)
   const alreadyDone = !!fxId && !!season?.results[fxId] && !(ready && live && !live.replay)
   const details = useDetails()
+  const updateSeason = useStore((s) => s.updateSeason)
+  const leagueTeams = useTeamMap()
   // Matches go in order: you can't open a later one while a match of yours before it is still waiting.
   const waitFor = (() => {
     const fx = fxId && season ? season.fixtures.find((f) => f.id === fxId) : undefined
@@ -405,9 +490,13 @@ export function MatchPage() {
   // Opening a match (from Play, the session, or a link) makes it the live one, unless another is mid-way.
   useEffect(() => {
     // (if we're already on our way out of this page, e.g. after cancelling, don't start anything)
-    if (valid && !ready && !blocked && !alreadyDone && !waitFor && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
+    if (valid && !ready && !blocked && !alreadyDone && !waitFor && !catchUp && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valid, ready, blocked, key])
+  }, [valid, ready, blocked, key, catchUp])
+  useEffect(() => {
+    if (catchUp && !waitFor && fixtureNow) updateSeason((s) => playEarlierMatches(s, fixtureNow.date, leagueTeams))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catchUp, waitFor])
 
   if (!valid) {
     return (
@@ -416,6 +505,7 @@ export function MatchPage() {
       </div>
     )
   }
+  if (catchUp && !waitFor) return <div className="mx-auto max-w-xl rounded-3xl border border-line bg-panel p-8 text-center text-slate-300"><div className="font-display text-3xl tracking-wide text-white">Playing the earlier matches…</div><p className="mt-1 text-sm">Every match before this one is played first.</p></div>
   if (waitFor && season) {
     const [h, w] = [teamMapOf(waitFor.homeId), teamMapOf(waitFor.awayId)]
     return (

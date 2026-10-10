@@ -1,3 +1,4 @@
+import type { NewsItem } from '../season/selection'
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -17,6 +18,8 @@ export interface SessionFile {
   season: Season
   /** Finished years for your team, oldest first. */
   reviews: SeasonReview[]
+  /** Every finished season in full (tournaments, results, ratings), oldest first, so past years can be looked back on. */
+  history?: Season[]
 }
 
 /** The match being played right now. It's saved as its seed, squads and the actions taken so far. */
@@ -33,7 +36,7 @@ export interface LiveMatch {
   /** The session a calendar match belongs to, so its result is saved there even if you switch sessions meanwhile. */
   sessionId?: string
   /** What the computer changed in its XI for this match (injuries, form), shown on the toss screen. */
-  news?: string[]
+  news?: (NewsItem | string)[]
   /** Career mode: the team you manage in this match (null = you manage both) and how hard the computer plays. */
   myTeamId?: string | null
   difficulty?: Difficulty
@@ -60,6 +63,9 @@ interface State {
   createSession: (opts: { name: string; year: number; teams: Team[]; seed: number; myTeamId: string | null; difficulty: Difficulty }) => string
   /** Archives the finished year's review and moves the session on to the next season. */
   startNextSeason: (review: SeasonReview, next: Season) => void
+  /** Which year the career's Tournaments, Stats and team pages are showing (null = the current year). Not saved. */
+  viewYear: number | null
+  setViewYear: (year: number | null) => void
   openSession: (id: string) => void
   renameSession: (id: string, name: string) => void
   deleteSession: (id: string) => void
@@ -69,7 +75,7 @@ interface State {
   recordMatch: (summary: RawSummary, date: string) => void
   /** The match in progress (null when there isn't one). Lives until it ends or is discarded. */
   liveMatch: LiveMatch | null
-  startLive: (opts: { format: MatchFormat; teamA: Team; teamB: Team; seed: number; fixtureId?: string; news?: string[]; url: string }) => void
+  startLive: (opts: { format: MatchFormat; teamA: Team; teamB: Team; seed: number; fixtureId?: string; news?: NewsItem[]; url: string }) => void
   liveAct: (a: Action) => void
   setLivePhase: (phase: 'toss' | 'play') => void
   setTossChoice: (c: 'bat' | 'bowl') => void
@@ -94,12 +100,14 @@ export const useStore = create<State>()(
         const season = generateSeason({ year, teams, seed, myTeamId, difficulty })
         const now = new Date().toISOString()
         const id = `session-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
-        set((st) => ({ sessions: [...st.sessions, { id, name: name.trim() || `Session ${st.sessions.length + 1}`, createdAt: now, updatedAt: now, season, reviews: [] }], activeSessionId: id }))
+        set((st) => ({ sessions: [...st.sessions, { id, name: name.trim() || `Career ${st.sessions.length + 1}`, createdAt: now, updatedAt: now, season, reviews: [] }], activeSessionId: id }))
         return id
       },
+      viewYear: null,
+      setViewYear: (year) => set({ viewYear: year }),
       startNextSeason: (review, next) =>
         set((st) => ({
-          sessions: st.sessions.map((x) => (x.id === st.activeSessionId ? { ...x, season: next, reviews: [...(x.reviews ?? []), review], updatedAt: new Date().toISOString() } : x)),
+          sessions: st.sessions.map((x) => (x.id === st.activeSessionId ? { ...x, history: [...(x.history ?? []), x.season], season: next, reviews: [...(x.reviews ?? []), review], updatedAt: new Date().toISOString() } : x)),
         })),
       openSession: (id) => set((st) => (st.sessions.some((x) => x.id === id) ? { activeSessionId: id } : st)),
       renameSession: (id, name) => set((st) => ({ sessions: st.sessions.map((x) => (x.id === id ? { ...x, name: name.trim() || x.name } : x)) })),
@@ -194,6 +202,19 @@ export function useTeams(): Team[] {
 }
 
 export const defaultTeam = (id: string) => BUILT_IN_TEAMS.find((t) => t.id === id)
+
+/**
+ * The season the career's Tournaments, Stats and team pages are looking at: the year picked in the year selector,
+ * or the current one. Past years are read-only.
+ */
+export function useViewedSeason(): { season: Season | null; year: number | null; isCurrent: boolean; years: number[] } {
+  const session = useStore(selectSession)
+  const viewYear = useStore((s) => s.viewYear)
+  const current = session?.season ?? null
+  const past = viewYear !== null ? session?.history?.find((h) => h.year === viewYear) : undefined
+  const years = session ? [...(session.history ?? []).map((h) => h.year), session.season.year] : []
+  return { season: past ?? current, year: (past ?? current)?.year ?? null, isCurrent: !past, years }
+}
 
 export const selectSession = (s: { sessions: SessionFile[]; activeSessionId: string | null }): SessionFile | null =>
   s.sessions.find((x) => x.id === s.activeSessionId) ?? null

@@ -2,7 +2,8 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import type { TossResult } from '../../engine/types'
 import type { Side } from '../../engine/types'
-import { RatingBadge, TeamCrest, accentOf } from '../ui'
+import type { NewsItem } from '../../season/selection'
+import { PlayerAvatar, RatingBadge, TeamCrest, accentOf } from '../ui'
 import { teamStrength } from '../../data/builders'
 import { sfx } from '../../audio/sfx'
 
@@ -29,7 +30,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
   /** The toss winner is a person, who hasn't picked yet. */
   mustChoose?: boolean; onChoose?: (c: 'bat' | 'bowl') => void
   /** Changes the computer made to its XI. */
-  news?: string[]
+  news?: (NewsItem | string)[]
   /** Leave before a ball is bowled. Nothing is recorded. */
   onCancel?: () => void
 }) {
@@ -63,7 +64,24 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
             <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] text-sky-200">{news.length}</span>
             <svg className="ml-auto h-4 w-4 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
           </summary>
-          <ul className="space-y-0.5 border-t border-line px-3 py-2 text-sm text-slate-200">{news.map((n) => <li key={n}>• {n}</li>)}</ul>
+          <ul className="divide-y divide-line/60 border-t border-line px-3 py-1 text-sm text-slate-200">
+            {news.map((n, i) => {
+              if (typeof n === 'string') return <li key={i} className="py-1.5">• {n}</li>
+              const side = sides.find((s) => s.team.id === n.teamId)
+              const p = side?.team.players.find((x) => x.id === n.playerId)
+              if (!side || !p) return null
+              return (
+                <li key={`${n.playerId}-${n.kind}`} className="flex items-center gap-2.5 py-1.5">
+                  <PlayerAvatar profile player={p} team={side.team} size={32} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-white">{p.name}</span>
+                    <span className="block truncate text-xs text-slate-400">{side.team.name}</span>
+                  </span>
+                  <span className={`shrink-0 text-right text-xs font-bold ${n.kind === 'in' ? 'text-emerald-300' : 'text-rose-300'}`}>{n.kind === 'in' ? '▲ In' : '▼ Out'}<span className="block font-normal text-slate-400">{n.why}</span></span>
+                </li>
+              )
+            })}
+          </ul>
         </details>
       )}
       <div className="my-6 font-display text-4xl tracking-wide text-slate-300">The toss</div>
