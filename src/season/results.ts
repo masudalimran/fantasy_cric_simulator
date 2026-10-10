@@ -157,6 +157,16 @@ export function nextMatchDate(season: Season): string | null {
 /** A match involving the player's team. */
 export const isMine = (season: Season, f: Fixture) => !!season.myTeamId && (f.homeId === season.myTeamId || f.awayId === season.myTeamId)
 
+/**
+ * The earlier match of yours that must be played before this one can be, or null if it's free to go.
+ * Time can't move past a match of yours that is still waiting: not yours later on, and not anyone else's after it.
+ */
+export function mustPlayFirst(season: Season, f: Fixture): Fixture | null {
+  const pending = myNextFixture(season)
+  if (!pending || pending.id === f.id) return null
+  return f.date > pending.date ? pending : null
+}
+
 /** The player's next match that hasn't been played yet (once its teams are known), earliest first. */
 export function myNextFixture(season: Season): Fixture | null {
   let best: Fixture | null = null

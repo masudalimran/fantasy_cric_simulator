@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { competitionStatus, nextMatchDate, resolveSeason, simDay, simulateFixture, tableFor } from './results'
+import { competitionStatus, isMine, mustPlayFirst, myNextFixture, nextMatchDate, recordResult, resolveSeason, simDay, simulateFixture, tableFor } from './results'
 import type { Season } from './types'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
@@ -79,5 +79,24 @@ describe('season results', () => {
     expect(resolveSeason(start)).toBe(start)
     const pending = start.fixtures.filter((f) => !f.homeId || !f.awayId)
     expect(pending.length).toBeGreaterThan(0)
+  })
+})
+
+describe('playing in order', () => {
+  it('holds back every match after one of yours that is still waiting', () => {
+    const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
+    const s = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 3, myTeamId: BUILT_IN_TEAMS[0].id })
+    const first = myNextFixture(s)!
+    const mine = s.fixtures.filter((f) => isMine(s, f) && f.homeId && f.awayId).sort((a, b) => a.date.localeCompare(b.date))
+    expect(mustPlayFirst(s, first)).toBeNull()
+    const later = mine.find((f) => f.date > first.date)!
+    expect(mustPlayFirst(s, later)?.id).toBe(first.id)
+    const elsewhere = s.fixtures.find((f) => !isMine(s, f) && f.homeId && f.awayId && f.date > first.date)!
+    expect(mustPlayFirst(s, elsewhere)?.id).toBe(first.id)
+    const before = s.fixtures.find((f) => !isMine(s, f) && f.homeId && f.awayId && f.date <= first.date)
+    if (before) expect(mustPlayFirst(s, before)).toBeNull()
+    // once it's played, the next of yours becomes the one that's allowed
+    const next = recordResult(s, simulateFixture(s, first, teams))
+    expect(mustPlayFirst(next, later)?.id ?? 'free').not.toBe(first.id)
   })
 })

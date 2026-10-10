@@ -25,12 +25,13 @@ import { computeAwards } from '../engine/awards'
 import { randomSeed } from '../engine/rng'
 import { FORMATS, type BallEvent } from '../engine/types'
 import { paths } from '../routes'
-import { summarizeMatch } from '../season/results'
+import { mustPlayFirst, summarizeMatch } from '../season/results'
 import { sessionTeam } from '../season/progression'
 import { cpuSelections, formTable } from '../season/selection'
 import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../store/useStore'
 import { TeamCrest } from '../components/ui'
-import { competitionName, useTeamMap } from '../components/season/shared'
+import { competitionName, matchHref, useTeamMap } from '../components/season/shared'
+import { formatDate } from '../season/dates'
 import type { MatchFormat, Team } from '../types'
 
 /** How long auto-play waits before the next ball. Big moments hold for a few seconds (shorter at higher speeds). */
@@ -387,6 +388,7 @@ export function MatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a0, b0, fxId, season?.results, season?.myTeamId])
   const { a, b } = picked
+  const teamMapOf = (id: string | null) => (id ? teams.find((t) => t.id === id)?.name : undefined)
   const valid = (format === 't20' || format === 'odi') && !!a && !!b && a.id !== b.id
   const key = matchKey(format, aId, bId, Number(seed) || 1)
   const ready = live?.key === key
@@ -394,11 +396,16 @@ export function MatchPage() {
   // A career match that already has a result is final: it can be looked at, never played again.
   const alreadyDone = !!fxId && !!season?.results[fxId] && !(ready && live && !live.replay)
   const details = useDetails()
+  // Matches go in order: you can't open a later one while a match of yours before it is still waiting.
+  const waitFor = (() => {
+    const fx = fxId && season ? season.fixtures.find((f) => f.id === fxId) : undefined
+    return fx && season && !season.results[fx.id] && !ready ? mustPlayFirst(season, fx) : null
+  })()
 
   // Opening a match (from Play, the session, or a link) makes it the live one, unless another is mid-way.
   useEffect(() => {
     // (if we're already on our way out of this page, e.g. after cancelling, don't start anything)
-    if (valid && !ready && !blocked && !alreadyDone && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
+    if (valid && !ready && !blocked && !alreadyDone && !waitFor && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valid, ready, blocked, key])
 
@@ -406,6 +413,19 @@ export function MatchPage() {
     return (
       <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">
         That match can't be set up. <Link to={paths.play} className="text-indigo-300 hover:underline">Pick two teams</Link>
+      </div>
+    )
+  }
+  if (waitFor && season) {
+    const [h, w] = [teamMapOf(waitFor.homeId), teamMapOf(waitFor.awayId)]
+    return (
+      <div className="mx-auto max-w-xl rounded-3xl border border-amber-400/50 bg-panel p-8 text-center">
+        <div className="font-display text-4xl tracking-wide text-amber-300">Not yet</div>
+        <p className="mt-2 text-sm text-slate-300">Matches are played in order. Your match on <b className="text-white">{formatDate(waitFor.date)}</b>{h && w ? ` (${h} v ${w})` : ''} comes first.</p>
+        <div className="mt-6 flex flex-col gap-2">
+          <Link to={matchHref(season, waitFor)} className="rounded-xl bg-amber-400 px-5 py-3 text-base font-bold text-black hover:bg-amber-300">Play that match</Link>
+          <Link to={paths.session()} className="rounded-xl border border-line px-5 py-3 text-sm font-bold text-slate-200 hover:border-slate-400">Back to the career</Link>
+        </div>
       </div>
     )
   }

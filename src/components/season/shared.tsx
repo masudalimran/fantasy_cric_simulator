@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { formatDate } from '../../season/dates'
-import { fixtureSeed, isMine, recordResult, simulateFixture } from '../../season/results'
+import { fixtureSeed, isMine, mustPlayFirst, recordResult, simulateFixture } from '../../season/results'
 import type { Competition, Fixture, Season } from '../../season/types'
 import { paths } from '../../routes'
 import { sessionTeam } from '../../season/progression'
@@ -59,6 +59,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
   const res = season.results[fixture.id]
   const comp = season.competitions.find((c) => c.id === fixture.competitionId)
   const playable = !!home && !!away
+  const waitFor = !res && playable ? mustPlayFirst(season, fixture) : null
   const mine = isMine(season, fixture)
   const slotText = (slot: Fixture['homeRef']) =>
     slot.kind === 'winner' ? 'Winner of an earlier match' : slot.kind === 'rank' ? `${['', '1st', '2nd', '3rd', '4th'][slot.rank] ?? slot.rank + 'th'}${slot.group ? ` in Group ${slot.group}` : ' in the table'}` : ''
@@ -108,7 +109,10 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         ) : (
           <div className="text-xs text-slate-600">{playable ? 'Not played yet' : 'Waiting on earlier results'}</div>
         )}
-        {!res && playable && (
+        {!res && playable && waitFor && (
+          <div className="text-xs font-semibold text-amber-300/90" title="Matches are played in order">Play your match on {formatDate(waitFor.date)} first</div>
+        )}
+        {!res && playable && !waitFor && (
           <div className="flex gap-2">
             <button onClick={sim} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500">Sim</button>
             <button onClick={() => navigate(matchHref(season, fixture))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
