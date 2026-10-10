@@ -1,3 +1,4 @@
+import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TipBanner } from '../components/TipBanner'
 import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
@@ -93,6 +94,8 @@ export function CalendarPage() {
   const selected = params.get('day')
   // set when a sim stops because it reached one of your own matches
   const [stopped, setStopped] = useState<Fixture | null>(null)
+  const [rangeOpen, setRangeOpen] = useState(false)
+  const [peek, setPeek] = useState<{ day?: string; until?: string } | null>(null) // the games of a day or a stretch of days being looked at
 
   const byDate = useMemo(() => {
     const map = new Map<string, Fixture[]>()
@@ -128,8 +131,25 @@ export function CalendarPage() {
     setStopped(r.stoppedAt)
     if (r.stoppedAt) navigate(paths.session(r.stoppedAt.date.slice(0, 7)) + `?day=${r.stoppedAt.date}`, { replace: true })
   }
-  const simNextDay = () => { const nd = nextMatchDate(season); if (nd) { simUntil(nd); if (!myNextFixture(season) || myNextFixture(season)!.date !== nd) navigate(paths.session(nd.slice(0, 7)) + `?day=${nd}`) } }
+  // Move the date forward to a day. Nothing is played: the games of that day are shown first, and the date stays
+  // there when the popup is closed.
+  const moveTo = (date: string) => updateSeason((s) => (date > s.today ? { ...s, today: date } : s))
+  const goToDay = (date: string) => { moveTo(date); setPeek({ day: date }); navigate(paths.session(date.slice(0, 7)), { replace: true }) }
+  const simNextDay = () => { const nd = nextMatchDate(season); if (nd) goToDay(nd) }
+  // A week or a month ahead: stop at the first match day on the way (and ask), or if there is none just move the date on.
+  const skipDays = (n: number) => {
+    const until = addDays(season.today, n)
+    const nd = nextMatchDate(season)
+    if (nd && nd <= until) goToDay(nd)
+    else moveTo(until)
+  }
   const myNext = myNextFixture(season)
+  const between = matchesBefore(season)
+  const skipToMine = () => {
+    if (!myNext) return
+    if (between.length > 0) setRangeOpen(true)
+    else simUntil(myNext.date)
+  }
   const done = seasonComplete(season)
   const myTeam = season.myTeamId ? teams.get(season.myTeamId) : undefined
   const lastYear = [...(session?.reviews[session.reviews.length - 1]?.progress ?? [])].sort((a, b) => b.after - b.before - (a.after - a.before))
@@ -149,14 +169,18 @@ export function CalendarPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          {myTeam && <button className={`${myNext && myNext.date > season.today ? 'cta-pulse cta-pulse-gold ' : ''}w-full rounded-full border-2 border-amber-200 bg-gradient-to-b from-amber-300 to-amber-500 px-6 py-3 font-display text-2xl leading-none tracking-wide text-black shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:animate-none sm:w-auto`} disabled={!myNext} onClick={() => myNext && simUntil(myNext.date)} title="Plays every other team's matches up to yours, then stops so you can play it">Skip to my next match</button>}
-          <button className={btn} disabled={!pending} onClick={simNextDay}>Skip to next match day</button>
-          <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 7))}>Skip a week</button>
-          <button className={btn} disabled={!pending} onClick={() => simUntil(addDays(season.today, 30))}>Skip 30 days</button>
+          {myTeam && <button className={`${myNext && myNext.date > season.today ? 'cta-pulse cta-pulse-gold ' : ''}w-full rounded-full border-2 border-amber-200 bg-gradient-to-b from-amber-300 to-amber-500 px-6 py-3 font-display text-2xl leading-none tracking-wide text-black shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:animate-none sm:w-auto`} disabled={!myNext} onClick={skipToMine} title="Shows the other teams' matches before yours, so you can watch or sim them">{between.length > 0 ? `Sim the ${between.length === 1 ? 'game' : `${between.length} games`} before yours` : 'Go to my next match'}</button>}
+          <button className="w-full rounded-full border-2 border-indigo-300/70 bg-gradient-to-b from-indigo-400 to-indigo-600 px-6 py-2.5 font-display text-xl leading-none tracking-wide text-white shadow-[0_0_16px_rgba(99,102,241,.45)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto" disabled={!pending} onClick={simNextDay}>Skip to next match day</button>
+          <button className={btn} disabled={!pending} onClick={() => skipDays(7)}>Skip a week</button>
+          <button className={btn} disabled={!pending} onClick={() => skipDays(30)}>Skip 30 days</button>
         </div>
       </div>
       {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
-      <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Skip</b> to let the other teams catch up first.</TipBanner>
+      <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
+
+
+      <AnimatePresence>{peek && <BeforeYoursSheet day={peek.day} until={peek.until} onClose={() => setPeek(null)} />}</AnimatePresence>
+      <AnimatePresence>{rangeOpen && myNext && <BeforeYoursSheet onClose={() => setRangeOpen(false)} onSkipped={setStopped} />}</AnimatePresence>
 
       {myTeam && (myNext || done) && (
         <div className="mb-4 rounded-2xl border-2 border-amber-400/60 bg-amber-400/5 p-3">

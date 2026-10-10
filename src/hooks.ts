@@ -56,3 +56,29 @@ export function useInstall() {
 export function haptic(pattern: number | number[] = 12) {
   try { if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern) } catch { /* not allowed here */ }
 }
+
+/** Holds the screen on (Screen Wake Lock) while the app is showing, so a phone doesn't dim in the middle of a match. */
+export function useWakeLock(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled || !('wakeLock' in navigator)) return
+    let lock: WakeLockSentinel | null = null
+    let stopped = false
+    const grab = async () => {
+      if (stopped || document.visibilityState !== 'visible' || lock) return
+      try {
+        lock = await navigator.wakeLock.request('screen')
+        lock.addEventListener('release', () => { lock = null })
+      } catch { /* refused (low battery, unsupported): nothing to do */ }
+    }
+    void grab()
+    const onVisible = () => { void grab() } // the lock is dropped when the app is hidden, so take it again on return
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pointerdown', onVisible) // some browsers only allow it after a touch
+    return () => {
+      stopped = true
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pointerdown', onVisible)
+      void lock?.release()
+    }
+  }, [enabled])
+}

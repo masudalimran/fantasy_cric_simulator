@@ -37,6 +37,7 @@ import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../s
 import { Delta, PlayerAvatar, ROLE_LABEL, TeamCrest } from '../components/ui'
 import { competitionName, matchHref, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
+import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TipBanner } from '../components/TipBanner'
 import type { MatchFormat, Team } from '../types'
 
@@ -116,6 +117,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   // A calendar fixture: save the result when the match ends (unless it was already played).
   const season = useStore(selectSeason)
+  const [beforeOpen, setBeforeOpen] = useState(false)
   const updateSeasonNow = useStore((s) => s.updateSeason)
   const allBaseTeams = useBaseTeamMap()
   const teamMap = useTeamMap()
@@ -374,6 +376,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const nextMine = season ? myNextFixture(season) : null
   const nextLabel = !fixture ? null : nextMine ? 'Play my next match' : season && seasonComplete(season) ? 'See my season review' : null
   const goNext = () => {
+    if (season && matchesBefore(season).length > 0) { setBeforeOpen(true); return } // show the matches that come first
+
     const s = selectSeason(useStore.getState())
     if (!s) return navigate(paths.session())
     const mine = myNextFixture(s)
@@ -412,8 +416,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               </div>
             )
           })()}
+          {fixture && (
+            <Link to={paths.session(season?.today.slice(0, 7))} className="mt-4 inline-flex w-full max-w-md items-center justify-center rounded-full border-2 border-slate-300/60 bg-white/10 px-6 py-3 text-lg font-bold text-white hover:bg-white/20">Go to the calendar</Link>
+          )}
           {nextLabel && (
-            <button onClick={goNext} className="cta-pulse cta-pulse-gold mt-4 w-full max-w-md rounded-full bg-amber-400 px-6 py-3.5 font-display text-2xl leading-none tracking-wide text-black active:bg-amber-300 hover:bg-amber-300">{nextLabel}</button>
+            <button onClick={goNext} className="cta-pulse cta-pulse-gold mt-3 w-full max-w-md rounded-full bg-amber-400 px-6 py-3.5 font-display text-2xl leading-none tracking-wide text-black active:bg-amber-300 hover:bg-amber-300">{nextLabel}</button>
           )}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {/* A session match is final: no rematch, no new match, just back to the career. */}
@@ -422,7 +429,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <button className={btn} onClick={() => setWinOpen(true)}>Celebrate again</button>
             <button className={btn} onClick={() => setSummaryOpen(true)}>Match summary</button>
             {fixture
-              ? <Link to={paths.session(season?.today.slice(0, 7))} className={`${btn} border-emerald-400/70 text-emerald-200`}>Back to the calendar</Link>
+              ? null
               : <Link to={paths.play} className={btn}>New match</Link>}
           </div>
         </motion.div>
@@ -434,6 +441,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const overlays = (
     <>
       <Fx fx={fx} />
+      <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting={!auto} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
@@ -451,7 +459,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         <div className="fixed inset-0 z-30 flex bg-ink" data-scroll-lock style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
           <div className="flex min-w-0 flex-[1.3] flex-col">
             <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-            <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
+            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -459,12 +467,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
-            </div>
+            </div>}
           </div>
           <div className="flex min-w-0 flex-1 flex-col border-l border-line" style={{ paddingTop: 'var(--sat)' }}>
-            <MobileNowPlaying match={match} displayOver={displayOver} />
+            {!match.isOver && <MobileNowPlaying match={match} displayOver={displayOver} />}
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
-              {resultCard}
+              {!match.isOver && resultCard}
               <Commentary match={match} tab={tab} setTab={setTab} />
             </div>
             {!finished && <MobileDock onBall={() => act({ t: 'ball' })} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
@@ -480,7 +488,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         {overlays}
         <div className="fixed inset-0 z-30 flex flex-col bg-ink" data-scroll-lock>
           <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-          <div className="relative shrink-0">
+          {!match.isOver && <div className="relative shrink-0">
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -489,7 +497,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
             <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
-          </div>
+          </div>}
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-2 py-2">
             {resultCard}
             <Commentary match={match} tab={tab} setTab={setTab} />
@@ -509,7 +517,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       {fixture && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-4 py-2 text-sm text-slate-200">
           <span>{(() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : '' })()} · {fixture.stage}{alreadyPlayed && <span className="ml-2 font-semibold text-amber-300">Already played. This replay doesn't change the record.</span>}</span>
-          <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className="font-semibold text-indigo-300 hover:underline">Back to the career</Link>
+          <Link to={`${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}`} className="font-semibold text-indigo-300 hover:underline">‹ Back to the calendar</Link>
         </div>
       )}
 

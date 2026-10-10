@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { formatDate } from '../../season/dates'
 import { fixtureSeed, isMine, myNextFixture, mustPlayFirst, playEarlierMatches, recordResult, simulateFixture } from '../../season/results'
@@ -8,6 +9,7 @@ import { sessionTeam } from '../../season/progression'
 import { useStore, useTeams, useViewedSeason } from '../../store/useStore'
 import type { Team } from '../../types'
 import { useDetails } from './Details'
+import { BeforeYoursSheet, matchesBefore } from './BeforeYours'
 import { accentOf, PlayerAvatar, TeamCrest } from '../ui'
 import type { Player } from '../../types'
 
@@ -61,6 +63,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
   perspective?: string
 }) {
   const navigate = useNavigate()
+  const [beforeOpen, setBeforeOpen] = useState(false)
   const details = useDetails()
   const baseTeams = useBaseTeamMap()
   const liveMatch = useStore((s) => s.liveMatch)
@@ -136,14 +139,15 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         )}
         {!res && playable && !waitFor && !liveHere && (
           <div className="flex gap-2">
-            <button onClick={sim} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Play this match for you, without watching">Skip</button>
-            <button onClick={() => navigate(matchHref(season, fixture))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? `bg-amber-400 text-black hover:bg-amber-300 ${season && myNextFixture(season)?.id === fixture.id ? 'cta-pulse cta-pulse-gold' : ''}` : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
+            <button onClick={() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : sim())} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Simulate this match: it is played for you and you just see the result">Sim</button>
+            <button onClick={() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(matchHref(season, fixture)))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? `bg-amber-400 text-black hover:bg-amber-300 ${season && myNextFixture(season)?.id === fixture.id ? 'cta-pulse cta-pulse-gold' : ''}` : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
           </div>
         )}
         {res && playable && details && (
           <button onClick={() => details.openMatch(fixture.id)} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-sky-400">Match details</button>
         )}
       </div>
+      <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
     </div>
   )
 }

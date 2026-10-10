@@ -127,6 +127,15 @@ The app is built so someone who has never seen it can follow the shiny things:
   with a **Got it** button on the Calendar, the toss and the match screen. Each shows once.
 - **The glow**: `.cta-pulse` (green) and `.cta-pulse-gold` in `index.css` mark the one thing to press: Start career,
   your next match's Play button, NEXT BALL (not while auto-play runs), and Got it. It stops for people who prefer reduced motion.
+- **Skip to my next match** (Calendar, the big gold button): if other teams' matches are waiting before yours, a popup
+  lists them, each with **Watch** (play it yourself) and **Sim** (simulate it, just the result), plus **Sim all** at the top.
+  When none are left it turns into "It's match day!" with a glowing **Play match** button. **Skip to next match day**
+  is the second most important button (indigo, full width on a phone). It moves the date to the next match day and opens
+  the same popup for that day's games, with **Watch** and **Sim** on each and a **Sim all** button. **Skip a week** and
+  **Skip 30 days** move the date to the first match day on the way (or to the end if there is none) and ask the same
+  way. Nothing is simulated without you choosing, and closing the popup leaves the date on that match day.
+- **After a match** a glowing **Play my next match** button opens the same popup (`components/season/BeforeYours.tsx`)
+  when other teams' matches are waiting, and otherwise goes straight to the next toss (or "See my season review" at the end of the year).
 - **Plain words**: "Sim" is now **Skip** (it plays the other teams' matches and always stops before yours), with a line
   of explanation under the Calendar buttons.
 - **New career** asks only for a team (with a **Pick one for me** button); difficulty, name, year and the teams in the
@@ -158,6 +167,9 @@ The app is built to feel like a native app on a phone (the desktop layout is unc
   12% tighter; the match screen's big numbers are smaller again on top of that.
 - Buttons are trimmed on a phone too: they get a smaller spacing unit (`--spacing: 0.19rem` in `index.css`), so their
   padding, gaps and heights are about a quarter tighter, with a 32px minimum height for touch.
+- **Screen stays on**: the app asks the phone not to dim or lock while it is open (Screen Wake Lock, `useWakeLock` in
+  `hooks.ts`). It needs https (the Netlify site, or an installed app), so it does nothing on `http://192.168…` in dev.
+  The More sheet has a **Keep screen on** switch (on by default, `fcs.keepAwake`).
 - Test it on a real phone with `npm run dev -- --host` (same Wi-Fi) or the Netlify deploy.
 
 ## How it works

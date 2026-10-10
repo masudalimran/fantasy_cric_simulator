@@ -13,7 +13,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { CareerLayout } from './components/CareerLayout'
 import { Glossary } from './components/Glossary'
 import { BottomNav, MobileHeader, MoreSheet } from './components/MobileChrome'
-import { useIsMobile } from './hooks'
+import { useIsMobile, useWakeLock } from './hooks'
 import { DetailsProvider } from './components/season/Details'
 import { CompetitionsPage } from './pages/CompetitionsPage'
 import { MatchPage } from './pages/MatchPage'
@@ -27,7 +27,7 @@ import { ReviewPage } from './pages/ReviewPage'
 import { BackupPage } from './pages/BackupPage'
 import { StatsPage } from './pages/StatsPage'
 import { isMuted, setMuted, sfx } from './audio/sfx'
-import { setHideImages, useHideImages } from './prefs'
+import { setHideImages, useHideImages, useKeepAwake } from './prefs'
 import { paths } from './routes'
 import { selectSeason, useStore, useTeams } from './store/useStore'
 
@@ -181,6 +181,7 @@ export default function App() {
   const resuming = !!live && !live.finished
   const playTo = resuming && live ? live.url : paths.play
   const mobile = useIsMobile()
+  useWakeLock(useKeepAwake())
   const [moreOpen, setMoreOpen] = useState(false)
   // on a phone a match is a full-screen game: no top bar, no tab bar
   const showChrome = !(mobile && pathname.startsWith('/match/'))

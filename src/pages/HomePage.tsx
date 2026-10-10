@@ -1,4 +1,7 @@
+import { AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TeamCrest } from '../components/ui'
 import { matchHref, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
@@ -7,13 +10,14 @@ import { paths } from '../routes'
 import { openHelp } from '../tips'
 import { selectSeason, selectSession, useStore } from '../store/useStore'
 
-interface Next { label: string; hint: string; to: string; gold?: boolean }
+interface Next { label: string; hint: string; to: string; gold?: boolean; mine?: boolean }
 
 const tile = 'flex min-h-[76px] flex-col justify-center rounded-2xl border border-line bg-panel p-4 text-left transition hover:border-slate-500 active:bg-panel-2'
 
 /** The front door: one big shiny button that always says what to do next, and a few quiet ones below it. */
 export function HomePage() {
   const navigate = useNavigate()
+  const [beforeOpen, setBeforeOpen] = useState(false)
   const season = useStore(selectSeason)
   const session = useStore(selectSession)
   const live = useStore((s) => s.liveMatch)
@@ -27,7 +31,7 @@ export function HomePage() {
   let next: Next
   if (resuming && live) next = { label: 'Carry on with your match', hint: 'A match is waiting exactly where you left it.', to: live.url, gold: true }
   else if (!session || !season) next = { label: 'Start your first career', hint: 'Pick a team and you are ready to play. It takes about ten seconds.', to: paths.newSession }
-  else if (nextMine && home && away) next = { label: 'Play your next match', hint: `${home.name} v ${away.name} · ${formatDate(nextMine.date)}`, to: matchHref(season, nextMine), gold: true }
+  else if (nextMine && home && away) next = { label: 'Play your next match', hint: `${home.name} v ${away.name} · ${formatDate(nextMine.date)}`, to: matchHref(season, nextMine), gold: true, mine: true }
   else if (seasonComplete(season)) next = { label: 'See how your year went', hint: 'The season is over. Look back at it, then start the next one.', to: paths.review }
   else next = { label: 'Skip ahead', hint: 'Nothing of yours is waiting. Let the other teams play on.', to: paths.session() }
 
@@ -40,7 +44,7 @@ export function HomePage() {
         {me && <div className="mb-3 flex justify-center"><TeamCrest team={me} size={72} /></div>}
         <p className="mb-4 min-h-5 text-sm text-slate-300">{next.hint}</p>
         <button
-          onClick={() => navigate(next.to)}
+          onClick={() => (next.mine && season && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(next.to))}
           className={`cta-pulse ${next.gold ? 'cta-pulse-gold bg-amber-400 active:bg-amber-300 hover:bg-amber-300' : 'bg-emerald-500 active:bg-emerald-400 hover:bg-emerald-400'} w-full rounded-full px-6 py-4 font-display text-3xl leading-none tracking-wide text-black`}
         >
           {next.label}
@@ -64,6 +68,7 @@ export function HomePage() {
         <Link to={paths.teams} className={tile}><span className="font-display text-2xl tracking-wide text-white">Teams</span><span className="text-xs text-slate-400">See all the heroes</span></Link>
         <button onClick={openHelp} className={tile}><span className="font-display text-2xl tracking-wide text-white">How to play</span><span className="text-xs text-slate-400">Six easy steps</span></button>
       </div>
+      <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
     </div>
   )
 }

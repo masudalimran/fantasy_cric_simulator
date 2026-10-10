@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router'
 import { isMuted, setMuted, sfx } from '../audio/sfx'
 import { useInstall } from '../hooks'
-import { setHideImages, useHideImages } from '../prefs'
+import { setHideImages, setKeepAwake, useHideImages, useKeepAwake } from '../prefs'
 import { paths } from '../routes'
 import { openHelp } from '../tips'
 
@@ -69,6 +69,7 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
 /** A bottom sheet with the things that don't need a tab: backup, sound, images and installing the app. */
 export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const hideImages = useHideImages()
+  const keepAwake = useKeepAwake()
   const [muted, setM] = useState(isMuted())
   const install = useInstall()
   const [showIos, setShowIos] = useState(false)
@@ -109,6 +110,11 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-fuchsia-400/15 text-fuchsia-300"><svg width="22" height="22" viewBox="0 0 24 24" {...stroke}><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.8" /><path d="m21 16-5-5-8 8" />{hideImages && <path d="M3 3l18 18" />}</svg></span>
                 <span className="flex-1"><span className="block font-semibold text-white">Player images</span><span className="block text-xs text-slate-400">Turn pictures off to show initials</span></span>
                 {toggle(!hideImages)}
+              </button>
+              <button onClick={() => setKeepAwake(!keepAwake)} className={row} role="switch" aria-checked={keepAwake}>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-400/15 text-sky-300"><svg width="22" height="22" viewBox="0 0 24 24" {...stroke}><rect x="6" y="2" width="12" height="20" rx="3" /><path d="M12 18h.01" /></svg></span>
+                <span className="flex-1"><span className="block font-semibold text-white">Keep screen on</span><span className="block text-xs text-slate-400">Stops the phone dimming while you play</span></span>
+                {toggle(keepAwake)}
               </button>
               {!install.installed && (install.canPrompt || install.ios) && (
                 <>
