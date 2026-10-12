@@ -87,9 +87,11 @@ export function CareerLayout() {
         )}
         {/* the career's pages as a tab strip that stays in view while you scroll, like a native app */}
         <div className="sticky z-30 -mx-4 mb-3 flex items-center gap-1 border-b border-line/70 bg-ink/95 px-1.5 py-1.5 backdrop-blur-xl" style={{ top: 'calc(var(--sat) + 49px)' }}>
+          <NavLink to={tabs[0][0]} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-extrabold tracking-tight transition ${isActive ? 'bg-amber-400 text-black shadow-[0_0_12px_rgba(251,191,36,.45)]' : 'border border-amber-400/70 bg-amber-400/15 text-amber-200 active:bg-amber-400/30'}`}>{tabs[0][1]}</NavLink>
+          <span className="h-6 w-px shrink-0 bg-line" aria-hidden />
           <button onClick={() => nudge(-1)} disabled={!more.left} aria-label="Previous tabs" className="grid h-9 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-bold text-white transition active:bg-white/15 disabled:opacity-25">‹</button>
           <nav ref={tabStrip} onScroll={measure} className="flex min-w-0 flex-1 gap-1 overflow-x-hidden" aria-label="Career pages">
-            {tabs.map(([to, label]) => (
+            {tabs.slice(1).map(([to, label]) => (
               <NavLink key={to} to={to} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-center text-[13px] font-bold tracking-tight transition ${isActive ? 'bg-indigo-500 text-white' : 'text-slate-300 active:bg-white/10'}`}>{label}</NavLink>
             ))}
           </nav>
@@ -135,7 +137,7 @@ export function CareerLayout() {
         )}
         <nav className="mt-3 flex flex-wrap gap-1.5" aria-label="Career pages">
           {tabs.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `rounded-full px-4 py-1.5 text-sm font-semibold transition ${isActive ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'}`}>{label}</NavLink>
+            <NavLink key={to} to={to} className={({ isActive }) => `rounded-full px-4 py-1.5 text-sm font-semibold transition ${label === 'Calendar' ? (isActive ? 'bg-amber-400 text-black shadow-[0_0_14px_rgba(251,191,36,.45)]' : 'border border-amber-400/70 bg-amber-400/15 text-amber-200 hover:bg-amber-400/25') : isActive ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'}`}>{label}</NavLink>
           ))}
         </nav>
       </div>
