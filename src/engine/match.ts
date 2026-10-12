@@ -7,8 +7,8 @@ import {
 } from './model'
 import { Rng, randomSeed } from './rng'
 import {
-  DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
-  type BallEvent, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
+  BOWL_STYLE_VALUE, DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
+  type BallEvent, type BowlStyle, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
   type MatchResult, type Pitch, type Side, type TossResult,
 } from './types'
 
@@ -47,6 +47,8 @@ export class Match {
 
   /** Per-side overrides: set by the user's controls, otherwise the AI decides. */
   intent: [Intent | number | null, Intent | number | null] = [null, null]
+  /** How each side bowls when it is the bowling side (null = the usual). */
+  bowlStyle: [BowlStyle | null, BowlStyle | null] = [null, null]
   /** Set when a side forfeits: the rest of the match is played out, and that side loses. */
   forfeitSide: 0 | 1 | null = null
   /** The side the player manages (null = the player manages both, as in a friendly). */
@@ -90,6 +92,7 @@ export class Match {
       this.cpuSide = (1 - this.mySide) as 0 | 1
       const d = DIFFICULTIES[opts.career.difficulty]
       this.bonus[this.cpuSide] = d.boost
+      this.bonus[this.mySide] = d.help
       this.blunder = d.blunder
     }
     this.toss = this.doToss(opts.toss, opts.tossDecision)
@@ -276,7 +279,7 @@ export class Match {
         : typeof userIntent === 'number' ? userIntent : INTENT_VALUE[userIntent]
 
     const probs = ballProbs({
-      format, phase, intent, pitch: this.pitch, freeHit: inn.freeHit,
+      format, phase, intent, style: BOWL_STYLE_VALUE[this.bowlStyle[bowlingSideIdx] ?? 'normal'], pitch: this.pitch, freeHit: inn.freeHit,
       forfeit: this.forfeitSide === battingSideIdx ? 'bat' : this.forfeitSide === bowlingSideIdx ? 'bowl' : undefined,
       ballsFaced: strikerLine.balls,
       fieldingAvg: this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx],

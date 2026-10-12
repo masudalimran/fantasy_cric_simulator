@@ -76,11 +76,31 @@ export interface CpuXI {
 }
 
 /**
+ * The XI a team put out in its most recent match before `beforeDate` (null if it has none on record, such as older
+ * saves or the first match of a career). Team news is measured against this, so "in" and "out" mean "compared with last game".
+ */
+export function lastPlayedXI(season: Season, team: Team, beforeDate: string): string[] | null {
+  const roster = season.roster ?? []
+  const mine = new Set(team.players.map((p) => p.id))
+  let best: { date: string; ids: string[] } | null = null
+  for (const f of season.fixtures) {
+    if (f.date >= beforeDate || (f.homeId !== team.id && f.awayId !== team.id)) continue
+    const played = season.results[f.id]?.played
+    if (!played || (best && f.date <= best.date)) continue
+    const ids = played.map((i) => roster[i]).filter((id): id is string => !!id && mine.has(id))
+    if (ids.length >= XI_SIZE) best = { date: f.date, ids }
+  }
+  return best ? best.ids : null
+}
+
+/**
  * The computer's selection for one match. It keeps the settled side but drops a player who is injured or badly
  * out of form, and brings in a bench player who is in form or simply better. It also fixes the batting order.
  */
 export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'date'>, form: Form): CpuXI {
-  const usual = team.players.slice(0, XI_SIZE)
+  // "usual" = who played last time (so news says what changed since then); the settled side if there is no last game
+  const last = lastPlayedXI(season, team, fixture.date)
+  const usual = last ? team.players.filter((p) => last.includes(p.id)) : team.players.slice(0, XI_SIZE)
   const usualIds = new Set(usual.map((p) => p.id))
   const injured = new Set(team.players.filter((p) => isInjured(season, p.id, fixture.date)).map((p) => p.id))
   // never leave the side short: if too many are out, the least-bad stay in

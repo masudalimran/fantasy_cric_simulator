@@ -120,6 +120,8 @@ export interface BallInput {
   bowl: EffBowl
   /** Intent: -1 defend, 0 normal, +1 attack, +2 slog. Fractions are fine. */
   intent: number
+  /** The bowling side's approach: -1 safe, 0 normal, +1 aggressive. */
+  style?: number
   ballsFaced: number
   pitch: Pitch
   freeHit: boolean
@@ -163,13 +165,23 @@ export function ballProbs(i: BallInput): BallProbs {
   const field = (i.fieldingAvg - 70) / 30
 
   const m = new Array<number>(9).fill(1)
-  m[WICKET] = clamp(Math.exp(KNOBS.wicketSens * (zThr - zDef) + 0.4 * dUp + 0.5 * dDn - 0.2 * ease) * eyeIn * tune.wicket, KNOBS.wicketMin, KNOBS.wicketMax)
+  m[WICKET] = clamp(Math.exp(KNOBS.wicketSens * (zThr - zDef) + 0.4 * Math.min(dUp, 1) + 0.05 * Math.max(dUp - 1, 0) + 0.5 * dDn - 0.2 * ease) * eyeIn * tune.wicket, KNOBS.wicketMin, KNOBS.wicketMax)
   m[FOUR] = clamp(Math.exp(0.55 * zAtk - 0.35 * zCtl + 0.5 * d + 0.25 * ease - 0.15 * field) * tune.four, 0.12, 4)
   m[SIX] = clamp(Math.exp(0.8 * zP - 0.35 * zCtl + 0.75 * d + 0.25 * ease - 0.1 * field) * tune.six * (1 - 0.35 * settle), 0.05, 5)
   m[DOT] = clamp(Math.exp(0.4 * zCtl - 0.3 * zT - 0.12 * zR - 0.18 * d - 0.1 * ease + 0.1 * field) * slow * tune.dot * (i.phase === 'death' ? tune.deathDot : 1), 0.3, 2.4)
   m[ONE] = clamp(Math.exp(0.1 * zR - 0.08 * zCtl - 0.1 * d), 0.6, 1.5)
   m[TWO] = clamp(Math.exp(0.25 * zR - 0.05 * zCtl), 0.5, 2)
   m[THREE] = clamp(Math.exp(0.3 * zR), 0.4, 2.2)
+
+  // Bowling approach. Safe: bowl to the fielders, fewer wickets but fewer boundaries. Aggressive: bait the big shot, more wickets and more runs.
+  const st = i.style ?? 0
+  if (st !== 0) {
+    const up = st > 0
+    m[WICKET] *= up ? 1.22 : 0.8
+    m[FOUR] *= up ? 1.12 : 0.86
+    m[SIX] *= up ? 1.2 : 0.8
+    m[DOT] *= up ? 0.94 : 1.1
+  }
 
   if (i.forfeit === 'bat') { m[WICKET] *= 6; m[FOUR] *= 0.4; m[SIX] *= 0.3; m[DOT] *= 1.5 }
   if (i.forfeit === 'bowl') { m[WICKET] *= 0.1; m[FOUR] *= 2; m[SIX] *= 2.2; m[DOT] *= 0.5 }

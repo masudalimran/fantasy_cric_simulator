@@ -24,19 +24,20 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
     // a phone's day is small: its number, a dot per match in the tournament's colour, and a ring if one of yours is waiting
     const mineWaiting = fixtures.some((f) => isMine(season, f) && !season.results[f.id])
     const allPlayed = fixtures.length > 0 && fixtures.every((f) => season.results[f.id])
+    const mine = fixtures.some((f) => isMine(season, f))
     return (
       <button
         onClick={onSelect}
         className={`flex min-h-[54px] flex-col items-center justify-between rounded-xl border px-0.5 py-1 transition active:scale-95 ${
-          selected ? 'border-indigo-400 bg-indigo-400/15' : mineWaiting ? 'border-amber-400 bg-amber-400/10' : today ? 'border-amber-400/70 bg-amber-400/5' : 'border-line bg-panel'
+          selected ? 'border-indigo-400 bg-indigo-400/15' : today ? 'border-2 border-sky-400 bg-sky-400/15' : mineWaiting ? 'border-amber-400 bg-amber-400/10' : mine ? 'border-amber-400/50 bg-panel' : 'border-line bg-panel'
         } ${inMonth ? '' : 'opacity-30'}`}
         aria-label={`${formatDate(date)}, ${fixtures.length} match${fixtures.length === 1 ? '' : 'es'}`}
       >
-        <span className={`text-[13px] font-bold leading-none ${today ? 'text-amber-300' : mineWaiting ? 'text-amber-200' : 'text-slate-300'}`}>{Number(date.slice(8))}</span>
+        <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[13px] font-bold leading-none ${today ? 'bg-sky-400 text-black' : mineWaiting ? 'text-amber-200' : 'text-slate-300'}`}>{Number(date.slice(8))}</span>
         <span className="flex max-w-full flex-wrap items-center justify-center gap-[3px] px-0.5">
           {shown.map((f) => { const comp = compOf(f); return <span key={f.id} className={`h-1.5 w-1.5 rounded-full ${season.results[f.id] ? 'opacity-40' : ''}`} style={{ background: comp ? competitionColor(comp, teams) : '#94a3b8' }} /> })}
         </span>
-        <span className="h-3 text-[9px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : allPlayed ? <span className="text-emerald-400">✓</span> : mineWaiting ? <span className="text-amber-300">●</span> : ''}</span>
+        <span className="h-3 text-[9px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : mineWaiting ? <span className="text-[11px] text-amber-300">★</span> : allPlayed ? <span className="text-emerald-400">✓</span> : mine ? <span className="text-amber-300/70">★</span> : ''}</span>
       </button>
     )
   }
@@ -44,13 +45,17 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
     <button
       onClick={onSelect}
       className={`flex min-h-[110px] flex-col rounded-xl border p-1.5 text-left transition ${
-        selected ? 'border-indigo-400 bg-indigo-400/10' : fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_14px_#fbbf2433]' : today ? 'border-amber-400/70 bg-amber-400/5' : 'border-line bg-panel hover:border-slate-600'
+        selected ? 'border-indigo-400 bg-indigo-400/10' : today ? 'border-2 border-sky-400 bg-sky-400/10 shadow-[0_0_14px_#38bdf844]' : fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_14px_#fbbf2433]' : 'border-line bg-panel hover:border-slate-600'
       } ${inMonth ? '' : 'opacity-35'}`}
     >
       <div className="flex items-center justify-between">
-        <span className={`text-xs font-semibold ${today ? 'text-amber-300' : 'text-slate-400'}`}>{Number(date.slice(8))}</span>
-        {fixtures.length > 0 && <span className="text-[10px] text-slate-600">{fixtures.length}</span>}
+        <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-semibold ${today ? 'bg-sky-400 font-extrabold text-black' : 'text-slate-400'}`}>{Number(date.slice(8))}</span>
+        {today && <span className="rounded bg-sky-400 px-1 text-[9px] font-extrabold text-black">TODAY</span>}
+        {!today && fixtures.length > 0 && <span className="text-[10px] text-slate-600">{fixtures.length}</span>}
       </div>
+      {fixtures.some((f) => isMine(season, f)) && (
+        <div className={`mt-1 rounded px-1 py-0.5 text-center text-[10px] font-extrabold ${fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'bg-amber-400 text-black' : 'bg-amber-400/25 text-amber-200'}`}>★ YOUR MATCH</div>
+      )}
       <div className="mt-1 space-y-0.5">
         {shown.map((f) => {
           const comp = compOf(f)

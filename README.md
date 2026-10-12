@@ -35,14 +35,14 @@ Pick any two teams and a format (T20 or ODI). You control both sides. Before the
 XI in batting order, captain and keeper, ratings, the bench, and for a computer team who came in or dropped out and
 why). The sheets fill exactly one desktop screen, so there is nothing to scroll. The coin sits in a bar along the bottom: tap it, it spins, and the toss winner chooses to bat or bowl. Before the coin is flipped you can **Edit squad**: in a
 career only your own team (kept for the rest of the career), in a friendly both sides (this match only). Anyone you bring in is marked **IN** and anyone you take out appears
-on two fixed lines, a green **IN** line and a red **OUT** line (each says "no changes" when nobody moved, so both sheets stay the same size) (the computer's changes show the same way, with the reason). The editor
+on two fixed lines, a green **IN** line and a red **OUT** line (each says "no changes" when nobody moved, so both sheets stay the same size) (the computer's changes show the same way, with the reason). IN and OUT are measured against the XI that team played in its **last match**, not the original team. The editor
 shows every player's rating and how far the career has moved it. You can cancel until the coin
 is flipped; after that there is no way out (remembered across a refresh). Matches in progress are saved, so refreshing or leaving brings you
 back to the same ball (the match is replayed from its seed and your actions).
 
 ### Career (the main mode)
 A career is a save file. `/career` lists your saves; inside one you get these pages:
-- **Calendar**: the whole year's fixtures. Sim buttons stop at your next match.
+- **Calendar**: the whole year's fixtures. Today is a blue circle and a TODAY tag; days with your match say ★ YOUR MATCH. Sim buttons stop at your next match.
 - **Tournaments**: an **All** view (every team's record across all tournaments, latest results with a *Show all*
   page, coming up) and a page per tournament with standings, form, playoffs, leaders and matches.
 - **Stats**: batting, bowling, awards, **Rating** (every player's current overall and individual ratings, sorted by overall;
@@ -57,7 +57,9 @@ A career is a save file. `/career` lists your saves; inside one you get these pa
   at any past year (read-only).
 
 Rules of a career:
-- You choose one team and a **difficulty** (Easy, Normal, Hard, Legend) when it starts; it can't change later and is
+- You choose one team and a **difficulty** (Easy, Normal, Hard, Legend) when it starts. Easy and Normal help your own
+  team (`help`: +8 and +5 rating points in matches) and Easy also weakens the computer; Hard has no help; Legend
+  strengthens the computer (`DIFFICULTIES` in `engine/types.ts`); it can't change later and is
   shown throughout. The computer runs every other team, including batting plans, bowling changes, its XI (it drops
   injured or out-of-form players, with "Team news" shown at the toss) and batting-order calls during a match.
 - **Matches are played in order.** Nothing after one of your waiting matches can be started, and every earlier
@@ -92,9 +94,14 @@ You can see it everywhere:
 ### The match screen
 - A field with batsman, non-striker, bowler and fielders, a scoreboard with projected score, scorecard,
   commentary and a Stats tab (overview, wagon wheel, charts, partnerships, phases, overs, matchups, win chance).
+- **How to bowl**: when you bowl, the Controls panel offers **Safe**, **Normal** or **Aggressive**. Safe bowls to the
+  fielders (fewer wickets, fewer boundaries); Aggressive tempts the big shot (more wickets, more boundaries). It is an
+  action (`style`) in the replay log, and `bowlStyle` on the match.
+- **Innings break**: the next innings never starts by itself. Auto-play stops and you press **Start the chase**.
 - **Controls** (the round buttons, bottom right): next ball, auto-play, and a panel with finish over, sim N overs,
   next wicket, end innings, finish match, batting plan, bowler choice and forfeit.
-- **Auto-play** pauses where you tick it: wickets, boundaries, end of an innings.
+- **Auto-play** pauses where you tick it: wickets, boundaries, end of an innings. With the wicket pause off, introductions are half as long.
+- **Run rate** chart (Stats > Charts): the running rate after each over for both innings, with the chase's required rate.
 - **TV-style moments** take over the field for a few seconds: a wicket (it stays up until you resume, play, or click
   it when "pause on wickets" is on), fifties and hundreds, and the first time a batsman or bowler gets going
   (his season stats, or his ratings in a friendly). Introductions stay up long enough to read (12 seconds at normal speed,
@@ -114,6 +121,8 @@ and stats like Avg, SR, Econ, NRR) and a tooltip explains it in plain words. The
 `src/data/glossary.ts`; a table heading is picked up automatically, anything else needs `data-gloss="Name"`.
 
 ### Click-through everywhere (inside a career)
+In every match row the winner's crest has a gold ring and a W badge; the loser's is dimmed.
+
 A finished match opens a popup (Match summary first, then Scorecards, teams in batting order with the opposition's
 bowling against them). A player's portrait or name opens his profile. A team name goes to the team page. When you add
 a screen that mentions a match, player or team, link it the same way.

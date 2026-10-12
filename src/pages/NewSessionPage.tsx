@@ -106,7 +106,7 @@ export function NewSessionPage() {
               <button key={l} onClick={() => setDifficulty(l)} aria-pressed={on} className="rounded-xl border-2 p-3 text-left transition hover:brightness-110" style={{ borderColor: on ? LEVEL_COLOR[l] : '#2b3145', background: on ? `${LEVEL_COLOR[l]}1f` : '#10131c' }}>
                 <div className="font-display text-2xl tracking-wide" style={{ color: LEVEL_COLOR[l] }}>{d.label}</div>
                 <div className="mt-0.5 text-xs text-slate-300">{d.blurb}</div>
-                <div className="mt-1.5 text-[11px] text-slate-500">{d.boost === 0 ? 'Computer teams at their normal ratings' : `Computer players ${d.boost > 0 ? '+' : ''}${d.boost} rating points`}</div>
+                <div className="mt-1.5 text-[11px] text-slate-500">{[d.help ? `Your players +${d.help} rating points` : '', d.boost ? `Computer players ${d.boost > 0 ? '+' : ''}${d.boost}` : ''].filter(Boolean).join(' · ') || 'Everyone at their normal ratings'}</div>
               </button>
             )
           })}

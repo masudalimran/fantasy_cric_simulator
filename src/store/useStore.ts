@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from '../season/generate'
+import { lastPlayedXI } from '../season/selection'
 import { recordResult } from '../season/results'
 import { appendAction, type Action } from '../engine/replay'
 import type { Difficulty } from '../engine/types'
@@ -145,9 +146,12 @@ export const useStore = create<State>()(
       liveMatch: null,
       startLive: ({ format, teamA, teamB, seed, fixtureId, news, url }) => {
         const season = selectSeason(get())
+        // your team's "before" is who played in its last match (so IN and OUT say what changed since then)
+        const date = season?.fixtures.find((f) => f.id === fixtureId)?.date
+        const startOf = (t: Team) => (season && date && season.myTeamId === t.id ? lastPlayedXI(season, t, date) : null) ?? t.players.slice(0, 11).map((p) => p.id)
         const live: LiveMatch = {
           id: `live-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
-          key: matchKey(format, teamA.id, teamB.id, seed), url, format, teamA, teamB, seed, fixtureId, startXI: [teamA.players.slice(0, 11).map((p) => p.id), teamB.players.slice(0, 11).map((p) => p.id)], news: news?.length ? news : undefined, sessionId: fixtureId && season ? (get().activeSessionId ?? undefined) : undefined,
+          key: matchKey(format, teamA.id, teamB.id, seed), url, format, teamA, teamB, seed, fixtureId, startXI: [startOf(teamA), startOf(teamB)], news: news?.length ? news : undefined, sessionId: fixtureId && season ? (get().activeSessionId ?? undefined) : undefined,
           // a session match is played as the team you manage; a friendly from the Play page has no 'you'
           myTeamId: fixtureId && season ? (season.myTeamId ?? null) : null,
           difficulty: fixtureId && season ? (season.difficulty ?? 'normal') : 'normal',

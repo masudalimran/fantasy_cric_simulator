@@ -96,7 +96,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const seenInnings = useRef(match.current.index)
   const inningsNow = match.current.index
   useEffect(() => {
-    if (inningsNow > seenInnings.current && !match.isOver) setBreakOpen(true)
+    if (inningsNow > seenInnings.current && !match.isOver) { setBreakOpen(true); setAuto(0) } // the next innings starts when you say so
     seenInnings.current = inningsNow
   }, [inningsNow, match])
   stopsRef.current = stops
@@ -192,7 +192,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (match.isOver) return
     const inn = match.current
     const sp = autoRef.current
-    const ms = sp === 4 ? 7000 : sp === 2 ? 9000 : 12000 // long enough to read in full; a click moves on sooner
+    const quick = sp > 0 && !stopsRef.current.wickets // auto-play that never pauses: don't hold things up
+    const ms = (sp === 4 ? 7000 : sp === 2 ? 9000 : 12000) / (quick ? 2 : 1) // long enough to read in full; a click moves on sooner
     const mk = (kind: 'batsman' | 'bowler', id: string): Moment => {
       const p = match.player(id)
       const team = (kind === 'batsman' ? match.battingSide() : match.bowlingSide()).team
@@ -444,7 +445,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting={!auto} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} />
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>

@@ -3,17 +3,20 @@ import type { MatchFormat, Player, Team } from '../types'
 export type Phase = 'powerplay' | 'middle' | 'death'
 
 /** Batting intent as a number: -1 defend, 0 normal for the phase, +1 attack, +2 slog. */
+/** How the bowling side sets out to bowl: safe (tidy, fewer wickets and boundaries), normal, or aggressive (wicket-hunting, more risk). */
+export type BowlStyle = 'safe' | 'normal' | 'aggressive'
+export const BOWL_STYLE_VALUE: Record<BowlStyle, number> = { safe: -1, normal: 0, aggressive: 1 }
 export type Intent = 'defend' | 'normal' | 'attack' | 'slog'
 export const INTENT_VALUE: Record<Intent, number> = { defend: -1, normal: 0, attack: 1, slog: 2 }
 
 /** How hard the computer-run teams make it for the player. Only matches involving your own team are affected. */
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'legend'
 
-export const DIFFICULTIES: Record<Difficulty, { label: string; blurb: string; /** rating points added to every computer player */ boost: number; /** how often the computer makes a poor tactical call (0 = never) */ blunder: number }> = {
-  easy: { label: 'Easy', blurb: 'The computer plays a little worse and sometimes makes poor calls.', boost: -6, blunder: 0.45 },
-  normal: { label: 'Normal', blurb: 'A fair contest. Ratings decide it.', boost: 0, blunder: 0.2 },
-  hard: { label: 'Hard', blurb: 'The computer plays a bit above its ratings with sharper tactics.', boost: 5, blunder: 0.08 },
-  legend: { label: 'Legend', blurb: 'The computer plays well above its ratings and never gets tactics wrong.', boost: 10, blunder: 0 },
+export const DIFFICULTIES: Record<Difficulty, { label: string; blurb: string; /** rating points added to every computer player (negative = weaker) */ boost: number; /** rating points added to every player on YOUR team */ help: number; /** how often the computer makes a poor tactical call (0 = never) */ blunder: number }> = {
+  easy: { label: 'Easy', blurb: 'Your team plays much better than its ratings and the computer slips up often.', boost: -6, help: 8, blunder: 0.45 },
+  normal: { label: 'Normal', blurb: 'Friendly: your team gets a helping hand and the computer is fair.', boost: 0, help: 5, blunder: 0.2 },
+  hard: { label: 'Hard', blurb: 'No help. Ratings decide it, and the computer has sharper tactics.', boost: 2, help: 0, blunder: 0.08 },
+  legend: { label: 'Legend', blurb: 'The computer plays above its ratings and never gets tactics wrong.', boost: 6, help: 0, blunder: 0 },
 }
 
 export interface FormatConfig {

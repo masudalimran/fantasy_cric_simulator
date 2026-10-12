@@ -66,6 +66,25 @@ export function Charts({ match }: { match: Match }) {
         </div>
       </Card>
 
+      <Card title="Run rate" hint="Runs an over so far, after each over. The dashed line is the rate the chasing side needs from the start.">
+        <div className="h-52">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
+              <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
+              <XAxis type="number" dataKey="over" domain={[1, cfg.overs]} allowDecimals={false} tickCount={Math.min(cfg.overs / 5 + 1, 11)} stroke={AXIS} tick={{ fontSize: 11 }} />
+              <YAxis stroke={AXIS} tick={{ fontSize: 11 }} domain={[0, 'auto']} />
+              <Tooltip {...tip} formatter={(v) => [Number(v).toFixed(2), 'Run rate']} labelFormatter={(l) => `After over ${l}`} />
+              {target !== null && <ReferenceLine y={(target / (cfg.overs * 6)) * 6} stroke="#fbbf24" strokeDasharray="5 4" />}
+              {match.innings.map((i, n) => {
+                let total = 0
+                const data = perOver(i).map((o, k) => { total += o.runs; return { over: k + 1, rate: total / (k + 1) } })
+                return <Line key={n} data={data} dataKey="rate" name={match.battingSide(i).team.name} stroke={accent(n)} strokeWidth={2.5} dot={{ r: 2 }} isAnimationActive={false} type="monotone" />
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
       <InningsPicker match={match} idx={idx} setIdx={setIdx} />
 
       <Card title="Runs per over" hint="A red W marks an over with a wicket.">

@@ -85,6 +85,26 @@ describe('match engine', () => {
     expect(d.wkts).toBeGreaterThan(1) // defending is not a safe harbour
   })
 
+  it('slogging is risky but not a collapse, and the bowling approach matters', () => {
+    const avg = (set: (m: Match) => void) => {
+      let runs = 0, wkts = 0
+      for (let seed = 0; seed < 150; seed++) {
+        const m = new Match({ teamA: A, teamB: B, format: 't20', seed, toss: { winnerSide: 0, decision: 'bat' } })
+        set(m)
+        m.playInnings()
+        runs += m.innings[0].runs
+        wkts += m.innings[0].wickets
+      }
+      return { runs: runs / 150, wkts: wkts / 150 }
+    }
+    const slog = avg((m) => { m.intent[0] = 'slog' })
+    expect(slog.wkts).toBeLessThan(9.2) // not "wickets falling like snow"
+    const safe = avg((m) => { m.bowlStyle[1] = 'safe' })
+    const aggressive = avg((m) => { m.bowlStyle[1] = 'aggressive' })
+    expect(aggressive.wkts).toBeGreaterThan(safe.wkts)
+    expect(aggressive.runs).toBeGreaterThan(safe.runs - 1) // aggression costs runs when it fails
+  })
+
   it('rewards better players: the stronger side wins more often', () => {
     const strong = BUILT_IN_TEAMS.find((t) => t.id === 'dragonball')!
     const weak = BUILT_IN_TEAMS.find((t) => t.id === 'overwatch')!

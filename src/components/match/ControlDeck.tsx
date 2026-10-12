@@ -66,6 +66,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
   const bat = match.battingSide()
   const bowl = match.bowlingSide()
 
+  const styleNow = match.bowlStyle[bowlSide] ?? 'normal'
   const intentNow = match.intent[batSide]
   const intentKey = intentNow === null ? null : typeof intentNow === 'string' ? intentNow : 'normal'
   const options = match.bowlerOptions(bowlSide)
@@ -147,6 +148,25 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
       </Section>}
 
       {!spectating && !showBowl && <Section title={`Bowling · ${bowl.team.name}`}>{cpuNote(bowl.team.name)}</Section>}
+      {showBowl && <Section title={`How to bowl · ${bowl.team.name}`} hint="applies from the next ball">
+        <div className="grid grid-cols-3 gap-1.5">
+          {([
+            ['safe', 'Safe', '#38bdf8', 'Bowl to the fielders. Fewer boundaries, but fewer wickets too.'],
+            ['normal', 'Normal', '#94a3b8', 'The usual mix.'],
+            ['aggressive', 'Aggressive', '#f87171', 'Tempt the big shot. More wickets, but more boundaries too.'],
+          ] as const).map(([id, label, color, hint]) => {
+            const on = styleNow === id
+            return (
+              <button key={id} title={hint} onClick={() => act({ t: 'style', side: bowlSide, v: id })} className="flex h-12 flex-col items-center justify-center rounded-lg border-2 transition hover:brightness-125" style={{ borderColor: on ? color : '#2b3145', background: on ? `${color}26` : '#1a1f2e' }}>
+                <span className="text-[12px] font-bold text-white">{label}</span>
+                <span className="text-[9px] leading-tight text-slate-400">{id === 'safe' ? 'fewer wickets' : id === 'aggressive' ? 'more wickets' : 'balanced'}</span>
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[11px] leading-snug text-slate-400">{styleNow === 'safe' ? 'Bowling to where the fielders are: harder to score off, but batsmen survive more often.' : styleNow === 'aggressive' ? 'Bowling to tempt a big hit: more chances of a catch, and more runs when it goes wrong.' : 'The bowlers mix it up.'}</p>
+      </Section>}
+
       {showBowl && <Section title={`Bowling · ${bowl.team.name}`} hint={canChange ? 'pick the next over' : 'locked until the over ends'}>
         <div className={`grid grid-cols-2 gap-1.5 ${canChange ? '' : 'pointer-events-none opacity-50'}`}>
           {options.map((p) => {
