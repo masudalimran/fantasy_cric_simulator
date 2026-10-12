@@ -29,11 +29,11 @@ export function CareerLayout() {
   }, [])
   // the arrows move the strip by about two tabs; it does not scroll by touch
   const nudge = (dir: -1 | 1) => tabStrip.current?.scrollBy({ left: dir * 150, behavior: 'smooth' })
-  // keep the open page's tab in view when the strip is wider than the screen
+  // when the strip is wider than the screen, move the open page's tab toward the left so what comes after it shows
   useEffect(() => {
     const strip = tabStrip.current
     const on = strip?.querySelector<HTMLElement>('[aria-current="page"]')
-    if (strip && on) strip.scrollTo({ left: on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2, behavior: 'smooth' })
+    if (strip && on) strip.scrollTo({ left: Math.max(0, on.offsetLeft - strip.clientWidth * 0.12), behavior: 'smooth' }) // the open tab sits near the left, so the tabs after it show
   }, [pathname, mobile])
   useEffect(() => { measure(); window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure) }, [measure, mobile, pathname])
   const viewYear = useStore((s) => s.viewYear)
