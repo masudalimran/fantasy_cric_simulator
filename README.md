@@ -241,6 +241,7 @@ The app is built to feel like a native app on a phone (the desktop layout is unc
   at the bottom (controls, a big NEXT BALL, auto-play). Wickets, boundaries and milestones buzz on phones that support
   it. Held sideways, the field fills the left and everything else sits beside it. Introductions and big moments stack
   portrait-over-text and say "Tap to continue".
+- **Toss screen** (IN and OUT lines): the ▲ In and ▼ Out labels stay put and the names beside them scroll sideways, with no scrollbar, when there are too many to fit.
 - **Toss screen**: the two team sheets are tabs; the coin sits in a bar at the bottom, in thumb reach.
 - **Popups are bottom sheets** (`components/Sheet.tsx`): they slide up, have a grab handle, and drag down to dismiss.
   On a computer the same component is a centred card.

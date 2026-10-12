@@ -82,23 +82,27 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
       <div className="mt-1.5 shrink-0 space-y-1 text-[11px]" aria-label="Changes to the XI">
         <div className="flex h-[22px] items-center gap-2 overflow-hidden whitespace-nowrap">
           <span className="w-12 shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-center text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">▲ In</span>
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ins.length === 0 ? <span className="text-slate-600">no changes</span> : ins.map((p) => (
-            <span key={p.id} className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 py-0.5 pl-0.5 pr-2" title={`${p.name} comes in`}>
+            <span key={p.id} className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 py-0.5 pl-0.5 pr-2" title={`${p.name} comes in`}>
               <PlayerAvatar profile player={p} team={team} size={18} /><span className="font-semibold text-emerald-100">{p.name}</span>
             </span>
           ))}
+          </div>
         </div>
         <div className="flex h-[22px] items-center gap-2 overflow-hidden whitespace-nowrap">
           <span className="w-12 shrink-0 rounded bg-rose-500/20 px-1.5 py-0.5 text-center text-[10px] font-extrabold uppercase tracking-wider text-rose-300">▼ Out</span>
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {outs.length === 0 ? <span className="text-slate-600">no changes</span> : outs.map((n) => {
             const p = team.players.find((x) => x.id === n.playerId)
             return p ? (
-              <span key={n.playerId} className="flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 py-0.5 pl-0.5 pr-2" title={`${p.name}: ${n.why}`}>
+              <span key={n.playerId} className="flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 py-0.5 pl-0.5 pr-2" title={`${p.name}: ${n.why}`}>
                 <span className="opacity-60 grayscale"><PlayerAvatar profile player={p} team={team} size={18} /></span>
                 <span className="font-semibold text-rose-100">{p.name}</span><span className="text-rose-300/80">{n.why}</span>
               </span>
             ) : null
           })}
+          </div>
         </div>
       </div>
       {bench.length > 0 && <div className="shrink-0 truncate text-[11px] text-slate-500" title={bench.map((p) => p.name).join(', ')}><b className="text-slate-400">Bench:</b> {bench.map((p) => p.name).join(', ')}</div>}
