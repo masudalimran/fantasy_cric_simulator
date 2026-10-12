@@ -8,6 +8,7 @@ import { gradePlayedMatches } from '../season/progression'
 import { cpuCoachingMissing } from '../season/coaching'
 import { useBaseTeamMap, useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
+import { OfferBanner } from './season/OfferBanner'
 
 const COLOR = { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' } as const
 
@@ -96,6 +97,7 @@ export function CareerLayout() {
           </nav>
           <button onClick={() => nudge(1)} disabled={!more.right} aria-label="More tabs" className="grid h-9 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-bold text-white transition active:bg-white/15 disabled:opacity-25">›</button>
         </div>
+        <OfferBanner />
         <Outlet />
       </div>
     )
@@ -140,6 +142,7 @@ export function CareerLayout() {
           ))}
         </nav>
       </div>
+      <OfferBanner />
       <Outlet />
     </div>
   )

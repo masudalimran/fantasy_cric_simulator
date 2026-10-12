@@ -31,6 +31,12 @@ export function useSeen(id: string): boolean {
   return seen.has(id)
 }
 
+/** The whole set of things seen, for lists of ids (re-renders when it changes). */
+export function useSeenSet(): ReadonlySet<string> {
+  useSyncExternalStore(subscribe, () => seenSnapshot, () => '')
+  return seen
+}
+
 // ---- the "How to play" sheet ------------------------------------------------------------------------------------
 
 let helpOpen = false

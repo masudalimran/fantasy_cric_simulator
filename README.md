@@ -115,6 +115,9 @@ that links to the market) and on the Home page.
   more for your best five, never when you are at the minimum squad). Offers are listed at the top of the Market page
   (the tab shows a dot) for five days: **Accept** sells him and you get the coins, **Decline** turns it down. If the buyer
   is full they release their weakest player.
+- **Offer notice** (`OfferBanner`): while an offer is on the table, a blue notice shows at the top of every career page
+  (not on the Market page itself, which lists it): who wants whom and for how much, tap it to go to the Market page. Its cross
+  only closes the notice; it does not accept or decline. A new offer brings the notice back.
 - **Which team he played for**: after a move, each row in his Recent matches shows the team he played for that day, and
   the opponent is worked out from that, not from his current team.
 - **Signing animation** (`SigningOverlay`): the player's portrait lands between his old team (or "Free agent") and the
