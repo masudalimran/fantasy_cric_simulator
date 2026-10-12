@@ -1,3 +1,4 @@
+import { deliveryText, shotText } from './AimPads'
 import { AnimatePresence, motion } from 'framer-motion'
 import { commentary, tagLabel } from '../../engine/commentary'
 import type { Match } from '../../engine/match'
@@ -51,6 +52,7 @@ export function Commentary({ match, tab, setTab }: { match: Match; tab: Tab; set
                         out: ev.wicket ? match.player(ev.wicket.playerId).name : undefined,
                         fielder: ev.wicket?.fielderId ? match.player(ev.wicket.fielderId).name : undefined,
                       })}
+                      {(ev.delivery || ev.shot) && <span className="mt-0.5 block text-[11px] font-normal text-amber-200/80">{[ev.delivery && `Bowled ${deliveryText(ev.delivery)}`, ev.shot && `played ${shotText(ev.shot)}`].filter(Boolean).join('; ')}.</span>}
                       {ev.tags.filter((t) => tagLabel[t] && t !== 'maiden').map((t) => <span key={t} className="ml-2 rounded bg-amber-400/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">{tagLabel[t]}</span>)}
                     </span>
                   </div>

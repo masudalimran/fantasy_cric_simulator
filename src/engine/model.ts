@@ -1,6 +1,7 @@
 import type { BowlType, MatchFormat, Player, Trait } from '../types'
 import baselines from './data/baselines.json'
-import type { Phase, Pitch } from './types'
+import { aimMods } from './aim'
+import type { DeliveryAim, Phase, Pitch, ShotAim } from './types'
 
 /**
  * The ball model. For each delivery it starts from what really happens at that point of a real
@@ -122,6 +123,11 @@ export interface BallInput {
   intent: number
   /** The bowling side's approach: -1 safe, 0 normal, +1 aggressive. */
   style?: number
+  /** A shot and/or delivery chosen by a person for this ball. */
+  shot?: ShotAim | null
+  delivery?: DeliveryAim | null
+  /** The same line and length as the previous ball. */
+  repeat?: boolean
   ballsFaced: number
   pitch: Pitch
   freeHit: boolean
@@ -165,6 +171,7 @@ export function ballProbs(i: BallInput): BallProbs {
   const field = (i.fieldingAvg - 70) / 30
 
   const m = new Array<number>(9).fill(1)
+  let wideMul = 1
   m[WICKET] = clamp(Math.exp(KNOBS.wicketSens * (zThr - zDef) + 0.4 * Math.min(dUp, 1) + 0.05 * Math.max(dUp - 1, 0) + 0.5 * dDn - 0.2 * ease) * eyeIn * tune.wicket, KNOBS.wicketMin, KNOBS.wicketMax)
   m[FOUR] = clamp(Math.exp(0.55 * zAtk - 0.35 * zCtl + 0.5 * d + 0.25 * ease - 0.15 * field) * tune.four, 0.12, 4)
   m[SIX] = clamp(Math.exp(0.8 * zP - 0.35 * zCtl + 0.75 * d + 0.25 * ease - 0.1 * field) * tune.six * (1 - 0.35 * settle), 0.05, 5)
@@ -183,6 +190,12 @@ export function ballProbs(i: BallInput): BallProbs {
     m[DOT] *= up ? 0.94 : 1.1
   }
 
+  if (i.shot || i.delivery) {
+    const a = aimMods(i.shot, i.delivery, i.bowl.acc, i.repeat)
+    m[WICKET] *= a.wicket; m[FOUR] *= a.four; m[SIX] *= a.six; m[DOT] *= a.dot; m[ONE] *= a.one
+    wideMul = a.wide
+  }
+
   if (i.forfeit === 'bat') { m[WICKET] *= 6; m[FOUR] *= 0.4; m[SIX] *= 0.3; m[DOT] *= 1.5 }
   if (i.forfeit === 'bowl') { m[WICKET] *= 0.1; m[FOUR] *= 2; m[SIX] *= 2.2; m[DOT] *= 0.5 }
 
@@ -198,7 +211,7 @@ export function ballProbs(i: BallInput): BallProbs {
   const s2 = norm.reduce((a, c) => a + c, 0)
 
   return {
-    wide: clamp(base.wide * Math.exp(-0.5 * zA) * tune.wide * (i.forfeit === 'bowl' ? 2 : 1), 0.004, 0.14),
+    wide: clamp(base.wide * Math.exp(-0.5 * zA) * tune.wide * wideMul * (i.forfeit === 'bowl' ? 2 : 1), 0.004, 0.14),
     noball: clamp(base.noball * Math.exp(-0.3 * zA), 0.001, 0.03),
     legal: norm.map((p) => p / s2),
   }

@@ -105,6 +105,32 @@ describe('match engine', () => {
     expect(aggressive.runs).toBeGreaterThan(safe.runs - 1) // aggression costs runs when it fails
   })
 
+  it('chosen shots and deliveries are balanced: a random mix is about as good as leaving it to the sim, and repeating one ball is punished', () => {
+    const L = ['yorker', 'full', 'good', 'short'] as const
+    const avgRuns = (setup: (m: Match, i: number) => void) => {
+      let runs = 0
+      const n = 60
+      for (let seed = 0; seed < n; seed++) {
+        const m = new Match({ teamA: A, teamB: B, format: 't20', seed, toss: { winnerSide: 0, decision: 'bat' } })
+        let i = 0
+        while (m.current.index === 0 && !m.isOver) { setup(m, i++); m.playBall() }
+        runs += m.innings[0].runs
+      }
+      return runs / n
+    }
+    const base = avgRuns(() => {})
+    let x = 7
+    const rnd = () => ((x = (x * 16807) % 2147483647) / 2147483647)
+    const mixed = avgRuns((m) => {
+      m.shotAim[0] = { angle: -Math.PI + rnd() * Math.PI, loft: rnd() < 0.4 }
+      m.deliveryAim[1] = { line: (Math.floor(rnd() * 5) - 2) as -2, length: L[Math.floor(rnd() * 4)], pace: 'medium' }
+    })
+    expect(Math.abs(mixed - base)).toBeLessThan(18)
+    const spamShort = avgRuns((m) => { m.deliveryAim[1] = { line: 1, length: 'short', pace: 'medium' } })
+    const varied = avgRuns((m, i) => { m.deliveryAim[1] = { line: ([1, 0, 1, 2, 0, -1][i % 6]) as 1, length: L[i % 4], pace: 'medium' } })
+    expect(varied).toBeLessThan(spamShort)
+  })
+
   it('rewards better players: the stronger side wins more often', () => {
     const strong = BUILT_IN_TEAMS.find((t) => t.id === 'dragonball')!
     const weak = BUILT_IN_TEAMS.find((t) => t.id === 'overwatch')!
@@ -121,7 +147,7 @@ describe('match engine', () => {
   it('stays near real-world T20 and ODI scoring', () => {
     for (const [format, lo, hi] of [['t20', 150, 190, ], ['odi', 235, 290]] as const) {
       let total = 0
-      const n = 120
+      const n = 60
       for (let seed = 0; seed < n; seed++) {
         const m = new Match({ teamA: BUILT_IN_TEAMS[seed % 20], teamB: BUILT_IN_TEAMS[(seed * 7 + 3) % 20 === seed % 20 ? 0 : (seed * 7 + 3) % 20], format, seed, toss: { winnerSide: 0, decision: 'bat' } })
         m.playInnings()

@@ -1,5 +1,5 @@
 import type { Match } from './match'
-import type { BallEvent, BowlStyle, Intent } from './types'
+import type { BallEvent, BowlStyle, DeliveryAim, Intent, ShotAim } from './types'
 
 /**
  * Everything a player can do in a match. A match is fully determined by its seed, the two squads
@@ -15,6 +15,8 @@ export type Action =
   | { t: 'intent'; side: 0 | 1; v: Intent | null }
   | { t: 'bowler'; side: 0 | 1; id: string }
   | { t: 'style'; side: 0 | 1; v: BowlStyle | null }
+  | { t: 'shot'; side: 0 | 1; v: ShotAim | null } // line up a shot for the next ball
+  | { t: 'delivery'; side: 0 | 1; v: DeliveryAim | null } // line up a delivery for the next ball
   | { t: 'forfeit'; side: 0 | 1 }
 
 /** Performs one action on the match and returns the deliveries it produced. */
@@ -35,6 +37,8 @@ export function applyAction(m: Match, a: Action): BallEvent[] {
     case 'innings': return m.playInnings()
     case 'match': m.playMatch(); return []
     case 'intent': m.intent[a.side] = a.v; return []
+    case 'shot': m.shotAim[a.side] = a.v; return []
+    case 'delivery': m.deliveryAim[a.side] = a.v; return []
     case 'style': m.bowlStyle[a.side] = a.v; return []
     case 'bowler': m.setBowler(a.side, a.id); return []
     case 'forfeit': m.forfeit(a.side); return []

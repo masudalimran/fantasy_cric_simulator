@@ -94,6 +94,18 @@ You can see it everywhere:
 ### The match screen
 - A field with batsman, non-striker, bowler and fielders, a scoreboard with projected score, scorecard,
   commentary and a Stats tab (overview, wagon wheel, charts, partnerships, phases, overs, matchups, win chance).
+- **Aim your shot / line, length and pace** (Controls panel, two folded sections, shown only for the side(s) you run):
+  - *Batting*: tap a part of the field on the wheel (Straight, Cover, Point, Third man, Behind, Fine leg, Square leg,
+    Midwicket) and choose Ground or In the air, **or just drag across the field** (a short drag stays on the ground, a
+    long one lifts it; a checkbox turns dragging off). An amber arrow shows the lined-up shot.
+  - *Bowling*: tap a spot on the little pitch (line from down the leg side to wide of off, length from short to yorker)
+    and pick Fast / Medium / Slower ball (Quicker / Normal / Flighted for spinners). A red dot shows where it will pitch.
+  - Each choice is for the **next ball only**; with nothing chosen the ball is simulated exactly as before. The ball
+    follows what you chose (it pitches where you put it and the shot goes where you aimed), the wagon wheel and the
+    commentary show it. `engine/aim.ts` holds the maths: gaps in the field score more, playing across the line is
+    risky, lofted shots give sixes and catches, yorkers are hard to hit but a miss is a full toss, and bowling the
+    same line and length twice lets the batsman read it. A random mix of choices plays out about like the plain sim,
+    so nothing is a free win (tests check this). Actions: `shot`, `delivery` in the replay log.
 - **How to bowl**: when you bowl, the Controls panel offers **Safe**, **Normal** or **Aggressive**. Safe bowls to the
   fielders (fewer wickets, fewer boundaries); Aggressive tempts the big shot (more wickets, more boundaries). It is an
   action (`style`) in the replay log, and `bowlStyle` on the match.

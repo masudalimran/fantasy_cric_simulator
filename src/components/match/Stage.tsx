@@ -1,8 +1,8 @@
 import { AnimatePresence, motion, useAnimationControls } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
-import type { BallEvent } from '../../engine/types'
-import { reachFactor, shotAngle } from '../../engine/shots'
+import type { BallEvent, DeliveryAim, ShotAim } from '../../engine/types'
+import { eventAngle, reachFactor } from '../../engine/shots'
 import { PlayerAvatar, accentOf } from '../ui'
 import { MomentOverlay, type Moment } from './MomentOverlay'
 
@@ -47,6 +47,12 @@ export function placeFielders(xi: Player[], bowlerId: string): Placed[] {
   return [keeper, ...others].filter((p): p is Player => !!p).slice(0, FIELD_SPOTS.length).map((player, i) => ({ player, ...FIELD_SPOTS[i] }))
 }
 
+/** Where a chosen delivery pitches, on the strip in the field view. */
+export function landingSpot(d: DeliveryAim) {
+  const y = d.length === 'yorker' ? 65 : d.length === 'full' ? 59 : d.length === 'good' ? 51 : 42
+  return { x: 80 + d.line * 1.15, y }
+}
+
 /** A point on the rope in the direction of `angle`, seen from the batsman. */
 function ropePoint(angle: number) {
   // ray from HIT to the ellipse: solve numerically with a few steps (cheap and stable)
@@ -70,7 +76,7 @@ export function endPoint(ev: BallEvent, field: Placed[]) {
     if (f) return { x: f.x, y: f.y }
   }
   if (ev.extraType === 'wide') return { x: 100, y: 84 }
-  const angle = shotAngle(ev.seq) // mostly in front of the bat, sometimes behind
+  const angle = eventAngle(ev) // the shot a person chose, else a stable pick (mostly in front of the bat)
   const rope = ropePoint(angle)
   const reach = reachFactor(ev.runsBat)
   return { x: HIT.x + (rope.x - HIT.x) * reach, y: HIT.y + (rope.y - HIT.y) * reach }
@@ -285,9 +291,13 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, note, moment, onDismissMoment,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe,
 }: {
   event: BallEvent | null; overEvents: BallEvent[]; note?: StageNote | null; moment?: Moment | null; onDismissMoment?: () => void
+  /** A shot / delivery lined up for the next ball, drawn on the field. */
+  aimShot?: ShotAim | null; aimDelivery?: DeliveryAim | null
+  /** When set, dragging across the field aims the next shot. */
+  onSwipe?: (a: ShotAim) => void
   striker: Player; nonStriker: Player | null; bowler: Player
   battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
 }) {
@@ -301,8 +311,11 @@ export function Stage({
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const swipeFrom = useRef<{ x: number; y: number } | null>(null)
   const end = event ? endPoint(event, fielders) : HIT
   const six = event?.boundary === 6
+  // a delivery chosen by a person lands where they put it
+  const bounce = event?.delivery ? landingSpot(event.delivery) : null
   const wicket = !!event?.wicket
   const involved = event?.wicket?.fielderId ?? null
   const seq = event?.seq ?? 0
@@ -322,6 +335,20 @@ export function Stage({
       animate={wicket ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
       transition={{ duration: 0.45 }}
       className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-line bg-[#070b14]"
+      style={onSwipe ? { touchAction: 'none' } : undefined}
+      onPointerDown={onSwipe ? (e) => { swipeFrom.current = { x: e.clientX, y: e.clientY } } : undefined}
+      onPointerUp={onSwipe ? (e) => {
+        const from = swipeFrom.current
+        swipeFrom.current = null
+        const rect = box.current?.getBoundingClientRect()
+        if (!from || !rect) return
+        const dx = e.clientX - from.x
+        const dy = e.clientY - from.y
+        const len = Math.hypot(dx, dy)
+        if (len < 26) return // a tap, not a swipe
+        // the field is drawn in a box that is a different shape from the screen, so measure the direction in field units
+        onSwipe({ angle: Math.atan2((dy / rect.height) * H, (dx / rect.width) * W), loft: len > rect.width * 0.3 })
+      } : undefined}
     >
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
         <Ground battingColor={battingTeam.colors.primary} />
@@ -341,14 +368,33 @@ export function Stage({
         })}
         {event?.boundary && <Sparks key={`sp${seq}`} x={end.x} y={end.y} color={event.boundary === 6 ? '#e879f9' : '#38bdf8'} big={event.boundary === 6} />}
         {stumpsHit && <StumpsFly key={`st${seq}`} />}
+        {aimShot && (() => {
+          const tip = ropePoint(aimShot.angle)
+          const reach = aimShot.loft ? 0.95 : 0.8
+          const x2 = HIT.x + (tip.x - HIT.x) * reach
+          const y2 = HIT.y + (tip.y - HIT.y) * reach
+          return (
+            <g pointerEvents="none">
+              <line x1={HIT.x} y1={HIT.y} x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="1.1" strokeLinecap="round" strokeDasharray={aimShot.loft ? '0.1 2.2' : '3 1.6'} />
+              <circle cx={x2} cy={y2} r="2.2" fill="#fbbf24" stroke="#000" strokeWidth="0.4" />
+              <text x={x2} y={y2 + 0.9} textAnchor="middle" fontSize="2.6" fontWeight="800" fill="#000">{aimShot.loft ? '↑' : '•'}</text>
+            </g>
+          )
+        })()}
+        {aimDelivery && (() => {
+          const p = landingSpot(aimDelivery)
+          return <circle cx={p.x} cy={p.y} r="1.9" fill="#ef4444" stroke="#fff" strokeWidth="0.5" pointerEvents="none" />
+        })()}
         {/* the ball: travels bowler to bat, then away */}
         {event && (
           <motion.g key={event.seq}>
             <motion.circle
               r={six ? 1.7 : 1.15} fill="#ef4444" stroke="#fecaca" strokeWidth="0.35"
               initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 1 }}
-              animate={{ cx: [BOWLER_STRIDE.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, HIT.y, end.y], r: six ? [1.15, 1.15, 2.4, 1.3] : [1.15, 1.15, 1.15], opacity: [1, 1, event.boundary ? 0.35 : 1] }}
-              transition={{ duration: 1.05, times: [0, 0.38, 1], ease: 'easeOut' }}
+              animate={bounce
+                ? { cx: [BOWLER_STRIDE.x, bounce.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, bounce.y, HIT.y, end.y], r: six ? [1.15, 1.15, 1.15, 2.4] : [1.15, 1.15, 1.15, 1.15], opacity: [1, 1, 1, event.boundary ? 0.35 : 1] }
+                : { cx: [BOWLER_STRIDE.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, HIT.y, end.y], r: six ? [1.15, 1.15, 2.4, 1.3] : [1.15, 1.15, 1.15], opacity: [1, 1, event.boundary ? 0.35 : 1] }}
+              transition={bounce ? { duration: 1.1, times: [0, 0.2, 0.4, 1], ease: 'easeOut' } : { duration: 1.05, times: [0, 0.38, 1], ease: 'easeOut' }}
             />
           </motion.g>
         )}

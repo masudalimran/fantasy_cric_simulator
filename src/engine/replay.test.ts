@@ -33,6 +33,24 @@ describe('match replay', () => {
     }
   })
 
+  it('replays chosen shots, deliveries and bowling styles exactly', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const live = fresh(seed)
+      let log: Action[] = []
+      const act = (a: Action) => { applyAction(live, a); log = appendAction(log, a) }
+      for (let i = 0; i < 40; i++) {
+        const bat = live.current.battingSide
+        if (i % 3 === 0) act({ t: 'shot', side: bat, v: { angle: -Math.PI / 2 + (i % 5) * 0.4, loft: i % 2 === 0 } })
+        if (i % 4 === 0) act({ t: 'delivery', side: (1 - bat) as 0 | 1, v: { line: ((i % 5) - 2) as -2, length: (['yorker', 'full', 'good', 'short'] as const)[i % 4], pace: 'fast' } })
+        if (i === 10) act({ t: 'style', side: (1 - bat) as 0 | 1, v: 'aggressive' })
+        act({ t: 'ball' })
+      }
+      const copy = fresh(seed)
+      for (const a of log) applyAction(copy, a)
+      expect(copy.events.map((e) => [e.seq, e.total, !!e.wicket, e.shot?.loft, e.delivery?.length])).toEqual(live.events.map((e) => [e.seq, e.total, !!e.wicket, e.shot?.loft, e.delivery?.length]))
+    }
+  })
+
   it('folds consecutive single balls into one entry', () => {
     let log: Action[] = []
     for (let i = 0; i < 120; i++) log = appendAction(log, { t: 'ball' })

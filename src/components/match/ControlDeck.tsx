@@ -5,6 +5,8 @@ import type { Intent } from '../../engine/types'
 import { FORMATS } from '../../engine/types'
 import { PlayerAvatar, TeamCrest } from '../ui'
 import { oversText } from './format'
+import { setSwipeAim, useSwipeAim } from '../../prefs'
+import { DeliveryPad, ShotPad } from './AimPads'
 
 type Auto = 0 | 1 | 2 | 4
 
@@ -44,6 +46,20 @@ const INTENTS: { id: Intent | null; label: string; hint: string; color: string; 
 const base = 'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-[13px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40'
 const solid = `${base} bg-slate-700 text-white hover:bg-slate-600`
 
+/** A section that stays folded until you open it, for the optional controls. */
+function Fold({ title, hint, badge, children }: { title: string; hint?: string; badge?: string | null; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <details className="group px-3 py-2.5" open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-2">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200">{title} <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></h3>
+        {badge ? <span className="truncate rounded bg-amber-400 px-1.5 py-px text-[10px] font-extrabold text-black">{badge}</span> : hint && <p className="truncate text-[11px] text-slate-500">{hint}</p>}
+      </summary>
+      <div className="mt-2 space-y-2">{children}</div>
+    </details>
+  )
+}
+
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2 px-3 py-2.5">
@@ -57,6 +73,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectating = false, stops, setStops }: Props) {
+  const swipeOn = useSwipeAim()
   const [overs, setOvers] = useState(5)
   const [askForfeit, setAskForfeit] = useState(false)
   const inn = match.current
@@ -147,6 +164,14 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
         </div>
       </Section>}
 
+      {showBat && <Fold title="Aim your shot" hint="optional" badge={match.shotAim[batSide] ? 'AIMED' : null}>
+        <ShotPad value={match.shotAim[batSide]} onChange={(v) => act({ t: 'shot', side: batSide, v })} />
+        <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
+          <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={swipeOn} onChange={(e) => setSwipeAim(e.target.checked)} />
+          Drag across the field to aim (a short drag keeps it on the ground, a long one lifts it)
+        </label>
+      </Fold>}
+
       {!spectating && !showBowl && <Section title={`Bowling · ${bowl.team.name}`}>{cpuNote(bowl.team.name)}</Section>}
       {showBowl && <Section title={`How to bowl · ${bowl.team.name}`} hint="applies from the next ball">
         <div className="grid grid-cols-3 gap-1.5">
@@ -188,6 +213,10 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           })}
         </div>
       </Section>}
+
+      {showBowl && <Fold title="Line, length and pace" hint="optional" badge={match.deliveryAim[bowlSide] ? 'AIMED' : null}>
+        <DeliveryPad value={match.deliveryAim[bowlSide]} onChange={(v) => act({ t: 'delivery', side: bowlSide, v })} paceLabels={bowlerNow && /spin|break|googly|chinaman|orthodox|leg|off/i.test(match.player(bowlerNow).bowling?.type ?? '') ? ['Quicker', 'Normal', 'Flighted'] : ['Fast', 'Medium', 'Slower ball']} />
+      </Fold>}
 
       {/* FOOTER: shortcuts + forfeit */}
       <section className="bg-black/20 px-3 py-2">

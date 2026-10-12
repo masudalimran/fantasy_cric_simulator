@@ -6,6 +6,13 @@ export type Phase = 'powerplay' | 'middle' | 'death'
 /** How the bowling side sets out to bowl: safe (tidy, fewer wickets and boundaries), normal, or aggressive (wicket-hunting, more risk). */
 export type BowlStyle = 'safe' | 'normal' | 'aggressive'
 export const BOWL_STYLE_VALUE: Record<BowlStyle, number> = { safe: -1, normal: 0, aggressive: 1 }
+/** Where in the pitch a delivery lands. */
+export type Length = 'yorker' | 'full' | 'good' | 'short'
+export type Pace = 'fast' | 'medium' | 'slow'
+/** A delivery chosen by the bowling side: the line (+2 wide of off ... 0 stumps ... -2 down the leg side), length and pace. */
+export interface DeliveryAim { line: -2 | -1 | 0 | 1 | 2; length: Length; pace: Pace }
+/** A shot chosen by the batting side: the direction on the field view (radians, screen angle) and whether it goes in the air. */
+export interface ShotAim { angle: number; loft: boolean }
 export type Intent = 'defend' | 'normal' | 'attack' | 'slog'
 export const INTENT_VALUE: Record<Intent, number> = { defend: -1, normal: 0, attack: 1, slog: 2 }
 
@@ -69,6 +76,9 @@ export interface BallEvent {
   wicket: (Dismissal & { playerId: string }) | null
   intent: number
   freeHit: boolean
+  /** What the people in charge chose for this ball, when they chose anything. */
+  shot?: ShotAim
+  delivery?: DeliveryAim
   /** Score once this delivery is complete. */
   score: { runs: number; wickets: number; legalBalls: number }
   /** Moments worth a callout: fifty, hundred, hat-trick, maiden, etc. */

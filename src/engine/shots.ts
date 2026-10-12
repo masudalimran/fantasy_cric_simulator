@@ -30,3 +30,6 @@ export function sectorIndex(deg: number): number {
 
 /** How far down the ground a shot travels, as a share of the way to the boundary. */
 export const reachFactor = (runs: number) => (runs >= 6 ? 1.12 : runs === 4 ? 1 : runs === 3 ? 0.78 : runs === 2 ? 0.56 : runs === 1 ? 0.34 : 0.1)
+
+/** The direction a ball's shot went: the one a person chose, or the stable pick from the ball number. */
+export const eventAngle = (ev: { seq: number; shot?: { angle: number } }) => ev.shot?.angle ?? shotAngle(ev.seq)

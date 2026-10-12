@@ -1,4 +1,4 @@
-import { degreesFromStraight, sectorIndex, shotAngle } from './shots'
+import { degreesFromStraight, eventAngle, sectorIndex } from './shots'
 import type { BallEvent, Innings } from './types'
 
 // ---- Runs by over (worm and Manhattan) -----------------------------------------
@@ -112,7 +112,7 @@ export function wagonShots(inn: Innings, isLeftHanded: (id: string) => boolean):
   return inn.log
     .filter((e: BallEvent) => e.runsBat > 0)
     .map((e) => {
-      const angle = shotAngle(e.seq)
+      const angle = eventAngle(e)
       const deg = degreesFromStraight(angle, isLeftHanded(e.strikerId))
       return { seq: e.seq, batterId: e.strikerId, runs: e.runsBat, angle, deg, sector: sectorIndex(deg) }
     })

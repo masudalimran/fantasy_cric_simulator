@@ -35,3 +35,19 @@ export function setKeepAwake(on: boolean) {
 export function useKeepAwake(): boolean {
   return useSyncExternalStore((cb) => { awakeListeners.add(cb); return () => { awakeListeners.delete(cb) } }, () => awake, () => true)
 }
+
+// ---- Swipe on the field to aim a shot -------------------------------------------------------------------------
+const SWIPE_KEY = 'fcs.swipeAim'
+const swipeListeners = new Set<() => void>()
+let swipe = (() => { try { return localStorage.getItem(SWIPE_KEY) !== '0' } catch { return true } })()
+
+export function setSwipeAim(on: boolean) {
+  swipe = on
+  try { localStorage.setItem(SWIPE_KEY, on ? '1' : '0') } catch { /* just not remembered */ }
+  swipeListeners.forEach((l) => l())
+}
+
+/** Whether dragging a finger (or the mouse) across the field aims the next shot (on by default). */
+export function useSwipeAim(): boolean {
+  return useSyncExternalStore((cb) => { swipeListeners.add(cb); return () => { swipeListeners.delete(cb) } }, () => swipe, () => true)
+}

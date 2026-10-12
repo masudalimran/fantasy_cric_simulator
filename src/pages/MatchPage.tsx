@@ -11,6 +11,7 @@ import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
+import { useSwipeAim } from '../prefs'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
@@ -93,6 +94,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const stopsRef = useRef(stops)
   // The innings break card: shown when the first innings ends during play (not when you reopen a match that is already in the chase).
   const [breakOpen, setBreakOpen] = useState(false)
+  const swipeOn = useSwipeAim()
   const seenInnings = useRef(match.current.index)
   const inningsNow = match.current.index
   useEffect(() => {
@@ -358,6 +360,16 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   const inn = match.current
   const batSide = match.battingSide()
+  // lining up a shot or a delivery: only for the side(s) a person is running, never for the computer's
+  const batIdx = match.current.battingSide
+  const watching = !!live.myTeamId && match.mySide === null
+  const userBats = !watching && !match.isOver && (match.mySide === null || match.mySide === batIdx)
+  const userBowls = !watching && !match.isOver && (match.mySide === null || match.mySide === 1 - batIdx)
+  const aimProps = {
+    aimShot: userBats ? match.shotAim[batIdx] : null,
+    aimDelivery: userBowls ? match.deliveryAim[(1 - batIdx) as 0 | 1] : null,
+    onSwipe: swipeOn && userBats ? (a: { angle: number; loft: boolean }) => { haptic(8); act({ t: 'shot', side: batIdx, v: a }) } : undefined,
+  }
   const bowlSide = match.bowlingSide()
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
@@ -464,7 +476,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -493,7 +505,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -536,7 +548,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />

@@ -8,7 +8,7 @@ import {
 import { Rng, randomSeed } from './rng'
 import {
   BOWL_STYLE_VALUE, DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
-  type BallEvent, type BowlStyle, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
+  type BallEvent, type BowlStyle, type DeliveryAim, type ShotAim, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
   type MatchResult, type Pitch, type Side, type TossResult,
 } from './types'
 
@@ -49,6 +49,10 @@ export class Match {
   intent: [Intent | number | null, Intent | number | null] = [null, null]
   /** How each side bowls when it is the bowling side (null = the usual). */
   bowlStyle: [BowlStyle | null, BowlStyle | null] = [null, null]
+  /** A shot / delivery a person has lined up for the NEXT ball only (it is used and cleared by that ball). */
+  shotAim: [ShotAim | null, ShotAim | null] = [null, null]
+  deliveryAim: [DeliveryAim | null, DeliveryAim | null] = [null, null]
+  private lastDelivery: [DeliveryAim | null, DeliveryAim | null] = [null, null]
   /** Set when a side forfeits: the rest of the match is played out, and that side loses. */
   forfeitSide: 0 | 1 | null = null
   /** The side the player manages (null = the player manages both, as in a friendly). */
@@ -279,6 +283,8 @@ export class Match {
         : typeof userIntent === 'number' ? userIntent : INTENT_VALUE[userIntent]
 
     const probs = ballProbs({
+      shot: this.shotAim[battingSideIdx], delivery: this.deliveryAim[bowlingSideIdx],
+      repeat: !!this.deliveryAim[bowlingSideIdx] && this.lastDelivery[bowlingSideIdx]?.line === this.deliveryAim[bowlingSideIdx]!.line && this.lastDelivery[bowlingSideIdx]?.length === this.deliveryAim[bowlingSideIdx]!.length,
       format, phase, intent, style: BOWL_STYLE_VALUE[this.bowlStyle[bowlingSideIdx] ?? 'normal'], pitch: this.pitch, freeHit: inn.freeHit,
       forfeit: this.forfeitSide === battingSideIdx ? 'bat' : this.forfeitSide === bowlingSideIdx ? 'bowl' : undefined,
       ballsFaced: strikerLine.balls,
@@ -360,6 +366,8 @@ export class Match {
       strikerId: striker.id, nonStrikerId: inn.nonStrikerId, bowlerId: bowler.id,
       runsBat, extraType, extraRuns, total, boundary: runsBat === 4 ? 4 : runsBat === 6 ? 6 : 0,
       wicket: dismissal, intent, freeHit: wasFreeHit,
+      ...(this.shotAim[battingSideIdx] ? { shot: this.shotAim[battingSideIdx] as ShotAim } : {}),
+      ...(this.deliveryAim[bowlingSideIdx] ? { delivery: this.deliveryAim[bowlingSideIdx] as DeliveryAim } : {}),
       score: { runs: inn.runs, wickets: inn.wickets, legalBalls: inn.legalBalls }, tags,
     }
 
@@ -399,6 +407,9 @@ export class Match {
 
     inn.log.push(ev)
     this.events.push(ev)
+    if (this.deliveryAim[bowlingSideIdx]) this.lastDelivery[bowlingSideIdx] = this.deliveryAim[bowlingSideIdx]
+    this.shotAim[battingSideIdx] = null // a lined-up shot or delivery is for one ball only
+    this.deliveryAim[bowlingSideIdx] = null
 
     // ---- Is the innings (or match) over?
     const allOut = inn.wickets >= batXI.length - 1
