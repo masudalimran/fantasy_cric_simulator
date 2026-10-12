@@ -69,6 +69,14 @@ describe('team tiers', () => {
   })
 })
 
+describe('portraits', () => {
+  it('every player on every built-in team has a portrait in the game (not only in one browser)', async () => {
+    const manifest = (await import('./imageManifest.json')).default.players as Record<string, string>
+    const missing = BUILT_IN_TEAMS.flatMap((t) => t.players.filter((p) => !manifest[p.id]).map((p) => `${t.id}/${p.name}`))
+    expect(missing).toEqual([])
+  })
+})
+
 describe('youth pool', () => {
   it('has no one who already plays for a team, and every one has a portrait', async () => {
     const { YOUTH } = await import('./youthPool')

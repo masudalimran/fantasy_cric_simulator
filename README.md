@@ -22,7 +22,7 @@ Deployed on Netlify (`netlify.toml` sets the build and the single-page-app redir
 
 ### Teams
 - 20 built-in fantasy teams (Bleach, Naruto, Dragon Ball, JoJo, Yu-Gi-Oh!, The Seven Deadly Sins, InuYasha, The Witcher,
-  Final Fantasy and more), 15 to 20 players each. Every built-in team has a portrait for every player. The Zelda, Mass
+  Final Fantasy and more), 15 to 20 players each. Every built-in team has a portrait for every player, saved in `public/images/players` (a test checks it). To ship portraits you pasted as URLs, export "Current teams only" from the Backup page and run `node scripts/bake-image-urls.mjs <that file>`. The Zelda, Mass
   Effect, Overwatch and Halo teams were retired because some portraits could not be found (`LEGACY_TEAMS`): they are no
   longer offered, but a saved career that already uses one keeps it. You can edit any team or player (changes are saved
   here, with a confirmed "Reset to default") or create your own team. Images are pasted as URLs; team logos and player
