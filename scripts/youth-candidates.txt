@@ -157,7 +157,6 @@ Senku Ishigami|dr. stone
 Taiju Oki|dr. stone
 Tsukasa Shishio|dr. stone
 Chrome|dr. stone
-Kohaku|dr. stone
 Gen Asagiri|dr. stone
 Ryusui Nanami|dr. stone
 Yuzuriha Ogawa|dr. stone
@@ -182,7 +181,6 @@ Genkai|yu yu hakusho
 Younger Toguro|yu yu hakusho
 Gintoki Sakata|gintama
 Shinpachi Shimura|gintama
-Kagura|gintama
 Toshiro Hijikata|gintama
 Sougo Okita|gintama
 Isao Kondo|gintama
@@ -345,7 +343,6 @@ Yuji Itadori|jujutsu
 Nobara Kugisaki|jujutsu
 Maki Zenin|jujutsu
 Yuta Okkotsu|jujutsu
-Nanami Kento|jujutsu
 Mahito|jujutsu
 Jogo|jujutsu
 Hanami|jujutsu

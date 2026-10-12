@@ -176,6 +176,34 @@ export const GLYPHS: Record<string, Glyph> = {
       <circle cx="50" cy="90" r="6" fill={fg} />
     </>
   ),
+  jojo: (fg, bg) => (
+    <>
+      <path d="M50 4 L66 40 L96 44 L72 66 L80 96 L50 78 L20 96 L28 66 L4 44 L34 40 Z" fill={fg} stroke={bg} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M50 28 L56 46 L74 48 L60 58 L64 76 L50 66 L36 76 L40 58 L26 48 L44 46 Z" fill={bg} />
+    </>
+  ),
+  yugioh: (fg, bg) => (
+    <>
+      <path d="M4 50 C22 20 78 20 96 50 C78 80 22 80 4 50 Z" fill={fg} />
+      <circle cx="50" cy="50" r="16" fill={bg} />
+      <circle cx="50" cy="50" r="7" fill={fg} />
+      <path d="M50 18 V4 M50 82 V96 M20 36 L10 28 M80 36 L90 28" stroke={fg} strokeWidth="6" strokeLinecap="round" />
+    </>
+  ),
+  sds: (fg, bg) => (
+    <>
+      <path d="M26 30 C18 18 30 6 44 12 L50 20 L56 12 C70 6 82 18 74 30 C90 40 88 66 72 74 C64 88 36 88 28 74 C12 66 10 40 26 30 Z" fill={fg} />
+      <circle cx="38" cy="48" r="5" fill={bg} /><circle cx="62" cy="48" r="5" fill={bg} />
+      <ellipse cx="50" cy="66" rx="12" ry="9" fill={bg} /><circle cx="45" cy="66" r="2.5" fill={fg} /><circle cx="55" cy="66" r="2.5" fill={fg} />
+    </>
+  ),
+  inuyasha: (fg, bg) => (
+    <>
+      <path d="M50 2 L88 40 L50 98 L12 40 Z" fill={fg} />
+      <path d="M50 14 L74 40 L50 82 L26 40 Z" fill={bg} opacity="0.85" />
+      <path d="M50 22 L62 40 L50 64 L38 40 Z" fill={fg} />
+    </>
+  ),
   zelda: (fg) => (
     <g transform="translate(9 8) scale(.84)" fill={fg}>
       <polygon points="50,6 78,54 22,54" />
@@ -248,6 +276,7 @@ export const FRAMES: Record<string, Frame> = {
   bleach: 'circle', naruto: 'shield', dragonball: 'circle', onepiece: 'rounded', aot: 'shield',
   mha: 'hex', demonslayer: 'rounded', jjk: 'circle', fma: 'circle', witcher: 'circle',
   dragonage: 'shield', dota: 'hex', poe: 'circle', finalfantasy: 'diamond', elderscrolls: 'shield',
+  jojo: 'hex', yugioh: 'diamond', sds: 'shield', inuyasha: 'circle',
   assassinscreed: 'diamond', zelda: 'hex', masseffect: 'rounded', overwatch: 'circle', halo: 'hex',
 }
 

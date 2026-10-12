@@ -101,6 +101,10 @@ const ANIME: Record<string, { keys: string[]; search: string }> = {
   demonslayer: { keys: ['kimetsu', 'demon slayer'], search: 'Demon Slayer: Kimetsu no Yaiba' },
   jjk: { keys: ['jujutsu'], search: 'Jujutsu Kaisen' },
   fma: { keys: ['hagane', 'fullmetal'], search: 'Fullmetal Alchemist: Brotherhood' },
+  jojo: { keys: ['jojo'], search: "JoJo's Bizarre Adventure: Stardust Crusaders" },
+  yugioh: { keys: ['yu-gi-oh', 'yu☆gi☆oh'], search: 'Yu-Gi-Oh!' },
+  sds: { keys: ['nanatsu', 'seven deadly'], search: 'The Seven Deadly Sins' },
+  inuyasha: { keys: ['inuyasha'], search: 'InuYasha' },
 }
 
 // Spelling AniList actually uses, where our display name differs.
@@ -120,6 +124,7 @@ const ANIME_QUERY: Record<string, string> = {
   'Satoru Gojo': 'Satoru Gojou', 'Ryomen Sukuna': 'Ryomen Sukuna', 'Toji Fushiguro': 'Touji Fushiguro', 'Megumi Fushiguro': 'Megumi Fushiguro',
   'Toge Inumaki': 'Toge Inumaki', 'Kinji Hakari': 'Kinji Hakari', 'Aoi Todo': 'Aoi Toudou', 'Suguru Geto': 'Suguru Geto',
   'Kon': 'Kon', 'Rukia Kuchiki': 'Rukia Kuchiki', 'Hange Zoe': 'Hange Zoe', 'Kenny Ackerman': 'Kenny Ackerman',
+  'Jolyne Kujo': 'Jolyne Cujoh', Atem: 'Yami Yuugi', 'Tea Gardner': 'Anzu Mazaki', King: 'Harlequin King', Totosai: 'Totosai', Jakotsu: 'Jakotsu', Hakudoshi: 'Hakudoushi',
   'Erwin Smith': 'Erwin Smith', 'Levi Ackerman': 'Levi', 'Eren Yeager': 'Eren Yeager', 'Zeke Yeager': 'Zeke Yeager',
 }
 

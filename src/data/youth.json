@@ -1335,7 +1335,7 @@
  {
   "id": "yt-biscuit-krueger",
   "name": "Biscuit Krueger",
-  "series": "HUNTER×HUNTER: Greed Island",
+  "series": "HUNTER\u00d7HUNTER: Greed Island",
   "universe": "anime",
   "role": "BAT",
   "hand": "R",
@@ -3215,31 +3215,6 @@
   "potential": 70
  },
  {
-  "id": "yt-kohaku",
-  "name": "Kohaku",
-  "series": "Dr. STONE",
-  "universe": "anime",
-  "role": "BOWL",
-  "hand": "L",
-  "batting": {
-   "technique": 19,
-   "power": 14,
-   "temperament": 26,
-   "running": 27
-  },
-  "bowling": {
-   "type": "leftspin",
-   "accuracy": 36,
-   "variation": 42,
-   "stamina": 37
-  },
-  "fielding": 41,
-  "traits": [
-   "powerplay-specialist"
-  ],
-  "potential": 68
- },
- {
   "id": "yt-gen-asagiri",
   "name": "Gen Asagiri",
   "series": "Dr. STONE",
@@ -3769,31 +3744,6 @@
   "potential": 81
  },
  {
-  "id": "yt-kagura",
-  "name": "Kagura",
-  "series": "Gintama",
-  "universe": "anime",
-  "role": "AR",
-  "hand": "R",
-  "batting": {
-   "technique": 34,
-   "power": 36,
-   "temperament": 34,
-   "running": 31
-  },
-  "bowling": {
-   "type": "legspin",
-   "accuracy": 38,
-   "variation": 30,
-   "stamina": 28
-  },
-  "fielding": 33,
-  "traits": [
-   "clutch"
-  ],
-  "potential": 69
- },
- {
   "id": "yt-sougo-okita",
   "name": "Sougo Okita",
   "series": "Gintama",
@@ -4303,7 +4253,7 @@
  {
   "id": "yt-frieren",
   "name": "Frieren",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "AR",
   "hand": "R",
@@ -4328,7 +4278,7 @@
  {
   "id": "yt-fern",
   "name": "Fern",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "BOWL",
   "hand": "R",
@@ -4351,7 +4301,7 @@
  {
   "id": "yt-stark",
   "name": "Stark",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "BOWL",
   "hand": "R",
@@ -4374,7 +4324,7 @@
  {
   "id": "yt-himmel",
   "name": "Himmel",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "BAT",
   "hand": "R",
@@ -4392,7 +4342,7 @@
  {
   "id": "yt-heiter",
   "name": "Heiter",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "BOWL",
   "hand": "L",
@@ -4417,7 +4367,7 @@
  {
   "id": "yt-eisen",
   "name": "Eisen",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "AR",
   "hand": "L",
@@ -4440,7 +4390,7 @@
  {
   "id": "yt-ubel",
   "name": "Ubel",
-  "series": "Frieren: Beyond Journey’s End",
+  "series": "Frieren: Beyond Journey\u2019s End",
   "universe": "anime",
   "role": "BAT",
   "hand": "R",
@@ -5938,29 +5888,6 @@
   "fielding": 40,
   "traits": [],
   "potential": 65
- },
- {
-  "id": "yt-nanami-kento",
-  "name": "Nanami Kento",
-  "series": "Jujutsu Kaisen",
-  "universe": "anime",
-  "role": "AR",
-  "hand": "R",
-  "batting": {
-   "technique": 38,
-   "power": 43,
-   "temperament": 45,
-   "running": 42
-  },
-  "bowling": {
-   "type": "offspin",
-   "accuracy": 43,
-   "variation": 44,
-   "stamina": 45
-  },
-  "fielding": 47,
-  "traits": [],
-  "potential": 61
  },
  {
   "id": "yt-jogo",

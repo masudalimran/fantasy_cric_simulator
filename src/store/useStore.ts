@@ -2,7 +2,7 @@ import type { NewsItem } from '../season/selection'
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { BUILT_IN_TEAMS } from '../data/teams'
+import { BUILT_IN_TEAMS, LEGACY_TEAMS, refreshRatings } from '../data/teams'
 import { generateSeason } from '../season/generate'
 import { lastPlayedXI } from '../season/selection'
 import { advanceMarket, initMarket, marketWindows, playerIndex } from '../season/market'
@@ -135,7 +135,7 @@ export const useStore = create<State>()(
         set((st) => ({
           sessions: st.sessions.map((x) => {
             if (x.id !== st.activeSessionId || (x.season.market && x.season.windows)) return x
-            const teams = resolveTeams(st.customTeams, st.overrides).filter((t) => x.season.teamIds.includes(t.id))
+            const teams = resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)).filter((t) => x.season.teamIds.includes(t.id))
             return { ...x, season: { ...x.season, windows: x.season.windows ?? marketWindows(x.season.year), market: x.season.market ?? initMarket(teams, x.season.seed) } }
           }),
         })),
@@ -145,7 +145,7 @@ export const useStore = create<State>()(
             if (x.id !== st.activeSessionId) return x
             const next = fn(x.season)
             // as the days of a market window go by, the computer teams do their shopping
-            const season = advanceMarket(x.season, next, () => playerIndex(resolveTeams(st.customTeams, st.overrides), next.market))
+            const season = advanceMarket(x.season, next, () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), next.market))
             return { ...x, season, updatedAt: new Date().toISOString() }
           }),
         })),
@@ -155,10 +155,10 @@ export const useStore = create<State>()(
             const target = st.liveMatch?.fixtureId === summary.fixtureId && st.liveMatch.sessionId ? st.liveMatch.sessionId : st.activeSessionId
             if (x.id !== target || x.season.results[summary.fixtureId]) return x
             // the match's players are graded on how they did, and their ratings move a little
-            const teams = new Map(resolveTeams(st.customTeams, st.overrides).map((t) => [t.id, t]))
+            const teams = new Map(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)).map((t) => [t.id, t]))
             const next = recordResult(x.season, summary, teams)
             const moved = { ...next, today: date > next.today ? date : next.today }
-            return { ...x, season: advanceMarket(x.season, moved, () => playerIndex(resolveTeams(st.customTeams, st.overrides), moved.market)), updatedAt: new Date().toISOString() }
+            return { ...x, season: advanceMarket(x.season, moved, () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), moved.market)), updatedAt: new Date().toISOString() }
           }),
         })),
       liveMatch: null,
@@ -237,8 +237,17 @@ export const useStore = create<State>()(
   ),
 )
 
-export const resolveTeams = (custom: Team[], overrides: Record<string, Team>): Team[] => [
-  ...BUILT_IN_TEAMS.map((t) => overrides[t.id] ?? t),
+/** Ids of retired built-in teams that a saved career still uses. */
+export const legacyIdsOf = (sessions: SessionFile[]): string[] => {
+  const retired = new Set(LEGACY_TEAMS.map((t) => t.id))
+  const used = new Set<string>()
+  for (const s of sessions) for (const season of [...(s.history ?? []), s.season]) for (const id of season.teamIds) if (retired.has(id)) used.add(id)
+  return [...used].sort()
+}
+
+export const resolveTeams = (custom: Team[], overrides: Record<string, Team>, legacy: string[] = []): Team[] => [
+  ...BUILT_IN_TEAMS.map((t) => (overrides[t.id] ? refreshRatings(overrides[t.id]) : t)),
+  ...LEGACY_TEAMS.filter((t) => legacy.includes(t.id)).map((t) => overrides[t.id] ?? t),
   ...custom,
 ]
 
@@ -246,10 +255,11 @@ export const resolveTeams = (custom: Team[], overrides: Record<string, Team>): T
 export function useTeams(): Team[] {
   const custom = useStore((s) => s.customTeams)
   const overrides = useStore((s) => s.overrides)
-  return useMemo(() => resolveTeams(custom, overrides), [custom, overrides])
+  const legacy = useStore((s) => legacyIdsOf(s.sessions).join(',')) // a string, so this only changes when a career starts or ends using a retired team
+  return useMemo(() => resolveTeams(custom, overrides, legacy ? legacy.split(',') : []), [custom, overrides, legacy])
 }
 
-export const defaultTeam = (id: string) => BUILT_IN_TEAMS.find((t) => t.id === id)
+export const defaultTeam = (id: string) => BUILT_IN_TEAMS.find((t) => t.id === id) ?? LEGACY_TEAMS.find((t) => t.id === id)
 
 /**
  * The season the career's Tournaments, Stats and team pages are looking at: the year picked in the year selector,

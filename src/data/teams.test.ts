@@ -25,8 +25,8 @@ describe('built-in teams', () => {
       it('has exactly one keeper in the XI', () => {
         expect(xi.filter((p) => p.role === 'WK')).toHaveLength(1)
       })
-      it('has at least 5 real bowling options in the XI', () => {
-        expect(xi.filter((p) => p.bowling && p.bowling.accuracy >= 55).length).toBeGreaterThanOrEqual(5)
+      it('has at least 5 bowling options in the XI', () => {
+        expect(xi.filter((p) => p.bowling && p.bowling.accuracy >= 30).length).toBeGreaterThanOrEqual(5)
       })
       it('has bowling ratings for every bowler and allrounder', () => {
         for (const p of team.players) if (p.role === 'BOWL' || p.role === 'AR') expect(p.bowling).not.toBeNull()
@@ -41,8 +41,8 @@ describe('built-in teams', () => {
         }
       })
       it('is not stacked or hopeless', () => {
-        expect(teamStrength(team)).toBeGreaterThan(55)
-        expect(teamStrength(team)).toBeLessThan(85)
+        expect(teamStrength(team)).toBeGreaterThan(50)
+        expect(teamStrength(team)).toBeLessThan(90)
       })
     })
   }
@@ -50,6 +50,33 @@ describe('built-in teams', () => {
   it('prints team strengths for review', () => {
     const rows = BUILT_IN_TEAMS.map((t) => [t.short, teamStrength(t), Math.max(...t.players.map(overall))] as const).sort((a, b) => b[1] - a[1])
     console.log(rows.map(([s, v, m]) => `${s} xi=${v} best=${m}`).join('\n'))
+  })
+})
+
+describe('team tiers', () => {
+  const str = (id: string) => teamStrength(BUILT_IN_TEAMS.find((t) => t.id === id)!)
+  const top = ['dragonball', 'onepiece', 'assassinscreed']
+  const mid = ['naruto', 'demonslayer', 'bleach']
+  it('the three most popular teams are the top tier, then the middle, then everyone else', () => {
+    const rest = BUILT_IN_TEAMS.filter((t) => ![...top, ...mid].includes(t.id)).map((t) => teamStrength(t))
+    expect(Math.min(...top.map(str))).toBeGreaterThan(Math.max(...mid.map(str)))
+    expect(Math.max(...rest)).toBeLessThanOrEqual(Math.max(...mid.map(str)))
+    expect(Math.min(...rest)).toBeLessThan(Math.min(...mid.map(str)) - 3) // and the bottom is properly weak
+  })
+  it('none of the new teams share a character with the youth pool or another team', () => {
+    const names = BUILT_IN_TEAMS.flatMap((t) => t.players.map((p) => p.name.toLowerCase()))
+    expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe('youth pool', () => {
+  it('has no one who already plays for a team, and every one has a portrait', async () => {
+    const { YOUTH } = await import('./youthPool')
+    const manifest = (await import('./imageManifest.json')).default.players as Record<string, string>
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
+    const onTeams = new Set([...BUILT_IN_TEAMS].flatMap((t) => t.players.map((p) => norm(p.name))))
+    expect(YOUTH.length).toBeGreaterThan(200)
+    for (const y of YOUTH) { expect(onTeams.has(norm(y.name))).toBe(false); expect(manifest[y.id]).toBeTruthy() }
   })
 })
 

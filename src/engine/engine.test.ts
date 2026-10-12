@@ -133,7 +133,7 @@ describe('match engine', () => {
 
   it('rewards better players: the stronger side wins more often', () => {
     const strong = BUILT_IN_TEAMS.find((t) => t.id === 'dragonball')!
-    const weak = BUILT_IN_TEAMS.find((t) => t.id === 'overwatch')!
+    const weak = BUILT_IN_TEAMS.find((t) => t.id === 'jjk')!
     let strongWins = 0
     for (let seed = 0; seed < 200; seed++) {
       const m = new Match({ teamA: strong, teamB: weak, format: 't20', seed })

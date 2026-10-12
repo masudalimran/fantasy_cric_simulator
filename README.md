@@ -21,9 +21,18 @@ Deployed on Netlify (`netlify.toml` sets the build and the single-page-app redir
 ## What is in the app
 
 ### Teams
-- 20 built-in fantasy teams (Bleach, Naruto, Dragon Ball, Zelda, Final Fantasy and more), 15 to 20 players each, with
-  ratings by popularity. You can edit any team or player (changes are saved here, with a confirmed "Reset to default")
-  or create your own team. Images are pasted as URLs; team logos and player portraits fall back to initials.
+- 20 built-in fantasy teams (Bleach, Naruto, Dragon Ball, JoJo, Yu-Gi-Oh!, The Seven Deadly Sins, InuYasha, The Witcher,
+  Final Fantasy and more), 15 to 20 players each. Every built-in team has a portrait for every player. The Zelda, Mass
+  Effect, Overwatch and Halo teams were retired because some portraits could not be found (`LEGACY_TEAMS`): they are no
+  longer offered, but a saved career that already uses one keeps it. You can edit any team or player (changes are saved
+  here, with a confirmed "Reset to default") or create your own team. Images are pasted as URLs; team logos and player
+  portraits fall back to initials.
+- **Team strength tiers** (`TIER` in `src/data/teams/index.ts`): Universe 7 Warriors, Grand Line Pirates and Assassin
+  Brotherhood are the top tier (they win about 85% of their matches against the whole field), Hidden Leaf Shinobi,
+  Demon Slayer Corps and Soul Reapers the middle, and the rest run from decent (about 60%) down to weak (under 20%).
+  The numbers were tuned by simulating every team against every other, since a few rating points is a lot in this
+  engine. The ratings are written once and shifted per team to hit the tier; a team you saved with edits keeps your
+  edited players and gets the tier ratings for everyone you did not edit.
 - **Squad** page: drag one player onto another to swap, pick the captain (C) and the wicketkeeper (WK). Saving without
   a keeper or captain in the XI asks you to choose.
 - **Import stats from a season** (Teams page): copies the ratings a career season ended with onto the teams
