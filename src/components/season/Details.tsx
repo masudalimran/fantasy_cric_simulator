@@ -327,7 +327,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
               {b && (
                 <div>
                   <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bat apps', b.batApps)}{stat('Runs', b.runs)}{stat('Average', f1(average(b)))}{stat('Strike rate', f1(strikeRate(b)))}{stat('Best', `${b.high}${b.highNotOut ? '*' : ''}`)}{stat('50s / 100s', `${b.fifties} / ${b.hundreds}`)}{stat('Fours / sixes', `${b.fours} / ${b.sixes}`)}</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bat apps', b.batApps)}{stat('Runs', b.runs)}{stat('Average', f1(average(b)))}{stat('Strike rate', f1(strikeRate(b)))}{stat('Best', `${b.high}${b.highNotOut ? '*' : ''}`)}{stat('50s / 100s', `${b.fifties} / ${b.hundreds}`)}{stat('Fours / sixes', `${b.fours} / ${b.sixes}`)}{stat('Longest six', b.longSix > 0 ? `${b.longSix} m` : '-')}</div>
                 </div>
               )}
               {w && (

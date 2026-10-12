@@ -38,7 +38,7 @@ export function OverallStats({ playerId, seasons, live }: { playerId: string; se
           {l.bat && (
             <div>
               <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Bat apps', l.bat.batApps)}{tile('Runs', l.bat.runs)}{tile('Average', f1(average(l.bat)))}{tile('Strike rate', f1(strikeRate(l.bat), 0))}{tile('Best', `${l.bat.high}${l.bat.highNotOut ? '*' : ''}`)}{tile('50s / 100s', `${l.bat.fifties} / ${l.bat.hundreds}`)}{tile('Fours / sixes', `${l.bat.fours} / ${l.bat.sixes}`)}{l.bat.longSix > 0 && tile('Longest six', `${l.bat.longSix} m`)}</div>
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Bat apps', l.bat.batApps)}{tile('Runs', l.bat.runs)}{tile('Average', f1(average(l.bat)))}{tile('Strike rate', f1(strikeRate(l.bat), 0))}{tile('Best', `${l.bat.high}${l.bat.highNotOut ? '*' : ''}`)}{tile('50s / 100s', `${l.bat.fifties} / ${l.bat.hundreds}`)}{tile('Fours / sixes', `${l.bat.fours} / ${l.bat.sixes}`)}{tile('Longest six', l.bat.longSix > 0 ? `${l.bat.longSix} m` : '-')}</div>
             </div>
           )}
           {l.bowl && (

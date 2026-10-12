@@ -51,12 +51,13 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
   const w = player.bowling
   // what he has done in this match so far
   const batting = match.innings.flatMap((inn) => inn.batters.filter((x) => x.id === player.id).map((line) => ({ inn, line })))
+  const matchSix = match.innings.flatMap((i) => i.log).filter((e) => e.strikerId === player.id && e.boundary === 6).reduce((m, e) => Math.max(m, e.distance ?? 0), 0)
   const bowling = match.innings.flatMap((inn) => { const line = inn.bowlers.get(player.id); return line ? [line] : [] })
   // what he has done in this match so far, as season-style lines (added to his overall stats while the match is on)
   const liveStats = match.isOver ? undefined : (() => {
     let bat: BatStat | undefined
     let bowl: BowlStat | undefined
-    for (const { line } of batting) bat = { id: player.id, matches: 1, innings: 1, notOuts: line.dismissal ? 0 : 1, runs: line.runs, balls: line.balls, fours: line.fours, sixes: line.sixes, high: line.runs, highNotOut: !line.dismissal, fifties: line.runs >= 50 && line.runs < 100 ? 1 : 0, hundreds: line.runs >= 100 ? 1 : 0, ducks: line.runs === 0 && line.dismissal ? 1 : 0, batApps: 1, longSix: 0 }
+    for (const { line } of batting) bat = { id: player.id, matches: 1, innings: 1, notOuts: line.dismissal ? 0 : 1, runs: line.runs, balls: line.balls, fours: line.fours, sixes: line.sixes, high: line.runs, highNotOut: !line.dismissal, fifties: line.runs >= 50 && line.runs < 100 ? 1 : 0, hundreds: line.runs >= 100 ? 1 : 0, ducks: line.runs === 0 && line.dismissal ? 1 : 0, batApps: 1, longSix: match.innings.flatMap((i) => i.log).filter((e) => e.strikerId === player.id && e.boundary === 6).reduce((m, e) => Math.max(m, e.distance ?? 0), 0) }
     for (const l of bowling) if (l.legalBalls > 0) bowl = { id: player.id, matches: 1, balls: l.legalBalls, runs: l.runs, wickets: l.wickets, maidens: l.maidens, bestW: l.wickets, bestR: l.runs, fiveW: l.wickets >= 5 ? 1 : 0, bowlApps: 1 }
     return { bat, bowl } // being in the XI is enough to count the match, even before he has batted or bowled
   })()
@@ -126,6 +127,7 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
             {batting.map(({ inn, line }) => (
               <Line key={`b${inn.index}`} label="Batting">{line.runs} ({line.balls}) · {line.fours}x4 {line.sixes}x6 · SR {strikeRate(line.runs, line.balls)} <span className="font-normal text-slate-400">· {dismissalText(match, line, inn)}</span></Line>
             ))}
+            {matchSix > 0 && <Line label="Longest six">{matchSix} m</Line>}
             {bowling.map((l, i) => (
               <Line key={`w${i}`} label="Bowling">{oversText(l.legalBalls)}-{l.maidens}-{l.runs}-{l.wickets} <span className="font-normal text-slate-400">· econ {economy(l)}</span></Line>
             ))}
