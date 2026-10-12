@@ -8,7 +8,7 @@ import { PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
 import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { daysBetween, formatDate } from '../season/dates'
-import { askingFromTeam, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundFor, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
+import { acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundFor, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { paths } from '../routes'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
@@ -99,6 +99,15 @@ export function MarketPage() {
     )
   }
 
+  const offers = (market.offers ?? []).filter((o) => o.expires >= today)
+  const takeOffer = (id: string) => {
+    const o = offers.find((x) => x.id === id)
+    const out = acceptOffer(season, index, id, today)
+    if (out.error) { setNotice(out.error); return }
+    updateSeason(() => out.season)
+    setNotice(o ? `${index.get(o.playerId)?.name ?? 'He'} has joined ${teams.get(o.teamId)?.name ?? 'them'}. You got ${o.fee} coins.` : null)
+  }
+
   const matches = (p: Player) => role === 'all' || p.role === role
   const pool = market.pool.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort((a, b) => overall(shown(b)) - overall(shown(a)))
   const otherTeams = Object.keys(market.squads).filter((id) => id !== season.myTeamId)
@@ -130,6 +139,32 @@ export function MarketPage() {
       </div>
 
       {notice && <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-sm text-amber-100" role="status"><span>{notice}</span><button onClick={() => setNotice(null)} className="font-bold" aria-label="Dismiss">✕</button></div>}
+
+      {offers.length > 0 && (
+        <section className="mb-4 rounded-3xl border-2 border-sky-400/60 bg-sky-400/5 p-3">
+          <h3 className="mb-2 font-display text-2xl tracking-wide text-sky-200">Offers for your players</h3>
+          <div className="space-y-2">
+            {offers.map((o) => {
+              const p = index.get(o.playerId)
+              const buyer = teams.get(o.teamId)
+              if (!p || !buyer) return null
+              return (
+                <div key={o.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-2.5">
+                  <PlayerAvatar profile player={shown(p)} team={me ?? FREE_AGENTS} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold text-white">{p.name} <span className="text-xs font-normal text-slate-400">· worth {worth(p)}</span></div>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-300"><TeamCrest team={buyer} size={16} />{buyer.name} offers <b className="text-amber-300">{o.fee} coins</b> <span className="text-slate-500">· until {formatDate(o.expires)}</span></div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => takeOffer(o.id)} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : 'Sell him'} className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-extrabold leading-none text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400">Accept</button>
+                    <button onClick={() => updateSeason((s) => declineOffer(s, o.id))} className="rounded-full border border-line px-4 py-2 text-xs font-bold leading-none text-slate-200 hover:border-slate-400">Decline</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button className={chip(view === 'unsigned')} onClick={() => setView('unsigned')}>Unsigned ({market.pool.length})</button>

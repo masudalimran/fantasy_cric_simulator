@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { advanceMarket, cpuMarketDay, developYouth, initMarket, marketValue, openWindow, playerIndex, POOL_SIZE, releasePlayer, rolloverMarket, signPlayer, SQUAD_CAP, SQUAD_FLOOR, teamOnDate } from './market'
+import { acceptOffer, advanceMarket, declineOffer, cpuMarketDay, developYouth, initMarket, marketValue, openWindow, playerIndex, POOL_SIZE, releasePlayer, rolloverMarket, signPlayer, SQUAD_CAP, SQUAD_FLOOR, teamOnDate } from './market'
 import { sessionTeam } from './progression'
 import type { Season } from './types'
 
@@ -109,6 +109,26 @@ describe('player market', () => {
     const idx = () => index(s)
     expect(advanceMarket({ ...s, today: '2030-02-01' }, { ...s, today: '2030-02-20' }, idx).market!.log).toHaveLength(0)
     expect(advanceMarket({ ...s, today: '2030-01-02' }, { ...s, today: '2030-01-14' }, idx).market!.log.length).toBeGreaterThan(0)
+  })
+
+  it('computer teams make offers for your players, which you can accept or turn down', () => {
+    let s = mk('legend')
+    const idx = index(s)
+    for (let d = 1; d <= 14; d++) s = cpuMarketDay(s, idx, `2030-01-${String(d).padStart(2, '0')}`)
+    const offers = s.market!.offers ?? []
+    expect(offers.length).toBeGreaterThan(0)
+    expect(offers.length).toBeLessThanOrEqual(3)
+    const o = offers[0]
+    const before = s.market!.budgets.bleach
+    const done = acceptOffer({ ...s, today: '2030-01-14' }, idx, o.id, '2030-01-14')
+    expect(done.error).toBeUndefined()
+    expect(done.season.market!.squads.bleach).not.toContain(o.playerId)
+    expect(done.season.market!.squads[o.teamId]).toContain(o.playerId)
+    expect(done.season.market!.budgets.bleach).toBe(before + o.fee)
+    expect(done.season.market!.log.at(-1)).toMatchObject({ kind: 'buy', from: 'bleach', to: o.teamId, fee: o.fee })
+    const refused = declineOffer(s, o.id)
+    expect(refused.market!.offers!.some((x) => x.id === o.id)).toBe(false)
+    expect(acceptOffer({ ...s, today: '2030-03-01' }, idx, o.id, '2030-03-01').error).toMatch(/closed/i)
   })
 
   it('rolls into a new year: new purses, a fresh pool, young players developing', () => {

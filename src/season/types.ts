@@ -93,6 +93,18 @@ export interface Transfer {
   kind: 'sign' | 'buy' | 'release'
 }
 
+/** A computer team's offer for one of your players. You can accept it (he moves and you get the fee) or turn it down. */
+export interface Offer {
+  id: string
+  date: string
+  playerId: string
+  /** The computer team that wants him. */
+  teamId: string
+  fee: number
+  /** The last day the offer stands. */
+  expires: string
+}
+
 /** Who is on which team, who is unsigned, and what everyone can afford. Lives in the season so a career carries it forward. */
 export interface MarketState {
   /** Current squad of every team, as player ids (the first are the usual XI). */
@@ -108,6 +120,8 @@ export interface MarketState {
   /** Coins each team can spend. */
   budgets: Record<string, number>
   log: Transfer[]
+  /** Offers computer teams have made for your players (undefined in older saves). */
+  offers?: Offer[]
 }
 
 export interface Season {

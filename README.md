@@ -93,6 +93,12 @@ that links to the market) and on the Home page.
 - **The computer shops too**: each window day every computer team may sign one player (the harder the difficulty the
   busier they are, `BUSY`), buying whoever improves their side most and releasing the weakest if they are full. If you wait
   too long, the player you wanted is gone. Your own team is never touched.
+- **Offers for your players**: while a window is open, computer teams sometimes bid for one of your players (fair price, a lot
+  more for your best five, never when you are at the minimum squad). Offers are listed at the top of the Market page
+  (the tab shows a dot) for five days: **Accept** sells him and you get the coins, **Decline** turns it down. If the buyer
+  is full they release their weakest player.
+- **Which team he played for**: after a move, each row in his Recent matches shows the team he played for that day, and
+  the opponent is worked out from that, not from his current team.
 - **Signing animation** (`SigningOverlay`): the player's portrait lands between his old team (or "Free agent") and the
   new one, with his ratings. In matches a new signing's introduction says where he came from and what he cost, and his
   player card has a **Career path** (every move he has made).

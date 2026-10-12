@@ -1,4 +1,4 @@
-import { movesOf } from '../../season/market'
+import { movesOf, teamOnDate } from '../../season/market'
 import { AnimatePresence } from 'framer-motion'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -230,14 +230,18 @@ export function RecentMatches({ season, playerId, teamId, teams }: { season: Sea
     const roster = season.roster ?? []
     const at = roster.indexOf(playerId)
     if (at < 0) return []
-    const out: { fixtureId: string; date: string; vs: Team | undefined; bat?: BatLine; bowl?: BowlLine; change?: number; attrs?: Partial<Record<AttrKey, number>> }[] = []
+    const moves = movesOf(season, playerId)
+    const out: { fixtureId: string; date: string; vs: Team | undefined; own?: Team; bat?: BatLine; bowl?: BowlLine; change?: number; attrs?: Partial<Record<AttrKey, number>> }[] = []
     for (const f of season.fixtures) {
       const r = season.results[f.id]
       if (!r) continue
       const bat = (r.bat ?? []).find((l) => l[0] === at)
       const bowl = (r.bowl ?? []).find((l) => l[0] === at)
       if (!bat && !bowl) continue
-      out.push({ fixtureId: f.id, date: f.date, vs: teams.get((f.homeId === teamId ? f.awayId : f.homeId) as string), bat, bowl, change: season.changes?.[f.id]?.[playerId]?.o, attrs: season.changes?.[f.id]?.[playerId]?.a })
+      // the team he played for that day (it can differ from his team now if he has moved)
+      const ownId = moves.length ? teamOnDate(season, playerId, f.date, moves[0].from) : teamId
+      const side = ownId === f.homeId || ownId === f.awayId ? ownId : teamId
+      out.push({ fixtureId: f.id, date: f.date, own: moves.length ? teams.get(ownId ?? '') : undefined, vs: teams.get((f.homeId === side ? f.awayId : f.homeId) as string), bat, bowl, change: season.changes?.[f.id]?.[playerId]?.o, attrs: season.changes?.[f.id]?.[playerId]?.a })
     }
     return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
   }, [season, playerId, teams, teamId])
@@ -250,7 +254,7 @@ export function RecentMatches({ season, playerId, teamId, teams }: { season: Sea
             {recent.map((r) => (
               <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
                 <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(r.date)}</span>
-                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">{r.own && <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/5 py-0.5 pl-0.5 pr-1.5 text-[10px] font-bold text-slate-200" title={`He played for ${r.own.name}`}><TeamCrest team={r.own} size={14} />{r.own.short}</span>}v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
                 <span className="shrink-0 tabular-nums text-white">{r.bat ? `${r.bat[1]}${r.bat[5] ? '' : '*'} (${r.bat[2]})` : ''}{r.bat && r.bowl ? ' · ' : ''}{r.bowl ? `${r.bowl[3]}/${r.bowl[2]}` : ''}</span>
                 <span className="flex w-28 shrink-0 flex-wrap items-center justify-end gap-x-1.5 text-xs" title="How that match changed his ratings">
                   {r.attrs && Object.keys(r.attrs).length > 0

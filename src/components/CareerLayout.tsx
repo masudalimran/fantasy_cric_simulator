@@ -41,7 +41,7 @@ export function CareerLayout() {
     [paths.session(), 'Calendar'],
     [paths.competitions, 'Tournaments'],
     [paths.stats, 'Stats'],
-    ...(mine ? ([[paths.market, 'Market']] as [string, string][]) : []),
+    ...(mine ? ([[paths.market, (season.market?.offers ?? []).some((o) => o.expires >= season.today) ? 'Market ●' : 'Market']] as [string, string][]) : []),
     ...(mine ? ([[paths.sessionSquad, 'My squad'], [paths.review, 'Season review']] as [string, string][]) : []),
   ]
 

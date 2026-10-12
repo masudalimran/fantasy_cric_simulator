@@ -269,7 +269,89 @@ export function cpuMarketDay(season: Season, base: Map<string, Player>, date: st
     const out = signPlayer(cur, base, teamId, best.id, date, drop)
     if (!out.error) cur = out.season
   }
-  return cur
+  return cpuOffers(cur, base, date, rng)
+}
+
+// ---- Offers for your players -----------------------------------------------------------------------------------
+
+const OFFER_DAYS = 5
+const MAX_OFFERS = 3
+
+/** Now and then a computer team asks about one of your players: a fair price, more for a star, never one you cannot afford to lose. */
+function cpuOffers(season: Season, base: Map<string, Player>, date: string, rng: Rng): Season {
+  const m = season.market
+  const me = season.myTeamId
+  if (!m || !me) return season
+  let offers = (m.offers ?? []).filter((o) => o.expires >= date)
+  const mine = (m.squads[me] ?? []).map((id) => base.get(id)).filter((p): p is Player => !!p)
+  if (mine.length <= SQUAD_FLOOR) return offers.length === (m.offers ?? []).length ? season : { ...season, market: { ...m, offers } }
+  const worth = (p: Player) => { const o = overall(applyShift(p, season.shifts?.[p.id])); return o + 0.35 * Math.max(0, potentialOf(p) - o) }
+  const top = new Set([...mine].sort((a, b) => worth(b) - worth(a)).slice(0, 5).map((p) => p.id))
+  const busy = BUSY[season.difficulty] ?? BUSY.normal
+  for (const teamId of rng.shuffle(Object.keys(m.squads).filter((id) => id !== me))) {
+    if (offers.length >= MAX_OFFERS) break
+    if (!rng.chance(busy * 0.35)) continue
+    const squad = (m.squads[teamId] ?? []).map((id) => base.get(id)).filter((p): p is Player => !!p)
+    if (squad.length === 0) continue
+    const weakest = [...squad].sort((a, b) => worth(b) - worth(a))[Math.min(squad.length - 1, 13)]
+    const purse = m.budgets[teamId] ?? 0
+    const wants = mine
+      .filter((p) => !offers.some((o) => o.playerId === p.id) && worth(p) - worth(weakest) > 3)
+      .map((p) => ({ p, fee: Math.round(marketValue(p, recentForm(season, p.id), season.shifts?.[p.id]) * (1.25 + rng.next() * 0.35) * (top.has(p.id) ? 1.8 : 1)) }))
+      .filter((w) => w.fee <= purse)
+    if (!wants.length) continue
+    const pick = wants[rng.int(wants.length)]
+    offers = [...offers, { id: `${date}-o${(m.log.length + offers.length + 1)}`, date, playerId: pick.p.id, teamId, fee: Math.max(1, pick.fee), expires: addDays(date, OFFER_DAYS) }]
+  }
+  return { ...season, market: { ...m, offers } }
+}
+
+/** You accept an offer: he joins them, you get the fee. (If they are full, they let their weakest player go.) */
+export function acceptOffer(season: Season, base: Map<string, Player>, offerId: string, date: string): Outcome {
+  const m = season.market
+  const me = season.myTeamId
+  const offer = m?.offers?.find((o) => o.id === offerId)
+  if (!m || !me || !offer) return deny(season, 'That offer is no longer on the table.')
+  if (!openWindow(season, date)) return deny(season, 'The market is closed.')
+  const mine = m.squads[me] ?? []
+  const player = base.get(offer.playerId)
+  if (!player || !mine.includes(offer.playerId)) return deny(season, 'He is no longer in your squad.')
+  if (mine.length <= SQUAD_FLOOR) return deny(season, `You need at least ${SQUAD_FLOOR} players.`)
+  if ((m.budgets[offer.teamId] ?? 0) < offer.fee) return deny(season, 'They can no longer afford him.')
+  const theirs = m.squads[offer.teamId] ?? []
+  const squads = { ...m.squads, [me]: remove(mine, offer.playerId) }
+  const log: Transfer[] = [...m.log]
+  const players = { ...m.players, [offer.playerId]: m.players[offer.playerId] ?? player }
+  let pool = m.pool
+  const asking = { ...m.asking }
+  let next = [...theirs]
+  if (next.length >= SQUAD_CAP) {
+    const worth = (p: Player) => overall(applyShift(p, season.shifts?.[p.id]))
+    const drop = [...next].map((id) => base.get(id)).filter((p): p is Player => !!p).sort((a, b) => worth(a) - worth(b))[0]
+    if (drop) {
+      next = remove(next, drop.id); pool = [...pool, drop.id]; players[drop.id] = m.players[drop.id] ?? drop
+      asking[drop.id] = marketValue(drop, recentForm(season, drop.id), season.shifts?.[drop.id])
+      log.push({ id: `${offer.id}r`, date, playerId: drop.id, name: drop.name, from: offer.teamId, to: null, fee: 0, kind: 'release' })
+    }
+  }
+  squads[offer.teamId] = [...next, offer.playerId]
+  log.push({ id: offer.id, date, playerId: offer.playerId, name: player.name, from: me, to: offer.teamId, fee: offer.fee, kind: 'buy' })
+  return {
+    season: {
+      ...season,
+      market: {
+        ...m, squads, players, pool, asking, log,
+        budgets: { ...m.budgets, [me]: (m.budgets[me] ?? 0) + offer.fee, [offer.teamId]: (m.budgets[offer.teamId] ?? 0) - offer.fee },
+        offers: (m.offers ?? []).filter((o) => o.id !== offerId && o.playerId !== offer.playerId),
+      },
+    },
+  }
+}
+
+export function declineOffer(season: Season, offerId: string): Season {
+  const m = season.market
+  if (!m) return season
+  return { ...season, market: { ...m, offers: (m.offers ?? []).filter((o) => o.id !== offerId) } }
 }
 
 /** Runs the computer's window days between two dates (exclusive of `from`, inclusive of `to`). `base` is only built if a window day is crossed. */
