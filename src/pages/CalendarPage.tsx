@@ -1,4 +1,5 @@
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
+import { MarketOpens } from '../components/season/MarketOpens'
 import { TipBanner } from '../components/TipBanner'
 import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
@@ -190,6 +191,7 @@ export function CalendarPage() {
           <span className="shrink-0 font-display text-xl leading-none tracking-wide text-white">Go to the market ›</span>
         </Link>
       )}
+      {session && <MarketOpens season={season} sessionId={session.id} />}
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
 
 
