@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /** True on a phone: narrow (portrait), or short and wide (landscape). Updates when the window or orientation changes. */
 export function useIsMobile(): boolean {
@@ -81,4 +81,22 @@ export function useWakeLock(enabled: boolean) {
       void lock?.release()
     }
   }, [enabled])
+}
+
+/**
+ * Props for a button that does one thing on a tap and another on a long press. After a long press the click that
+ * follows is swallowed, so the tap action does not also run.
+ */
+export function useLongPress(onLong: () => void, onTap: () => void, ms = 500) {
+  const timer = useRef<number | undefined>(undefined)
+  const fired = useRef(false)
+  const clear = () => { window.clearTimeout(timer.current); timer.current = undefined }
+  return {
+    onPointerDown: () => { fired.current = false; clear(); timer.current = window.setTimeout(() => { fired.current = true; onLong() }, ms) },
+    onPointerUp: clear,
+    onPointerLeave: clear,
+    onPointerCancel: clear,
+    onContextMenu: (e: React.MouseEvent) => { if (fired.current) e.preventDefault() }, // a long press must not open the phone's menu
+    onClick: () => { if (fired.current) { fired.current = false; return } onTap() },
+  }
 }

@@ -18,6 +18,7 @@ import { overall } from '../data/builders'
 import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { InningsBar } from '../components/match/InningsBar'
+import { InningsBreak } from '../components/match/InningsBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
@@ -95,10 +96,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // The innings break card: shown when the first innings ends during play (not when you reopen a match that is already in the chase).
   const [breakOpen, setBreakOpen] = useState(false)
   const swipeOn = useSwipeAim()
+  const [breakPopup, setBreakPopup] = useState(false) // the innings summary card (it does not start anything)
   const seenInnings = useRef(match.current.index)
   const inningsNow = match.current.index
   useEffect(() => {
-    if (inningsNow > seenInnings.current && !match.isOver) { setBreakOpen(true); setAuto(0) } // the next innings starts when you say so
+    if (inningsNow > seenInnings.current && !match.isOver) { setBreakOpen(true); setBreakPopup(true); setAuto(0); setControlsOpen(false) } // the next innings starts when you say so
     seenInnings.current = inningsNow
   }, [inningsNow, match])
   stopsRef.current = stops
@@ -308,7 +310,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   /** Every player action goes through here: do it, save it (so the match can be resumed), then react to it. */
   const act = useCallback(
     (a: Action) => {
-      if (holdRef.current && ['ball', 'over', 'overs', 'wicket', 'innings', 'match'].includes(a.t)) return // nothing is played until Next innings is pressed
+      if (holdRef.current && ['ball', 'over', 'overs', 'wicket', 'innings', 'match', 'intent', 'bowler', 'style', 'shot', 'delivery'].includes(a.t)) return // nothing is played until Next innings is pressed
       if (a.t === 'forfeit') sfx.sadTrombone()
       else if (a.t !== 'ball') sfx.tick()
       if (a.t !== 'forfeit') clearMoments() // the next delivery takes over from any big moment
@@ -471,7 +473,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>{holding && <InningsBar match={match} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{holding && breakPopup && <InningsBreak match={match} onClose={() => setBreakPopup(false)} />}</AnimatePresence>
+      <AnimatePresence>{holding && !breakPopup && <InningsBar match={match} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} />
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>

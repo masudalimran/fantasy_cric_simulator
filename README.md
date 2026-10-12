@@ -163,7 +163,10 @@ You can see it everywhere:
 - **How to bowl**: when you bowl, the Controls panel offers **Safe**, **Normal** or **Aggressive**. Safe bowls to the
   fielders (fewer wickets, fewer boundaries); Aggressive tempts the big shot (more wickets, more boundaries). It is an
   action (`style`) in the replay log, and `bowlStyle` on the match.
-- **Innings break**: the next innings never starts by itself. The screen stays on the finished innings (scoreboard, scorecard,
+- **Auto-play button**: tap to cycle 1x, 2x, 4x, off; **hold it down** while auto-play is running to pause it.
+- **Innings break**: the innings summary card comes up first (top scorers, best bowling, the target) with only a Close
+  button, so it never starts anything. The sides stay as they were (the controls say "Innings break") until you press
+  **Next innings**, which swaps batting and bowling. The next innings never starts by itself. The screen stays on the finished innings (scoreboard, scorecard,
   commentary) while the big Next ball button becomes **Next innings** (also on a small card with the target); nothing
   plays until you press it.
 - **Controls** (the round buttons, bottom right): next ball, auto-play, and a panel with finish over, sim N overs,

@@ -1,4 +1,4 @@
-import { haptic } from '../../hooks'
+import { haptic, useLongPress } from '../../hooks'
 
 type Auto = 0 | 1 | 2 | 4
 
@@ -7,6 +7,8 @@ type Auto = 0 | 1 | 2 | 4
  * auto-play on the right (tap to cycle 1x, 2x, 4x, off). Everything else lives in the controls sheet.
  */
 export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel }: { onBall: () => void; auto: Auto; setAuto: (v: Auto) => void; onControls: () => void; over: boolean; /** Between innings the big button says this instead of NEXT BALL. */ holdLabel?: string }) {
+  // tap cycles 1x, 2x, 4x, off; holding it down while auto-play is running pauses it
+  const autoPress = useLongPress(() => { if (auto) { haptic(15); setAuto(0) } }, () => setAuto(auto === 0 ? 1 : auto === 1 ? 2 : auto === 2 ? 4 : 0))
   const circle = 'relative grid h-12 w-12 shrink-0 place-items-center rounded-full transition active:scale-95'
   return (
     <div className="shrink-0 border-t border-line bg-ink/95 px-3 pt-2 backdrop-blur" style={{ paddingBottom: 'calc(var(--sab) + 10px)' }}>
@@ -22,7 +24,7 @@ export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel 
           {holdLabel ?? 'NEXT BALL'}
         </button>
         <button
-          onClick={() => setAuto(auto === 0 ? 1 : auto === 1 ? 2 : auto === 2 ? 4 : 0)} aria-label="Auto-play"
+          {...autoPress} aria-label="Auto-play"
           className={`${circle} ${auto ? 'bg-indigo-500 text-white ring-2 ring-indigo-300' : 'bg-slate-700 text-white'}`}
         >
           {auto ? (

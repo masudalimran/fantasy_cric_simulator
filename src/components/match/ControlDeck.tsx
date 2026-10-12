@@ -76,12 +76,12 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
   const swipeOn = useSwipeAim()
   const [overs, setOvers] = useState(5)
   const [askForfeit, setAskForfeit] = useState(false)
-  const inn = match.current
+  const inn = match.shown
   const cfg = FORMATS[match.format]
   const batSide = inn.battingSide
   const bowlSide = (1 - batSide) as 0 | 1
-  const bat = match.battingSide()
-  const bowl = match.bowlingSide()
+  const bat = match.battingSide(inn)
+  const bowl = match.bowlingSide(inn)
 
   const styleNow = match.bowlStyle[bowlSide] ?? 'normal'
   const intentNow = match.intent[batSide]
@@ -91,6 +91,8 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
   const bowlerNow = inn.bowlerId
 
   if (match.isOver) return null
+  // between the innings nothing can be set: the sides swap when Next innings is pressed
+  if (match.hold !== null) return <div className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300"><b className="text-white">Innings break.</b> Press <b className="text-white">Next innings</b> to swap the sides and carry on. The controls come back with the next innings.</div>
   const showBat = !spectating && (mySide === null || mySide === batSide)
   const showBowl = !spectating && (mySide === null || mySide === bowlSide)
   const cpuNote = (team: string) => <p className="rounded-lg bg-white/5 px-2.5 py-2 text-[12px] text-slate-300"><b className="text-white">{team}</b> is run by the computer, which picks its own plan.</p>
