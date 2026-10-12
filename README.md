@@ -163,15 +163,18 @@ You can see it everywhere:
 - **How to bowl**: when you bowl, the Controls panel offers **Safe**, **Normal** or **Aggressive**. Safe bowls to the
   fielders (fewer wickets, fewer boundaries); Aggressive tempts the big shot (more wickets, more boundaries). It is an
   action (`style`) in the replay log, and `bowlStyle` on the match.
-- **Play manually** (switch in the Controls panel, remembered): no auto-play anywhere. The dock with Next ball, auto-play
-  and the gear goes away and the controls take that space as a first **Controls** tab (next ball, finish over, tactics,
-  aim your shot, line and length), with the field and the batsmen and bowler cards kept. Switch it off to bring the
-  auto-play options back.
+- **Play manually** (switch in the Controls panel, remembered; turning it on closes the controls drawer): no auto-play and
+  no Next ball anywhere. The dock goes away and the lower panel gets a **Controls** tab with only the aim for the side
+  you run: when you bat, the shot wheel (choose Ground or In the air, then tap where to hit it); when you bowl, the pitch
+  grid (choose the pace, then tap where it pitches). **Choosing is what plays the ball.** Dragging across the field does the
+  same for a shot, and Space does nothing. In a friendly you run both sides, so both pads show. If you are only
+  watching, a single Next ball button is all there is. The field and the batsman and bowler cards stay. Switch it off
+  (in the same tab) to bring the auto-play options back.
 - **Wicket animations** (`Stage.tsx`): each dismissal plays out on the field before the batsman's moment comes up. Bowled:
   the stumps fly and the keeper hops. LBW: the bowler appeals (HOWZAT!). Caught: the fielder takes it and celebrates and the
   bowler runs over to him. Caught and bowled: the bowler takes it. Run out: the ball goes to the fielder and is thrown
   to the stumps. Stumped: the ball goes to the keeper and the stumps go. Hit wicket: the stumps go.
-- **Auto-play button**: tap to cycle 1x, 2x, 4x, off; **hold it down** while auto-play is running to pause it.
+- **Auto-play button**: tap to cycle 1x, 2x, 4x, off.
 - **Innings break**: the innings summary card comes up first (top scorers, best bowling, the target) with only a Close
   button, so it never starts anything. The sides stay as they were (the controls say "Innings break") until you press
   **Next innings**, which swaps batting and bowling. The next innings never starts by itself. The field is hidden during the break, the Controls and auto-play buttons are

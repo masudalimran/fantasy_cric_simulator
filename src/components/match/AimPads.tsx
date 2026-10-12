@@ -18,16 +18,19 @@ export function shotText(a: ShotAim | null | undefined) {
 }
 
 /** Choose where the next shot goes: tap a part of the field, then ground or air. It applies to the next ball only. */
-export function ShotPad({ value, onChange }: { value: ShotAim | null; onChange: (v: ShotAim | null) => void }) {
-  const cur = value ? sectorIndex(degOf(value.angle)) : -1
-  const loft = value?.loft ?? false
+/** In manual play: tapping a part of the field plays the ball straight away (`onPick`); ground or air is chosen first (`loft`). */
+export interface ManualShot { loft: boolean; setLoft: (v: boolean) => void; onPick: (angle: number) => void }
+
+export function ShotPad({ value, onChange, manual }: { value: ShotAim | null; onChange: (v: ShotAim | null) => void; manual?: ManualShot }) {
+  const cur = value && !manual ? sectorIndex(degOf(value.angle)) : -1
+  const loft = manual ? manual.loft : (value?.loft ?? false)
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
         <svg viewBox="0 0 100 100" className="h-36 w-36 shrink-0" role="group" aria-label="Shot direction">
           <circle cx="50" cy="50" r="47" fill="#1a6a3a" stroke="#fff" strokeOpacity="0.5" />
           {SECTOR_DEG.map((d, i) => (
-            <g key={i} className="cursor-pointer" onClick={() => onChange({ angle: angleOfDeg(d), loft })} role="button" aria-label={SECTORS[i]} aria-pressed={cur === i}>
+            <g key={i} className="cursor-pointer" onClick={() => (manual ? manual.onPick(angleOfDeg(d)) : onChange({ angle: angleOfDeg(d), loft }))} role="button" aria-label={SECTORS[i]} aria-pressed={cur === i}>
               <path d={wedge(50, 50, 13, 46, d - 22, d + 22)} fill={cur === i ? '#fbbf24' : '#ffffff'} fillOpacity={cur === i ? 0.95 : 0.12} stroke="#fff" strokeOpacity="0.45" strokeWidth="0.5" />
               <text x={50 + 31 * Math.sin((d * Math.PI) / 180)} y={50 - 31 * Math.cos((d * Math.PI) / 180) + 1.6} textAnchor="middle" fontSize="5.4" fontWeight="700" fill={cur === i ? '#000' : '#fff'} pointerEvents="none">{SECTORS[i].replace(' ', ' ')}</text>
             </g>
@@ -38,11 +41,11 @@ export function ShotPad({ value, onChange }: { value: ShotAim | null; onChange: 
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="grid grid-cols-2 overflow-hidden rounded-lg bg-slate-700">
             {([['Ground', false], ['In the air', true]] as const).map(([label, l]) => (
-              <button key={label} onClick={() => onChange({ angle: value?.angle ?? angleOfDeg(0), loft: l })} className={`h-9 text-[12px] font-bold transition ${loft === l && value ? 'bg-amber-400 text-black' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
+              <button key={label} onClick={() => (manual ? manual.setLoft(l) : onChange({ angle: value?.angle ?? angleOfDeg(0), loft: l }))} className={`h-9 text-[12px] font-bold transition ${loft === l && (value || manual) ? 'bg-amber-400 text-black' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
             ))}
           </div>
-          <p className="text-[11px] leading-snug text-slate-400">{value ? <>Next ball: <b className="text-amber-300">{shotText(value)}</b>.</> : 'Tap a part of the field to aim the next ball. Gaps between fielders score more; across the line is risky; in the air is worth sixes but can be caught.'}</p>
-          {value && <button onClick={() => onChange(null)} className="rounded-lg border border-line px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-slate-400">Clear (let the batsman decide)</button>}
+          <p className="text-[11px] leading-snug text-slate-400">{manual ? 'Choose ground or in the air, then tap where to hit it. The ball is played straight away.' : value ? <>Next ball: <b className="text-amber-300">{shotText(value)}</b>.</> : 'Tap a part of the field to aim the next ball. Gaps between fielders score more; across the line is risky; in the air is worth sixes but can be caught.'}</p>
+          {value && !manual && <button onClick={() => onChange(null)} className="rounded-lg border border-line px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-slate-400">Clear (let the batsman decide)</button>}
         </div>
       </div>
     </div>
@@ -70,8 +73,11 @@ export function deliveryText(a: DeliveryAim | null | undefined) {
 }
 
 /** Choose where the next ball pitches (line and length) and how quick it is. It applies to the next ball only. */
-export function DeliveryPad({ value, onChange, paceLabels }: { value: DeliveryAim | null; onChange: (v: DeliveryAim | null) => void; paceLabels: [string, string, string] }) {
-  const pace: Pace = value?.pace ?? 'medium'
+/** In manual play: tapping a spot on the pitch bowls the ball straight away (`onPick`), at the pace chosen first. */
+export interface ManualDelivery { pace: Pace; setPace: (p: Pace) => void; onPick: (line: DeliveryAim['line'], length: Length) => void }
+
+export function DeliveryPad({ value, onChange, paceLabels, manual }: { value: DeliveryAim | null; onChange: (v: DeliveryAim | null) => void; paceLabels: [string, string, string]; manual?: ManualDelivery }) {
+  const pace: Pace = manual ? manual.pace : (value?.pace ?? 'medium')
   const set = (patch: Partial<DeliveryAim>) => onChange({ line: value?.line ?? 0, length: value?.length ?? 'good', pace, ...patch })
   return (
     <div className="space-y-2">
@@ -79,10 +85,10 @@ export function DeliveryPad({ value, onChange, paceLabels }: { value: DeliveryAi
         <div className="shrink-0">
           <div className="grid grid-cols-5 gap-px overflow-hidden rounded-lg border border-line bg-line" role="group" aria-label="Line and length">
             {LENGTHS.map((len) => LINES.map((ln) => {
-              const on = value?.length === len.id && value.line === ln.id
+              const on = !manual && value?.length === len.id && value.line === ln.id
               return (
                 <button
-                  key={`${len.id}${ln.id}`} onClick={() => set({ line: ln.id, length: len.id })} aria-pressed={on} aria-label={`${len.label} length, ${ln.label}`} title={`${len.label} length, ${ln.label}`}
+                  key={`${len.id}${ln.id}`} onClick={() => (manual ? manual.onPick(ln.id, len.id) : set({ line: ln.id, length: len.id }))} aria-pressed={on} aria-label={`${len.label} length, ${ln.label}`} title={`${len.label} length, ${ln.label}`}
                   className={`h-7 w-8 transition ${on ? 'bg-amber-400' : 'bg-[#c8a869] hover:bg-[#dcc185]'}`}
                 >
                   {on ? <span className="mx-auto block h-3 w-3 rounded-full bg-red-600 ring-2 ring-white" /> : null}
@@ -96,11 +102,11 @@ export function DeliveryPad({ value, onChange, paceLabels }: { value: DeliveryAi
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-slate-700">
             {(['fast', 'medium', 'slow'] as const).map((p, i) => (
-              <button key={p} onClick={() => set({ pace: p })} className={`h-9 text-[11px] font-bold transition ${value && pace === p ? 'bg-amber-400 text-black' : 'text-slate-200 hover:bg-slate-600'}`}>{paceLabels[i]}</button>
+              <button key={p} onClick={() => (manual ? manual.setPace(p) : set({ pace: p }))} className={`h-9 text-[11px] font-bold transition ${(value || manual) && pace === p ? 'bg-amber-400 text-black' : 'text-slate-200 hover:bg-slate-600'}`}>{paceLabels[i]}</button>
             ))}
           </div>
-          <p className="text-[11px] leading-snug text-slate-400">{value ? <>Next ball: <b className="text-amber-300">{deliveryText(value)}</b>.</> : 'Tap a spot on the pitch for the next ball. Mix it up: bowling the same ball twice lets the batsman read it. Yorkers are hard to hit but a miss is a full toss.'}</p>
-          {value && <button onClick={() => onChange(null)} className="rounded-lg border border-line px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-slate-400">Clear (let the bowler decide)</button>}
+          <p className="text-[11px] leading-snug text-slate-400">{manual ? 'Choose the pace, then tap where it pitches. The ball is bowled straight away.' : value ? <>Next ball: <b className="text-amber-300">{deliveryText(value)}</b>.</> : 'Tap a spot on the pitch for the next ball. Mix it up: bowling the same ball twice lets the batsman read it. Yorkers are hard to hit but a miss is a full toss.'}</p>
+          {value && !manual && <button onClick={() => onChange(null)} className="rounded-lg border border-line px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-slate-400">Clear (let the bowler decide)</button>}
         </div>
       </div>
     </div>

@@ -17,7 +17,7 @@ import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
 import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
-import { ControlDeck } from '../components/match/ControlDeck'
+import { ManualControls } from '../components/match/ManualControls'
 import { InningsBreak } from '../components/match/InningsBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
@@ -116,6 +116,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [moment, setMoment] = useState<Moment | null>(null)
   const momentTimer = useRef<number | undefined>(undefined)
+  const manualRef = useRef(false) // play manually with a side of your own to control
   const holdRef = useRef(false) // the screen is holding on the finished first innings
   const autoRef = useRef(auto)
   autoRef.current = auto
@@ -312,7 +313,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // The openers and the first bowler are introduced as play begins; the batsman and bowler of the chase, once the break is over.
   useEffect(() => { if (phase === 'play' && !holdNow) enqueueIntros() }, [phase, holdNow, enqueueIntros])
   // Play manually: auto-play stops and the controls take the lower panel; switching it off brings the auto-play options back
-  useEffect(() => { if (manual) { setAuto(0); setTab('controls') } else setTab((t) => (t === 'controls' ? 'scorecard' : t)) }, [manual])
+  useEffect(() => { if (manual) { setAuto(0); setTab('controls'); setControlsOpen(false) } else setTab((t) => (t === 'controls' ? 'scorecard' : t)) }, [manual])
 
   /** Every player action goes through here: do it, save it (so the match can be resumed), then react to it. */
   const act = useCallback(
@@ -366,6 +367,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       const t = e.target as HTMLElement
       if (e.metaKey || e.ctrlKey || e.altKey || ['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName) || match.isOver) return
       if (e.code === 'Space' && holdRef.current) { e.preventDefault(); setBreakOpen(false) }
+      else if (e.code === 'Space' && manualRef.current) e.preventDefault() // manual play: choosing the aim is what plays the ball
       else if (e.code === 'Space') { e.preventDefault(); if (t.tagName === 'BUTTON') t.blur(); act({ t: 'ball' }) }
       else if (e.key === 'o' || e.key === 'O') act({ t: 'over' })
       else if ((e.key === 'p' || e.key === 'P') && !manual) setAuto((a) => (a === 0 ? 1 : 0))
@@ -388,13 +390,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const watching = !!live.myTeamId && match.mySide === null
   const userBats = !watching && !match.isOver && !holding && (match.mySide === null || match.mySide === batIdx)
   const userBowls = !watching && !match.isOver && !holding && (match.mySide === null || match.mySide === 1 - batIdx)
-  const controlsNode = manual && !holding ? (
-    <ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={match.mySide} spectating={watching} stops={stops} setStops={setStops} manual setManual={setManualPlay} />
-  ) : undefined
+  const controlsNode = manual && !holding ? <ManualControls match={match} act={act} userBats={userBats} userBowls={userBowls} setManual={setManualPlay} /> : undefined
+  manualRef.current = manual && (userBats || userBowls)
   const aimProps = {
     aimShot: userBats ? match.shotAim[batIdx] : null,
     aimDelivery: userBowls ? match.deliveryAim[(1 - batIdx) as 0 | 1] : null,
-    onSwipe: swipeOn && userBats ? (a: { angle: number; loft: boolean }) => { haptic(8); act({ t: 'shot', side: batIdx, v: a }) } : undefined,
+    onSwipe: swipeOn && userBats ? (a: { angle: number; loft: boolean }) => { haptic(8); act({ t: 'shot', side: batIdx, v: a }); if (manual) act({ t: 'ball' }) } : undefined,
   }
   const bowlSide = match.bowlingSide(inn)
   const last = match.events[match.events.length - 1] ?? null

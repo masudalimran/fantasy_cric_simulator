@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect } from 'react'
 import type { Match } from '../../engine/match'
 import type { Action } from '../../engine/replay'
-import { useIsMobile, useLongPress } from '../../hooks'
+import { useIsMobile } from '../../hooks'
 import { Sheet } from '../Sheet'
 import { ControlDeck, type AutoStops } from './ControlDeck'
 
@@ -57,7 +57,6 @@ interface DockProps {
  */
 export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops, hideDock = false, holdLabel, onHold, manual = false, setManual }: DockProps) {
   const mobile = useIsMobile()
-  const autoPress = useLongPress(() => { if (auto) setAuto(0) }, () => setAuto(auto === 0 ? 1 : auto === 1 ? 2 : auto === 2 ? 4 : 0))
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -79,7 +78,7 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
         </Tip>}
         {!holdLabel && !manual && <Tip label={auto === 0 ? 'Auto-play: off. Click to start' : `Auto-play ${auto}x. Click to ${auto === 4 ? 'stop' : 'speed up'}`} hint="P pauses">
           <button
-            {...autoPress}
+            onClick={() => setAuto(auto === 0 ? 1 : auto === 1 ? 2 : auto === 2 ? 4 : 0)}
             aria-label="Auto-play"
             className={`relative grid h-12 w-12 place-items-center rounded-full transition ${auto ? 'bg-indigo-500 text-white ring-2 ring-indigo-300' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
           >
