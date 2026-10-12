@@ -5,7 +5,7 @@ import { TeamCrest, accentOf } from '../ui'
 /** Which innings an analysis tab is showing. Follows the live innings until you pick one yourself. */
 export function useInningsPick(match: Match): [number, (n: number) => void] {
   const [picked, setPicked] = useState<number | null>(null)
-  const idx = Math.min(picked ?? match.innings.length - 1, match.innings.length - 1)
+  const idx = Math.min(picked ?? (match.hold ?? match.innings.length - 1), match.innings.length - 1)
   return [idx, setPicked]
 }
 

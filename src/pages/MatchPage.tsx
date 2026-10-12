@@ -17,7 +17,7 @@ import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
 import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
-import { InningsBreak } from '../components/match/InningsBreak'
+import { InningsBar } from '../components/match/InningsBar'
 import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
@@ -113,6 +113,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [moment, setMoment] = useState<Moment | null>(null)
   const momentTimer = useRef<number | undefined>(undefined)
+  const holdRef = useRef(false) // the screen is holding on the finished first innings
   const autoRef = useRef(auto)
   autoRef.current = auto
   const fixtureId = live.fixtureId
@@ -216,7 +217,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           ? [t('Bowl apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Average', bowlAverage(s) === null ? '-' : bowlAverage(s)!.toFixed(1)), t('Best', `${s.bestW}/${s.bestR}`), t('5-wicket hauls', s.fiveW)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]
       }
-      return { key: introSeq.current++, kind, player: p, team, title: kind === 'batsman' ? 'AT THE CREASE' : 'INTO THE ATTACK', lines, tiles, rating: overall(p), delay: 150, ms }
+      // a player who joined this year gets a different introduction: where he came from, and what he cost
+      const move = fixture ? [...(season?.market?.log ?? [])].reverse().find((t) => t.playerId === id && t.to === team.id) : undefined
+      if (move) {
+        const was = move.from ? teamMap.get(move.from)?.name : null
+        lines = [`${move.kind === 'sign' ? 'Signed from the unsigned pool' : `Bought from ${was ?? 'another team'}`} for ${move.fee} ${move.fee === 1 ? 'coin' : 'coins'}`, ...lines.slice(1)]
+      }
+      return { key: introSeq.current++, kind, player: p, team, title: move ? (kind === 'batsman' ? 'NEW SIGNING AT THE CREASE' : 'NEW SIGNING INTO THE ATTACK') : kind === 'batsman' ? 'AT THE CREASE' : 'INTO THE ATTACK', lines, tiles, rating: overall(p), delay: 150, ms }
     }
     const striker = inn.batters.find((b) => b.id === inn.strikerId)
     if (striker && striker.balls === 0 && !seen.current!.has(`bat:${striker.id}`)) { seen.current!.add(`bat:${striker.id}`); enqueueMoment(mk('batsman', striker.id)) }
@@ -301,6 +308,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   /** Every player action goes through here: do it, save it (so the match can be resumed), then react to it. */
   const act = useCallback(
     (a: Action) => {
+      if (holdRef.current && ['ball', 'over', 'overs', 'wicket', 'innings', 'match'].includes(a.t)) return // nothing is played until Next innings is pressed
       if (a.t === 'forfeit') sfx.sadTrombone()
       else if (a.t !== 'ball') sfx.tick()
       if (a.t !== 'forfeit') clearMoments() // the next delivery takes over from any big moment
@@ -325,6 +333,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     let timer = 0
     const step = () => {
       // wait while a wicket, milestone or introduction is on screen
+      if (holdRef.current) { setAuto(0); return } // between innings nothing plays by itself
       const wait = busyUntil.current - Date.now()
       if (wait > 0) { timer = window.setTimeout(step, Math.min(wait, 500)); return }
       const innings = match.current.index
@@ -347,7 +356,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
       if (e.metaKey || e.ctrlKey || e.altKey || ['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName) || match.isOver) return
-      if (e.code === 'Space') { e.preventDefault(); if (t.tagName === 'BUTTON') t.blur(); act({ t: 'ball' }) }
+      if (e.code === 'Space' && holdRef.current) { e.preventDefault(); setBreakOpen(false) }
+      else if (e.code === 'Space') { e.preventDefault(); if (t.tagName === 'BUTTON') t.blur(); act({ t: 'ball' }) }
       else if (e.key === 'o' || e.key === 'O') act({ t: 'over' })
       else if (e.key === 'p' || e.key === 'P') setAuto((a) => (a === 0 ? 1 : 0))
       else if (e.key === 'c' || e.key === 'C') setControlsOpen((o) => !o)
@@ -358,19 +368,23 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
 
-  const inn = match.current
-  const batSide = match.battingSide()
+  // between the innings the screen stays on the first innings until you press Next innings
+  const holding = !match.isOver && (breakOpen || match.current.index > seenInnings.current)
+  holdRef.current = holding
+  match.hold = holding ? 0 : null
+  const inn = match.shown
+  const batSide = match.battingSide(inn)
   // lining up a shot or a delivery: only for the side(s) a person is running, never for the computer's
-  const batIdx = match.current.battingSide
+  const batIdx = inn.battingSide
   const watching = !!live.myTeamId && match.mySide === null
-  const userBats = !watching && !match.isOver && (match.mySide === null || match.mySide === batIdx)
-  const userBowls = !watching && !match.isOver && (match.mySide === null || match.mySide === 1 - batIdx)
+  const userBats = !watching && !match.isOver && !holding && (match.mySide === null || match.mySide === batIdx)
+  const userBowls = !watching && !match.isOver && !holding && (match.mySide === null || match.mySide === 1 - batIdx)
   const aimProps = {
     aimShot: userBats ? match.shotAim[batIdx] : null,
     aimDelivery: userBowls ? match.deliveryAim[(1 - batIdx) as 0 | 1] : null,
     onSwipe: swipeOn && userBats ? (a: { angle: number; loft: boolean }) => { haptic(8); act({ t: 'shot', side: batIdx, v: a }) } : undefined,
   }
-  const bowlSide = match.bowlingSide()
+  const bowlSide = match.bowlingSide(inn)
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
   const striker = match.player(inn.strikerId)
@@ -457,8 +471,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>{breakOpen && !match.isOver && <InningsBreak match={match} waiting onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
-      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} />
+      <AnimatePresence>{holding && <InningsBar match={match} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
+      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} />
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
     </>
@@ -488,7 +502,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               {!match.isOver && resultCard}
               <Commentary match={match} tab={tab} setTab={setTab} />
             </div>
-            {!finished && <MobileDock onBall={() => act({ t: 'ball' })} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+            {!finished && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
           </div>
         </div>
       </PlayerCardProvider>
@@ -515,7 +529,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             {resultCard}
             <Commentary match={match} tab={tab} setTab={setTab} />
           </div>
-          {!finished && <MobileDock onBall={() => act({ t: 'ball' })} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+          {!finished && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
         </div>
       </PlayerCardProvider>
     )

@@ -7,7 +7,7 @@ import type { Player, Team } from '../../types'
 import { Sheet } from '../Sheet'
 import { selectSession, useStore, useTeams } from '../../store/useStore'
 import { OverallStats } from '../season/OverallStats'
-import { RecentMatches } from '../season/Details'
+import { CareerPath, RecentMatches } from '../season/Details'
 import { useTeamMap } from '../season/shared'
 import type { BatStat, BowlStat } from '../../season/stats'
 import { accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, tierOf } from '../ui'
@@ -118,6 +118,7 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
           </section>
 
           {career && seasons.length > 0 && <RecentMatches season={seasons[seasons.length - 1]} playerId={player.id} teamId={team.id} teams={careerTeams} />}
+          {career && seasons.length > 0 && <CareerPath season={seasons[seasons.length - 1]} playerId={player.id} teams={careerTeams} />}
 
           <section className="rounded-2xl border border-line bg-panel p-3">
             <h3 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">In this match</h3>

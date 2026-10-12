@@ -177,6 +177,11 @@ export class Match {
   get current(): Innings {
     return this.innings[this.innings.length - 1]
   }
+  /** Which innings the screen is showing. Normally the live one; the screen holds on the finished first innings until you start the chase. */
+  hold: number | null = null
+  get shown(): Innings {
+    return this.hold !== null && this.innings[this.hold] ? this.innings[this.hold] : this.current
+  }
   get over(): number {
     return Math.floor(this.current.legalBalls / 6)
   }

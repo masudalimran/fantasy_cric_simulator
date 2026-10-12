@@ -1,0 +1,353 @@
+# Name | words that must appear in the show's title (lowercase, separated by /)
+Shoyo Hinata|haikyuu
+Tobio Kageyama|haikyuu
+Kei Tsukishima|haikyuu
+Yu Nishinoya|haikyuu
+Asahi Azumane|haikyuu
+Daichi Sawamura|haikyuu
+Koshi Sugawara|haikyuu
+Ryunosuke Tanaka|haikyuu
+Kenma Kozume|haikyuu
+Tetsuro Kuroo|haikyuu
+Kotaro Bokuto|haikyuu
+Keiji Akaashi|haikyuu
+Wakatoshi Ushijima|haikyuu
+Tooru Oikawa|haikyuu
+Hajime Iwaizumi|haikyuu
+Atsumu Miya|haikyuu
+Osamu Miya|haikyuu
+Satori Tendo|haikyuu
+Tadashi Yamaguchi|haikyuu
+Tetsuya Kuroko|kuroko
+Taiga Kagami|kuroko
+Daiki Aomine|kuroko
+Ryota Kise|kuroko
+Shintaro Midorima|kuroko
+Atsushi Murasakibara|kuroko
+Seijuro Akashi|kuroko
+Kazunari Takao|kuroko
+Asta|black clover
+Yuno|black clover
+Noelle Silva|black clover
+Yami Sukehiro|black clover
+Julius Novachrono|black clover
+Mimosa Vermillion|black clover
+Luck Voltia|black clover
+Magna Swing|black clover
+Vanessa Enoteca|black clover
+Charmy Pappitson|black clover
+Gauche Adlai|black clover
+Zora Ideale|black clover
+Nacht Faust|black clover
+Mereoleona Vermillion|black clover
+Fuegoleon Vermillion|black clover
+Secre Swallowtail|black clover
+Klaus Lunettes|black clover
+Finral Roulacase|black clover
+Natsu Dragneel|fairy tail
+Lucy Heartfilia|fairy tail
+Gray Fullbuster|fairy tail
+Erza Scarlet|fairy tail
+Wendy Marvell|fairy tail
+Gajeel Redfox|fairy tail
+Laxus Dreyar|fairy tail
+Juvia Lockser|fairy tail
+Gildarts Clive|fairy tail
+Mirajane Strauss|fairy tail
+Levy McGarden|fairy tail
+Jellal Fernandes|fairy tail
+Elfman Strauss|fairy tail
+Cana Alberona|fairy tail
+Gon Freecss|hunter
+Killua Zoldyck|hunter
+Kurapika|hunter
+Leorio Paradinight|hunter
+Hisoka Morow|hunter
+Chrollo Lucilfer|hunter
+Isaac Netero|hunter
+Meruem|hunter
+Feitan Portor|hunter
+Illumi Zoldyck|hunter
+Kite|hunter
+Biscuit Krueger|hunter
+Neferpitou|hunter
+Machi Komacine|hunter
+Shalnark|hunter
+Pakunoda|hunter
+Uvogin|hunter
+Franklin Bordeau|hunter
+Kirito|sword art
+Asuna Yuuki|sword art
+Sinon|sword art
+Leafa|sword art
+Klein|sword art
+Agil|sword art
+Silica|sword art
+Lisbeth|sword art
+Eugeo|sword art
+Alice Zuberg|sword art
+Ken Kaneki|tokyo ghoul
+Touka Kirishima|tokyo ghoul
+Juuzou Suzuya|tokyo ghoul
+Koutarou Amon|tokyo ghoul
+Shuu Tsukiyama|tokyo ghoul
+Hinami Fueguchi|tokyo ghoul
+Ayato Kirishima|tokyo ghoul
+Light Yagami|death note
+L Lawliet|death note
+Misa Amane|death note
+Near|death note
+Mello|death note
+Lelouch Lamperouge|code geass
+Suzaku Kururugi|code geass
+Kallen Stadtfeld|code geass
+Jeremiah Gottwald|code geass
+Cornelia li Britannia|code geass
+Schneizel el Britannia|code geass
+Shirou Emiya|fate
+Rin Tohsaka|fate
+Gilgamesh|fate
+Sakura Matou|fate
+Illyasviel von Einzbern|fate
+Kirei Kotomine|fate
+Subaru Natsuki|re:zero
+Emilia|re:zero
+Rem|re:zero
+Ram|re:zero
+Beatrice|re:zero
+Reinhard van Astrea|re:zero
+Roswaal L Mathers|re:zero
+Garfiel Tinsel|re:zero
+Otto Suwen|re:zero
+Kazuma Satou|kono subarashii
+Aqua|kono subarashii
+Megumin|kono subarashii
+Darkness|kono subarashii
+Yunyun|kono subarashii
+Wiz|kono subarashii
+Loid Forger|spy
+Yor Forger|spy
+Anya Forger|spy
+Damian Desmond|spy
+Franky Franklin|spy
+Yuri Briar|spy
+Becky Blackbell|spy
+Denji|chainsaw
+Power|chainsaw
+Aki Hayakawa|chainsaw
+Makima|chainsaw
+Kobeni Higashiyama|chainsaw
+Himeno|chainsaw
+Reze|chainsaw
+Shigeo Kageyama|mob psycho
+Arataka Reigen|mob psycho
+Teruki Hanazawa|mob psycho
+Ritsu Kageyama|mob psycho
+Saitama|one punch
+Genos|one punch
+Tatsumaki|one punch
+Fubuki|one punch
+Garou|one punch
+King|one punch
+Bang|one punch
+Mumen Rider|one punch
+Sonic|one punch
+Metal Bat|one punch
+Senku Ishigami|dr. stone
+Taiju Oki|dr. stone
+Tsukasa Shishio|dr. stone
+Chrome|dr. stone
+Kohaku|dr. stone
+Gen Asagiri|dr. stone
+Ryusui Nanami|dr. stone
+Yuzuriha Ogawa|dr. stone
+Shinra Kusakabe|fire force/enen
+Arthur Boyle|fire force/enen
+Maki Oze|fire force/enen
+Iris|fire force/enen
+Tamaki Kotatsu|fire force/enen
+Takehisa Hinawa|fire force/enen
+Princess Hibana|fire force/enen
+Maka Albarn|soul eater
+Soul Eater Evans|soul eater
+Black Star|soul eater
+Death the Kid|soul eater
+Tsubaki Nakatsukasa|soul eater
+Crona|soul eater
+Yusuke Urameshi|yu yu hakusho
+Kazuma Kuwabara|yu yu hakusho
+Kurama|yu yu hakusho
+Hiei|yu yu hakusho
+Genkai|yu yu hakusho
+Younger Toguro|yu yu hakusho
+Gintoki Sakata|gintama
+Shinpachi Shimura|gintama
+Kagura|gintama
+Toshiro Hijikata|gintama
+Sougo Okita|gintama
+Isao Kondo|gintama
+Shinsuke Takasugi|gintama
+Spike Spiegel|cowboy bebop
+Jet Black|cowboy bebop
+Faye Valentine|cowboy bebop
+Edward Wong|cowboy bebop
+Shinji Ikari|evangelion
+Rei Ayanami|evangelion
+Asuka Langley|evangelion
+Misato Katsuragi|evangelion
+Kaworu Nagisa|evangelion
+Toji Suzuhara|evangelion
+Hanamichi Sakuragi|slam dunk
+Kaede Rukawa|slam dunk
+Takenori Akagi|slam dunk
+Hisashi Mitsui|slam dunk
+Ryota Miyagi|slam dunk
+Akira Sendoh|slam dunk
+Yoichi Isagi|blue lock
+Meguru Bachira|blue lock
+Seishiro Nagi|blue lock
+Rin Itoshi|blue lock
+Shoei Baro|blue lock
+Reo Mikage|blue lock
+Ryusei Shidou|blue lock
+Rensuke Kunigami|blue lock
+Hyoma Chigiri|blue lock
+Sae Itoshi|blue lock
+Michael Kaiser|blue lock
+Frieren|sousou
+Fern|sousou
+Stark|sousou
+Himmel|sousou
+Heiter|sousou
+Eisen|sousou
+Ubel|sousou
+Ikkaku Madarame|bleach
+Yumichika Ayasegawa|bleach
+Rangiku Matsumoto|bleach
+Gin Ichimaru|bleach
+Shuhei Hisagi|bleach
+Soi Fon|bleach
+Grimmjow Jaegerjaquez|bleach
+Ulquiorra Cifer|bleach
+Coyote Starrk|bleach
+Nelliel Tu Odelschwanck|bleach
+Boruto Uzumaki|boruto/naruto
+Sarada Uchiha|boruto/naruto
+Mitsuki|boruto/naruto
+Konohamaru Sarutobi|naruto
+Kiba Inuzuka|naruto
+Shino Aburame|naruto
+Tenten|naruto
+Temari|naruto
+Kankuro|naruto
+Sai|naruto
+Kakuzu|naruto
+Hidan|naruto
+Deidara|naruto
+Sasori|naruto
+Kisame Hoshigaki|naruto
+Obito Uchiha|naruto
+Kushina Uzumaki|naruto
+Tobirama Senju|naruto
+Hashirama Senju|naruto
+Killer Bee|naruto
+Kabuto Yakushi|naruto
+Zabuza Momochi|naruto
+Haku|naruto
+Anko Mitarashi|naruto
+Ino Yamanaka|naruto
+Sakura Haruno|naruto
+Ochaco Uraraka|boku no hero/my hero
+Tsuyu Asui|boku no hero/my hero
+Denki Kaminari|boku no hero/my hero
+Momo Yaoyorozu|boku no hero/my hero
+Mina Ashido|boku no hero/my hero
+Fumikage Tokoyami|boku no hero/my hero
+Hitoshi Shinso|boku no hero/my hero
+Mirio Togata|boku no hero/my hero
+Tamaki Amajiki|boku no hero/my hero
+Nejire Hado|boku no hero/my hero
+Keigo Takami|boku no hero/my hero
+Enji Todoroki|boku no hero/my hero
+Dabi|boku no hero/my hero
+Himiko Toga|boku no hero/my hero
+Kyoka Jiro|boku no hero/my hero
+Mezo Shoji|boku no hero/my hero
+Tanjiro Kamado|kimetsu/demon slayer
+Nezuko Kamado|kimetsu/demon slayer
+Zenitsu Agatsuma|kimetsu/demon slayer
+Inosuke Hashibira|kimetsu/demon slayer
+Shinobu Kocho|kimetsu/demon slayer
+Mitsuri Kanroji|kimetsu/demon slayer
+Tengen Uzui|kimetsu/demon slayer
+Obanai Iguro|kimetsu/demon slayer
+Muzan Kibutsuji|kimetsu/demon slayer
+Akaza|kimetsu/demon slayer
+Kokushibo|kimetsu/demon slayer
+Kanao Tsuyuri|kimetsu/demon slayer
+Mikasa Ackerman|shingeki/attack on titan
+Armin Arlert|shingeki/attack on titan
+Jean Kirstein|shingeki/attack on titan
+Connie Springer|shingeki/attack on titan
+Sasha Blouse|shingeki/attack on titan
+Reiner Braun|shingeki/attack on titan
+Annie Leonhart|shingeki/attack on titan
+Historia Reiss|shingeki/attack on titan
+Falco Grice|shingeki/attack on titan
+Gabi Braun|shingeki/attack on titan
+Pieck Finger|shingeki/attack on titan
+Porco Galliard|shingeki/attack on titan
+Monkey D. Luffy|one piece
+Roronoa Zoro|one piece
+Nami|one piece
+Usopp|one piece
+Sanji|one piece
+Tony Tony Chopper|one piece
+Nico Robin|one piece
+Franky|one piece
+Brook|one piece
+Jinbe|one piece
+Sabo|one piece
+Trafalgar Law|one piece
+Eustass Kid|one piece
+Boa Hancock|one piece
+Shanks|one piece
+Buggy|one piece
+Crocodile|one piece
+Donquixote Doflamingo|one piece
+Charlotte Katakuri|one piece
+Yamcha|dragon ball
+Master Roshi|dragon ball
+Videl|dragon ball
+Goten|dragon ball
+Beerus|dragon ball
+Jiren|dragon ball
+Cabba|dragon ball
+Caulifla|dragon ball
+Broly|dragon ball
+Cell|dragon ball
+Bardock|dragon ball
+Raditz|dragon ball
+Nappa|dragon ball
+Gotenks|dragon ball
+Mr. Satan|dragon ball
+Bulma|dragon ball
+Alphonse Elric|hagane/fullmetal
+Winry Rockbell|hagane/fullmetal
+Roy Mustang|hagane/fullmetal
+Riza Hawkeye|hagane/fullmetal
+Scar|hagane/fullmetal
+Lust|hagane/fullmetal
+Greed|hagane/fullmetal
+Ling Yao|hagane/fullmetal
+Maes Hughes|hagane/fullmetal
+Yuji Itadori|jujutsu
+Nobara Kugisaki|jujutsu
+Maki Zenin|jujutsu
+Yuta Okkotsu|jujutsu
+Nanami Kento|jujutsu
+Mahito|jujutsu
+Jogo|jujutsu
+Hanami|jujutsu
+Panda|jujutsu
+Kento Nanami|jujutsu

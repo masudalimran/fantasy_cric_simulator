@@ -20,6 +20,7 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
   const shown = fixtures.slice(0, 3)
   const compOf = (f: Fixture) => season.competitions.find((c) => c.id === f.competitionId)
   const mobile = useIsMobile()
+  const win = season.windows?.find((w) => date >= w.start && date <= w.end) // the market is open on this day
   if (mobile) {
     // a phone's day is small: its number, a dot per match in the tournament's colour, and a ring if one of yours is waiting
     const mineWaiting = fixtures.some((f) => isMine(season, f) && !season.results[f.id])
@@ -30,14 +31,14 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
         onClick={onSelect}
         className={`flex min-h-[54px] flex-col items-center justify-between rounded-xl border px-0.5 py-1 transition active:scale-95 ${
           selected ? 'border-indigo-400 bg-indigo-400/15' : today ? 'border-2 border-sky-400 bg-sky-400/15' : mineWaiting ? 'border-amber-400 bg-amber-400/10' : mine ? 'border-amber-400/50 bg-panel' : 'border-line bg-panel'
-        } ${inMonth ? '' : 'opacity-30'}`}
+        } ${inMonth ? '' : 'opacity-30'} ${win ? 'ring-1 ring-fuchsia-400/70' : ''}`}
         aria-label={`${formatDate(date)}, ${fixtures.length} match${fixtures.length === 1 ? '' : 'es'}`}
       >
         <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[13px] font-bold leading-none ${today ? 'bg-sky-400 text-black' : mineWaiting ? 'text-amber-200' : 'text-slate-300'}`}>{Number(date.slice(8))}</span>
         <span className="flex max-w-full flex-wrap items-center justify-center gap-[3px] px-0.5">
           {shown.map((f) => { const comp = compOf(f); return <span key={f.id} className={`h-1.5 w-1.5 rounded-full ${season.results[f.id] ? 'opacity-40' : ''}`} style={{ background: comp ? competitionColor(comp, teams) : '#94a3b8' }} /> })}
         </span>
-        <span className="h-3 text-[9px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : mineWaiting ? <span className="text-[11px] text-amber-300">★</span> : allPlayed ? <span className="text-emerald-400">✓</span> : mine ? <span className="text-amber-300/70">★</span> : ''}</span>
+        <span className="h-3 text-[9px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : win && !mineWaiting && !allPlayed ? <span className="text-[9px] font-extrabold text-fuchsia-300">$</span> : mineWaiting ? <span className="text-[11px] text-amber-300">★</span> : allPlayed ? <span className="text-emerald-400">✓</span> : mine ? <span className="text-amber-300/70">★</span> : ''}</span>
       </button>
     )
   }
@@ -46,8 +47,10 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
       onClick={onSelect}
       className={`flex min-h-[110px] flex-col rounded-xl border p-1.5 text-left transition ${
         selected ? 'border-indigo-400 bg-indigo-400/10' : today ? 'border-2 border-sky-400 bg-sky-400/10 shadow-[0_0_14px_#38bdf844]' : fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_14px_#fbbf2433]' : 'border-line bg-panel hover:border-slate-600'
-      } ${inMonth ? '' : 'opacity-35'}`}
+      } ${inMonth ? '' : 'opacity-35'} ${win ? 'ring-1 ring-fuchsia-400/60' : ''}`}
     >
+      {win && date === win.start && <span className="mb-0.5 rounded bg-fuchsia-500 px-1 text-center text-[9px] font-extrabold text-white">{win.name.toUpperCase()} OPENS</span>}
+      {win && date === win.end && <span className="mb-0.5 rounded bg-fuchsia-500/60 px-1 text-center text-[9px] font-extrabold text-white">MARKET CLOSES</span>}
       <div className="flex items-center justify-between">
         <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-semibold ${today ? 'bg-sky-400 font-extrabold text-black' : 'text-slate-400'}`}>{Number(date.slice(8))}</span>
         {today && <span className="rounded bg-sky-400 px-1 text-[9px] font-extrabold text-black">TODAY</span>}
@@ -180,6 +183,12 @@ export function CalendarPage() {
           <button className={btn} disabled={!pending} onClick={() => skipDays(30)}>Skip 30 days</button>
         </div>
       </div>
+      {season.windows?.some((w) => season.today >= w.start && season.today <= w.end) && (
+        <Link to={paths.market} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-fuchsia-400/70 bg-fuchsia-500/10 px-4 py-3 transition hover:bg-fuchsia-500/20">
+          <span><b className="block font-display text-2xl tracking-wide text-fuchsia-200">The player market is open</b><span className="text-xs text-slate-300">Sign young talent or buy stars before the window closes. Computer teams are shopping too.</span></span>
+          <span className="rounded-full bg-fuchsia-400 px-4 py-2 font-display text-lg leading-none tracking-wide text-black">Go to the market</span>
+        </Link>
+      )}
       {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
 

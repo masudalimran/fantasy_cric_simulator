@@ -1,3 +1,4 @@
+import { movesOf } from '../../season/market'
 import { AnimatePresence } from 'framer-motion'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -193,6 +194,34 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
 
 // ---- A player --------------------------------------------------------------
 
+/** Where a player has played: every move he has made in the market, oldest first. */
+export function CareerPath({ season, playerId, teams }: { season: Season | null; playerId: string; teams: Map<string, Team> }) {
+  const moves = season ? movesOf(season, playerId) : []
+  if (moves.length === 0) return null
+  return (
+    <section>
+      <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career path</h3>
+      <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
+        {moves.map((t) => {
+          const from = t.from ? teams.get(t.from) : null
+          const to = t.to ? teams.get(t.to) : null
+          return (
+            <div key={t.id} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300">
+              <span className="w-20 shrink-0 text-xs text-slate-500">{formatDate(t.date)}</span>
+              {t.kind === 'release' ? <>Released by {from && <TeamCrest team={from} size={18} />}<b className="text-white">{from?.name}</b></> : <>
+                {from ? <><TeamCrest team={from} size={18} /><span>{from.name}</span></> : <span className="text-slate-400">Free agent</span>}
+                <span className="text-amber-300">➜</span>
+                {to && <TeamCrest team={to} size={18} />}<b className="text-white">{to?.name}</b>
+                <span className="ml-auto text-xs text-slate-500">{t.fee} coins</span>
+              </>}
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 /** The player's last matches in this career, and what each one did to his ratings. */
 export function RecentMatches({ season, playerId, teamId, teams }: { season: Season | null; playerId: string; teamId: string; teams: Map<string, Team> }) {
   const api = useDetails()
@@ -322,6 +351,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
         {player.traits.length > 0 && <div className="flex flex-wrap gap-1.5">{player.traits.map((t) => <span key={t} className="rounded-full border border-line bg-panel-2 px-2.5 py-1 text-xs capitalize text-slate-200">{t.replace(/-/g, ' ')}</span>)}</div>}
 
         {inCareer && <RecentMatches season={season} playerId={playerId} teamId={team.id} teams={teams} />}
+        {inCareer && <CareerPath season={season} playerId={playerId} teams={teams} />}
       </div>
     </Shell>
   )

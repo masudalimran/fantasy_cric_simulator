@@ -1,0 +1,6008 @@
+[
+ {
+  "id": "yt-shoyo-hinata",
+  "name": "Shoyo Hinata",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 49,
+   "power": 44,
+   "temperament": 46,
+   "running": 51
+  },
+  "bowling": null,
+  "fielding": 57,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-tobio-kageyama",
+  "name": "Tobio Kageyama",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 16,
+   "power": 16,
+   "temperament": 19,
+   "running": 18
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 47,
+   "variation": 48,
+   "stamina": 30
+  },
+  "fielding": 43,
+  "traits": [],
+  "potential": 62
+ },
+ {
+  "id": "yt-kei-tsukishima",
+  "name": "Kei Tsukishima",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 33,
+   "power": 35,
+   "temperament": 38,
+   "running": 35
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 36,
+   "variation": 39,
+   "stamina": 39
+  },
+  "fielding": 36,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 59
+ },
+ {
+  "id": "yt-asahi-azumane",
+  "name": "Asahi Azumane",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 53,
+   "temperament": 45,
+   "running": 53
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 44,
+   "variation": 53,
+   "stamina": 48
+  },
+  "fielding": 60,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 84
+ },
+ {
+  "id": "yt-daichi-sawamura",
+  "name": "Daichi Sawamura",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 41,
+   "temperament": 39,
+   "running": 44
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 43,
+   "variation": 43,
+   "stamina": 40
+  },
+  "fielding": 50,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-kenma-kozume",
+  "name": "Kenma Kozume",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 53,
+   "temperament": 49,
+   "running": 53
+  },
+  "bowling": null,
+  "fielding": 52,
+  "traits": [],
+  "potential": 78
+ },
+ {
+  "id": "yt-keiji-akaashi",
+  "name": "Keiji Akaashi",
+  "series": "HAIKYU!! 2nd Season",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 54,
+   "power": 54,
+   "temperament": 62,
+   "running": 58
+  },
+  "bowling": null,
+  "fielding": 64,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-wakatoshi-ushijima",
+  "name": "Wakatoshi Ushijima",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 60,
+   "power": 56,
+   "temperament": 62,
+   "running": 47
+  },
+  "bowling": null,
+  "fielding": 55,
+  "traits": [
+   "pace-crusher"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-tooru-oikawa",
+  "name": "Tooru Oikawa",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 56,
+   "power": 54,
+   "temperament": 52,
+   "running": 44
+  },
+  "bowling": null,
+  "fielding": 53,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 90
+ },
+ {
+  "id": "yt-hajime-iwaizumi",
+  "name": "Hajime Iwaizumi",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 43,
+   "temperament": 41,
+   "running": 48
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 38,
+   "variation": 45,
+   "stamina": 40
+  },
+  "fielding": 42,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-atsumu-miya",
+  "name": "Atsumu Miya",
+  "series": "Haikyu!!",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 24,
+   "power": 21,
+   "temperament": 28,
+   "running": 34
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 49,
+   "variation": 57,
+   "stamina": 52
+  },
+  "fielding": 47,
+  "traits": [],
+  "potential": 79
+ },
+ {
+  "id": "yt-osamu-miya",
+  "name": "Osamu Miya",
+  "series": "Haikyu!!",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 32,
+   "power": 41,
+   "temperament": 35,
+   "running": 27
+  },
+  "bowling": null,
+  "fielding": 28,
+  "traits": [],
+  "potential": 61
+ },
+ {
+  "id": "yt-satori-tendo",
+  "name": "Satori Tendo",
+  "series": "HAIKYU!! 3rd Season",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 22,
+   "power": 27,
+   "temperament": 28,
+   "running": 24
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 51,
+   "variation": 53,
+   "stamina": 42
+  },
+  "fielding": 41,
+  "traits": [],
+  "potential": 86
+ },
+ {
+  "id": "yt-tadashi-yamaguchi",
+  "name": "Tadashi Yamaguchi",
+  "series": "HAIKYU!!",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 46,
+   "temperament": 49,
+   "running": 37
+  },
+  "bowling": null,
+  "fielding": 42,
+  "traits": [],
+  "potential": 62
+ },
+ {
+  "id": "yt-tetsuya-kuroko",
+  "name": "Tetsuya Kuroko",
+  "series": "Kuroko's Basketball",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 45,
+   "power": 39,
+   "temperament": 47,
+   "running": 33
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 44,
+   "variation": 45,
+   "stamina": 39
+  },
+  "fielding": 43,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-taiga-kagami",
+  "name": "Taiga Kagami",
+  "series": "Kuroko's Basketball",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 16,
+   "power": 20,
+   "temperament": 25,
+   "running": 25
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 40,
+   "variation": 40,
+   "stamina": 48
+  },
+  "fielding": 45,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 75
+ },
+ {
+  "id": "yt-daiki-aomine",
+  "name": "Daiki Aomine",
+  "series": "Kuroko's Basketball",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 49,
+   "power": 52,
+   "temperament": 51,
+   "running": 49
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 50,
+   "variation": 50,
+   "stamina": 58
+  },
+  "fielding": 62,
+  "traits": [],
+  "potential": 83
+ },
+ {
+  "id": "yt-atsushi-murasakibara",
+  "name": "Atsushi Murasakibara",
+  "series": "Kuroko's Basketball",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 49,
+   "temperament": 45,
+   "running": 50
+  },
+  "bowling": null,
+  "fielding": 38,
+  "traits": [],
+  "potential": 67
+ },
+ {
+  "id": "yt-seijuro-akashi",
+  "name": "Seijuro Akashi",
+  "series": "Kuroko's Basketball",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 53,
+   "temperament": 52,
+   "running": 49
+  },
+  "bowling": null,
+  "fielding": 52,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 65
+ },
+ {
+  "id": "yt-kazunari-takao",
+  "name": "Kazunari Takao",
+  "series": "Kuroko's Basketball",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 42,
+   "power": 46,
+   "temperament": 46,
+   "running": 44
+  },
+  "bowling": null,
+  "fielding": 58,
+  "traits": [],
+  "potential": 65
+ },
+ {
+  "id": "yt-asta",
+  "name": "Asta",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 31,
+   "power": 37,
+   "temperament": 30,
+   "running": 31
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 32,
+   "variation": 31,
+   "stamina": 38
+  },
+  "fielding": 47,
+  "traits": [],
+  "potential": 65
+ },
+ {
+  "id": "yt-yuno",
+  "name": "Yuno",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 48,
+   "temperament": 50,
+   "running": 51
+  },
+  "bowling": null,
+  "fielding": 51,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-noelle-silva",
+  "name": "Noelle Silva",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 42,
+   "temperament": 40,
+   "running": 46
+  },
+  "bowling": null,
+  "fielding": 33,
+  "traits": [],
+  "potential": 69
+ },
+ {
+  "id": "yt-yami-sukehiro",
+  "name": "Yami Sukehiro",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 54,
+   "power": 59,
+   "temperament": 53,
+   "running": 53
+  },
+  "bowling": null,
+  "fielding": 68,
+  "traits": [
+   "safe-hands"
+  ],
+  "potential": 71
+ },
+ {
+  "id": "yt-julius-novachrono",
+  "name": "Julius Novachrono",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 37,
+   "power": 44,
+   "temperament": 36,
+   "running": 43
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [],
+  "potential": 69
+ },
+ {
+  "id": "yt-mimosa-vermillion",
+  "name": "Mimosa Vermillion",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 16,
+   "power": 19,
+   "temperament": 21,
+   "running": 24
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 47,
+   "variation": 36,
+   "stamina": 35
+  },
+  "fielding": 38,
+  "traits": [],
+  "potential": 60
+ },
+ {
+  "id": "yt-luck-voltia",
+  "name": "Luck Voltia",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 59,
+   "temperament": 50,
+   "running": 43
+  },
+  "bowling": null,
+  "fielding": 54,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-magna-swing",
+  "name": "Magna Swing",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 50,
+   "power": 50,
+   "temperament": 49,
+   "running": 58
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 49,
+   "variation": 53,
+   "stamina": 57
+  },
+  "fielding": 54,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 83
+ },
+ {
+  "id": "yt-vanessa-enoteca",
+  "name": "Vanessa Enoteca",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 36,
+   "power": 35,
+   "temperament": 40,
+   "running": 26
+  },
+  "bowling": null,
+  "fielding": 39,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-charmy-pappitson",
+  "name": "Charmy Pappitson",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 21,
+   "power": 17,
+   "temperament": 29,
+   "running": 27
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 48,
+   "variation": 48,
+   "stamina": 41
+  },
+  "fielding": 39,
+  "traits": [
+   "economical"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-gauche-adlai",
+  "name": "Gauche Adlai",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 35,
+   "power": 37,
+   "temperament": 30,
+   "running": 29
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 36,
+   "variation": 32,
+   "stamina": 29
+  },
+  "fielding": 30,
+  "traits": [],
+  "potential": 58
+ },
+ {
+  "id": "yt-zora-ideale",
+  "name": "Zora Ideale",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 45,
+   "power": 47,
+   "temperament": 41,
+   "running": 41
+  },
+  "bowling": null,
+  "fielding": 55,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 60
+ },
+ {
+  "id": "yt-nacht-faust",
+  "name": "Nacht Faust",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 42,
+   "power": 33,
+   "temperament": 42,
+   "running": 36
+  },
+  "bowling": null,
+  "fielding": 28,
+  "traits": [],
+  "potential": 75
+ },
+ {
+  "id": "yt-mereoleona-vermillion",
+  "name": "Mereoleona Vermillion",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 39,
+   "power": 42,
+   "temperament": 38,
+   "running": 32
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [
+   "pace-crusher"
+  ],
+  "potential": 54
+ },
+ {
+  "id": "yt-fuegoleon-vermillion",
+  "name": "Fuegoleon Vermillion",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 11,
+   "power": 19,
+   "temperament": 22,
+   "running": 15
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 42,
+   "variation": 36,
+   "stamina": 27
+  },
+  "fielding": 32,
+  "traits": [],
+  "potential": 55
+ },
+ {
+  "id": "yt-klaus-lunettes",
+  "name": "Klaus Lunettes",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 40,
+   "temperament": 40,
+   "running": 42
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 41,
+   "variation": 39,
+   "stamina": 34
+  },
+  "fielding": 41,
+  "traits": [],
+  "potential": 59
+ },
+ {
+  "id": "yt-finral-roulacase",
+  "name": "Finral Roulacase",
+  "series": "Black Clover",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 19,
+   "power": 19,
+   "temperament": 30,
+   "running": 23
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 47,
+   "variation": 41,
+   "stamina": 41
+  },
+  "fielding": 49,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-natsu-dragneel",
+  "name": "Natsu Dragneel",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 45,
+   "temperament": 45,
+   "running": 35
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 39,
+   "variation": 39,
+   "stamina": 41
+  },
+  "fielding": 41,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-lucy-heartfilia",
+  "name": "Lucy Heartfilia",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 62,
+   "power": 58,
+   "temperament": 54,
+   "running": 55
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [],
+  "potential": 90
+ },
+ {
+  "id": "yt-gray-fullbuster",
+  "name": "Gray Fullbuster",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 37,
+   "power": 41,
+   "temperament": 41,
+   "running": 41
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 30,
+   "variation": 41,
+   "stamina": 27
+  },
+  "fielding": 47,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 61
+ },
+ {
+  "id": "yt-erza-scarlet",
+  "name": "Erza Scarlet",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 51,
+   "power": 52,
+   "temperament": 42,
+   "running": 42
+  },
+  "bowling": null,
+  "fielding": 46,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-wendy-marvell",
+  "name": "Wendy Marvell",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 15,
+   "power": 19,
+   "temperament": 29,
+   "running": 24
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 47,
+   "variation": 49,
+   "stamina": 38
+  },
+  "fielding": 34,
+  "traits": [
+   "death-specialist"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-gajeel-redfox",
+  "name": "Gajeel Redfox",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 45,
+   "power": 39,
+   "temperament": 44,
+   "running": 37
+  },
+  "bowling": null,
+  "fielding": 42,
+  "traits": [
+   "slow-starter"
+  ],
+  "potential": 70
+ },
+ {
+  "id": "yt-laxus-dreyar",
+  "name": "Laxus Dreyar",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 43,
+   "temperament": 51,
+   "running": 50
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [],
+  "potential": 61
+ },
+ {
+  "id": "yt-juvia-lockser",
+  "name": "Juvia Lockser",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 48,
+   "power": 44,
+   "temperament": 43,
+   "running": 45
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 45,
+   "variation": 50,
+   "stamina": 39
+  },
+  "fielding": 51,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-gildarts-clive",
+  "name": "Gildarts Clive",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 40,
+   "power": 50,
+   "temperament": 40,
+   "running": 45
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 45,
+   "variation": 41,
+   "stamina": 41
+  },
+  "fielding": 56,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 74
+ },
+ {
+  "id": "yt-mirajane-strauss",
+  "name": "Mirajane Strauss",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 41,
+   "temperament": 41,
+   "running": 45
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 45,
+   "variation": 44,
+   "stamina": 45
+  },
+  "fielding": 47,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 80
+ },
+ {
+  "id": "yt-levy-mcgarden",
+  "name": "Levy McGarden",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 18,
+   "power": 22,
+   "temperament": 23,
+   "running": 23
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 37,
+   "variation": 47,
+   "stamina": 31
+  },
+  "fielding": 43,
+  "traits": [],
+  "potential": 73
+ },
+ {
+  "id": "yt-jellal-fernandes",
+  "name": "Jellal Fernandes",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 33,
+   "temperament": 40,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [
+   "weak-vs-spin"
+  ],
+  "potential": 54
+ },
+ {
+  "id": "yt-elfman-strauss",
+  "name": "Elfman Strauss",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 46,
+   "temperament": 56,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 49,
+  "traits": [],
+  "potential": 74
+ },
+ {
+  "id": "yt-cana-alberona",
+  "name": "Cana Alberona",
+  "series": "Fairy Tail",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 60,
+   "temperament": 61,
+   "running": 56
+  },
+  "bowling": null,
+  "fielding": 54,
+  "traits": [],
+  "potential": 75
+ },
+ {
+  "id": "yt-gon-freecss",
+  "name": "Gon Freecss",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 21,
+   "power": 20,
+   "temperament": 25,
+   "running": 32
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 49,
+   "variation": 51,
+   "stamina": 49
+  },
+  "fielding": 53,
+  "traits": [],
+  "potential": 90
+ },
+ {
+  "id": "yt-killua-zoldyck",
+  "name": "Killua Zoldyck",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 57,
+   "power": 51,
+   "temperament": 53,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 52,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-kurapika",
+  "name": "Kurapika",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 39,
+   "temperament": 37,
+   "running": 42
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 38,
+   "variation": 40,
+   "stamina": 46
+  },
+  "fielding": 38,
+  "traits": [],
+  "potential": 65
+ },
+ {
+  "id": "yt-leorio-paradinight",
+  "name": "Leorio Paradinight",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 33,
+   "power": 41,
+   "temperament": 33,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 37,
+  "traits": [],
+  "potential": 49
+ },
+ {
+  "id": "yt-hisoka-morow",
+  "name": "Hisoka Morow",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 56,
+   "power": 53,
+   "temperament": 58,
+   "running": 57
+  },
+  "bowling": null,
+  "fielding": 53,
+  "traits": [],
+  "potential": 87
+ },
+ {
+  "id": "yt-chrollo-lucilfer",
+  "name": "Chrollo Lucilfer",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 55,
+   "temperament": 50,
+   "running": 47
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 55,
+   "variation": 44,
+   "stamina": 54
+  },
+  "fielding": 50,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 91
+ },
+ {
+  "id": "yt-isaac-netero",
+  "name": "Isaac Netero",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 46,
+   "temperament": 44,
+   "running": 48
+  },
+  "bowling": null,
+  "fielding": 54,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-meruem",
+  "name": "Meruem",
+  "series": "Hunter x Hunter (2011)",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 55,
+   "temperament": 50,
+   "running": 55
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 52,
+   "variation": 50,
+   "stamina": 48
+  },
+  "fielding": 49,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 92
+ },
+ {
+  "id": "yt-feitan-portor",
+  "name": "Feitan Portor",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 44,
+   "power": 51,
+   "temperament": 52,
+   "running": 44
+  },
+  "bowling": null,
+  "fielding": 39,
+  "traits": [
+   "pace-crusher"
+  ],
+  "potential": 87
+ },
+ {
+  "id": "yt-illumi-zoldyck",
+  "name": "Illumi Zoldyck",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 39,
+   "power": 45,
+   "temperament": 45,
+   "running": 43
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 40,
+   "variation": 38,
+   "stamina": 39
+  },
+  "fielding": 52,
+  "traits": [],
+  "potential": 68
+ },
+ {
+  "id": "yt-kite",
+  "name": "Kite",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 41,
+   "temperament": 51,
+   "running": 42
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 42,
+   "variation": 44,
+   "stamina": 49
+  },
+  "fielding": 46,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 71
+ },
+ {
+  "id": "yt-biscuit-krueger",
+  "name": "Biscuit Krueger",
+  "series": "HUNTER×HUNTER: Greed Island",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 50,
+   "temperament": 42,
+   "running": 39
+  },
+  "bowling": null,
+  "fielding": 37,
+  "traits": [
+   "pace-crusher"
+  ],
+  "potential": 65
+ },
+ {
+  "id": "yt-neferpitou",
+  "name": "Neferpitou",
+  "series": "Hunter x Hunter (2011)",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 17,
+   "power": 20,
+   "temperament": 23,
+   "running": 15
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 42,
+   "variation": 41,
+   "stamina": 32
+  },
+  "fielding": 31,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 49
+ },
+ {
+  "id": "yt-machi-komacine",
+  "name": "Machi Komacine",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 44,
+   "power": 50,
+   "temperament": 47,
+   "running": 37
+  },
+  "bowling": null,
+  "fielding": 56,
+  "traits": [
+   "safe-hands"
+  ],
+  "potential": 77
+ },
+ {
+  "id": "yt-shalnark",
+  "name": "Shalnark",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 22,
+   "power": 26,
+   "temperament": 25,
+   "running": 28
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 51,
+   "variation": 44,
+   "stamina": 46
+  },
+  "fielding": 47,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-pakunoda",
+  "name": "Pakunoda",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 35,
+   "power": 39,
+   "temperament": 40,
+   "running": 35
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 35,
+   "variation": 33,
+   "stamina": 34
+  },
+  "fielding": 48,
+  "traits": [],
+  "potential": 72
+ },
+ {
+  "id": "yt-uvogin",
+  "name": "Uvogin",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 55,
+   "power": 52,
+   "temperament": 50,
+   "running": 52
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [
+   "slow-starter"
+  ],
+  "potential": 85
+ },
+ {
+  "id": "yt-franklin-bordeau",
+  "name": "Franklin Bordeau",
+  "series": "Hunter x Hunter",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 47,
+   "temperament": 52,
+   "running": 55
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 55,
+   "variation": 59,
+   "stamina": 44
+  },
+  "fielding": 54,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-kirito",
+  "name": "Kirito",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 54,
+   "power": 59,
+   "temperament": 52,
+   "running": 55
+  },
+  "bowling": null,
+  "fielding": 51,
+  "traits": [],
+  "potential": 84
+ },
+ {
+  "id": "yt-asuna-yuuki",
+  "name": "Asuna Yuuki",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 46,
+   "temperament": 52,
+   "running": 41
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 44,
+   "variation": 48,
+   "stamina": 42
+  },
+  "fielding": 49,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 68
+ },
+ {
+  "id": "yt-sinon",
+  "name": "Sinon",
+  "series": "Sword Art Online II",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 14,
+   "power": 16,
+   "temperament": 26,
+   "running": 26
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 43,
+   "variation": 36,
+   "stamina": 35
+  },
+  "fielding": 38,
+  "traits": [],
+  "potential": 59
+ },
+ {
+  "id": "yt-leafa",
+  "name": "Leafa",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 17,
+   "power": 15,
+   "temperament": 24,
+   "running": 19
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 40,
+   "variation": 40,
+   "stamina": 33
+  },
+  "fielding": 34,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 65
+ },
+ {
+  "id": "yt-klein",
+  "name": "Klein",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 50,
+   "power": 57,
+   "temperament": 62,
+   "running": 50
+  },
+  "bowling": null,
+  "fielding": 45,
+  "traits": [
+   "pace-crusher"
+  ],
+  "potential": 70
+ },
+ {
+  "id": "yt-agil",
+  "name": "Agil",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 23,
+   "power": 25,
+   "temperament": 26,
+   "running": 23
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 46,
+   "variation": 49,
+   "stamina": 45
+  },
+  "fielding": 43,
+  "traits": [],
+  "potential": 71
+ },
+ {
+  "id": "yt-silica",
+  "name": "Silica",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 45,
+   "temperament": 37,
+   "running": 31
+  },
+  "bowling": null,
+  "fielding": 35,
+  "traits": [
+   "slow-starter"
+  ],
+  "potential": 70
+ },
+ {
+  "id": "yt-lisbeth",
+  "name": "Lisbeth",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 18,
+   "power": 24,
+   "temperament": 29,
+   "running": 32
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 46,
+   "variation": 47,
+   "stamina": 48
+  },
+  "fielding": 47,
+  "traits": [
+   "economical"
+  ],
+  "potential": 64
+ },
+ {
+  "id": "yt-eugeo",
+  "name": "Eugeo",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 37,
+   "temperament": 37,
+   "running": 36
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 44,
+   "variation": 37,
+   "stamina": 43
+  },
+  "fielding": 51,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 74
+ },
+ {
+  "id": "yt-alice-zuberg",
+  "name": "Alice Zuberg",
+  "series": "Sword Art Online",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 55,
+   "temperament": 50,
+   "running": 47
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 48,
+   "variation": 51,
+   "stamina": 45
+  },
+  "fielding": 52,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-ken-kaneki",
+  "name": "Ken Kaneki",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 24,
+   "power": 22,
+   "temperament": 32,
+   "running": 29
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 47,
+   "variation": 45,
+   "stamina": 49
+  },
+  "fielding": 45,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 65
+ },
+ {
+  "id": "yt-touka-kirishima",
+  "name": "Touka Kirishima",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 39,
+   "temperament": 49,
+   "running": 36
+  },
+  "bowling": null,
+  "fielding": 54,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 74
+ },
+ {
+  "id": "yt-juuzou-suzuya",
+  "name": "Juuzou Suzuya",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 37,
+   "power": 41,
+   "temperament": 41,
+   "running": 36
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 62
+ },
+ {
+  "id": "yt-koutarou-amon",
+  "name": "Koutarou Amon",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 42,
+   "temperament": 38,
+   "running": 29
+  },
+  "bowling": null,
+  "fielding": 46,
+  "traits": [],
+  "potential": 64
+ },
+ {
+  "id": "yt-shuu-tsukiyama",
+  "name": "Shuu Tsukiyama",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 45,
+   "temperament": 40,
+   "running": 36
+  },
+  "bowling": null,
+  "fielding": 38,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 56
+ },
+ {
+  "id": "yt-hinami-fueguchi",
+  "name": "Hinami Fueguchi",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 47,
+   "temperament": 48,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 54,
+  "traits": [],
+  "potential": 80
+ },
+ {
+  "id": "yt-ayato-kirishima",
+  "name": "Ayato Kirishima",
+  "series": "Tokyo Ghoul",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 41,
+   "temperament": 46,
+   "running": 49
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [
+   "slow-starter"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-light-yagami",
+  "name": "Light Yagami",
+  "series": "Death Note",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 25,
+   "power": 27,
+   "temperament": 27,
+   "running": 26
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 56,
+   "variation": 60,
+   "stamina": 45
+  },
+  "fielding": 48,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 70
+ },
+ {
+  "id": "yt-l-lawliet",
+  "name": "L Lawliet",
+  "series": "Death Note",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 54,
+   "temperament": 48,
+   "running": 53
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [],
+  "potential": 74
+ },
+ {
+  "id": "yt-misa-amane",
+  "name": "Misa Amane",
+  "series": "Death Note",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 44,
+   "power": 44,
+   "temperament": 47,
+   "running": 31
+  },
+  "bowling": null,
+  "fielding": 38,
+  "traits": [],
+  "potential": 59
+ },
+ {
+  "id": "yt-near",
+  "name": "Near",
+  "series": "Death Note",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 44,
+   "power": 42,
+   "temperament": 45,
+   "running": 38
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 42,
+   "variation": 47,
+   "stamina": 41
+  },
+  "fielding": 44,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 68
+ },
+ {
+  "id": "yt-mello",
+  "name": "Mello",
+  "series": "Death Note",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 12,
+   "power": 21,
+   "temperament": 18,
+   "running": 22
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 44,
+   "variation": 34,
+   "stamina": 35
+  },
+  "fielding": 36,
+  "traits": [],
+  "potential": 64
+ },
+ {
+  "id": "yt-lelouch-lamperouge",
+  "name": "Lelouch Lamperouge",
+  "series": "Code Geass: Lelouch of the Rebellion",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 21,
+   "temperament": 21,
+   "running": 20
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 39,
+   "variation": 47,
+   "stamina": 36
+  },
+  "fielding": 39,
+  "traits": [],
+  "potential": 64
+ },
+ {
+  "id": "yt-suzaku-kururugi",
+  "name": "Suzaku Kururugi",
+  "series": "Code Geass: Lelouch of the Rebellion",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 26,
+   "power": 27,
+   "temperament": 26,
+   "running": 31
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 48,
+   "variation": 51,
+   "stamina": 57
+  },
+  "fielding": 51,
+  "traits": [
+   "economical"
+  ],
+  "potential": 87
+ },
+ {
+  "id": "yt-kallen-stadtfeld",
+  "name": "Kallen Stadtfeld",
+  "series": "Code Geass: Lelouch of the Rebellion",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 60,
+   "power": 58,
+   "temperament": 51,
+   "running": 47
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 60,
+   "variation": 54,
+   "stamina": 52
+  },
+  "fielding": 61,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 75
+ },
+ {
+  "id": "yt-jeremiah-gottwald",
+  "name": "Jeremiah Gottwald",
+  "series": "Code Geass: Lelouch of the Rebellion",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 58,
+   "power": 64,
+   "temperament": 58,
+   "running": 58
+  },
+  "bowling": null,
+  "fielding": 55,
+  "traits": [],
+  "potential": 80
+ },
+ {
+  "id": "yt-cornelia-li-britannia",
+  "name": "Cornelia li Britannia",
+  "series": "Code Geass: Lelouch of the Rebellion",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 54,
+   "temperament": 46,
+   "running": 50
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [],
+  "potential": 67
+ },
+ {
+  "id": "yt-schneizel-el-britannia",
+  "name": "Schneizel el Britannia",
+  "series": "Code Geass: Lelouch of the Rebellion",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 43,
+   "temperament": 46,
+   "running": 44
+  },
+  "bowling": null,
+  "fielding": 40,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-shirou-emiya",
+  "name": "Shirou Emiya",
+  "series": "Fate/stay night",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 54,
+   "temperament": 60,
+   "running": 51
+  },
+  "bowling": null,
+  "fielding": 69,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 74
+ },
+ {
+  "id": "yt-rin-tohsaka",
+  "name": "Rin Tohsaka",
+  "series": "Fate/stay night",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 43,
+   "temperament": 51,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [
+   "slow-starter"
+  ],
+  "potential": 62
+ },
+ {
+  "id": "yt-gilgamesh",
+  "name": "Gilgamesh",
+  "series": "Fate/stay night",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 40,
+   "power": 43,
+   "temperament": 37,
+   "running": 41
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 41,
+   "variation": 40,
+   "stamina": 36
+  },
+  "fielding": 49,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 60
+ },
+ {
+  "id": "yt-sakura-matou",
+  "name": "Sakura Matou",
+  "series": "Fate/stay night",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 44,
+   "temperament": 44,
+   "running": 35
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 38,
+   "variation": 45,
+   "stamina": 43
+  },
+  "fielding": 46,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-illyasviel-von-einzbern",
+  "name": "Illyasviel von Einzbern",
+  "series": "Fate/stay night",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 17,
+   "power": 23,
+   "temperament": 20,
+   "running": 18
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 43,
+   "variation": 45,
+   "stamina": 43
+  },
+  "fielding": 36,
+  "traits": [
+   "economical"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-kirei-kotomine",
+  "name": "Kirei Kotomine",
+  "series": "Fate/stay night",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 13,
+   "power": 19,
+   "temperament": 23,
+   "running": 22
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 48,
+   "variation": 40,
+   "stamina": 41
+  },
+  "fielding": 38,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 68
+ },
+ {
+  "id": "yt-subaru-natsuki",
+  "name": "Subaru Natsuki",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 35,
+   "power": 39,
+   "temperament": 34,
+   "running": 36
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 29,
+   "variation": 30,
+   "stamina": 33
+  },
+  "fielding": 46,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-emilia",
+  "name": "Emilia",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 39,
+   "power": 41,
+   "temperament": 38,
+   "running": 27
+  },
+  "bowling": null,
+  "fielding": 28,
+  "traits": [],
+  "potential": 56
+ },
+ {
+  "id": "yt-rem",
+  "name": "Rem",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 41,
+   "power": 41,
+   "temperament": 39,
+   "running": 43
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 57
+ },
+ {
+  "id": "yt-ram",
+  "name": "Ram",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 54,
+   "temperament": 52,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 62,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-beatrice",
+  "name": "Beatrice",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 36,
+   "power": 40,
+   "temperament": 39,
+   "running": 32
+  },
+  "bowling": null,
+  "fielding": 38,
+  "traits": [],
+  "potential": 56
+ },
+ {
+  "id": "yt-reinhard-van-astrea",
+  "name": "Reinhard van Astrea",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 63,
+   "power": 56,
+   "temperament": 56,
+   "running": 49
+  },
+  "bowling": null,
+  "fielding": 47,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 80
+ },
+ {
+  "id": "yt-roswaal-l-mathers",
+  "name": "Roswaal L Mathers",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 53,
+   "power": 53,
+   "temperament": 54,
+   "running": 53
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 56,
+   "variation": 53,
+   "stamina": 50
+  },
+  "fielding": 55,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-garfiel-tinsel",
+  "name": "Garfiel Tinsel",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 14,
+   "power": 22,
+   "temperament": 26,
+   "running": 19
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 38,
+   "variation": 35,
+   "stamina": 31
+  },
+  "fielding": 34,
+  "traits": [
+   "death-specialist"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-otto-suwen",
+  "name": "Otto Suwen",
+  "series": "Re:ZERO -Starting Life in Another World-",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 46,
+   "power": 45,
+   "temperament": 47,
+   "running": 44
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 38,
+   "variation": 46,
+   "stamina": 39
+  },
+  "fielding": 43,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-kazuma-satou",
+  "name": "Kazuma Satou",
+  "series": "KONOSUBA -God's blessing on this wonderful world!",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 45,
+   "temperament": 37,
+   "running": 46
+  },
+  "bowling": null,
+  "fielding": 53,
+  "traits": [],
+  "potential": 80
+ },
+ {
+  "id": "yt-aqua",
+  "name": "Aqua",
+  "series": "KONOSUBA -God's blessing on this wonderful world!",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 53,
+   "temperament": 57,
+   "running": 53
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 59,
+   "variation": 50,
+   "stamina": 52
+  },
+  "fielding": 53,
+  "traits": [],
+  "potential": 77
+ },
+ {
+  "id": "yt-megumin",
+  "name": "Megumin",
+  "series": "KONOSUBA -God's blessing on this wonderful world!",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "L",
+  "batting": {
+   "technique": 46,
+   "power": 51,
+   "temperament": 46,
+   "running": 38
+  },
+  "bowling": null,
+  "fielding": 54,
+  "traits": [],
+  "potential": 64
+ },
+ {
+  "id": "yt-darkness",
+  "name": "Darkness",
+  "series": "KONOSUBA -God's blessing on this wonderful world!",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 13,
+   "power": 20,
+   "temperament": 28,
+   "running": 27
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 46,
+   "variation": 45,
+   "stamina": 36
+  },
+  "fielding": 39,
+  "traits": [
+   "death-specialist"
+  ],
+  "potential": 58
+ },
+ {
+  "id": "yt-yunyun",
+  "name": "Yunyun",
+  "series": "KONOSUBA -God's blessing on this wonderful world!",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 44,
+   "temperament": 42,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 49,
+  "traits": [],
+  "potential": 69
+ },
+ {
+  "id": "yt-wiz",
+  "name": "Wiz",
+  "series": "KONOSUBA -God's blessing on this wonderful world!",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 65,
+   "power": 66,
+   "temperament": 63,
+   "running": 62
+  },
+  "bowling": null,
+  "fielding": 51,
+  "traits": [],
+  "potential": 79
+ },
+ {
+  "id": "yt-loid-forger",
+  "name": "Loid Forger",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 16,
+   "power": 15,
+   "temperament": 20,
+   "running": 25
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 39,
+   "variation": 43,
+   "stamina": 43
+  },
+  "fielding": 31,
+  "traits": [],
+  "potential": 71
+ },
+ {
+  "id": "yt-yor-forger",
+  "name": "Yor Forger",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 39,
+   "power": 48,
+   "temperament": 39,
+   "running": 42
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 41,
+   "variation": 47,
+   "stamina": 38
+  },
+  "fielding": 41,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 75
+ },
+ {
+  "id": "yt-anya-forger",
+  "name": "Anya Forger",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 27,
+   "temperament": 28,
+   "running": 33
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 61,
+   "variation": 56,
+   "stamina": 50
+  },
+  "fielding": 45,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 89
+ },
+ {
+  "id": "yt-damian-desmond",
+  "name": "Damian Desmond",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 56,
+   "temperament": 56,
+   "running": 47
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 56,
+   "variation": 57,
+   "stamina": 52
+  },
+  "fielding": 61,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 92
+ },
+ {
+  "id": "yt-franky-franklin",
+  "name": "Franky Franklin",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 50,
+   "temperament": 52,
+   "running": 54
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 57,
+   "variation": 59,
+   "stamina": 58
+  },
+  "fielding": 55,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 92
+ },
+ {
+  "id": "yt-yuri-briar",
+  "name": "Yuri Briar",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 61,
+   "temperament": 61,
+   "running": 55
+  },
+  "bowling": null,
+  "fielding": 47,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 91
+ },
+ {
+  "id": "yt-becky-blackbell",
+  "name": "Becky Blackbell",
+  "series": "SPY x FAMILY",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 40,
+   "temperament": 41,
+   "running": 44
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 48,
+   "variation": 39,
+   "stamina": 44
+  },
+  "fielding": 55,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-denji",
+  "name": "Denji",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 49,
+   "temperament": 46,
+   "running": 41
+  },
+  "bowling": null,
+  "fielding": 31,
+  "traits": [],
+  "potential": 69
+ },
+ {
+  "id": "yt-power",
+  "name": "Power",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 62,
+   "temperament": 53,
+   "running": 59
+  },
+  "bowling": null,
+  "fielding": 51,
+  "traits": [
+   "pace-crusher"
+  ],
+  "potential": 91
+ },
+ {
+  "id": "yt-aki-hayakawa",
+  "name": "Aki Hayakawa",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 23,
+   "power": 24,
+   "temperament": 26,
+   "running": 25
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 60,
+   "variation": 61,
+   "stamina": 47
+  },
+  "fielding": 45,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-makima",
+  "name": "Makima",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 53,
+   "temperament": 50,
+   "running": 45
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 52,
+   "variation": 55,
+   "stamina": 52
+  },
+  "fielding": 57,
+  "traits": [],
+  "potential": 72
+ },
+ {
+  "id": "yt-kobeni-higashiyama",
+  "name": "Kobeni Higashiyama",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 42,
+   "power": 47,
+   "temperament": 47,
+   "running": 37
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 47,
+   "variation": 46,
+   "stamina": 39
+  },
+  "fielding": 42,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 84
+ },
+ {
+  "id": "yt-himeno",
+  "name": "Himeno",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 40,
+   "temperament": 39,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 32,
+  "traits": [],
+  "potential": 67
+ },
+ {
+  "id": "yt-reze",
+  "name": "Reze",
+  "series": "Chainsaw Man",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 39,
+   "power": 48,
+   "temperament": 45,
+   "running": 34
+  },
+  "bowling": null,
+  "fielding": 42,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 57
+ },
+ {
+  "id": "yt-shigeo-kageyama",
+  "name": "Shigeo Kageyama",
+  "series": "Mob Psycho 100",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 19,
+   "power": 21,
+   "temperament": 24,
+   "running": 24
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 43,
+   "variation": 39,
+   "stamina": 29
+  },
+  "fielding": 28,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-arataka-reigen",
+  "name": "Arataka Reigen",
+  "series": "Mob Psycho 100",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 15,
+   "power": 15,
+   "temperament": 22,
+   "running": 26
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 43,
+   "variation": 35,
+   "stamina": 37
+  },
+  "fielding": 29,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-teruki-hanazawa",
+  "name": "Teruki Hanazawa",
+  "series": "Mob Psycho 100",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 37,
+   "power": 40,
+   "temperament": 39,
+   "running": 38
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 36,
+   "variation": 41,
+   "stamina": 43
+  },
+  "fielding": 38,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 79
+ },
+ {
+  "id": "yt-ritsu-kageyama",
+  "name": "Ritsu Kageyama",
+  "series": "Mob Psycho 100",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "L",
+  "batting": {
+   "technique": 53,
+   "power": 45,
+   "temperament": 48,
+   "running": 50
+  },
+  "bowling": null,
+  "fielding": 58,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-saitama",
+  "name": "Saitama",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 39,
+   "power": 38,
+   "temperament": 41,
+   "running": 42
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 41,
+   "variation": 39,
+   "stamina": 46
+  },
+  "fielding": 42,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 70
+ },
+ {
+  "id": "yt-genos",
+  "name": "Genos",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 12,
+   "power": 19,
+   "temperament": 22,
+   "running": 28
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 44,
+   "variation": 45,
+   "stamina": 46
+  },
+  "fielding": 32,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 56
+ },
+ {
+  "id": "yt-tatsumaki",
+  "name": "Tatsumaki",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 46,
+   "temperament": 48,
+   "running": 47
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-fubuki",
+  "name": "Fubuki",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 54,
+   "temperament": 49,
+   "running": 50
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 55,
+   "variation": 56,
+   "stamina": 51
+  },
+  "fielding": 61,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 86
+ },
+ {
+  "id": "yt-garou",
+  "name": "Garou",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 52,
+   "power": 52,
+   "temperament": 45,
+   "running": 47
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 46,
+   "variation": 55,
+   "stamina": 46
+  },
+  "fielding": 49,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-bang",
+  "name": "Bang",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 31,
+   "power": 37,
+   "temperament": 42,
+   "running": 29
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 34,
+   "variation": 35,
+   "stamina": 31
+  },
+  "fielding": 35,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-mumen-rider",
+  "name": "Mumen Rider",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 26,
+   "temperament": 32,
+   "running": 37
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 65,
+   "variation": 55,
+   "stamina": 50
+  },
+  "fielding": 50,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 82
+ },
+ {
+  "id": "yt-sonic",
+  "name": "Sonic",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 35,
+   "power": 36,
+   "temperament": 37,
+   "running": 34
+  },
+  "bowling": null,
+  "fielding": 42,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 61
+ },
+ {
+  "id": "yt-metal-bat",
+  "name": "Metal Bat",
+  "series": "One-Punch Man",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 41,
+   "power": 41,
+   "temperament": 36,
+   "running": 33
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 32,
+   "variation": 41,
+   "stamina": 36
+  },
+  "fielding": 39,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-tsukasa-shishio",
+  "name": "Tsukasa Shishio",
+  "series": "Dr. STONE",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 58,
+   "temperament": 52,
+   "running": 58
+  },
+  "bowling": null,
+  "fielding": 53,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 82
+ },
+ {
+  "id": "yt-chrome",
+  "name": "Chrome",
+  "series": "Dr. STONE",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 49,
+   "power": 50,
+   "temperament": 53,
+   "running": 55
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 56,
+   "variation": 54,
+   "stamina": 57
+  },
+  "fielding": 57,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-kohaku",
+  "name": "Kohaku",
+  "series": "Dr. STONE",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 19,
+   "power": 14,
+   "temperament": 26,
+   "running": 27
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 36,
+   "variation": 42,
+   "stamina": 37
+  },
+  "fielding": 41,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 68
+ },
+ {
+  "id": "yt-gen-asagiri",
+  "name": "Gen Asagiri",
+  "series": "Dr. STONE",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 34,
+   "power": 36,
+   "temperament": 31,
+   "running": 31
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 29,
+   "variation": 32,
+   "stamina": 38
+  },
+  "fielding": 30,
+  "traits": [],
+  "potential": 56
+ },
+ {
+  "id": "yt-ryusui-nanami",
+  "name": "Ryusui Nanami",
+  "series": "Dr. STONE",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 57,
+   "power": 53,
+   "temperament": 61,
+   "running": 55
+  },
+  "bowling": null,
+  "fielding": 58,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-yuzuriha-ogawa",
+  "name": "Yuzuriha Ogawa",
+  "series": "Dr. STONE",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 21,
+   "temperament": 27,
+   "running": 22
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 43,
+   "variation": 46,
+   "stamina": 47
+  },
+  "fielding": 43,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 59
+ },
+ {
+  "id": "yt-shinra-kusakabe",
+  "name": "Shinra Kusakabe",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 44,
+   "power": 50,
+   "temperament": 49,
+   "running": 51
+  },
+  "bowling": null,
+  "fielding": 56,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-arthur-boyle",
+  "name": "Arthur Boyle",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 41,
+   "temperament": 46,
+   "running": 39
+  },
+  "bowling": null,
+  "fielding": 52,
+  "traits": [],
+  "potential": 61
+ },
+ {
+  "id": "yt-maki-oze",
+  "name": "Maki Oze",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 33,
+   "temperament": 38,
+   "running": 29
+  },
+  "bowling": null,
+  "fielding": 47,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 58
+ },
+ {
+  "id": "yt-iris",
+  "name": "Iris",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 21,
+   "power": 25,
+   "temperament": 34,
+   "running": 33
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 51,
+   "variation": 50,
+   "stamina": 54
+  },
+  "fielding": 41,
+  "traits": [],
+  "potential": 84
+ },
+ {
+  "id": "yt-tamaki-kotatsu",
+  "name": "Tamaki Kotatsu",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 41,
+   "power": 43,
+   "temperament": 38,
+   "running": 34
+  },
+  "bowling": null,
+  "fielding": 35,
+  "traits": [],
+  "potential": 68
+ },
+ {
+  "id": "yt-takehisa-hinawa",
+  "name": "Takehisa Hinawa",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 48,
+   "temperament": 48,
+   "running": 51
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 53,
+   "variation": 47,
+   "stamina": 50
+  },
+  "fielding": 50,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 89
+ },
+ {
+  "id": "yt-princess-hibana",
+  "name": "Princess Hibana",
+  "series": "Fire Force",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 50,
+   "power": 52,
+   "temperament": 49,
+   "running": 53
+  },
+  "bowling": null,
+  "fielding": 52,
+  "traits": [],
+  "potential": 75
+ },
+ {
+  "id": "yt-maka-albarn",
+  "name": "Maka Albarn",
+  "series": "Soul Eater",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 45,
+   "temperament": 47,
+   "running": 43
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 50,
+   "variation": 48,
+   "stamina": 51
+  },
+  "fielding": 50,
+  "traits": [],
+  "potential": 87
+ },
+ {
+  "id": "yt-soul-eater-evans",
+  "name": "Soul Eater Evans",
+  "series": "Soul Eater",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 37,
+   "temperament": 46,
+   "running": 41
+  },
+  "bowling": null,
+  "fielding": 30,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-black-star",
+  "name": "Black Star",
+  "series": "Soul Eater",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 25,
+   "power": 19,
+   "temperament": 26,
+   "running": 28
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 54,
+   "variation": 52,
+   "stamina": 42
+  },
+  "fielding": 42,
+  "traits": [],
+  "potential": 78
+ },
+ {
+  "id": "yt-death-the-kid",
+  "name": "Death the Kid",
+  "series": "Soul Eater",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 24,
+   "power": 25,
+   "temperament": 27,
+   "running": 27
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 54,
+   "variation": 51,
+   "stamina": 56
+  },
+  "fielding": 50,
+  "traits": [],
+  "potential": 67
+ },
+ {
+  "id": "yt-tsubaki-nakatsukasa",
+  "name": "Tsubaki Nakatsukasa",
+  "series": "Soul Eater",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 54,
+   "power": 60,
+   "temperament": 57,
+   "running": 60
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 57,
+   "variation": 53,
+   "stamina": 59
+  },
+  "fielding": 54,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-crona",
+  "name": "Crona",
+  "series": "Soul Eater",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 16,
+   "power": 19,
+   "temperament": 31,
+   "running": 25
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 50,
+   "variation": 47,
+   "stamina": 50
+  },
+  "fielding": 48,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-yusuke-urameshi",
+  "name": "Yusuke Urameshi",
+  "series": "Yu Yu Hakusho: Ghostfiles",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 48,
+   "temperament": 53,
+   "running": 48
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 53,
+   "variation": 54,
+   "stamina": 49
+  },
+  "fielding": 57,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 89
+ },
+ {
+  "id": "yt-kazuma-kuwabara",
+  "name": "Kazuma Kuwabara",
+  "series": "Yu Yu Hakusho: Ghostfiles",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 58,
+   "power": 53,
+   "temperament": 55,
+   "running": 47
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 56,
+   "variation": 55,
+   "stamina": 58
+  },
+  "fielding": 54,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 75
+ },
+ {
+  "id": "yt-kurama",
+  "name": "Kurama",
+  "series": "Yu Yu Hakusho: Ghostfiles",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 45,
+   "temperament": 39,
+   "running": 41
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 46,
+   "variation": 40,
+   "stamina": 35
+  },
+  "fielding": 42,
+  "traits": [],
+  "potential": 77
+ },
+ {
+  "id": "yt-hiei",
+  "name": "Hiei",
+  "series": "Yu Yu Hakusho: Ghostfiles",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 56,
+   "power": 58,
+   "temperament": 58,
+   "running": 44
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 57,
+   "variation": 48,
+   "stamina": 46
+  },
+  "fielding": 64,
+  "traits": [],
+  "potential": 86
+ },
+ {
+  "id": "yt-genkai",
+  "name": "Genkai",
+  "series": "Yu Yu Hakusho: Ghostfiles",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 25,
+   "power": 29,
+   "temperament": 26,
+   "running": 33
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 52,
+   "variation": 54,
+   "stamina": 46
+  },
+  "fielding": 47,
+  "traits": [],
+  "potential": 88
+ },
+ {
+  "id": "yt-younger-toguro",
+  "name": "Younger Toguro",
+  "series": "Yu Yu Hakusho: Ghostfiles",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 56,
+   "power": 56,
+   "temperament": 52,
+   "running": 53
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 57,
+   "variation": 52,
+   "stamina": 50
+  },
+  "fielding": 55,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-gintoki-sakata",
+  "name": "Gintoki Sakata",
+  "series": "Gintama",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 56,
+   "power": 54,
+   "temperament": 57,
+   "running": 49
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [],
+  "potential": 76
+ },
+ {
+  "id": "yt-shinpachi-shimura",
+  "name": "Shinpachi Shimura",
+  "series": "Gintama",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 52,
+   "temperament": 51,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 49,
+  "traits": [
+   "weak-vs-spin"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-kagura",
+  "name": "Kagura",
+  "series": "Gintama",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 34,
+   "power": 36,
+   "temperament": 34,
+   "running": 31
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 38,
+   "variation": 30,
+   "stamina": 28
+  },
+  "fielding": 33,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-sougo-okita",
+  "name": "Sougo Okita",
+  "series": "Gintama",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 44,
+   "power": 51,
+   "temperament": 47,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 62
+ },
+ {
+  "id": "yt-isao-kondo",
+  "name": "Isao Kondo",
+  "series": "Gintama",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 51,
+   "power": 54,
+   "temperament": 55,
+   "running": 51
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [],
+  "potential": 69
+ },
+ {
+  "id": "yt-shinsuke-takasugi",
+  "name": "Shinsuke Takasugi",
+  "series": "Gintama",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 35,
+   "power": 39,
+   "temperament": 36,
+   "running": 39
+  },
+  "bowling": null,
+  "fielding": 49,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 64
+ },
+ {
+  "id": "yt-spike-spiegel",
+  "name": "Spike Spiegel",
+  "series": "Cowboy Bebop",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 34,
+   "power": 43,
+   "temperament": 42,
+   "running": 28
+  },
+  "bowling": null,
+  "fielding": 46,
+  "traits": [],
+  "potential": 53
+ },
+ {
+  "id": "yt-jet-black",
+  "name": "Jet Black",
+  "series": "Cowboy Bebop",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 25,
+   "power": 20,
+   "temperament": 34,
+   "running": 25
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 55,
+   "variation": 54,
+   "stamina": 46
+  },
+  "fielding": 54,
+  "traits": [],
+  "potential": 66
+ },
+ {
+  "id": "yt-faye-valentine",
+  "name": "Faye Valentine",
+  "series": "Cowboy Bebop",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 46,
+   "temperament": 48,
+   "running": 48
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 45,
+   "variation": 43,
+   "stamina": 35
+  },
+  "fielding": 50,
+  "traits": [],
+  "potential": 67
+ },
+ {
+  "id": "yt-edward-wong",
+  "name": "Edward Wong",
+  "series": "Cowboy Bebop",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 43,
+   "power": 48,
+   "temperament": 39,
+   "running": 43
+  },
+  "bowling": null,
+  "fielding": 39,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 58
+ },
+ {
+  "id": "yt-shinji-ikari",
+  "name": "Shinji Ikari",
+  "series": "Neon Genesis Evangelion",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 23,
+   "power": 27,
+   "temperament": 32,
+   "running": 27
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 53,
+   "variation": 52,
+   "stamina": 51
+  },
+  "fielding": 47,
+  "traits": [],
+  "potential": 87
+ },
+ {
+  "id": "yt-rei-ayanami",
+  "name": "Rei Ayanami",
+  "series": "Neon Genesis Evangelion",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 27,
+   "power": 28,
+   "temperament": 34,
+   "running": 36
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 31,
+   "variation": 35,
+   "stamina": 24
+  },
+  "fielding": 29,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 51
+ },
+ {
+  "id": "yt-asuka-langley",
+  "name": "Asuka Langley",
+  "series": "Neon Genesis Evangelion",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 31,
+   "temperament": 31,
+   "running": 30
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 60,
+   "variation": 58,
+   "stamina": 52
+  },
+  "fielding": 55,
+  "traits": [],
+  "potential": 72
+ },
+ {
+  "id": "yt-misato-katsuragi",
+  "name": "Misato Katsuragi",
+  "series": "Neon Genesis Evangelion",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 34,
+   "power": 36,
+   "temperament": 31,
+   "running": 38
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 36,
+   "variation": 34,
+   "stamina": 41
+  },
+  "fielding": 37,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 62
+ },
+ {
+  "id": "yt-kaworu-nagisa",
+  "name": "Kaworu Nagisa",
+  "series": "Neon Genesis Evangelion",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 52,
+   "power": 57,
+   "temperament": 54,
+   "running": 52
+  },
+  "bowling": null,
+  "fielding": 45,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 86
+ },
+ {
+  "id": "yt-hanamichi-sakuragi",
+  "name": "Hanamichi Sakuragi",
+  "series": "Slam Dunk",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 57,
+   "power": 50,
+   "temperament": 60,
+   "running": 54
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 59,
+   "variation": 57,
+   "stamina": 50
+  },
+  "fielding": 53,
+  "traits": [],
+  "potential": 88
+ },
+ {
+  "id": "yt-kaede-rukawa",
+  "name": "Kaede Rukawa",
+  "series": "Slam Dunk",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 46,
+   "power": 40,
+   "temperament": 42,
+   "running": 46
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 42,
+   "variation": 45,
+   "stamina": 34
+  },
+  "fielding": 48,
+  "traits": [],
+  "potential": 77
+ },
+ {
+  "id": "yt-takenori-akagi",
+  "name": "Takenori Akagi",
+  "series": "Slam Dunk",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 46,
+   "power": 47,
+   "temperament": 47,
+   "running": 36
+  },
+  "bowling": null,
+  "fielding": 35,
+  "traits": [],
+  "potential": 73
+ },
+ {
+  "id": "yt-hisashi-mitsui",
+  "name": "Hisashi Mitsui",
+  "series": "Slam Dunk",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 49,
+   "power": 45,
+   "temperament": 44,
+   "running": 39
+  },
+  "bowling": null,
+  "fielding": 47,
+  "traits": [],
+  "potential": 83
+ },
+ {
+  "id": "yt-yoichi-isagi",
+  "name": "Yoichi Isagi",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 39,
+   "power": 38,
+   "temperament": 32,
+   "running": 32
+  },
+  "bowling": null,
+  "fielding": 46,
+  "traits": [],
+  "potential": 58
+ },
+ {
+  "id": "yt-meguru-bachira",
+  "name": "Meguru Bachira",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 50,
+   "power": 54,
+   "temperament": 59,
+   "running": 52
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 57,
+   "variation": 55,
+   "stamina": 44
+  },
+  "fielding": 58,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 88
+ },
+ {
+  "id": "yt-rin-itoshi",
+  "name": "Rin Itoshi",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 43,
+   "temperament": 41,
+   "running": 43
+  },
+  "bowling": null,
+  "fielding": 34,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-reo-mikage",
+  "name": "Reo Mikage",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 46,
+   "temperament": 50,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 60,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 64
+ },
+ {
+  "id": "yt-rensuke-kunigami",
+  "name": "Rensuke Kunigami",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 32,
+   "power": 34,
+   "temperament": 34,
+   "running": 32
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 31,
+   "variation": 40,
+   "stamina": 41
+  },
+  "fielding": 36,
+  "traits": [],
+  "potential": 78
+ },
+ {
+  "id": "yt-hyoma-chigiri",
+  "name": "Hyoma Chigiri",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 37,
+   "power": 35,
+   "temperament": 37,
+   "running": 34
+  },
+  "bowling": null,
+  "fielding": 51,
+  "traits": [
+   "electric-fielder"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-sae-itoshi",
+  "name": "Sae Itoshi",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 50,
+   "temperament": 43,
+   "running": 37
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 49,
+   "variation": 44,
+   "stamina": 43
+  },
+  "fielding": 54,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-michael-kaiser",
+  "name": "Michael Kaiser",
+  "series": "Blue Lock",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 51,
+   "temperament": 50,
+   "running": 53
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [],
+  "potential": 78
+ },
+ {
+  "id": "yt-frieren",
+  "name": "Frieren",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 38,
+   "temperament": 48,
+   "running": 47
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 39,
+   "variation": 43,
+   "stamina": 34
+  },
+  "fielding": 46,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-fern",
+  "name": "Fern",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 18,
+   "power": 21,
+   "temperament": 23,
+   "running": 26
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 41,
+   "variation": 34,
+   "stamina": 27
+  },
+  "fielding": 36,
+  "traits": [],
+  "potential": 71
+ },
+ {
+  "id": "yt-stark",
+  "name": "Stark",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 11,
+   "power": 15,
+   "temperament": 18,
+   "running": 18
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 32,
+   "variation": 40,
+   "stamina": 41
+  },
+  "fielding": 37,
+  "traits": [],
+  "potential": 51
+ },
+ {
+  "id": "yt-himmel",
+  "name": "Himmel",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 50,
+   "power": 52,
+   "temperament": 50,
+   "running": 46
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [],
+  "potential": 66
+ },
+ {
+  "id": "yt-heiter",
+  "name": "Heiter",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 27,
+   "power": 27,
+   "temperament": 31,
+   "running": 35
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 51,
+   "variation": 61,
+   "stamina": 58
+  },
+  "fielding": 44,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 86
+ },
+ {
+  "id": "yt-eisen",
+  "name": "Eisen",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 50,
+   "power": 46,
+   "temperament": 49,
+   "running": 50
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 41,
+   "variation": 44,
+   "stamina": 45
+  },
+  "fielding": 54,
+  "traits": [],
+  "potential": 83
+ },
+ {
+  "id": "yt-ubel",
+  "name": "Ubel",
+  "series": "Frieren: Beyond Journey’s End",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 54,
+   "temperament": 62,
+   "running": 54
+  },
+  "bowling": null,
+  "fielding": 61,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-ikkaku-madarame",
+  "name": "Ikkaku Madarame",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 33,
+   "temperament": 39,
+   "running": 42
+  },
+  "bowling": null,
+  "fielding": 33,
+  "traits": [],
+  "potential": 68
+ },
+ {
+  "id": "yt-yumichika-ayasegawa",
+  "name": "Yumichika Ayasegawa",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 53,
+   "power": 53,
+   "temperament": 47,
+   "running": 55
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-rangiku-matsumoto",
+  "name": "Rangiku Matsumoto",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 50,
+   "temperament": 49,
+   "running": 51
+  },
+  "bowling": null,
+  "fielding": 53,
+  "traits": [],
+  "potential": 69
+ },
+ {
+  "id": "yt-gin-ichimaru",
+  "name": "Gin Ichimaru",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 31,
+   "power": 31,
+   "temperament": 28,
+   "running": 27
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 32,
+   "variation": 34,
+   "stamina": 27
+  },
+  "fielding": 41,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 60
+ },
+ {
+  "id": "yt-soi-fon",
+  "name": "Soi Fon",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 40,
+   "power": 37,
+   "temperament": 36,
+   "running": 30
+  },
+  "bowling": null,
+  "fielding": 28,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-grimmjow-jaegerjaquez",
+  "name": "Grimmjow Jaegerjaquez",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 56,
+   "power": 57,
+   "temperament": 52,
+   "running": 46
+  },
+  "bowling": null,
+  "fielding": 47,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-ulquiorra-cifer",
+  "name": "Ulquiorra Cifer",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 57,
+   "temperament": 48,
+   "running": 55
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 57,
+   "variation": 48,
+   "stamina": 58
+  },
+  "fielding": 56,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-coyote-starrk",
+  "name": "Coyote Starrk",
+  "series": "Bleach",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 56,
+   "power": 55,
+   "temperament": 50,
+   "running": 54
+  },
+  "bowling": null,
+  "fielding": 57,
+  "traits": [],
+  "potential": 70
+ },
+ {
+  "id": "yt-boruto-uzumaki",
+  "name": "Boruto Uzumaki",
+  "series": "The Last: Naruto the Movie",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 39,
+   "power": 32,
+   "temperament": 38,
+   "running": 39
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 35,
+   "variation": 35,
+   "stamina": 29
+  },
+  "fielding": 34,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 58
+ },
+ {
+  "id": "yt-sarada-uchiha",
+  "name": "Sarada Uchiha",
+  "series": "Boruto: Naruto the Movie",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 14,
+   "power": 18,
+   "temperament": 23,
+   "running": 16
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 42,
+   "variation": 41,
+   "stamina": 35
+  },
+  "fielding": 25,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 71
+ },
+ {
+  "id": "yt-mitsuki",
+  "name": "Mitsuki",
+  "series": "Boruto: Naruto the Movie",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 62,
+   "power": 62,
+   "temperament": 55,
+   "running": 52
+  },
+  "bowling": null,
+  "fielding": 50,
+  "traits": [],
+  "potential": 78
+ },
+ {
+  "id": "yt-konohamaru-sarutobi",
+  "name": "Konohamaru Sarutobi",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 40,
+   "power": 42,
+   "temperament": 42,
+   "running": 35
+  },
+  "bowling": null,
+  "fielding": 27,
+  "traits": [],
+  "potential": 73
+ },
+ {
+  "id": "yt-kiba-inuzuka",
+  "name": "Kiba Inuzuka",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 14,
+   "power": 18,
+   "temperament": 18,
+   "running": 23
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 43,
+   "variation": 44,
+   "stamina": 32
+  },
+  "fielding": 31,
+  "traits": [],
+  "potential": 66
+ },
+ {
+  "id": "yt-shino-aburame",
+  "name": "Shino Aburame",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 46,
+   "power": 40,
+   "temperament": 41,
+   "running": 48
+  },
+  "bowling": null,
+  "fielding": 37,
+  "traits": [],
+  "potential": 71
+ },
+ {
+  "id": "yt-tenten",
+  "name": "Tenten",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 15,
+   "power": 22,
+   "temperament": 21,
+   "running": 23
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 44,
+   "variation": 48,
+   "stamina": 45
+  },
+  "fielding": 45,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 73
+ },
+ {
+  "id": "yt-temari",
+  "name": "Temari",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 28,
+   "power": 28,
+   "temperament": 28,
+   "running": 37
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 33,
+   "variation": 29,
+   "stamina": 33
+  },
+  "fielding": 31,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 55
+ },
+ {
+  "id": "yt-kankuro",
+  "name": "Kankuro",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 34,
+   "power": 39,
+   "temperament": 34,
+   "running": 35
+  },
+  "bowling": null,
+  "fielding": 43,
+  "traits": [
+   "weak-vs-spin"
+  ],
+  "potential": 53
+ },
+ {
+  "id": "yt-kakuzu",
+  "name": "Kakuzu",
+  "series": "Naruto: Shippuden",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "L",
+  "batting": {
+   "technique": 36,
+   "power": 43,
+   "temperament": 40,
+   "running": 36
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [],
+  "potential": 59
+ },
+ {
+  "id": "yt-hidan",
+  "name": "Hidan",
+  "series": "Naruto: Shippuden",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 51,
+   "power": 41,
+   "temperament": 44,
+   "running": 45
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 50,
+   "variation": 49,
+   "stamina": 43
+  },
+  "fielding": 44,
+  "traits": [],
+  "potential": 76
+ },
+ {
+  "id": "yt-deidara",
+  "name": "Deidara",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 14,
+   "power": 17,
+   "temperament": 18,
+   "running": 19
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 45,
+   "variation": 35,
+   "stamina": 37
+  },
+  "fielding": 35,
+  "traits": [
+   "economical"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-sasori",
+  "name": "Sasori",
+  "series": "Naruto: Shippuden",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 46,
+   "temperament": 47,
+   "running": 43
+  },
+  "bowling": null,
+  "fielding": 33,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-kisame-hoshigaki",
+  "name": "Kisame Hoshigaki",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 54,
+   "power": 59,
+   "temperament": 59,
+   "running": 53
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 54,
+   "variation": 49,
+   "stamina": 59
+  },
+  "fielding": 53,
+  "traits": [],
+  "potential": 92
+ },
+ {
+  "id": "yt-kushina-uzumaki",
+  "name": "Kushina Uzumaki",
+  "series": "Naruto: Shippuden",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 43,
+   "power": 40,
+   "temperament": 39,
+   "running": 46
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 50,
+   "variation": 41,
+   "stamina": 43
+  },
+  "fielding": 44,
+  "traits": [],
+  "potential": 76
+ },
+ {
+  "id": "yt-tobirama-senju",
+  "name": "Tobirama Senju",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 24,
+   "power": 21,
+   "temperament": 31,
+   "running": 25
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 47,
+   "variation": 56,
+   "stamina": 48
+  },
+  "fielding": 52,
+  "traits": [
+   "death-specialist"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-hashirama-senju",
+  "name": "Hashirama Senju",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 29,
+   "temperament": 33,
+   "running": 30
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 55,
+   "variation": 50,
+   "stamina": 45
+  },
+  "fielding": 45,
+  "traits": [],
+  "potential": 92
+ },
+ {
+  "id": "yt-killer-bee",
+  "name": "Killer Bee",
+  "series": "Naruto: Shippuden",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 22,
+   "power": 25,
+   "temperament": 32,
+   "running": 28
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 48,
+   "variation": 46,
+   "stamina": 52
+  },
+  "fielding": 46,
+  "traits": [
+   "death-specialist"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-kabuto-yakushi",
+  "name": "Kabuto Yakushi",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 48,
+   "power": 45,
+   "temperament": 52,
+   "running": 44
+  },
+  "bowling": null,
+  "fielding": 42,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 74
+ },
+ {
+  "id": "yt-zabuza-momochi",
+  "name": "Zabuza Momochi",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 57,
+   "power": 60,
+   "temperament": 62,
+   "running": 52
+  },
+  "bowling": null,
+  "fielding": 58,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 75
+ },
+ {
+  "id": "yt-haku",
+  "name": "Haku",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 14,
+   "power": 14,
+   "temperament": 25,
+   "running": 18
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 36,
+   "variation": 36,
+   "stamina": 26
+  },
+  "fielding": 24,
+  "traits": [
+   "economical"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-anko-mitarashi",
+  "name": "Anko Mitarashi",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 42,
+   "power": 50,
+   "temperament": 42,
+   "running": 45
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 50,
+   "variation": 51,
+   "stamina": 48
+  },
+  "fielding": 58,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 77
+ },
+ {
+  "id": "yt-ino-yamanaka",
+  "name": "Ino Yamanaka",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 38,
+   "power": 34,
+   "temperament": 33,
+   "running": 26
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 30,
+   "variation": 36,
+   "stamina": 31
+  },
+  "fielding": 41,
+  "traits": [],
+  "potential": 60
+ },
+ {
+  "id": "yt-sakura-haruno",
+  "name": "Sakura Haruno",
+  "series": "Naruto",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 52,
+   "power": 57,
+   "temperament": 52,
+   "running": 56
+  },
+  "bowling": null,
+  "fielding": 64,
+  "traits": [
+   "safe-hands"
+  ],
+  "potential": 80
+ },
+ {
+  "id": "yt-tsuyu-asui",
+  "name": "Tsuyu Asui",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 42,
+   "power": 43,
+   "temperament": 45,
+   "running": 44
+  },
+  "bowling": null,
+  "fielding": 51,
+  "traits": [],
+  "potential": 73
+ },
+ {
+  "id": "yt-denki-kaminari",
+  "name": "Denki Kaminari",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 44,
+   "power": 51,
+   "temperament": 42,
+   "running": 43
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 44,
+   "variation": 48,
+   "stamina": 47
+  },
+  "fielding": 54,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 84
+ },
+ {
+  "id": "yt-fumikage-tokoyami",
+  "name": "Fumikage Tokoyami",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 56,
+   "power": 49,
+   "temperament": 57,
+   "running": 49
+  },
+  "bowling": null,
+  "fielding": 46,
+  "traits": [],
+  "potential": 68
+ },
+ {
+  "id": "yt-hitoshi-shinso",
+  "name": "Hitoshi Shinso",
+  "series": "My Hero Academia Season 2",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 11,
+   "power": 17,
+   "temperament": 24,
+   "running": 22
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 42,
+   "variation": 35,
+   "stamina": 32
+  },
+  "fielding": 33,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 66
+ },
+ {
+  "id": "yt-tamaki-amajiki",
+  "name": "Tamaki Amajiki",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 24,
+   "power": 29,
+   "temperament": 34,
+   "running": 31
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 52,
+   "variation": 49,
+   "stamina": 45
+  },
+  "fielding": 42,
+  "traits": [],
+  "potential": 79
+ },
+ {
+  "id": "yt-nejire-hado",
+  "name": "Nejire Hado",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 20,
+   "power": 18,
+   "temperament": 29,
+   "running": 28
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 46,
+   "variation": 46,
+   "stamina": 49
+  },
+  "fielding": 48,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 81
+ },
+ {
+  "id": "yt-keigo-takami",
+  "name": "Keigo Takami",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 41,
+   "power": 37,
+   "temperament": 33,
+   "running": 40
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 41,
+   "variation": 32,
+   "stamina": 39
+  },
+  "fielding": 45,
+  "traits": [],
+  "potential": 62
+ },
+ {
+  "id": "yt-enji-todoroki",
+  "name": "Enji Todoroki",
+  "series": "My Hero Academia Season 2",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 19,
+   "power": 15,
+   "temperament": 25,
+   "running": 26
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 44,
+   "variation": 46,
+   "stamina": 45
+  },
+  "fielding": 40,
+  "traits": [],
+  "potential": 80
+ },
+ {
+  "id": "yt-himiko-toga",
+  "name": "Himiko Toga",
+  "series": "My Hero Academia Season 2",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 45,
+   "power": 49,
+   "temperament": 56,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 53,
+  "traits": [],
+  "potential": 63
+ },
+ {
+  "id": "yt-kyoka-jiro",
+  "name": "Kyoka Jiro",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 17,
+   "power": 17,
+   "temperament": 25,
+   "running": 24
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 34,
+   "variation": 32,
+   "stamina": 29
+  },
+  "fielding": 40,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-mezo-shoji",
+  "name": "Mezo Shoji",
+  "series": "My Hero Academia",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 24,
+   "power": 21,
+   "temperament": 31,
+   "running": 36
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 58,
+   "variation": 60,
+   "stamina": 45
+  },
+  "fielding": 56,
+  "traits": [
+   "economical"
+  ],
+  "potential": 68
+ },
+ {
+  "id": "yt-nezuko-kamado",
+  "name": "Nezuko Kamado",
+  "series": "Demon Slayer: Kimetsu no Yaiba",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 46,
+   "temperament": 43,
+   "running": 46
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 41,
+   "variation": 43,
+   "stamina": 37
+  },
+  "fielding": 48,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 77
+ },
+ {
+  "id": "yt-muzan-kibutsuji",
+  "name": "Muzan Kibutsuji",
+  "series": "Demon Slayer: Kimetsu no Yaiba",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 37,
+   "power": 42,
+   "temperament": 42,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 52,
+  "traits": [],
+  "potential": 59
+ },
+ {
+  "id": "yt-sasha-blouse",
+  "name": "Sasha Blouse",
+  "series": "Attack on Titan",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 42,
+   "power": 40,
+   "temperament": 39,
+   "running": 38
+  },
+  "bowling": null,
+  "fielding": 44,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 49
+ },
+ {
+  "id": "yt-falco-grice",
+  "name": "Falco Grice",
+  "series": "Attack on Titan",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 21,
+   "power": 27,
+   "temperament": 37,
+   "running": 33
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 57,
+   "variation": 62,
+   "stamina": 58
+  },
+  "fielding": 47,
+  "traits": [
+   "powerplay-specialist"
+  ],
+  "potential": 92
+ },
+ {
+  "id": "yt-gabi-braun",
+  "name": "Gabi Braun",
+  "series": "Attack on Titan",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 45,
+   "power": 44,
+   "temperament": 49,
+   "running": 42
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 48,
+   "variation": 49,
+   "stamina": 37
+  },
+  "fielding": 55,
+  "traits": [
+   "unpredictable"
+  ],
+  "potential": 76
+ },
+ {
+  "id": "yt-pieck-finger",
+  "name": "Pieck Finger",
+  "series": "Attack on Titan",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 14,
+   "power": 18,
+   "temperament": 23,
+   "running": 26
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 34,
+   "variation": 35,
+   "stamina": 33
+  },
+  "fielding": 34,
+  "traits": [],
+  "potential": 68
+ },
+ {
+  "id": "yt-sabo",
+  "name": "Sabo",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 37,
+   "temperament": 36,
+   "running": 45
+  },
+  "bowling": null,
+  "fielding": 40,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 79
+ },
+ {
+  "id": "yt-eustass-kid",
+  "name": "Eustass Kid",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 59,
+   "power": 59,
+   "temperament": 61,
+   "running": 46
+  },
+  "bowling": null,
+  "fielding": 48,
+  "traits": [
+   "slow-starter"
+  ],
+  "potential": 72
+ },
+ {
+  "id": "yt-boa-hancock",
+  "name": "Boa Hancock",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 39,
+   "power": 45,
+   "temperament": 46,
+   "running": 41
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 45,
+   "variation": 40,
+   "stamina": 44
+  },
+  "fielding": 49,
+  "traits": [
+   "clutch"
+  ],
+  "potential": 71
+ },
+ {
+  "id": "yt-buggy",
+  "name": "Buggy",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 41,
+   "power": 41,
+   "temperament": 42,
+   "running": 46
+  },
+  "bowling": null,
+  "fielding": 45,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 69
+ },
+ {
+  "id": "yt-crocodile",
+  "name": "Crocodile",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 41,
+   "power": 43,
+   "temperament": 45,
+   "running": 41
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 44,
+   "variation": 40,
+   "stamina": 38
+  },
+  "fielding": 46,
+  "traits": [
+   "big-match"
+  ],
+  "potential": 79
+ },
+ {
+  "id": "yt-donquixote-doflamingo",
+  "name": "Donquixote Doflamingo",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 49,
+   "power": 51,
+   "temperament": 46,
+   "running": 45
+  },
+  "bowling": {
+   "type": "leftspin",
+   "accuracy": 54,
+   "variation": 47,
+   "stamina": 56
+  },
+  "fielding": 57,
+  "traits": [],
+  "potential": 73
+ },
+ {
+  "id": "yt-charlotte-katakuri",
+  "name": "Charlotte Katakuri",
+  "series": "ONE PIECE",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "L",
+  "batting": {
+   "technique": 15,
+   "power": 21,
+   "temperament": 25,
+   "running": 18
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 40,
+   "variation": 40,
+   "stamina": 36
+  },
+  "fielding": 34,
+  "traits": [],
+  "potential": 58
+ },
+ {
+  "id": "yt-videl",
+  "name": "Videl",
+  "series": "Dragon Ball GT",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 15,
+   "power": 21,
+   "temperament": 24,
+   "running": 21
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 35,
+   "variation": 33,
+   "stamina": 30
+  },
+  "fielding": 29,
+  "traits": [],
+  "potential": 60
+ },
+ {
+  "id": "yt-goten",
+  "name": "Goten",
+  "series": "Dragon Ball GT",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 12,
+   "power": 21,
+   "temperament": 22,
+   "running": 25
+  },
+  "bowling": {
+   "type": "legspin",
+   "accuracy": 41,
+   "variation": 36,
+   "stamina": 38
+  },
+  "fielding": 30,
+  "traits": [
+   "death-specialist"
+  ],
+  "potential": 59
+ },
+ {
+  "id": "yt-jiren",
+  "name": "Jiren",
+  "series": "Dragon Ball Super",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "L",
+  "batting": {
+   "technique": 46,
+   "power": 47,
+   "temperament": 55,
+   "running": 41
+  },
+  "bowling": null,
+  "fielding": 61,
+  "traits": [],
+  "potential": 83
+ },
+ {
+  "id": "yt-cabba",
+  "name": "Cabba",
+  "series": "Dragon Ball Super",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 55,
+   "power": 45,
+   "temperament": 56,
+   "running": 52
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 45,
+   "variation": 46,
+   "stamina": 48
+  },
+  "fielding": 48,
+  "traits": [],
+  "potential": 84
+ },
+ {
+  "id": "yt-caulifla",
+  "name": "Caulifla",
+  "series": "Dragon Ball Super",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 35,
+   "power": 41,
+   "temperament": 43,
+   "running": 27
+  },
+  "bowling": null,
+  "fielding": 39,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 71
+ },
+ {
+  "id": "yt-broly",
+  "name": "Broly",
+  "series": "Dragon Ball Z: Broly - The Legendary Super Saiyan",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "L",
+  "batting": {
+   "technique": 51,
+   "power": 43,
+   "temperament": 47,
+   "running": 46
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 46,
+   "variation": 41,
+   "stamina": 39
+  },
+  "fielding": 46,
+  "traits": [
+   "wicket-taker"
+  ],
+  "potential": 71
+ },
+ {
+  "id": "yt-bardock",
+  "name": "Bardock",
+  "series": "Dragon Ball Z",
+  "universe": "anime",
+  "role": "WK",
+  "hand": "R",
+  "batting": {
+   "technique": 50,
+   "power": 48,
+   "temperament": 54,
+   "running": 38
+  },
+  "bowling": null,
+  "fielding": 59,
+  "traits": [
+   "anchor"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-raditz",
+  "name": "Raditz",
+  "series": "Dragon Ball Z",
+  "universe": "anime",
+  "role": "BOWL",
+  "hand": "R",
+  "batting": {
+   "technique": 15,
+   "power": 25,
+   "temperament": 30,
+   "running": 26
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 50,
+   "variation": 55,
+   "stamina": 41
+  },
+  "fielding": 49,
+  "traits": [],
+  "potential": 67
+ },
+ {
+  "id": "yt-nappa",
+  "name": "Nappa",
+  "series": "Dragon Ball GT",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 48,
+   "temperament": 48,
+   "running": 40
+  },
+  "bowling": null,
+  "fielding": 46,
+  "traits": [
+   "big-hitter"
+  ],
+  "potential": 63
+ },
+ {
+  "id": "yt-bulma",
+  "name": "Bulma",
+  "series": "Dragon Ball",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 47,
+   "power": 51,
+   "temperament": 57,
+   "running": 49
+  },
+  "bowling": {
+   "type": "fast",
+   "accuracy": 48,
+   "variation": 46,
+   "stamina": 49
+  },
+  "fielding": 49,
+  "traits": [],
+  "potential": 92
+ },
+ {
+  "id": "yt-ling-yao",
+  "name": "Ling Yao",
+  "series": "Fullmetal Alchemist: Brotherhood",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 43,
+   "power": 38,
+   "temperament": 37,
+   "running": 30
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 40,
+   "variation": 36,
+   "stamina": 45
+  },
+  "fielding": 40,
+  "traits": [],
+  "potential": 65
+ },
+ {
+  "id": "yt-nanami-kento",
+  "name": "Nanami Kento",
+  "series": "Jujutsu Kaisen",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 43,
+   "temperament": 45,
+   "running": 42
+  },
+  "bowling": {
+   "type": "offspin",
+   "accuracy": 43,
+   "variation": 44,
+   "stamina": 45
+  },
+  "fielding": 47,
+  "traits": [],
+  "potential": 61
+ },
+ {
+  "id": "yt-jogo",
+  "name": "Jogo",
+  "series": "Jujutsu Kaisen",
+  "universe": "anime",
+  "role": "AR",
+  "hand": "R",
+  "batting": {
+   "technique": 37,
+   "power": 34,
+   "temperament": 29,
+   "running": 37
+  },
+  "bowling": {
+   "type": "medium",
+   "accuracy": 33,
+   "variation": 35,
+   "stamina": 34
+  },
+  "fielding": 41,
+  "traits": [
+   "finisher"
+  ],
+  "potential": 50
+ },
+ {
+  "id": "yt-hanami",
+  "name": "Hanami",
+  "series": "Jujutsu Kaisen",
+  "universe": "anime",
+  "role": "BAT",
+  "hand": "R",
+  "batting": {
+   "technique": 38,
+   "power": 32,
+   "temperament": 38,
+   "running": 34
+  },
+  "bowling": null,
+  "fielding": 33,
+  "traits": [],
+  "potential": 61
+ }
+]

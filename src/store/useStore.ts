@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from '../season/generate'
 import { lastPlayedXI } from '../season/selection'
+import { advanceMarket, initMarket, marketWindows, playerIndex } from '../season/market'
 import { recordResult } from '../season/results'
 import { appendAction, type Action } from '../engine/replay'
 import type { Difficulty } from '../engine/types'
@@ -78,6 +79,8 @@ interface State {
   deleteSession: (id: string) => void
   /** Replace the active session's season with the result of `fn`. */
   updateSeason: (fn: (s: Season) => Season) => void
+  /** Older careers have no market yet: set one up (squads as they are, 40 youth in the pool, a purse each). */
+  ensureMarket: () => void
   /** Records a finished fixture in the active session, e.g. after watching it live. */
   recordMatch: (summary: RawSummary, date: string) => void
   /** The match in progress (null when there isn't one). Lives until it ends or is discarded. */
@@ -128,9 +131,23 @@ export const useStore = create<State>()(
           const sessions = st.sessions.filter((x) => x.id !== id)
           return { sessions, activeSessionId: st.activeSessionId === id ? (sessions[sessions.length - 1]?.id ?? null) : st.activeSessionId }
         }),
+      ensureMarket: () =>
+        set((st) => ({
+          sessions: st.sessions.map((x) => {
+            if (x.id !== st.activeSessionId || (x.season.market && x.season.windows)) return x
+            const teams = resolveTeams(st.customTeams, st.overrides).filter((t) => x.season.teamIds.includes(t.id))
+            return { ...x, season: { ...x.season, windows: x.season.windows ?? marketWindows(x.season.year), market: x.season.market ?? initMarket(teams, x.season.seed) } }
+          }),
+        })),
       updateSeason: (fn) =>
         set((st) => ({
-          sessions: st.sessions.map((x) => (x.id === st.activeSessionId ? { ...x, season: fn(x.season), updatedAt: new Date().toISOString() } : x)),
+          sessions: st.sessions.map((x) => {
+            if (x.id !== st.activeSessionId) return x
+            const next = fn(x.season)
+            // as the days of a market window go by, the computer teams do their shopping
+            const season = advanceMarket(x.season, next, () => playerIndex(resolveTeams(st.customTeams, st.overrides), next.market))
+            return { ...x, season, updatedAt: new Date().toISOString() }
+          }),
         })),
       recordMatch: (summary, date) =>
         set((st) => ({
@@ -140,7 +157,8 @@ export const useStore = create<State>()(
             // the match's players are graded on how they did, and their ratings move a little
             const teams = new Map(resolveTeams(st.customTeams, st.overrides).map((t) => [t.id, t]))
             const next = recordResult(x.season, summary, teams)
-            return { ...x, season: { ...next, today: date > next.today ? date : next.today }, updatedAt: new Date().toISOString() }
+            const moved = { ...next, today: date > next.today ? date : next.today }
+            return { ...x, season: advanceMarket(x.season, moved, () => playerIndex(resolveTeams(st.customTeams, st.overrides), moved.market)), updatedAt: new Date().toISOString() }
           }),
         })),
       liveMatch: null,

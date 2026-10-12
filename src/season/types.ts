@@ -76,6 +76,40 @@ export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played'> & {
   bowl: [string, number, number, number, number][]
 }
 
+/** A stretch of the year when players can be bought, sold and released. */
+export interface MarketWindow { id: string; name: string; start: string; end: string }
+
+/** One move in the market: a signing, a purchase from another team, or a release. */
+export interface Transfer {
+  id: string
+  date: string
+  playerId: string
+  name: string
+  /** The team he left (null = he was unsigned). */
+  from: string | null
+  /** The team he joined (null = released to the unsigned pool). */
+  to: string | null
+  fee: number
+  kind: 'sign' | 'buy' | 'release'
+}
+
+/** Who is on which team, who is unsigned, and what everyone can afford. Lives in the season so a career carries it forward. */
+export interface MarketState {
+  /** Current squad of every team, as player ids (the first are the usual XI). */
+  squads: Record<string, string[]>
+  /** Definitions of players who have moved from the team they started with (youth are looked up from the youth pool). */
+  players: Record<string, import('../types').Player>
+  /** Unsigned players you can sign now (this year's youth, plus anyone released). */
+  pool: string[]
+  /** Youth who have not been shown yet, drawn from as the years go by. */
+  reserve: string[]
+  /** What each unsigned player costs. */
+  asking: Record<string, number>
+  /** Coins each team can spend. */
+  budgets: Record<string, number>
+  log: Transfer[]
+}
+
 export interface Season {
   id: string
   year: number
@@ -100,6 +134,10 @@ export interface Season {
   startShifts?: Record<string, PlayerShift>
   /** What each played match did to each player's ratings (only players whose ratings moved), by fixture. */
   changes?: Record<string, Record<string, MatchDelta>>
+  /** Buying, selling and the unsigned pool (undefined in older saves until the market is set up). */
+  market?: MarketState
+  /** When the market is open this year. */
+  windows?: MarketWindow[]
   /** True once matches played before rating changes existed have been graded (new seasons have nothing to catch up on). */
   graded?: boolean
 }

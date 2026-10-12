@@ -4,7 +4,8 @@ import { Rng } from '../engine/rng'
 import type { MatchFormat, Team, TournamentDef } from '../types'
 import { addDays, daysBetween as daysBetweenISO, daysInYear, endOfYear, startOfYear } from './dates'
 import type { Difficulty } from '../engine/types'
-import type { Competition, Fixture, PlayerShift, Season, Slot } from './types'
+import { initMarket, marketWindows } from './market'
+import type { Competition, Fixture, MarketState, PlayerShift, Season, Slot } from './types'
 
 /**
  * Builds a whole year of cricket. Each tournament (founded by one team) takes a balanced share
@@ -211,11 +212,13 @@ export interface GenerateOptions {
   /** Career gains and losses carried over from earlier years. */
   shifts?: Record<string, PlayerShift>
   lineup?: Season['lineup']
+  /** The market carried over from the year before (a new career starts a fresh one). */
+  market?: MarketState
 }
 
 const structuredCloneShifts = (s: Record<string, PlayerShift>): Record<string, PlayerShift> => JSON.parse(JSON.stringify(s))
 
-export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, myTeamId = null, difficulty = 'normal', shifts, lineup }: GenerateOptions): Season {
+export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, myTeamId = null, difficulty = 'normal', shifts, lineup, market }: GenerateOptions): Season {
   if (teams.length < 4) throw new Error('A season needs at least 4 teams.')
   const rng = new Rng(seed)
   const strength = new Map(teams.map((t) => [t.id, teamStrength(t)]))
@@ -294,7 +297,7 @@ export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, m
     competitions.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id))
     return {
       id: `s${year}-${seed}`,
-      year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), graded: true, ...(shifts ? { shifts, startShifts: structuredCloneShifts(shifts) } : {}), ...(lineup ? { lineup } : {}),
+      year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), graded: true, windows: marketWindows(year), market: market ?? initMarket(teams, seed), ...(shifts ? { shifts, startShifts: structuredCloneShifts(shifts) } : {}), ...(lineup ? { lineup } : {}),
     }
   }
   throw new Error('Could not fit the season into the year.')

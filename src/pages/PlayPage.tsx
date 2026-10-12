@@ -8,7 +8,7 @@ import { useIsMobile } from '../hooks'
 import { teamStrength } from '../data/builders'
 import { randomSeed } from '../engine/rng'
 import { paths } from '../routes'
-import { useStore, useTeams } from '../store/useStore'
+import { selectSession, useStore, useTeams } from '../store/useStore'
 import type { MatchFormat, Team } from '../types'
 
 function Picker({ title, teams, value, disabledId, onPick }: { title: string; teams: Team[]; value: string | null; disabledId: string | null; onPick: (id: string) => void }) {
@@ -70,6 +70,7 @@ export function PlayPage() {
   const teams = useTeams()
   const navigate = useNavigate()
   const live = useStore((s) => s.liveMatch)
+  const career = useStore(selectSession)
   const discardLive = useStore((s) => s.discardLive)
   const [askDiscard, setAskDiscard] = useState(false)
   const [a, setA] = useState<string | null>(null)
@@ -149,6 +150,13 @@ export function PlayPage() {
           </button>
         </div>
 
+        {career && (
+          <div className="mt-6 rounded-3xl border-2 border-emerald-400/60 bg-gradient-to-r from-emerald-500/15 to-indigo-500/10 p-4 text-center">
+            <p className="mb-3 text-sm text-slate-200">Friendlies are for fun. Your career, <b className="text-white">{career.name}</b>, is waiting.</p>
+            <button onClick={() => navigate(paths.session())} className="cta-pulse h-14 w-full rounded-full bg-emerald-500 font-display text-2xl tracking-wider text-black active:bg-emerald-400">Continue career</button>
+          </div>
+        )}
+
         <AnimatePresence>
           {picking && <TeamPickSheet title={picking === 'a' ? 'Choose team A' : 'Choose team B'} teams={teams} disabledId={picking === 'a' ? b : a} onPick={(id) => { if (picking === 'a') setA(id); else setB(id); setPicking(null) }} onClose={() => setPicking(null)} />}
         </AnimatePresence>
@@ -199,6 +207,12 @@ export function PlayPage() {
         <Picker title="Team B" teams={teams} value={b} disabledId={a} onPick={setB} />
       </div>
 
+      {career && (
+        <div className="mt-6 rounded-3xl border-2 border-emerald-400/60 bg-gradient-to-r from-emerald-500/15 to-indigo-500/10 p-5 text-center">
+          <p className="mb-3 text-sm text-slate-200">Friendlies are for fun. Your career, <b className="text-white">{career.name}</b>, is waiting.</p>
+          <button onClick={() => navigate(paths.session())} className="cta-pulse w-full max-w-md rounded-full bg-emerald-500 px-8 py-4 font-display text-3xl leading-none tracking-wide text-black hover:bg-emerald-400 active:bg-emerald-400">Continue career</button>
+        </div>
+      )}
     </div>
   )
 }

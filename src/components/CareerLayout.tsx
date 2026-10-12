@@ -26,6 +26,8 @@ export function CareerLayout() {
   const viewed = useViewedSeason()
   const baseTeams = useBaseTeamMap()
   const updateSeason = useStore((s) => s.updateSeason)
+  const ensureMarket = useStore((s) => s.ensureMarket)
+  useEffect(() => { if (season && (!season.market || !season.windows)) ensureMarket() }, [season?.id, !!season?.market, !!season?.windows]) // eslint-disable-line react-hooks/exhaustive-deps
   // A career started before ratings changed with every match is caught up once, from the matches already played.
   useEffect(() => { if (season && !season.graded) updateSeason((s) => gradePlayedMatches(s, baseTeams)) }, [season?.graded, season?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // Only these pages can look back at a past year; the others always show the year being played.
@@ -39,6 +41,7 @@ export function CareerLayout() {
     [paths.session(), 'Calendar'],
     [paths.competitions, 'Tournaments'],
     [paths.stats, 'Stats'],
+    ...(mine ? ([[paths.market, 'Market']] as [string, string][]) : []),
     ...(mine ? ([[paths.sessionSquad, 'My squad'], [paths.review, 'Season review']] as [string, string][]) : []),
   ]
 

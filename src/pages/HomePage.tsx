@@ -63,6 +63,7 @@ export function HomePage() {
       )}
 
       <div className="mt-5 grid grid-cols-2 gap-2">
+        {session && season?.windows?.some((w) => season.today >= w.start && season.today <= w.end) && <Link to={paths.market} className={`${tile} col-span-2 border-fuchsia-400/70 bg-fuchsia-500/10`}><span className="font-display text-2xl tracking-wide text-fuchsia-200">The player market is open</span><span className="text-xs text-slate-300">Sign young talent or buy stars before it closes</span></Link>}
         {session && <Link to={paths.session()} className={tile}><span className="font-display text-2xl tracking-wide text-white">Calendar</span><span className="text-xs text-slate-400">All your matches</span></Link>}
         <Link to={paths.play} className={tile}><span className="font-display text-2xl tracking-wide text-white">Quick match</span><span className="text-xs text-slate-400">Any two teams, just for fun</span></Link>
         <Link to={paths.teams} className={tile}><span className="font-display text-2xl tracking-wide text-white">Teams</span><span className="text-xs text-slate-400">See all the heroes</span></Link>

@@ -31,6 +31,7 @@ Deployed on Netlify (`netlify.toml` sets the build and the single-page-app redir
 - **Hide player images** (button beside the sound icon in the top bar): shows initials instead of pictures everywhere.
 
 ### Play (friendlies)
+If a career is open, the Play page ends with a big **Continue career** button.
 Pick any two teams and a format (T20 or ODI). You control both sides. Before the toss you see both **team sheets** (the
 XI in batting order, captain and keeper, ratings, the bench, and for a computer team who came in or dropped out and
 why). The sheets fill exactly one desktop screen, so there is nothing to scroll. The coin sits in a bar along the bottom: tap it, it spins, and the toss winner chooses to bat or bowl. Before the coin is flipped you can **Edit squad**: in a
@@ -75,6 +76,35 @@ A win is worth 2 points and a tie 1. Every table (a tournament's league or group
 Tournaments > All and Stats > Teams) is sorted by points, and teams level on points are split by **net run rate**
 (NRR). In the Titles column, click a number to see which tournaments those titles were (`TitlesButton`); teams with none show a grey 0. Computed in `tableFor` (`season/results.ts`) and `teamRecords` (`season/stats.ts`).
 
+### The player market (Career > Market)
+Two windows a year (the **Season auction**, 1 to 14 January, and the **Mid-year window**, 1 to 14 July) when players can
+be bought, sold and released. The windows are marked on the calendar (a purple ring, OPENS and CLOSES tags, and a banner
+that links to the market) and on the Home page.
+- **Unsigned players**: each year 40 young anime characters (drawn from a pool of about 270 in `src/data/youth.json`,
+  each with an image; built by `scripts/fetch-youth.ts` from `scripts/youth-candidates.txt`) are on offer, plus anyone
+  who has been released. They are cheap but have a hidden **potential**, shown as stars; at the end of every year they
+  grow towards it (`developYouth`), so a star prospect is worth waiting for.
+- **Other teams**: you can buy from any computer team. They ask more than a player is worth, a lot more for their top
+  five, and will not sell below 13 players.
+- **Prices** (`marketValue` in `season/market.ts`) climb steeply with overall rating, recent form (from the per-match
+  rating changes) and potential. Every team has a purse (60 coins to start, +40 a year and +10 per title).
+- **Squad cap of 20**: a full squad has to release someone (they go back to the unsigned pool and the team gets a
+  quarter of their value back) before signing. A squad never goes below 13.
+- **The computer shops too**: each window day every computer team may sign one player (the harder the difficulty the
+  busier they are, `BUSY`), buying whoever improves their side most and releasing the weakest if they are full. If you wait
+  too long, the player you wanted is gone. Your own team is never touched.
+- **Signing animation** (`SigningOverlay`): the player's portrait lands between his old team (or "Free agent") and the
+  new one, with his ratings. In matches a new signing's introduction says where he came from and what he cost, and his
+  player card has a **Career path** (every move he has made).
+- Where it lives: the market is part of the season (`season.market`, `season.windows`), squads are applied in
+  `sessionTeam`, the computer's shopping runs as the date moves through a window (`advanceMarket`, called from the store),
+  and old careers get a market the first time they are opened (`ensureMarket`).
+
+### The computer's team selection
+Computer teams change their XI more often: form drops and recalls players, and in matches that matter little (friendly
+series, and sometimes league games) they rest a few regulars and give the reserves who have played least a chance,
+keeping five bowlers and a keeper. The team news says "rested" and "given a chance". Knockouts always get the best side.
+
 ### Ratings change as you play
 After every match each player who batted or bowled is graded against what a player of his rating normally does in
 that format. Beat it and a rating goes up by 1 or 2; fall well short and it goes down (a duck always costs a
@@ -109,7 +139,9 @@ You can see it everywhere:
 - **How to bowl**: when you bowl, the Controls panel offers **Safe**, **Normal** or **Aggressive**. Safe bowls to the
   fielders (fewer wickets, fewer boundaries); Aggressive tempts the big shot (more wickets, more boundaries). It is an
   action (`style`) in the replay log, and `bowlStyle` on the match.
-- **Innings break**: the next innings never starts by itself. Auto-play stops and you press **Start the chase**.
+- **Innings break**: the next innings never starts by itself. The screen stays on the finished innings (scoreboard, scorecard,
+  commentary) while the big Next ball button becomes **Next innings** (also on a small card with the target); nothing
+  plays until you press it.
 - **Controls** (the round buttons, bottom right): next ball, auto-play, and a panel with finish over, sim N overs,
   next wicket, end innings, finish match, batting plan, bowler choice and forfeit.
 - **Auto-play** pauses where you tick it: wickets, boundaries, end of an innings. With the wicket pause off, introductions are half as long.

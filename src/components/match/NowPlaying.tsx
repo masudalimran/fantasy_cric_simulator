@@ -34,9 +34,9 @@ function Card({ kind, children }: { kind: keyof typeof ACCENT; children: React.R
 
 /** Batsman, non-striker and bowler as three colour-coded cards, plus this over and the partnership. */
 export function NowPlaying({ match, displayOver }: { match: Match; displayOver: number }) {
-  const inn = match.current
-  const bat = match.battingSide()
-  const bowl = match.bowlingSide()
+  const inn = match.shown
+  const bat = match.battingSide(inn)
+  const bowl = match.bowlingSide(inn)
   const strikerLine = inn.batters.find((b) => b.id === inn.strikerId)
   const nonLine = inn.batters.find((b) => b.id === inn.nonStrikerId)
   const bowlerId = inn.bowlerId ?? inn.prevBowlerId
@@ -98,9 +98,9 @@ export function NowPlaying({ match, displayOver }: { match: Match; displayOver: 
 
 /** Batsman, non-striker and bowler as three small cells in a row (a phone has no room for three tall cards). */
 export function MobileNowPlaying({ match, displayOver }: { match: Match; displayOver: number }) {
-  const inn = match.current
-  const bat = match.battingSide()
-  const bowl = match.bowlingSide()
+  const inn = match.shown
+  const bat = match.battingSide(inn)
+  const bowl = match.bowlingSide(inn)
   const strikerLine = inn.batters.find((b) => b.id === inn.strikerId)
   const nonLine = inn.batters.find((b) => b.id === inn.nonStrikerId)
   const bowlerId = inn.bowlerId ?? inn.prevBowlerId

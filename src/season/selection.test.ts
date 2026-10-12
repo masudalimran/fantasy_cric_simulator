@@ -32,6 +32,25 @@ describe('computer squad selection', () => {
     }
   })
 
+  it('rests regulars in friendlies and gives the reserves a chance, but plays the best side in knockouts', () => {
+    const form = formTable(season, teams)
+    let restedSeries = 0, restedKnockout = 0, chances = 0
+    for (const t of BUILT_IN_TEAMS.slice(1)) {
+      for (let d = 1; d <= 28; d++) {
+        const date = `2027-03-${String(d).padStart(2, '0')}`
+        const series = pickCpuXI(t, season, { date, phase: 'series', competitionId: 'x' }, form)
+        const ko = pickCpuXI(t, season, { date, phase: 'knockout', competitionId: 'x' }, form)
+        restedSeries += series.news.filter((n) => n.why === 'rested').length
+        chances += series.news.filter((n) => n.why === 'given a chance').length
+        restedKnockout += ko.news.filter((n) => n.why === 'rested').length
+        expect(validateSquad(series.team.players, series.team.captainId, series.team.keeperId).errors).toEqual([])
+      }
+    }
+    expect(restedSeries).toBeGreaterThan(20)
+    expect(chances).toBeGreaterThan(20)
+    expect(restedKnockout).toBe(0)
+  })
+
   it('drops an injured player and replaces him', () => {
     const form = formTable(season, teams)
     let seen = false

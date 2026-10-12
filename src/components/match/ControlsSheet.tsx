@@ -43,13 +43,16 @@ interface DockProps {
   setStops: (s: AutoStops) => void
   /** On a phone the bottom bar has the buttons, so the floating ones are left out. */
   hideDock?: boolean
+  /** Between innings: the Next ball button becomes this, and does `onHold`. */
+  holdLabel?: string
+  onHold?: () => void
 }
 
 /**
  * The match controls live in a panel you open on demand, so the field and scorecard get the screen.
  * A small floating dock keeps the two things you do most within reach: the next ball and the panel.
  */
-export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops, hideDock = false }: DockProps) {
+export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops, hideDock = false, holdLabel, onHold }: DockProps) {
   const mobile = useIsMobile()
   useEffect(() => {
     if (!open) return
@@ -64,11 +67,12 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
     <>
       {/* floating dock: round icon buttons in a row, each explained by a tooltip */}
       {!hideDock && <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
-        <Tip label="Next ball" hint="Space">
+        {holdLabel && <button onClick={onHold} aria-label={holdLabel} className="cta-pulse mx-1 h-12 rounded-full bg-emerald-500 px-5 font-display text-lg tracking-wide text-black hover:bg-emerald-400">{holdLabel}</button>}
+        {!holdLabel && <Tip label="Next ball" hint="Space">
           <button onClick={() => act({ t: 'ball' })} aria-label="Next ball" className={`${auto ? '' : 'cta-pulse '}grid h-12 w-12 place-items-center rounded-full bg-emerald-500 text-black transition hover:bg-emerald-400`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
           </button>
-        </Tip>
+        </Tip>}
         <Tip label={auto === 0 ? 'Auto-play: off. Click to start' : `Auto-play ${auto}x. Click to ${auto === 4 ? 'stop' : 'speed up'}`} hint="P pauses">
           <button
             onClick={() => setAuto(auto === 0 ? 1 : auto === 1 ? 2 : auto === 2 ? 4 : 0)}

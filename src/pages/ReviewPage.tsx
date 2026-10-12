@@ -8,9 +8,10 @@ import { randomSeed } from '../engine/rng'
 import { paths } from '../routes'
 import { generateSeason } from '../season/generate'
 import { buildReview, winRate } from '../season/review'
-import { seasonComplete } from '../season/results'
+import { competitionStatus, seasonComplete } from '../season/results'
+import { developYouth, playerIndex, rolloverMarket } from '../season/market'
 import type { PlayerChange, PlayerReview, SeasonReview } from '../season/types'
-import { selectSeason, selectSession, useStore } from '../store/useStore'
+import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 
 const COLOR: Record<Difficulty, string> = { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' }
 const ordinal = (n: number) => `${n}${['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : Math.min(n % 10, 4) % 4]}`
@@ -72,6 +73,7 @@ export function ReviewPage() {
   const session = useStore(selectSession)
   const startNext = useStore((s) => s.startNextSeason)
   const teams = useTeamMap()
+  const baseTeams = useTeams()
   const navigate = useNavigate()
   const details = useDetails()
   const review = useMemo(() => (season ? buildReview(season, teams) : null), [season, teams])
@@ -92,8 +94,17 @@ export function ReviewPage() {
 
   const startNextSeason = () => {
     const participants = season.teamIds.map((id) => teams.get(id)).filter((t): t is NonNullable<typeof t> => !!t)
-    const shifts = season.shifts // everything earned in matches carries over into the new season
-    const next = generateSeason({ year: season.year + 1, teams: participants, seed: randomSeed(), myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup })
+    const seed = randomSeed()
+    // everything earned in matches carries over into the new season, and young players grow towards their potential
+    let shifts = season.shifts
+    let market = season.market
+    if (market) {
+      const titles: Record<string, number> = {}
+      for (const c of season.competitions) { if (c.kind === 'series') continue; const w = competitionStatus(season, c).champion; if (w) titles[w] = (titles[w] ?? 0) + 1 }
+      shifts = developYouth(market, shifts ?? {}, playerIndex(baseTeams, market), seed)
+      market = rolloverMarket(market, titles, seed)
+    }
+    const next = generateSeason({ year: season.year + 1, teams: participants, seed, myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup, market })
     startNext(review, next)
     navigate(paths.session(`${next.year}-01`))
   }

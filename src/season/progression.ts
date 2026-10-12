@@ -1,5 +1,6 @@
 import { Rng } from '../engine/rng'
 import { battingScore, bowlingScore, overall } from '../data/builders'
+import { YOUTH_BY_ID } from '../data/youthPool'
 import type { MatchFormat, Player, Team } from '../types'
 import type { AttrKey, Fixture, MatchDelta, PlayerChange, PlayerShift, RawSummary, Season } from './types'
 
@@ -35,9 +36,20 @@ export function applyShifts(team: Team, shifts: Record<string, PlayerShift> | un
   return { ...team, players: team.players.map((p) => applyShift(p, shifts[p.id])) }
 }
 
+/** The team with the players it has signed and without the ones it has let go (its squad in the market). */
+function withSquad(team: Team, market: Season['market']): Team {
+  const ids = market?.squads[team.id]
+  if (!ids) return team
+  const own = new Map(team.players.map((p) => [p.id, p]))
+  const players = ids.map((id) => own.get(id) ?? market.players[id] ?? YOUTH_BY_ID.get(id)).filter((p): p is Player => !!p)
+  if (players.length === ids.length && players.every((p, i) => p === team.players[i])) return team
+  const has = new Set(players.map((p) => p.id))
+  return { ...team, players, captainId: has.has(team.captainId) ? team.captainId : players[0]?.id ?? team.captainId, keeperId: team.keeperId && has.has(team.keeperId) ? team.keeperId : undefined }
+}
+
 /** A team as it plays in the career: ratings earned so far, and your own lineup if you've set one. */
-export function sessionTeam(team: Team, season: Pick<Season, 'shifts' | 'lineup' | 'myTeamId'>): Team {
-  const t = applyShifts(team, season.shifts)
+export function sessionTeam(team: Team, season: Pick<Season, 'shifts' | 'lineup' | 'myTeamId' | 'market'>): Team {
+  const t = applyShifts(withSquad(team, season.market), season.shifts)
   const l = team.id === season.myTeamId ? season.lineup : undefined
   if (!l) return t
   const byId = new Map(t.players.map((p) => [p.id, p]))

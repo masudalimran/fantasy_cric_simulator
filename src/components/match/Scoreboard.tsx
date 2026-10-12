@@ -31,12 +31,12 @@ export function projectedScore(runs: number, legalBalls: number, totalBalls: num
 
 /** The broadcast-style header: batting score, progress through the innings, and the target. */
 export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 | 1 | null; difficulty?: Difficulty | null }) {
-  const inn = match.current
-  const bat = match.battingSide()
-  const bowl = match.bowlingSide()
+  const inn = match.shown
+  const bat = match.battingSide(inn)
+  const bowl = match.bowlingSide(inn)
   const cfg = FORMATS[match.format]
   const total = cfg.overs * 6
-  const rrr = match.requiredRate()
+  const rrr = match.requiredRate(inn)
   const first = match.innings[0]
   const ballsLeft = total - inn.legalBalls
   const projected = projectedScore(inn.runs, inn.legalBalls, total, parRunsPerOver(match.format, 'middle'))
@@ -107,12 +107,12 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
 export function MobileScoreboard({ match, you, difficulty, onBack, backLabel }: {
   match: Match; you?: 0 | 1 | null; difficulty?: Difficulty | null; onBack: () => void; backLabel: string
 }) {
-  const inn = match.current
-  const bat = match.battingSide()
-  const bowl = match.bowlingSide()
+  const inn = match.shown
+  const bat = match.battingSide(inn)
+  const bowl = match.bowlingSide(inn)
   const cfg = FORMATS[match.format]
   const total = cfg.overs * 6
-  const rrr = match.requiredRate()
+  const rrr = match.requiredRate(inn)
   const ballsLeft = total - inn.legalBalls
   const projected = projectedScore(inn.runs, inn.legalBalls, total, parRunsPerOver(match.format, 'middle'))
   const pp = cfg.phases.powerplay[1] + 1

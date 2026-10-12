@@ -5,7 +5,8 @@ import { formatDate } from '../../season/dates'
 import { fixtureSeed, isMine, myNextFixture, mustPlayFirst, playEarlierMatches, recordResult, simulateFixture } from '../../season/results'
 import type { Competition, Fixture, Season } from '../../season/types'
 import { paths } from '../../routes'
-import { sessionTeam } from '../../season/progression'
+import { applyShift, sessionTeam } from '../../season/progression'
+import { playerIndex } from '../../season/market'
 import { useStore, useTeams, useViewedSeason } from '../../store/useStore'
 import type { Team } from '../../types'
 import { useDetails } from './Details'
@@ -155,13 +156,28 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
 export interface PlayerEntry { player: Player; team: Team }
 
 /** Every player in every team, by id, so stats can show names, faces and crests. */
+/** Stands in for a team when a player has none: someone in the unsigned pool. */
+export const FREE_AGENTS: Team = {
+  id: 'free-agents', name: 'Free agent', short: 'FA', series: 'Unsigned', universe: 'custom', emblem: 'star',
+  colors: { primary: '#334155', secondary: '#94a3b8' }, home: 'Anywhere', captainId: '', players: [],
+}
+
 export function usePlayerIndex(): Map<string, PlayerEntry> {
   const teamMap = useTeamMap() // the career's own ratings
+  const { season } = useViewedSeason()
+  const market = season?.market
+  const shifts = season?.shifts
+  const baseTeams = useTeams()
   return useMemo(() => {
     const m = new Map<string, PlayerEntry>()
     for (const team of teamMap.values()) for (const player of team.players) m.set(player.id, { player, team })
+    // players with no team (the market's pool) can be opened too
+    if (market) {
+      const all = playerIndex(baseTeams, market)
+      for (const id of market.pool) { const p = all.get(id); if (p && !m.has(id)) m.set(id, { player: applyShift(p, shifts?.[id]), team: FREE_AGENTS }) }
+    }
     return m
-  }, [teamMap])
+  }, [teamMap, market, shifts, baseTeams])
 }
 
 export function PlayerCell({ id, index, size = 32 }: { id: string; index: Map<string, PlayerEntry>; size?: number }) {
