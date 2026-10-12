@@ -78,6 +78,7 @@ Rules of a career:
   *Resume* for it, and it can't be simmed.
 - Teams in a career are fixed when it starts; a team created later can't join.
 - Seasons run strictly year to year.
+- **Deleting a career** asks you to type `DELETE` (exactly, in capitals) before the Delete career button turns on, because it can't be undone (`ConfirmDialog` has a `typeToConfirm` option for this).
 - A career can't be duplicated (that would allow save-scumming).
 
 ### Standings

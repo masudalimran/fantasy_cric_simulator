@@ -72,7 +72,7 @@ function SessionCard({ session, active }: { session: SessionFile; active: boolea
           Delete
         </button>
       </div>
-      <ConfirmDialog open={askDelete} tone="danger" title="Delete this career?" confirmLabel="Delete career" cancelLabel="Keep it" onCancel={() => setAskDelete(false)} onConfirm={() => { deleteSession(session.id); setAskDelete(false) }}>
+      <ConfirmDialog open={askDelete} tone="danger" typeToConfirm="DELETE" title="Delete this career?" confirmLabel="Delete career" cancelLabel="Keep it" onCancel={() => setAskDelete(false)} onConfirm={() => { deleteSession(session.id); setAskDelete(false) }}>
         <p><b>{session.name}</b> and all its results ({played} matches played) will be removed. This can't be undone.</p>
       </ConfirmDialog>
     </div>
