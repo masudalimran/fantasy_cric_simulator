@@ -66,6 +66,35 @@ export function RatingBadge({ value, size = 'md' }: { value: number; size?: 'sm'
 /** Lets a portrait open that player's profile popup. Provided once, near the top of the app. */
 export const ProfileContext = createContext<((playerId: string) => void) | null>(null)
 
+/** Who holds the Orange Cap (most runs) and the Purple Cap (most wickets) in the season being looked at. Provided with the profile popups. */
+export type CapKind = 'orange' | 'purple' | 'both'
+export const CapsContext = createContext<Map<string, CapKind> | null>(null)
+
+/** A little cap sitting on top of a portrait. Orange for the leading run scorer, purple for the leading wicket-taker (both if one player is both). */
+function CapBadge({ kind, size }: { kind: CapKind; size: number }) {
+  const w = Math.max(14, Math.round(size * 0.62))
+  const cap = (fill: string, rim: string, key: string, rot: number, dx: number) => (
+    <svg key={key} width={w} height={w * 0.7} viewBox="0 0 40 28" className="absolute drop-shadow-[0_1px_2px_rgba(0,0,0,.7)]" style={{ left: `calc(50% - ${w / 2}px + ${dx}px)`, top: -w * 0.5, transform: `rotate(${rot}deg)` }} aria-hidden>
+      <path d="M4 22 C4 8 14 2 22 2 C30 2 36 8 36 22 Z" fill={fill} stroke={rim} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M2 22 H36 Q40 22 40 25 Q30 27 6 26 Q2 25 2 22 Z" fill={rim} />
+      <circle cx="22" cy="3" r="2" fill={rim} />
+      {/* a shine that sweeps across the cap */}
+      <rect className="cap-glint" x="-12" y="0" width="9" height="28" fill="#fff" opacity="0.55" transform="skewX(-20)" clipPath="url(#capclip)" />
+      <clipPath id="capclip"><path d="M4 22 C4 8 14 2 22 2 C30 2 36 8 36 22 Z" /></clipPath>
+    </svg>
+  )
+  const title = kind === 'orange' ? 'Orange Cap: most runs this season' : kind === 'purple' ? 'Purple Cap: most wickets this season' : 'Orange Cap and Purple Cap: most runs and most wickets'
+  return (
+    <span className="pointer-events-none absolute inset-x-0 top-0 z-[2]" title={title} aria-label={title} role="img">
+      {/* glitter: little stars that twinkle around the cap so it shows off */}
+      {[{ x: 8, y: -w * 0.55, d: 0, s: 0.5 }, { x: size - 10, y: -w * 0.3, d: 0.7, s: 0.42 }, { x: size * 0.5, y: -w * 0.8, d: 1.3, s: 0.36 }].map((g, i) => (
+        <span key={i} className="cap-twinkle absolute text-amber-100" style={{ left: g.x, top: g.y, fontSize: Math.max(8, w * g.s), animationDelay: `${g.d}s`, textShadow: '0 0 6px #fde68a, 0 0 12px #fbbf24' }}>✦</span>
+      ))}
+      {kind === 'both' ? <>{cap('#8b5cf6', '#5b21b6', 'p', 12, w * 0.28)}{cap('#f97316', '#c2410c', 'o', -12, -w * 0.28)}</> : kind === 'orange' ? cap('#f97316', '#c2410c', 'o', 0, 0) : cap('#8b5cf6', '#5b21b6', 'p', 0, 0)}
+    </span>
+  )
+}
+
 /** `profile`: clicking the portrait opens the player's profile (when the app offers one). */
 export function PlayerAvatar({ player, team, size = 44, profile = false }: { player: Pick<Player, 'id' | 'name' | 'imageUrl'>; team: Pick<Team, 'colors'>; size?: number; profile?: boolean }) {
   const open = useContext(ProfileContext)
@@ -74,7 +103,8 @@ export function PlayerAvatar({ player, team, size = 44, profile = false }: { pla
   const initials = player.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
   const src = player.imageUrl ?? playerImage(player.id)
   const accent = accentOf(team)
-  return (
+  const cap = useContext(CapsContext)?.get(player.id)
+  const face = (
     <div
       {...(profile && open ? { role: 'button', tabIndex: 0, title: `${player.name}: view profile`, onClick: (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); open(player.id) }, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); open(player.id) } } } : {})}
       className={`relative shrink-0 overflow-hidden rounded-full ${profile && open ? 'cursor-pointer transition hover:scale-110 hover:brightness-110' : ''}`}
@@ -89,6 +119,8 @@ export function PlayerAvatar({ player, team, size = 44, profile = false }: { pla
       )}
     </div>
   )
+  if (!cap || size < 22) return face
+  return <div className="relative shrink-0" style={{ width: size, height: size }}>{face}<CapBadge kind={cap} size={size} /></div>
 }
 
 /** +3 in green or -2 in red; nothing when there is no change. */

@@ -170,6 +170,11 @@ You can see it everywhere:
   same for a shot, and Space does nothing. In a friendly you run both sides, so both pads show. If you are only
   watching, a single Next ball button is all there is. The field and the batsman and bowler cards stay. Switch it off
   (in the same tab) to bring the auto-play options back.
+- **Orange Cap and Purple Cap** (`CapsContext`/`CapBadge` in `components/ui.tsx`, computed in `DetailsProvider`): as in the
+  IPL, the season's leading run scorer wears the **Orange Cap** and the leading wicket-taker the **Purple Cap** (both caps
+  if one player leads both). The cap sits on top of that player's portrait everywhere a portrait is shown inside a career
+  (stats, squads, scorecards, popups, the match field), glitters with little twinkling stars and a shine, and follows the
+  year you are looking at. Hover it for what it is.
 - **Six animation** (`SixReplay.tsx`): every six plays a short screen of its own (about 3 seconds, tap to skip): the ball
   leaves the bat, climbs over the stands and out of the ground, and a counter runs up to how far it went in metres
   (`sixDistance` in `engine/shots.ts`: a stable figure from the ball number and the batsman's power, no randomness). It says

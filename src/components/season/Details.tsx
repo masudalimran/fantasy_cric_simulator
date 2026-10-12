@@ -6,13 +6,13 @@ import { overall } from '../../data/builders'
 import { paths } from '../../routes'
 import { formatDate } from '../../season/dates'
 import { ATTR_LABEL } from '../../season/progression'
-import { average, bowlAverage, collect, economy as bowlEcon, strikeRate } from '../../season/stats'
+import { average, bowlAverage, collect, economy as bowlEcon, strikeRate, topBatsmen, topBowlers } from '../../season/stats'
 import type { AttrKey, BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
 import { useTeams, useViewedSeason } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { Sheet } from '../Sheet'
-import { Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
+import { CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
 import { competitionName, usePlayerIndex, useTeamMap } from './shared'
 
 type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string }
@@ -366,6 +366,17 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
 /** Wrap a career's pages in this so matches and players anywhere in them can open their details in a popup. */
 export function DetailsProvider({ children }: { children: React.ReactNode }) {
   const { season } = useViewedSeason()
+  // the Orange Cap (most runs) and Purple Cap (most wickets) holders, shown on every portrait of theirs
+  const caps = useMemo(() => {
+    const m = new Map<string, 'orange' | 'purple' | 'both'>()
+    if (!season) return m
+    const c = collect(season)
+    const run = topBatsmen(c, 1)[0]
+    const wk = topBowlers(c, 1)[0]
+    if (run && run.runs > 0) m.set(run.id, 'orange')
+    if (wk && wk.wickets > 0) m.set(wk.id, m.get(wk.id) === 'orange' ? 'both' : 'purple')
+    return m
+  }, [season])
   const [stack, setStack] = useState<Entry[]>([])
   const openMatch = useCallback((id: string) => setStack((s) => [...s, { kind: 'match', id }]), [])
   const openPlayer = useCallback((id: string) => setStack((s) => [...s, { kind: 'player', id }]), [])
@@ -384,6 +395,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ProfileContext.Provider value={openPlayer}>
+    <CapsContext.Provider value={caps}>
     <Ctx.Provider value={api}>
       {children}
       <AnimatePresence>
@@ -392,6 +404,7 @@ export function DetailsProvider({ children }: { children: React.ReactNode }) {
           : <PlayerDialog key={`${i}-${e.id}`} season={season} playerId={e.id} z={80 + i} onClose={close} />)}
       </AnimatePresence>
     </Ctx.Provider>
+    </CapsContext.Provider>
     </ProfileContext.Provider>
   )
 }

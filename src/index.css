@@ -214,3 +214,18 @@ img {
 @media (prefers-reduced-motion: reduce) {
   .cta-pulse { animation: none; }
 }
+
+/* ---- The Orange Cap and Purple Cap glitter ------------------------------------------------------------------- */
+@keyframes cap-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  45% { opacity: 1; transform: scale(1.15) rotate(35deg); }
+  65% { opacity: 0.9; transform: scale(0.8) rotate(60deg); }
+}
+.cap-twinkle { animation: cap-twinkle 2.2s ease-in-out infinite; line-height: 1; }
+@keyframes cap-glint {
+  0%, 55% { transform: skewX(-20deg) translateX(0); opacity: 0; }
+  62% { opacity: 0.7; }
+  100% { transform: skewX(-20deg) translateX(70px); opacity: 0; }
+}
+.cap-glint { animation: cap-glint 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .cap-twinkle, .cap-glint { animation: none; opacity: 0.8; } }
