@@ -112,6 +112,10 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
   return { ...season, shifts, coachProgress: progress, coachReport: report }
 }
 
+/** Some computer team has a coach but no instruction yet (a career saved before they were given one). */
+export const cpuCoachingMissing = (season: Pick<Season, 'coaches' | 'coaching' | 'myTeamId' | 'market'>): boolean =>
+  !!season.coaches && !!season.market && Object.keys(season.market.squads).some((id) => id !== season.myTeamId && !!season.coaches?.[id] && !season.coaching?.[id]?.focus)
+
 /** Gives every computer team an instruction right away if it has none, so they are all working from the first day (not only once days start to pass). */
 export function startCpuCoaching(season: Season, index: Map<string, Player>): Season {
   if (!season.coaches || !season.market) return season

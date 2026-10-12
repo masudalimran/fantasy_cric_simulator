@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { COACHES } from '../data/coaches'
 import { BUILT_IN_TEAMS } from '../data/teams'
-import { advanceCoaching, assignCoaches, canChange, coachBoard, coachingOf, LOCK_DAYS, monthReport, needsFocus, seasonBoost, setFocus } from './coaching'
+import { advanceCoaching, assignCoaches, canChange, coachBoard, cpuCoachingMissing, startCpuCoaching, coachingOf, LOCK_DAYS, monthReport, needsFocus, seasonBoost, setFocus } from './coaching'
 import { addDays } from './dates'
 import { generateSeason } from './generate'
 import { playerIndex } from './market'
@@ -59,6 +59,14 @@ describe('coaches', () => {
     const s = base()
     for (const t of BUILT_IN_TEAMS.filter((x) => x.id !== 'bleach')) { const c = coachingOf(s, t.id); expect(c.focus).not.toBeNull(); expect(c.since).toBe(s.today); expect(c.lockedUntil).toBe(addDays(s.today, LOCK_DAYS)) }
     expect(coachingOf(s, 'bleach').focus).toBeNull()
+  })
+
+  it('a career saved before the computer had instructions is brought up to date', () => {
+    const old: Season = { ...base(), coaching: undefined }
+    expect(cpuCoachingMissing(old)).toBe(true)
+    const fixed = startCpuCoaching(old, playerIndex(BUILT_IN_TEAMS, old.market))
+    expect(cpuCoachingMissing(fixed)).toBe(false)
+    expect(coachingOf(fixed, 'bleach').focus).toBeNull() // still yours to set
   })
 
   it('the computer sets instructions for its teams and every team trains', () => {

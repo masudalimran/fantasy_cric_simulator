@@ -6,7 +6,7 @@ import { BUILT_IN_TEAMS, LEGACY_TEAMS, refreshRatings } from '../data/teams'
 import { generateSeason } from '../season/generate'
 import { lastPlayedXI } from '../season/selection'
 import { advanceMarket, initMarket, marketWindows, playerIndex } from '../season/market'
-import { advanceCoaching, assignCoaches, setFocus, startCpuCoaching } from '../season/coaching'
+import { advanceCoaching, assignCoaches, cpuCoachingMissing, setFocus, startCpuCoaching } from '../season/coaching'
 import type { CoachFocus } from '../data/coaches'
 import { recordResult } from '../season/results'
 import { appendAction, type Action } from '../engine/replay'
@@ -138,7 +138,7 @@ export const useStore = create<State>()(
       ensureMarket: () =>
         set((st) => ({
           sessions: st.sessions.map((x) => {
-            if (x.id !== st.activeSessionId || (x.season.market && x.season.windows && x.season.coaches)) return x
+            if (x.id !== st.activeSessionId || (x.season.market && x.season.windows && x.season.coaches && !cpuCoachingMissing(x.season))) return x
             const teams = resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)).filter((t) => x.season.teamIds.includes(t.id))
             const filled: typeof x.season = { ...x.season, windows: x.season.windows ?? marketWindows(x.season.year), market: x.season.market ?? initMarket(teams, x.season.seed), coaches: assignCoaches(x.season.teamIds, x.season.seed, x.season.coaches) }
             // the computer's coaches start work straight away

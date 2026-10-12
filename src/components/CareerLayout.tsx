@@ -5,6 +5,7 @@ import { paths } from '../routes'
 import { DIFFICULTIES } from '../engine/types'
 import { selectSeason, selectSession, useStore, useViewedSeason } from '../store/useStore'
 import { gradePlayedMatches } from '../season/progression'
+import { cpuCoachingMissing } from '../season/coaching'
 import { useBaseTeamMap, useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
 
@@ -42,7 +43,7 @@ export function CareerLayout() {
   const baseTeams = useBaseTeamMap()
   const updateSeason = useStore((s) => s.updateSeason)
   const ensureMarket = useStore((s) => s.ensureMarket)
-  useEffect(() => { if (season && (!season.market || !season.windows || !season.coaches)) ensureMarket() }, [season?.id, !!season?.market, !!season?.windows, !!season?.coaches]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (season && (!season.market || !season.windows || !season.coaches || cpuCoachingMissing(season))) ensureMarket() }, [season?.id, !!season?.market, !!season?.windows, !!season?.coaches, season && cpuCoachingMissing(season)]) // sets up the market, the coaches and the computer's coaching instructions in careers saved before they existed // eslint-disable-line react-hooks/exhaustive-deps
   // A career started before ratings changed with every match is caught up once, from the matches already played.
   useEffect(() => { if (season && !season.graded) updateSeason((s) => gradePlayedMatches(s, baseTeams)) }, [season?.graded, season?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // Only these pages can look back at a past year; the others always show the year being played.
