@@ -325,6 +325,12 @@ The app is built to feel like a native app on a phone (the desktop layout is unc
 
 - **Stack**: Vite, React 19, TypeScript, Tailwind v4, Zustand (persisted), React Router, Framer Motion, Recharts,
   canvas-confetti. No `enum`s or parameter properties (`erasableSyntaxOnly`).
+- **The computer's bowling changes** (`chooseBowler` in `engine/ai.ts`): the captain reads how each bowler has gone this innings
+  (economy and wickets against what is normal). A bowler who is going well keeps getting the ball until his overs are up. A bowler
+  who has been hit for a big over is taken off and rested for as long as the damage deserves (a bad over is one that went for
+  about 12+ in a T20), and he is less likely to come back while the batsman who hit him is still in, and happier to come back when
+  that batsman has gone. A bowler who has kept the current batsman quiet gets a lift, and when the real bowlers are all needed for the
+  overs that are left they are all used. In a test run, good bowlers who missed out on a full quota fell from 29% to 7%.
 - **Engine** (`src/engine`): a pure, seeded ball model. Baseline outcome probabilities per format and phase come from
   Cricsheet data and are scaled by ratings, batting intent, how settled a batsman is, pitch and "form of the day".
   A match is fully determined by its seed, squads and the list of actions taken, which is how resume works. Calibrated

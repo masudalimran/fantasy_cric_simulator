@@ -63,7 +63,52 @@ export function aiTossDecision(format: MatchFormat, rng: Rng): 'bat' | 'bowl' {
 const bowlScore = (p: Player) => (p.bowling ? p.bowling.variation * 0.45 + p.bowling.accuracy * 0.35 + p.bowling.stamina * 0.2 : 0)
 const isPace = (p: Player) => p.bowling?.type === 'fast' || p.bowling?.type === 'medium'
 
-/** Picks who bowls the next over, respecting over limits and the no-two-in-a-row rule. */
+/** How a bowler has gone so far this innings, as the captain would see it. */
+interface BowlerForm {
+  /** Economy and wickets against what is normal: positive is a good spell, negative a poor one. */
+  perf: number
+  /** The most recent over that went for a lot, and how many overs he is rested for after it. */
+  badOver: number
+  rest: number
+  /** The batsmen who have hit him hard, and the ones he has kept quiet. */
+  hurtBy: Set<string>
+  hasTied: Set<string>
+}
+
+function formOf(inn: Innings, bowlerId: string, par: number, format: MatchFormat): BowlerForm {
+  const overs = new Map<number, number>()
+  const vs = new Map<string, { runs: number; balls: number }>()
+  let runs = 0, balls = 0, wickets = 0
+  for (const e of inn.log) {
+    if (e.bowlerId !== bowlerId) continue
+    const conceded = e.runsBat + (e.extraType === 'wide' || e.extraType === 'noball' ? e.extraRuns : 0)
+    runs += conceded
+    if (e.legal) balls++
+    if (e.wicket && e.wicket.kind !== 'run out') wickets++
+    overs.set(e.over, (overs.get(e.over) ?? 0) + conceded)
+    const v = vs.get(e.strikerId) ?? { runs: 0, balls: 0 }
+    v.runs += conceded; if (e.legal) v.balls++
+    vs.set(e.strikerId, v)
+  }
+  const econ = balls >= 6 ? (runs / balls) * 6 : par
+  const perf = balls >= 6 ? clamp((par - econ) * 2.2 + wickets * 7, -25, 25) : 0
+  // an over that went for a lot sits him out for a while: the worse it was, the longer
+  const limit = Math.max(format === 't20' ? 12 : 9, par * 1.8)
+  let badOver = -99, rest = 0
+  for (const [o, r] of overs) if (r >= limit && o > badOver) { badOver = o; rest = Math.round(clamp((r - par * 1.5) / 8, 0.3, 1.5) * 3) }
+  const hurtBy = new Set<string>(), hasTied = new Set<string>()
+  for (const [id, v] of vs) {
+    if (v.runs >= 10 && v.balls <= 10 && v.runs / Math.max(v.balls, 1) >= (par / 6) * 1.7) hurtBy.add(id)
+    else if (v.balls >= 5 && v.runs / v.balls < (par / 6) * 0.7) hasTied.add(id)
+  }
+  return { perf, badOver, rest: Math.max(1, rest), hurtBy, hasTied }
+}
+
+/**
+ * Picks who bowls the next over, respecting over limits and the no-two-in-a-row rule. The captain bowls whoever is
+ * going well (until his overs are up), takes off a bowler who has been hit and rests him for as long as the damage
+ * deserves, and is happier to bring him back when the batsman who hurt him has gone.
+ */
 export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[]; keeperId: string | null; rng: Rng }): string {
   const { format, inn, xi, rng } = a
   const cfg = FORMATS[format]
@@ -88,10 +133,25 @@ export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[
   const topIds = new Set(ranked.slice(0, 2).map((p) => p.id))
   const avgBowled = real.reduce((s, p) => s + bowled(p), 0) / Math.max(real.length, 1)
 
+  const par = parRunsPerOver(format, phase)
+  const batsmen = [inn.strikerId, inn.nonStrikerId]
+  const slack = realCapacity - oversLeft // how close the real bowlers are to being needed for every remaining over
   let best = pool[0]
   let bestScore = -Infinity
   for (const p of pool) {
     let s = bowlScore(p)
+    const f = p.bowling ? formOf(inn, p.id, par, format) : null
+    if (f) {
+      // going well: keep him on until his overs run out. Going badly: someone else
+      s += f.perf * 0.6
+      if (f.perf > 4 && bowled(p) < cfg.maxBowlerOvers) s += 6
+      const hurtNow = batsmen.some((b) => f.hurtBy.has(b))
+      const remaining = f.badOver + f.rest - over + 1 // overs of rest left after his bad over
+      if (remaining > 0) s -= hurtNow ? 20 * Math.min(1, remaining / f.rest) : 3 // the man who hit him has gone, so he is less risky
+      else if (hurtNow) s -= 12
+      if (batsmen.some((b) => f.hasTied.has(b))) s += 6 // he has had this batsman tied down
+      if (slack <= 1 && p.bowling) s += 10 // the real bowlers are needed for every over that is left
+    }
     if (!p.bowling) s -= 25
     const t = p.traits
     if (phase === 'powerplay') s += (isPace(p) ? 5 : 0) + (t.includes('powerplay-specialist') ? 8 : 0)
@@ -99,8 +159,9 @@ export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[
     if (phase === 'middle') s += !isPace(p) && p.bowling ? 5 : 0
     // Hold the best bowlers back for the end, but don't hide them.
     const reserve = format === 't20' ? 2 : 5
-    if (topIds.has(p.id) && phase !== 'death' && bowled(p) >= reserve) s -= 6
-    s -= 2.5 * (bowled(p) - avgBowled)
+    const going = !!f && f.perf > 4
+    if (topIds.has(p.id) && phase !== 'death' && bowled(p) >= reserve && !going) s -= 6
+    if (!going) s -= 2.5 * (bowled(p) - avgBowled)
     s += (rng.next() - 0.5) * 8
     if (s > bestScore) { best = p; bestScore = s }
   }
