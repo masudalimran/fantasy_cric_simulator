@@ -2,6 +2,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Sheet } from '../components/Sheet'
+import { MarketConfirm, type Confirm } from '../components/season/MarketConfirm'
 import { SigningOverlay, type Signing } from '../components/season/SigningOverlay'
 import { FREE_AGENTS, useTeamMap } from '../components/season/shared'
 import { PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
@@ -11,7 +12,7 @@ import { daysBetween, formatDate } from '../season/dates'
 import { acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundFor, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { paths } from '../routes'
-import { selectSeason, useStore, useTeams } from '../store/useStore'
+import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 import type { Player, Team } from '../types'
 
 const stars = (potential: number) => Math.max(1, Math.min(5, Math.round((potential - 50) / 8)))
@@ -24,6 +25,7 @@ type View = 'unsigned' | 'teams' | 'squad'
 
 export function MarketPage() {
   const season = useStore(selectSeason)
+  const session = useStore(selectSession)
   const updateSeason = useStore((s) => s.updateSeason)
   const teams = useTeamMap()
   const base = useTeams()
@@ -32,6 +34,7 @@ export function MarketPage() {
   const [roomFor, setRoomFor] = useState<{ player: Player; from: string | null; price: number } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [signed, setSigned] = useState<Signing | null>(null)
+  const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [role, setRole] = useState<'all' | Player['role']>('all')
 
   const market = season?.market
@@ -93,9 +96,9 @@ export function MarketPage() {
     const why = disabledWhy ?? (!win ? 'Market closed' : price > purse && squadIds.length < SQUAD_CAP ? 'Too expensive' : null)
     return (
       <button
-        disabled={!!why} onClick={() => start(p, from, price)} title={why ?? `Sign for ${price} coins`}
+        disabled={!!why} onClick={() => setConfirm({ kind: 'buy', player: shown(p), from: from ? (teams.get(from) ?? null) : null, price })} title={why ?? `Sign him for ${price} coins`}
         className="shrink-0 rounded-full bg-amber-400 px-3.5 py-2 text-xs font-extrabold leading-none text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-      >{why ?? <>Sign · {price}</>}</button>
+      >{why ?? <>Cost · {price}</>}</button>
     )
   }
 
@@ -156,7 +159,7 @@ export function MarketPage() {
                     <div className="flex items-center gap-1.5 text-xs text-slate-300"><TeamCrest team={buyer} size={16} />{buyer.name} offers <b className="text-amber-300">{o.fee} coins</b> <span className="text-slate-500">· until {formatDate(o.expires)}</span></div>
                   </div>
                   <div className="flex gap-2">
-                    <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => takeOffer(o.id)} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : 'Sell him'} className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-extrabold leading-none text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400">Accept</button>
+                    <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => setConfirm({ kind: 'sell', player: shown(p), from: me ?? null, price: o.fee, buyer, offerId: o.id })} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : 'Sell him'} className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-extrabold leading-none text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400">Accept</button>
                     <button onClick={() => updateSeason((s) => declineOffer(s, o.id))} className="rounded-full border border-line px-4 py-2 text-xs font-bold leading-none text-slate-200 hover:border-slate-400">Decline</button>
                   </div>
                 </div>
@@ -202,7 +205,7 @@ export function MarketPage() {
         <div className="space-y-2">
           {mine.map((p) => row(p, {
             teamBadge: me ?? null,
-            action: <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => release(p)} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : `Release for ${refundFor(worth(p))} coins back`} className="shrink-0 rounded-full border border-red-400/60 px-3 py-2 text-xs font-bold leading-none text-red-200 transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-40">Release · +{refundFor(worth(p))}</button>,
+            action: <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => setConfirm({ kind: 'release', player: shown(p), from: me ?? null, price: refundFor(worth(p)) })} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : `Release for ${refundFor(worth(p))} coins back`} className="shrink-0 rounded-full border border-red-400/60 px-3 py-2 text-xs font-bold leading-none text-red-200 transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-40">Release · +{refundFor(worth(p))}</button>,
           }))}
         </div>
       )}
@@ -214,11 +217,25 @@ export function MarketPage() {
             {log.map((t) => {
               const from = t.from ? teams.get(t.from) : null
               const to = t.to ? teams.get(t.to) : null
+              const p = index.get(t.playerId)
+              const crest = (team: Team | null | undefined) => team && (
+                <Link to={paths.careerTeam(team.id)} className="inline-flex items-center gap-1 font-semibold text-white hover:underline" title={`Go to ${team.name}`}><TeamCrest team={team} size={18} />{team.name}</Link>
+              )
               return (
-                <div key={t.id} className="flex flex-wrap items-center gap-x-2 px-3 py-2 text-sm text-slate-300">
-                  <span className="w-20 shrink-0 text-xs text-slate-500">{formatDate(t.date)}</span>
-                  <b className="text-white">{t.name}</b>
-                  {t.kind === 'release' ? <span>released by {from?.name ?? 'a team'}</span> : <span>{t.kind === 'sign' ? 'signed by' : 'bought by'} <b className="text-white">{to?.name}</b>{from ? <> from {from.name}</> : null} for {t.fee}</span>}
+                <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-300">
+                  {p ? <PlayerAvatar profile player={shown(p)} team={to ?? from ?? FREE_AGENTS} size={40} /> : <span className="h-10 w-10 shrink-0" />}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2">
+                      <b className="text-white">{t.name}</b>
+                      {p && <span className="rounded bg-white/10 px-1.5 text-[11px] font-bold text-slate-200">{overall(shown(p))}</span>}
+                      <span className="text-xs text-slate-500">{formatDate(t.date)}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px]">
+                      {t.kind === 'release'
+                        ? <>released by {crest(from)}</>
+                        : <>{t.kind === 'sign' ? 'signed by' : 'bought by'} {crest(to)}{from ? <>from {crest(from)}</> : <span className="text-slate-400">from the unsigned pool</span>}<span className="text-slate-500">· {t.fee} {t.fee === 1 ? 'coin' : 'coins'}</span></>}
+                    </div>
+                  </div>
                 </div>
               )
             })}
@@ -245,6 +262,22 @@ export function MarketPage() {
               </div>
             </div>
           </Sheet>
+        )}
+        {confirm && (
+          <MarketConfirm
+            confirm={confirm} season={season} teams={teams} me={me} purse={purse}
+            seasons={[...(session?.history ?? []), season]}
+            full={confirm.kind === 'buy' && squadIds.length >= SQUAD_CAP}
+            onClose={() => setConfirm(null)}
+            onConfirm={() => {
+              const c = confirm
+              setConfirm(null)
+              const raw = index.get(c.player.id) ?? c.player
+              if (c.kind === 'buy') start(raw, c.from?.id ?? null, c.price)
+              else if (c.kind === 'release') release(raw)
+              else if (c.offerId) takeOffer(c.offerId)
+            }}
+          />
         )}
         {signed && <SigningOverlay signing={signed} onClose={() => setSigned(null)} />}
       </AnimatePresence>

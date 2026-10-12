@@ -97,6 +97,10 @@ that links to the market) and on the Home page.
   five, and will not sell below 13 players.
 - **Prices** (`marketValue` in `season/market.ts`) climb steeply with overall rating, recent form (from the per-match
   rating changes) and potential. Every team has a purse (60 coins to start, +40 a year and +10 per title).
+- **Confirm first**: Cost (buy or sign), Release and Accept (an offer) never act straight away. They open a card with the
+  player's ratings, traits, his numbers so far, recent matches and career path, and what it does to your coins; only
+  the green button does it (`MarketConfirm`). **Latest moves** shows each player's face (tap for his profile) and team
+  crests that link to the team pages.
 - **Squad cap of 20**: a full squad has to release someone (they go back to the unsigned pool and the team gets a
   quarter of their value back) before signing. A squad never goes below 13.
 - **The computer shops too**: each window day every computer team may sign one player (the harder the difficulty the

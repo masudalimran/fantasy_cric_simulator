@@ -183,13 +183,13 @@ export function CalendarPage() {
           <button className={btn} disabled={!pending} onClick={() => skipDays(30)}>Skip 30 days</button>
         </div>
       </div>
+      {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
       {season.windows?.some((w) => season.today >= w.start && season.today <= w.end) && (
-        <Link to={paths.market} className="mb-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-fuchsia-400/70 bg-fuchsia-500/10 px-4 py-3 transition hover:bg-fuchsia-500/20">
-          <span><b className="block font-display text-2xl tracking-wide text-fuchsia-200">The player market is open</b><span className="text-xs text-slate-300">Sign young talent or buy stars before the window closes. Computer teams are shopping too.</span></span>
-          <span className="rounded-full bg-fuchsia-400 px-4 py-2 font-display text-lg leading-none tracking-wide text-black">Go to the market</span>
+        <Link to={paths.market} className="mb-4 flex items-center justify-between gap-3 whitespace-nowrap rounded-full border-2 border-fuchsia-400/70 bg-fuchsia-500/15 px-4 py-2.5 transition hover:bg-fuchsia-500/25 active:bg-fuchsia-500/30" title="Sign young talent or buy stars before the window closes">
+          <span className="truncate font-display text-xl leading-none tracking-wide text-fuchsia-200"><span className="md:hidden">Market is open</span><span className="max-md:hidden">The player market is open</span></span>
+          <span className="shrink-0 font-display text-xl leading-none tracking-wide text-white">Go to the market ›</span>
         </Link>
       )}
-      {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
 
 
