@@ -4,7 +4,7 @@ import { Rng } from '../engine/rng'
 import type { MatchFormat, Team, TournamentDef } from '../types'
 import { addDays, daysBetween as daysBetweenISO, daysInYear, endOfYear, startOfYear } from './dates'
 import type { Difficulty } from '../engine/types'
-import { assignCoaches } from './coaching'
+import { assignCoaches, startCpuCoaching } from './coaching'
 import { initMarket, marketWindows } from './market'
 import type { Competition, Fixture, MarketState, PlayerShift, Season, Slot } from './types'
 
@@ -301,10 +301,12 @@ export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, m
     }
     fixtures.sort((a, b) => a.date.localeCompare(b.date) || a.competitionId.localeCompare(b.competitionId) || a.id.localeCompare(b.id, undefined, { numeric: true }))
     competitions.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id))
-    return {
+    const built: Season = {
       id: `s${year}-${seed}`,
       year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), graded: true, windows: marketWindows(year), market: market ?? initMarket(teams, seed), coaches: assignCoaches(teams.map((t) => t.id), seed, coaches), ...(coaching ? { coaching } : {}), ...(coachProgress ? { coachProgress } : {}), ...(coachReport ? { coachReport } : {}), ...(shifts ? { shifts, startShifts: structuredCloneShifts(shifts) } : {}), ...(lineup ? { lineup } : {}),
     }
+    // every computer team's coach starts work on day one
+    return startCpuCoaching(built, new Map(teams.flatMap((t) => t.players.map((p) => [p.id, p] as const))))
   }
   throw new Error('Could not fit the season into the year.')
 }

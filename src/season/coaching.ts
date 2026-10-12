@@ -112,6 +112,18 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
   return { ...season, shifts, coachProgress: progress, coachReport: report }
 }
 
+/** Gives every computer team an instruction right away if it has none, so they are all working from the first day (not only once days start to pass). */
+export function startCpuCoaching(season: Season, index: Map<string, Player>): Season {
+  if (!season.coaches || !season.market) return season
+  let cur = season
+  for (const teamId of Object.keys(season.market.squads)) {
+    if (teamId === season.myTeamId || coachingOf(cur, teamId).focus) continue
+    const squad = (cur.market?.squads[teamId] ?? []).map((id) => index.get(id)).filter((p): p is Player => !!p)
+    cur = setFocus(cur, teamId, cpuChoice(cur, teamId, squad, coachOf(cur, teamId), season.today), season.today)
+  }
+  return cur
+}
+
 /** Runs the days between two dates: the computer sets its instructions when they are due, then every team trains. */
 export function advanceCoaching(prev: Season, next: Season, base: () => Map<string, Player>): Season {
   if (next.today <= prev.today || !next.market || !next.coaches) return next

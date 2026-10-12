@@ -135,7 +135,7 @@ video games that have no team in the game (`src/data/coaches.ts`; coaches have n
 speciality (batting, bowling or fielding).
 - **Instruction**: each month a coach works on one thing for the whole squad: **batting** (technique, power, temperament,
   running), **bowling** (accuracy, variation, stamina) or **fielding**. You set it for your team on the **My squad** page by
-  tapping the coach card; the computer sets it for every other team (it reviews it each month, picking the squad's
+  tapping the coach card; the computer sets it for every other team from the first day of the career (it reviews it each month, picking the squad's
   weakest area with a nudge towards the coach's speciality).
 - **It stays for at least a month.** When you pick one the coach says so and tells you the date you can change it again;
   you can keep it going or change it after that. A **Choose again / Set it** step comes first.

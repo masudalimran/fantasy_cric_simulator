@@ -55,6 +55,12 @@ describe('coaches', () => {
     for (const g of gained) for (const k of Object.keys(g.attrs)) expect(['technique', 'power', 'temperament', 'running']).toContain(k)
   })
 
+  it('every computer team has an instruction from the very first day, and yours waits for you', () => {
+    const s = base()
+    for (const t of BUILT_IN_TEAMS.filter((x) => x.id !== 'bleach')) { const c = coachingOf(s, t.id); expect(c.focus).not.toBeNull(); expect(c.since).toBe(s.today); expect(c.lockedUntil).toBe(addDays(s.today, LOCK_DAYS)) }
+    expect(coachingOf(s, 'bleach').focus).toBeNull()
+  })
+
   it('the computer sets instructions for its teams and every team trains', () => {
     const s = run(base(), 40)
     for (const t of BUILT_IN_TEAMS.filter((x) => x.id !== 'bleach')) expect(coachingOf(s, t.id).focus).not.toBeNull()
