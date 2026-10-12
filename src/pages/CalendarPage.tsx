@@ -1,5 +1,6 @@
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { MarketOpens } from '../components/season/MarketOpens'
+import { MarketClosed } from '../components/season/MarketClosed'
 import { CoachPrompt, useCoachGate } from '../components/season/CoachGate'
 import { needsFocus } from '../season/coaching'
 import { TipBanner } from '../components/TipBanner'
@@ -219,6 +220,7 @@ export function CalendarPage() {
         </div>
       )}
       {session && <MarketOpens season={season} sessionId={session.id} />}
+      {session && myTeam && <MarketClosed season={season} sessionId={session.id} />}
       <AnimatePresence>{myTeam && needsFocus(season) && !coachDismissed && <CoachPrompt onClose={() => setCoachDismissed(true)} onLater={() => setCoachDismissed(true)} />}</AnimatePresence>
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
 

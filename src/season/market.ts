@@ -31,6 +31,13 @@ export function marketWindows(year: number): MarketWindow[] {
   ].filter((w) => w.end <= endOfYear(year))
 }
 
+/** Which window a date belongs to (id like 2026-a), from the date alone, so it also works for earlier years. */
+export function windowOfDate(date: string): { id: string; name: string; year: string } {
+  const year = date.slice(0, 4)
+  const first = Number(date.slice(5, 7)) <= 6
+  return { id: `${year}-${first ? 'a' : 'b'}`, name: first ? 'Season auction' : 'Mid-year window', year }
+}
+
 /** The window that is open on `date`, if any. */
 export const openWindow = (season: Pick<Season, 'windows'>, date: string): MarketWindow | null =>
   season.windows?.find((w) => date >= w.start && date <= w.end) ?? null

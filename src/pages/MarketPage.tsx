@@ -1,7 +1,8 @@
 import { AnimatePresence } from 'framer-motion'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { Sheet } from '../components/Sheet'
+import { TransferRow } from '../components/season/TransferRow'
 import { MarketConfirm, type Confirm } from '../components/season/MarketConfirm'
 import { SigningOverlay, type Signing } from '../components/season/SigningOverlay'
 import { FREE_AGENTS, useTeamMap } from '../components/season/shared'
@@ -9,7 +10,7 @@ import { PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
 import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { daysBetween, formatDate } from '../season/dates'
-import { acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
+import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
@@ -21,7 +22,7 @@ function Stars({ n }: { n: number }) {
   return <span className="whitespace-nowrap text-[11px] leading-none tracking-tight text-amber-300" title="How far he could grow">{'★'.repeat(n)}<span className="text-slate-600">{'★'.repeat(5 - n)}</span></span>
 }
 
-type View = 'unsigned' | 'teams' | 'squad'
+type View = 'unsigned' | 'teams' | 'squad' | 'transfers'
 
 export function MarketPage() {
   const season = useStore(selectSeason)
@@ -29,7 +30,9 @@ export function MarketPage() {
   const updateSeason = useStore((s) => s.updateSeason)
   const teams = useTeamMap()
   const base = useTeams()
-  const [view, setView] = useState<View>('unsigned')
+  const [params] = useSearchParams()
+  const [view, setView] = useState<View>(() => (['unsigned', 'teams', 'squad', 'transfers'].includes(params.get('tab') ?? '') ? (params.get('tab') as View) : 'unsigned'))
+  const [windowPick, setWindowPick] = useState<string>(() => params.get('window') ?? 'all')
   const [teamPick, setTeamPick] = useState<string | null>(null)
   const [roomFor, setRoomFor] = useState<{ player: Player; from: string | null; price: number } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -117,7 +120,6 @@ export function MarketPage() {
   const pickedTeam = teamPick ?? otherTeams[0]
   const theirs = (market.squads[pickedTeam] ?? []).map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort((a, b) => overall(shown(b)) - overall(shown(a)))
   const mine = squadIds.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p))
-  const log = [...market.log].reverse().slice(0, 12)
   const chip = (on: boolean) => `rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${on ? 'border-indigo-400 bg-indigo-500 text-white' : 'border-line text-slate-300 hover:text-white'}`
 
   return (
@@ -173,9 +175,10 @@ export function MarketPage() {
         <button className={chip(view === 'unsigned')} onClick={() => setView('unsigned')}>Unsigned ({market.pool.length})</button>
         <button className={chip(view === 'teams')} onClick={() => setView('teams')}>Other teams</button>
         <button className={chip(view === 'squad')} onClick={() => setView('squad')}>My squad ({squadIds.length})</button>
-        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="ml-auto rounded-lg border border-line bg-panel-2 px-2 py-1.5 text-sm text-white" aria-label="Filter by role">
+        <button className={chip(view === 'transfers')} onClick={() => setView('transfers')}>Transfers ({market.log.length})</button>
+        {view !== 'transfers' && <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="ml-auto rounded-lg border border-line bg-panel-2 px-2 py-1.5 text-sm text-white" aria-label="Filter by role">
           <option value="all">All roles</option><option value="BAT">Batsmen</option><option value="BOWL">Bowlers</option><option value="AR">All-rounders</option><option value="WK">Keepers</option>
-        </select>
+        </select>}
       </div>
 
       {view === 'unsigned' && (
@@ -210,38 +213,30 @@ export function MarketPage() {
         </div>
       )}
 
-      {log.length > 0 && (
-        <section className="mt-6">
-          <h3 className="mb-2 font-display text-2xl tracking-wide">Latest moves</h3>
-          <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
-            {log.map((t) => {
-              const from = t.from ? teams.get(t.from) : null
-              const to = t.to ? teams.get(t.to) : null
-              const p = index.get(t.playerId)
-              const crest = (team: Team | null | undefined) => team && (
-                <Link to={paths.careerTeam(team.id)} className="inline-flex items-center gap-1 font-semibold text-white hover:underline" title={`Go to ${team.name}`}><TeamCrest team={team} size={18} />{team.name}</Link>
-              )
-              return (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-300">
-                  {p ? <PlayerAvatar profile player={shown(p)} team={to ?? from ?? FREE_AGENTS} size={40} /> : <span className="h-10 w-10 shrink-0" />}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2">
-                      <b className="text-white">{t.name}</b>
-                      {p && <span className="rounded bg-white/10 px-1.5 text-[11px] font-bold text-slate-200">{overall(shown(p))}</span>}
-                      <span className="text-xs text-slate-500">{formatDate(t.date)}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px]">
-                      {t.kind === 'release'
-                        ? <>released by {crest(from)}</>
-                        : <>{t.kind === 'sign' ? 'signed by' : 'bought by'} {crest(to)}{from ? <>from {crest(from)}</> : <span className="text-slate-400">from the unsigned pool</span>}<span className="text-slate-500">· {t.fee} {t.fee === 1 ? 'coin' : 'coins'}</span></>}
-                    </div>
-                  </div>
+      {view === 'transfers' && (() => {
+        const windows = [...new Map(market.log.map((t) => [windowOfDate(t.date).id, windowOfDate(t.date)])).values()].sort((a, b) => b.id.localeCompare(a.id))
+        const list = [...market.log].filter((t) => windowPick === 'all' || windowOfDate(t.date).id === windowPick).reverse()
+        const moves = list.filter((t) => t.kind !== 'release')
+        const biggest = [...moves].sort((a, b) => b.fee - a.fee)[0]
+        return (
+          <div>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              <button className={chip(windowPick === 'all')} onClick={() => setWindowPick('all')}>All</button>
+              {windows.map((w) => <button key={w.id} className={chip(windowPick === w.id)} onClick={() => setWindowPick(w.id)}>{w.name} {w.year}</button>)}
+            </div>
+            {list.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-line p-8 text-center text-slate-400">No transfers yet. They appear here as teams sign, buy and release players during a window.</p>
+            ) : (
+              <>
+                <p className="mb-2 text-sm text-slate-300">{list.length} {list.length === 1 ? 'move' : 'moves'}: {list.filter((t) => t.kind === 'sign').length} signed from the pool, {list.filter((t) => t.kind === 'buy').length} bought from other teams, {list.filter((t) => t.kind === 'release').length} released.{biggest ? <> Biggest deal: <b className="text-white">{biggest.name}</b> for {biggest.fee} coins.</> : null}</p>
+                <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
+                  {list.map((t) => { const p = index.get(t.playerId); return <TransferRow key={t.id} t={t} player={p ? shown(p) : undefined} teams={teams} mine={season.myTeamId} /> })}
                 </div>
-              )
-            })}
+              </>
+            )}
           </div>
-        </section>
-      )}
+        )
+      })()}
 
       <AnimatePresence>
         {roomFor && (

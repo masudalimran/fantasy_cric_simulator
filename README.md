@@ -115,6 +115,12 @@ that links to the market) and on the Home page.
   more for your best five, never when you are at the minimum squad). Offers are listed at the top of the Market page
   (the tab shows a dot) for five days: **Accept** sells him and you get the coins, **Decline** turns it down. If the buyer
   is full they release their weakest player.
+- **Window closed popup** (`MarketClosed`): the first time you open the Calendar after a window has closed, a card says the
+  market is **CLOSED**, with how many transfers happened, how many were yours, the biggest deal, and a **See all transfers**
+  button that opens the Transfers tab for that window. It shows once per window per career.
+- **Transfers tab** (Market page): every move made in the career, newest first, filterable by window (Season auction or
+  Mid-year window of each year), with a summary line and the same face and team links as everywhere else. Moves that
+  involve your team are tinted gold.
 - **Offer notice** (`OfferBanner`): while an offer is on the table, a blue notice shows at the top of every career page
   (not on the Market page itself, which lists it): who wants whom and for how much, tap it to go to the Market page. Its cross
   only closes the notice; it does not accept or decline. A new offer brings the notice back.
