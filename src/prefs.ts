@@ -51,3 +51,19 @@ export function setSwipeAim(on: boolean) {
 export function useSwipeAim(): boolean {
   return useSyncExternalStore((cb) => { swipeListeners.add(cb); return () => { swipeListeners.delete(cb) } }, () => swipe, () => true)
 }
+
+// ---- Play manually: no auto-play, the controls take its place --------------------------------------------------
+const MANUAL_KEY = 'fcs.manual'
+const manualListeners = new Set<() => void>()
+let manual = (() => { try { return localStorage.getItem(MANUAL_KEY) === '1' } catch { return false } })()
+
+export function setManualPlay(on: boolean) {
+  manual = on
+  try { localStorage.setItem(MANUAL_KEY, on ? '1' : '0') } catch { /* just not remembered */ }
+  manualListeners.forEach((l) => l())
+}
+
+/** Whether you play every ball yourself from the controls, with all the auto-play options out of the way (off by default). */
+export function useManualPlay(): boolean {
+  return useSyncExternalStore((cb) => { manualListeners.add(cb); return () => { manualListeners.delete(cb) } }, () => manual, () => false)
+}

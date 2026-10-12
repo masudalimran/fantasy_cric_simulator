@@ -13,9 +13,9 @@ export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel 
   return (
     <div className="shrink-0 border-t border-line bg-ink/95 px-3 pt-2 backdrop-blur" style={{ paddingBottom: 'calc(var(--sab) + 10px)' }}>
       <div className="mx-auto flex max-w-md items-center gap-3">
-        <button onClick={onControls} aria-label="Open match controls" className={`${circle} bg-slate-700 text-white`}>
+        {!holdLabel && <button onClick={onControls} aria-label="Open match controls" className={`${circle} bg-slate-700 text-white`}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
-        </button>
+        </button>}
         <button
           onClick={() => { haptic(10); onBall() }} disabled={over} aria-label="Next ball"
           className={`${(!auto && !over) || holdLabel ? 'cta-pulse ' : ''}flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-emerald-500 font-display text-lg tracking-wider text-black shadow-[0_6px_20px_rgba(16,185,129,.35)] transition active:scale-[0.98] active:bg-emerald-400 disabled:opacity-40`}
@@ -23,7 +23,7 @@ export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel 
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
           {holdLabel ?? 'NEXT BALL'}
         </button>
-        <button
+        {!holdLabel && <button
           {...autoPress} aria-label="Auto-play"
           className={`${circle} ${auto ? 'bg-indigo-500 text-white ring-2 ring-indigo-300' : 'bg-slate-700 text-white'}`}
         >
@@ -33,7 +33,7 @@ export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel 
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5v13a1 1 0 0 0 1.5.86L13 14v4.5a1 1 0 0 0 1.5.86l8-6a1 1 0 0 0 0-1.72l-8-6A1 1 0 0 0 13 6.5V11L4.5 4.64A1 1 0 0 0 3 5.5z" /></svg>
           )}
           {auto > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-white px-1.5 text-[10px] font-extrabold leading-4 text-indigo-700">{auto}x</span>}
-        </button>
+        </button>}
       </div>
     </div>
   )

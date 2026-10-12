@@ -1,7 +1,7 @@
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { winChanceSeries } from '../../engine/analysis'
 import type { Match } from '../../engine/match'
-import { TeamCrest, accentOf } from '../ui'
+import { TeamCrest, distinctAccents } from '../ui'
 
 /** An estimate of who is winning, over the course of the match. */
 export function WinChance({ match }: { match: Match }) {
@@ -12,8 +12,7 @@ export function WinChance({ match }: { match: Match }) {
   const over = match.isOver
   const winner = match.result?.winnerSide
   const pSecond = over ? (winner === null ? 0.5 : winner === match.innings[1]?.battingSide ? 1 : 0) : now
-  const c1 = accentOf(first)
-  const c2 = accentOf(second).toLowerCase() === c1.toLowerCase() ? '#e2e8f0' : accentOf(second)
+  const [c1, c2] = distinctAccents(first, second)
   const data = series.map((s) => ({ x: s.x, chase: Math.round(s.p * 100) }))
 
   return (

@@ -25,6 +25,9 @@ interface Props {
   spectating?: boolean
   stops: AutoStops
   setStops: (s: AutoStops) => void
+  /** Play every ball yourself: the auto-play options go away. */
+  manual?: boolean
+  setManual?: (v: boolean) => void
 }
 
 const Icon = {
@@ -72,7 +75,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   )
 }
 
-export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectating = false, stops, setStops }: Props) {
+export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectating = false, stops, setStops, manual = false, setManual }: Props) {
   const swipeOn = useSwipeAim()
   const [overs, setOvers] = useState(5)
   const [askForfeit, setAskForfeit] = useState(false)
@@ -101,6 +104,13 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
     <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-panel">
       {/* PLAY */}
       <Section title="Play">
+        {setManual && (
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white/5 px-2.5 py-2" title="Play every ball yourself: the auto-play options go away and the controls stay in view">
+            <span><span className="block text-[13px] font-bold text-white">Play manually</span><span className="block text-[11px] text-slate-400">{manual ? 'On: no auto-play, the controls stay in view' : 'Off: auto-play is available'}</span></span>
+            <span role="switch" aria-checked={manual} onClick={(e) => { e.preventDefault(); setManual(!manual) }} className={`relative h-6 w-11 shrink-0 rounded-full transition ${manual ? 'bg-indigo-500' : 'bg-slate-600'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${manual ? 'left-[22px]' : 'left-0.5'}`} /></span>
+            <input type="checkbox" className="sr-only" checked={manual} onChange={(e) => setManual(e.target.checked)} />
+          </label>
+        )}
         <div className="grid grid-cols-[1.6fr_1fr] gap-1.5">
           <button className={`${base} bg-emerald-500 text-black hover:bg-emerald-400`} onClick={() => act({ t: 'ball' })}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
@@ -124,8 +134,8 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
         </div>
       </Section>
 
-      {/* AUTO-PLAY */}
-      <Section title="Auto-play" hint="pauses only where ticked">
+      {/* AUTO-PLAY (not shown when you play manually) */}
+      {!manual && <Section title="Auto-play" hint="pauses only where ticked">
         <div className="grid grid-cols-4 overflow-hidden rounded-lg bg-slate-700">
           {([0, 1, 2, 4] as const).map((v) => (
             <button key={v} onClick={() => setAuto(v)} className={`h-8 text-[13px] font-bold transition ${auto === v ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>
@@ -142,7 +152,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
             </label>
           ))}
         </div>
-      </Section>
+      </Section>}
 
       {/* TACTICS */}
       {spectating && <Section title="Watching"><p className="rounded-lg bg-white/5 px-2.5 py-2 text-[12px] text-slate-300">This isn't your team's match. The computer runs both sides, so there are no tactics to set.</p></Section>}

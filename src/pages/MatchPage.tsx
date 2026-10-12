@@ -11,13 +11,13 @@ import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
-import { useSwipeAim } from '../prefs'
+import { setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
 import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
-import { InningsBar } from '../components/match/InningsBar'
+import { ControlDeck } from '../components/match/ControlDeck'
 import { InningsBreak } from '../components/match/InningsBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
@@ -96,6 +96,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // The innings break card: shown when the first innings ends during play (not when you reopen a match that is already in the chase).
   const [breakOpen, setBreakOpen] = useState(false)
   const swipeOn = useSwipeAim()
+  const manual = useManualPlay() // play every ball from the controls: no auto-play anywhere
   const [breakPopup, setBreakPopup] = useState(false) // the innings summary card (it does not start anything)
   const seenInnings = useRef(match.current.index)
   const inningsNow = match.current.index
@@ -281,7 +282,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms,
             lines: [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`] })
         } else if (notable.wicket && outLine) {
-          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay, ms,
+          // the dismissal plays out on the field first (stumps flying, the catch, the throw), then the batsman's moment comes up
+          const wicketDelay = sp === 4 ? 1000 : sp === 2 ? 1500 : notable.wicket.kind === 'run out' ? 2400 : 2100
+          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wicketDelay, ms,
             lines: [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`] })
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
@@ -295,8 +298,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     },
     [match, showFx, showNote, enqueueMoment, clearMoments],
   )
+  // between the innings the next innings' introductions wait too (this is true from the very render the innings ends)
+  const holdNow = !match.isOver && (breakOpen || match.current.index > seenInnings.current)
   const breakRef = useRef(false)
-  breakRef.current = breakOpen
+  breakRef.current = holdNow
   const announce = useCallback(
     (events: BallEvent[]) => {
       announceEvents(events)
@@ -305,7 +310,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     [match, announceEvents, enqueueIntros],
   )
   // The openers and the first bowler are introduced as play begins; the batsman and bowler of the chase, once the break is over.
-  useEffect(() => { if (phase === 'play' && !breakOpen) enqueueIntros() }, [phase, breakOpen, enqueueIntros])
+  useEffect(() => { if (phase === 'play' && !holdNow) enqueueIntros() }, [phase, holdNow, enqueueIntros])
+  // Play manually: auto-play stops and the controls take the lower panel; switching it off brings the auto-play options back
+  useEffect(() => { if (manual) { setAuto(0); setTab('controls') } else setTab((t) => (t === 'controls' ? 'scorecard' : t)) }, [manual])
 
   /** Every player action goes through here: do it, save it (so the match can be resumed), then react to it. */
   const act = useCallback(
@@ -361,17 +368,17 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (e.code === 'Space' && holdRef.current) { e.preventDefault(); setBreakOpen(false) }
       else if (e.code === 'Space') { e.preventDefault(); if (t.tagName === 'BUTTON') t.blur(); act({ t: 'ball' }) }
       else if (e.key === 'o' || e.key === 'O') act({ t: 'over' })
-      else if (e.key === 'p' || e.key === 'P') setAuto((a) => (a === 0 ? 1 : 0))
+      else if ((e.key === 'p' || e.key === 'P') && !manual) setAuto((a) => (a === 0 ? 1 : 0))
       else if (e.key === 'c' || e.key === 'C') setControlsOpen((o) => !o)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [phase, match, act])
+  }, [phase, match, act, manual])
 
   if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
 
   // between the innings the screen stays on the first innings until you press Next innings
-  const holding = !match.isOver && (breakOpen || match.current.index > seenInnings.current)
+  const holding = holdNow
   holdRef.current = holding
   match.hold = holding ? 0 : null
   const inn = match.shown
@@ -381,6 +388,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const watching = !!live.myTeamId && match.mySide === null
   const userBats = !watching && !match.isOver && !holding && (match.mySide === null || match.mySide === batIdx)
   const userBowls = !watching && !match.isOver && !holding && (match.mySide === null || match.mySide === 1 - batIdx)
+  const controlsNode = manual && !holding ? (
+    <ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={match.mySide} spectating={watching} stops={stops} setStops={setStops} manual setManual={setManualPlay} />
+  ) : undefined
   const aimProps = {
     aimShot: userBats ? match.shotAim[batIdx] : null,
     aimDelivery: userBowls ? match.deliveryAim[(1 - batIdx) as 0 | 1] : null,
@@ -474,8 +484,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{holding && breakPopup && <InningsBreak match={match} onClose={() => setBreakPopup(false)} />}</AnimatePresence>
-      <AnimatePresence>{holding && !breakPopup && <InningsBar match={match} onContinue={() => setBreakOpen(false)} />}</AnimatePresence>
-      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} />
+      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} manual={manual} setManual={setManualPlay} />
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
     </>
@@ -489,7 +498,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         <div className="fixed inset-0 z-30 flex bg-ink" data-scroll-lock style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
           <div className="flex min-w-0 flex-[1.3] flex-col">
             <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
+            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : holding ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">Innings break</b>Look the innings over, then press Next innings.</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -500,12 +509,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             </div>}
           </div>
           <div className="flex min-w-0 flex-1 flex-col border-l border-line" style={{ paddingTop: 'var(--sat)' }}>
-            {!match.isOver && <MobileNowPlaying match={match} displayOver={displayOver} />}
+            {!match.isOver && !holding && <MobileNowPlaying match={match} displayOver={displayOver} />}
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
               {!match.isOver && resultCard}
-              <Commentary match={match} tab={tab} setTab={setTab} />
+              <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
             </div>
-            {!finished && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+            {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
           </div>
         </div>
       </PlayerCardProvider>
@@ -518,7 +527,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         {overlays}
         <div className="fixed inset-0 z-30 flex flex-col bg-ink" data-scroll-lock>
           <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-          {!match.isOver && <div className="relative shrink-0">
+          {!match.isOver && !holding && <div className="relative shrink-0">
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -530,9 +539,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           </div>}
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-2 py-2">
             {resultCard}
-            <Commentary match={match} tab={tab} setTab={setTab} />
+            <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
           </div>
-          {!finished && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+          {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
         </div>
       </PlayerCardProvider>
     )
@@ -561,6 +570,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* The field and the live mini-scorecard stay pinned in view while the rest of the page scrolls. */}
+        {holding ? (
+          <div className="rounded-2xl border border-line bg-panel p-8 text-center text-slate-300 xl:sticky xl:top-3 xl:self-start"><b className="block font-display text-4xl tracking-wide text-white">Innings break</b>Look the innings over in the scorecard, then press <b className="text-white">Next innings</b>.</div>
+        ) : (
         <div className="space-y-3 xl:sticky xl:top-3 xl:self-start">
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
@@ -570,8 +582,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           </div>
           <NowPlaying match={match} displayOver={displayOver} />
         </div>
+        )}
         <div className="space-y-4">
-          <Commentary match={match} tab={tab} setTab={setTab} />
+          <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
         </div>
       </div>
     </div>

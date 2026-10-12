@@ -2,7 +2,7 @@ import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ReferenceDot,
 import { perOver, runMix, worm, wormWickets } from '../../engine/analysis'
 import type { Match } from '../../engine/match'
 import { FORMATS } from '../../engine/types'
-import { accentOf } from '../ui'
+import { distinctAccents } from '../ui'
 import { ClickAvatar } from './PlayerCard'
 import { InningsPicker, useInningsPick } from './InningsPicker'
 
@@ -35,10 +35,8 @@ export function Charts({ match }: { match: Match }) {
   const cfg = FORMATS[match.format]
   const inn = match.innings[idx]
   const first = match.battingSide(match.innings[0])
-  const accent = (i: number) => {
-    const a = accentOf(match.battingSide(match.innings[i]).team)
-    return i === 1 && a.toLowerCase() === accentOf(first.team).toLowerCase() ? '#e2e8f0' : a // two teams of one colour need telling apart
-  }
+  const [c0, c1] = distinctAccents(first.team, match.battingSide(match.innings[1] ?? match.innings[0]).team) // two teams on one chart must look different
+  const accent = (i: number) => (i === 0 ? c0 : c1)
   const overs = perOver(inn)
   const mix = runMix(inn)
   const target = match.innings[1]?.target ?? null

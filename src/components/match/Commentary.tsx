@@ -6,7 +6,7 @@ import { Scorecard } from './Scorecard'
 import { StatsTabs } from './StatsTabs'
 import { chip } from './NowPlaying'
 
-export type Tab = 'scorecard' | 'commentary' | 'stats'
+export type Tab = 'controls' | 'scorecard' | 'commentary' | 'stats'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'scorecard', label: 'Scorecard' },
@@ -15,16 +15,18 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 /** Ball-by-ball commentary (newest first, with an over summary after each over) or the full scorecard. */
-export function Commentary({ match, tab, setTab }: { match: Match; tab: Tab; setTab: (t: Tab) => void }) {
+export function Commentary({ match, tab, setTab, controls }: { match: Match; tab: Tab; setTab: (t: Tab) => void; /** When set (manual play), a Controls tab comes first and shows this. */ controls?: React.ReactNode }) {
   const feed = [...match.events].reverse().slice(0, 90)
   return (
     <div className="rounded-2xl border border-line bg-panel p-4">
       <div className="mb-3 flex flex-wrap gap-1.5" role="tablist">
-        {TABS.map((t) => (
+        {(controls ? [{ id: 'controls' as Tab, label: 'Controls' }, ...TABS] : TABS).map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${tab === t.id ? 'border-indigo-400 bg-indigo-500 text-white' : 'border-line text-slate-300 hover:text-white'}`}>{t.label}</button>
         ))}
       </div>
-      {tab === 'scorecard' ? (
+      {tab === 'controls' && controls ? (
+        controls
+      ) : tab === 'scorecard' ? (
         <Scorecard match={match} />
       ) : tab === 'stats' ? (
         <StatsTabs match={match} />

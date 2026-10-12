@@ -46,13 +46,16 @@ interface DockProps {
   /** Between innings: the Next ball button becomes this, and does `onHold`. */
   holdLabel?: string
   onHold?: () => void
+  /** Play every ball yourself: the floating auto-play buttons go away. */
+  manual?: boolean
+  setManual?: (v: boolean) => void
 }
 
 /**
  * The match controls live in a panel you open on demand, so the field and scorecard get the screen.
  * A small floating dock keeps the two things you do most within reach: the next ball and the panel.
  */
-export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops, hideDock = false, holdLabel, onHold }: DockProps) {
+export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide, spectating, stops, setStops, hideDock = false, holdLabel, onHold, manual = false, setManual }: DockProps) {
   const mobile = useIsMobile()
   const autoPress = useLongPress(() => { if (auto) setAuto(0) }, () => setAuto(auto === 0 ? 1 : auto === 1 ? 2 : auto === 2 ? 4 : 0))
   useEffect(() => {
@@ -67,14 +70,14 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
   return (
     <>
       {/* floating dock: round icon buttons in a row, each explained by a tooltip */}
-      {!hideDock && <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
+      {!hideDock && (!manual || !!holdLabel) && <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
         {holdLabel && <button onClick={onHold} aria-label={holdLabel} className="cta-pulse mx-1 h-12 rounded-full bg-emerald-500 px-5 font-display text-lg tracking-wide text-black hover:bg-emerald-400">{holdLabel}</button>}
-        {!holdLabel && <Tip label="Next ball" hint="Space">
+        {!holdLabel && !manual && <Tip label="Next ball" hint="Space">
           <button onClick={() => act({ t: 'ball' })} aria-label="Next ball" className={`${auto ? '' : 'cta-pulse '}grid h-12 w-12 place-items-center rounded-full bg-emerald-500 text-black transition hover:bg-emerald-400`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
           </button>
         </Tip>}
-        <Tip label={auto === 0 ? 'Auto-play: off. Click to start' : `Auto-play ${auto}x. Click to ${auto === 4 ? 'stop' : 'speed up'}`} hint="P pauses">
+        {!holdLabel && !manual && <Tip label={auto === 0 ? 'Auto-play: off. Click to start' : `Auto-play ${auto}x. Click to ${auto === 4 ? 'stop' : 'speed up'}`} hint="P pauses">
           <button
             {...autoPress}
             aria-label="Auto-play"
@@ -87,19 +90,19 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
             )}
             {auto > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-white px-1.5 text-[10px] font-extrabold leading-4 text-indigo-700">{auto}x</span>}
           </button>
-        </Tip>
-        <Tip label="Match controls" hint="C" align="right">
+        </Tip>}
+        {!holdLabel && !manual && <Tip label="Match controls" hint="C" align="right">
           <button onClick={() => setOpen(true)} aria-label="Open match controls" className="grid h-12 w-12 place-items-center rounded-full bg-slate-700 text-white transition hover:bg-slate-600">
             <Gear />
           </button>
-        </Tip>
+        </Tip>}
       </div>}
 
       {/* the panel */}
       <AnimatePresence>
         {open && mobile && (
           <Sheet label="Match controls" onClose={() => setOpen(false)} z={80} size="sm">
-            <div className="p-2.5"><ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={mySide} spectating={spectating} stops={stops} setStops={setStops} /></div>
+            <div className="p-2.5"><ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={mySide} spectating={spectating} stops={stops} setStops={setStops} manual={manual} setManual={setManual} /></div>
           </Sheet>
         )}
         {open && !mobile && (
@@ -115,7 +118,7 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
                 <button onClick={() => setOpen(false)} className="rounded-lg border border-line px-2.5 py-1 text-[13px] font-bold text-slate-200 hover:border-slate-400">Close</button>
               </div>
               <div className="flex-1 overflow-y-auto p-2.5">
-                <ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={mySide} spectating={spectating} stops={stops} setStops={setStops} />
+                <ControlDeck match={match} act={act} auto={auto} setAuto={setAuto} mySide={mySide} spectating={spectating} stops={stops} setStops={setStops} manual={manual} setManual={setManual} />
               </div>
             </motion.aside>
           </motion.div>

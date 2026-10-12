@@ -14,6 +14,28 @@ export function luminance(hex: string): number {
 }
 
 /** The brighter of the two team colours, so it stays readable on the dark UI. */
+const rgb = (hex: string): [number, number, number] => {
+  const h = hex.replace('#', '')
+  const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.padEnd(6, '0')
+  return [parseInt(f.slice(0, 2), 16) || 0, parseInt(f.slice(2, 4), 16) || 0, parseInt(f.slice(4, 6), 16) || 0]
+}
+/** How different two colours look (0 identical, about 440 black and white). */
+const colorGap = (a: string, b: string) => { const [x, y] = [rgb(a), rgb(b)]; return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) }
+
+/**
+ * The two colours to draw two teams in when they must be told apart (a chart with both teams on it). Each team keeps its
+ * own accent unless the two are too alike, in which case the second one switches to its other colour, or to the most
+ * different colour from a short list.
+ */
+export function distinctAccents(a: Pick<Team, 'colors'>, b: Pick<Team, 'colors'>): [string, string] {
+  const first = accentOf(a)
+  const NEAR = 110
+  if (colorGap(first, accentOf(b)) >= NEAR) return [first, accentOf(b)]
+  for (const alt of [b.colors.primary, b.colors.secondary]) if (colorGap(first, alt) >= NEAR && colorGap(alt, '#10131c') > 60) return [first, alt]
+  const pool = ['#f8fafc', '#fbbf24', '#34d399', '#38bdf8', '#f472b6']
+  return [first, [...pool].sort((x, y) => colorGap(first, y) - colorGap(first, x))[0]]
+}
+
 export const accentOf = (t: Pick<Team, 'colors'>) =>
   luminance(t.colors.primary) >= luminance(t.colors.secondary) ? t.colors.primary : t.colors.secondary
 
