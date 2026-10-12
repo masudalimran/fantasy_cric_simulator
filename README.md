@@ -176,7 +176,7 @@ You can see it everywhere:
   the bowler appeals and the umpire's finger goes up. Caught: the ball goes to the fielder, he catches it and the bowler
   runs over to him. Caught and bowled: the bowler takes it. Run out: the batsmen run, the fielder throws and the stumps go.
   Stumped: the batsman steps out, the keeper takes it and the stumps go. Hit wicket: his own bat hits the stumps.
-  Higher auto-play speeds play it quicker. The field itself is not changed.
+  The OUT screen fades in as the replay fades out, with no gap between them. Higher auto-play speeds play it quicker. The field itself is not changed.
 - **Auto-play button**: tap to cycle 1x, 2x, 4x, off.
 - **Innings break**: the innings summary card comes up first (top scorers, best bowling, the target) with only a Close
   button, so it never starts anything. The sides stay as they were (the controls say "Innings break") until you press

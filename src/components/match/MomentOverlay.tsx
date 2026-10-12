@@ -83,7 +83,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
     return (
       <motion.div
         data-moment="replay" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.18, delay: 0 } }} transition={{ duration: 0.3, delay: moment.delay / 1000 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.05, transition: { duration: 0.45, delay: 0, ease: 'easeInOut' } }} transition={{ duration: 0.3, delay: moment.delay / 1000 }}
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
@@ -114,7 +114,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       className={`absolute inset-0 z-[45] flex cursor-pointer justify-center overflow-hidden rounded-2xl ${stacked ? 'flex-col items-center gap-1.5 px-3 text-center' : 'items-center gap-[4%] px-[5%]'}`}
       style={{ background: bg, boxShadow: wicket ? 'inset 0 0 90px rgba(239,68,68,.38)' : milestone ? 'inset 0 0 90px rgba(251,191,36,.3)' : `inset 0 0 80px ${accent}44` }}
       initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18, delay: 0 } }}
-      transition={{ duration: 0.28, delay: moment.delay / 1000 }}
+      transition={{ duration: moment.delay === 0 ? 0.5 : 0.28, delay: moment.delay / 1000, ease: 'easeOut' }} // straight after a replay: it fades in as the replay fades out
       aria-label={wicket ? 'Wicket' : milestone ? 'Milestone' : moment.kind === 'bowler' ? 'Bowler introduction' : 'Batsman introduction'}
     >
       {intro && (

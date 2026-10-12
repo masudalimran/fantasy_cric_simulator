@@ -170,7 +170,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (!m) { busyUntil.current = 0; return }
     // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
     if (m.kind === 'wicket' && stopsRef.current.wickets) { busyUntil.current = Infinity; return }
-    const total = m.delay + m.ms + 350
+    const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
   }, [])
@@ -293,7 +293,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(4300 * rate),
             replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})` },
           })
-          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay, ms,
+          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: 0, ms, // straight after the replay, no gap
             lines: [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`] })
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
