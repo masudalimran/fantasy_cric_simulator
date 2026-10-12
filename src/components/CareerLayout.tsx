@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useIsMobile } from '../hooks'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router'
 import { paths } from '../routes'
@@ -21,6 +21,13 @@ export function CareerLayout() {
   const teams = useTeamMap()
   const { pathname } = useLocation()
   const mobile = useIsMobile()
+  const tabStrip = useRef<HTMLElement>(null)
+  // keep the open page's tab in view when the strip is wider than the screen
+  useEffect(() => {
+    const strip = tabStrip.current
+    const on = strip?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (strip && on) strip.scrollTo({ left: on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2, behavior: 'smooth' })
+  }, [pathname, mobile])
   const viewYear = useStore((s) => s.viewYear)
   const setViewYear = useStore((s) => s.setViewYear)
   const viewed = useViewedSeason()
@@ -46,7 +53,6 @@ export function CareerLayout() {
   ]
 
   if (mobile) {
-    const short: Record<string, string> = { 'My squad': 'Squad', 'Season review': 'Review' }
     return (
       <div>
         <div className="mb-2 flex items-center gap-2.5 rounded-2xl border border-line bg-panel px-3 py-2.5">
@@ -72,9 +78,9 @@ export function CareerLayout() {
           </div>
         )}
         {/* the career's pages as a tab strip that stays in view while you scroll, like a native app */}
-        <nav className="sticky z-30 -mx-4 mb-3 grid gap-0.5 border-b border-line/70 bg-ink/95 px-2 py-1.5 backdrop-blur-xl" style={{ top: 'calc(var(--sat) + 49px)', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} aria-label="Career pages">
+        <nav ref={tabStrip} className="sticky z-30 -mx-4 mb-3 flex gap-1 overflow-x-auto overscroll-x-contain border-b border-line/70 bg-ink/95 px-3 py-1.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ top: 'calc(var(--sat) + 49px)' }} aria-label="Career pages">
           {tabs.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `rounded-xl px-0.5 py-2 text-center text-[11.5px] font-bold tracking-tight transition ${isActive ? 'bg-indigo-500 text-white' : 'text-slate-400 active:bg-white/10'}`}>{short[label] ?? label}</NavLink>
+            <NavLink key={to} to={to} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-center text-[13px] font-bold tracking-tight transition ${isActive ? 'bg-indigo-500 text-white' : 'text-slate-300 active:bg-white/10'}`}>{label}</NavLink>
           ))}
         </nav>
         <Outlet />
