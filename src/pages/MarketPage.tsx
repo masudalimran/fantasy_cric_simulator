@@ -171,15 +171,22 @@ export function MarketPage() {
         </section>
       )}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <button
+        onClick={() => setView(view === 'transfers' ? 'unsigned' : 'transfers')}
+        className={`mb-3 flex w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition md:w-auto md:min-w-[320px] ${view === 'transfers' ? 'border-fuchsia-300 bg-fuchsia-400 text-black' : 'border-fuchsia-400/70 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/20'}`}
+      >
+        <span><span className="block font-display text-2xl leading-none tracking-wide">{view === 'transfers' ? 'Back to the market' : 'All transfers'}</span><span className={`block text-xs ${view === 'transfers' ? 'text-black/70' : 'text-fuchsia-200/80'}`}>{view === 'transfers' ? 'Sign, buy or release players' : `Every move across all the teams · ${market.log.length}`}</span></span>
+        <span className="font-display text-3xl leading-none">{view === 'transfers' ? '‹' : '›'}</span>
+      </button>
+
+      {view !== 'transfers' && <div className="mb-3 flex flex-wrap items-center gap-2">
         <button className={chip(view === 'unsigned')} onClick={() => setView('unsigned')}>Unsigned ({market.pool.length})</button>
         <button className={chip(view === 'teams')} onClick={() => setView('teams')}>Other teams</button>
         <button className={chip(view === 'squad')} onClick={() => setView('squad')}>My squad ({squadIds.length})</button>
-        <button className={chip(view === 'transfers')} onClick={() => setView('transfers')}>Transfers ({market.log.length})</button>
-        {view !== 'transfers' && <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="ml-auto rounded-lg border border-line bg-panel-2 px-2 py-1.5 text-sm text-white" aria-label="Filter by role">
+        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="ml-auto rounded-lg border border-line bg-panel-2 px-2 py-1.5 text-sm text-white" aria-label="Filter by role">
           <option value="all">All roles</option><option value="BAT">Batsmen</option><option value="BOWL">Bowlers</option><option value="AR">All-rounders</option><option value="WK">Keepers</option>
-        </select>}
-      </div>
+        </select>
+      </div>}
 
       {view === 'unsigned' && (
         <div className="space-y-2">

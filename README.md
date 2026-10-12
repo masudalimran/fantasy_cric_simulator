@@ -117,8 +117,8 @@ that links to the market) and on the Home page.
   is full they release their weakest player.
 - **Window closed popup** (`MarketClosed`): the first time you open the Calendar after a window has closed, a card says the
   market is **CLOSED**, with how many transfers happened, how many were yours, the biggest deal, and a **See all transfers**
-  button that opens the Transfers tab for that window. It shows once per window per career.
-- **Transfers tab** (Market page): every move made in the career, newest first, filterable by window (Season auction or
+  button that opens the transfers list for that window. It shows once per window per career.
+- **All transfers** (a separate full-width button on the Market page, above the Unsigned / Other teams / My squad chips, not one of them; it changes to "Back to the market" while open): every move made in the career, newest first, filterable by window (Season auction or
   Mid-year window of each year), with a summary line and the same face and team links as everywhere else. Moves that
   involve your team are tinted gold.
 - **Offer notice** (`OfferBanner`): while an offer is on the table, a blue notice shows at the top of every career page
