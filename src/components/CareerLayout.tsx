@@ -29,11 +29,11 @@ export function CareerLayout() {
   }, [])
   // the arrows move the strip by about two tabs; it does not scroll by touch
   const nudge = (dir: -1 | 1) => tabStrip.current?.scrollBy({ left: dir * 150, behavior: 'smooth' })
-  // when the strip is wider than the screen, move the open page's tab toward the left so what comes after it shows
+  // keep the open page's tab fully in view (in the middle) when the strip is wider than the screen
   useEffect(() => {
     const strip = tabStrip.current
     const on = strip?.querySelector<HTMLElement>('[aria-current="page"]')
-    if (strip && on) strip.scrollTo({ left: Math.max(0, on.offsetLeft - strip.clientWidth * 0.12), behavior: 'smooth' }) // the open tab sits near the left, so the tabs after it show
+    if (strip && on) strip.scrollTo({ left: Math.max(0, on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2), behavior: 'smooth' }) // the open tab is brought to the middle, fully visible
   }, [pathname, mobile])
   useEffect(() => { measure(); window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure) }, [measure, mobile, pathname])
   const viewYear = useStore((s) => s.viewYear)
@@ -87,12 +87,10 @@ export function CareerLayout() {
         )}
         {/* the career's pages as a tab strip that stays in view while you scroll, like a native app */}
         <div className="sticky z-30 -mx-4 mb-3 flex items-center gap-1 border-b border-line/70 bg-ink/95 px-1.5 py-1.5 backdrop-blur-xl" style={{ top: 'calc(var(--sat) + 49px)' }}>
-          <NavLink to={tabs[0][0]} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-extrabold tracking-tight transition ${isActive ? 'bg-amber-400 text-black shadow-[0_0_12px_rgba(251,191,36,.45)]' : 'border border-amber-400/70 bg-amber-400/15 text-amber-200 active:bg-amber-400/30'}`}>{tabs[0][1]}</NavLink>
-          <span className="h-6 w-px shrink-0 bg-line" aria-hidden />
           <button onClick={() => nudge(-1)} disabled={!more.left} aria-label="Previous tabs" className="grid h-9 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-bold text-white transition active:bg-white/15 disabled:opacity-25">‹</button>
           <nav ref={tabStrip} onScroll={measure} className="flex min-w-0 flex-1 gap-1 overflow-x-hidden" aria-label="Career pages">
-            {tabs.slice(1).map(([to, label]) => (
-              <NavLink key={to} to={to} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-center text-[13px] font-bold tracking-tight transition ${isActive ? 'bg-indigo-500 text-white' : 'text-slate-300 active:bg-white/10'}`}>{label}</NavLink>
+            {tabs.map(([to, label]) => (
+              <NavLink key={to} to={to} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-center text-[13px] font-bold tracking-tight transition ${label === 'Calendar' ? (isActive ? 'bg-amber-400 font-extrabold text-black shadow-[0_0_12px_rgba(251,191,36,.45)]' : 'border border-amber-400/70 bg-amber-400/15 font-extrabold text-amber-200 active:bg-amber-400/30') : isActive ? 'bg-indigo-500 text-white' : 'text-slate-300 active:bg-white/10'}`}>{label}</NavLink>
             ))}
           </nav>
           <button onClick={() => nudge(1)} disabled={!more.right} aria-label="More tabs" className="grid h-9 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-bold text-white transition active:bg-white/15 disabled:opacity-25">›</button>
