@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { RatingBadge, accentOf } from '../ui'
+import { WicketReplay, type ReplayInfo } from './WicketReplay'
 import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from './Portrait'
 
 /**
@@ -10,7 +11,9 @@ import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler'
+  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler' | 'replay'
+  /** For a replay: how the wicket happened. */
+  replay?: ReplayInfo
   player: Player
   team: Team
   title: string
@@ -75,6 +78,18 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  if (moment.kind === 'replay' && moment.replay) {
+    // a screen of its own: how the wicket happened, a few seconds long (click to skip)
+    return (
+      <motion.div
+        data-moment="replay" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.18, delay: 0 } }} transition={{ duration: 0.3, delay: moment.delay / 1000 }}
+        aria-label="Wicket replay"
+      >
+        <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
   const wicket = moment.kind === 'wicket'
   const milestone = moment.kind === 'milestone'
   const intro = moment.kind === 'batsman' || moment.kind === 'bowler'

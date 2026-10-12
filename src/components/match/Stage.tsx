@@ -169,7 +169,7 @@ function Sparks({ x, y, color, big }: { x: number; y: number; color: string; big
 }
 
 /** The stumps flying when a batsman is bowled, leg before or stumped. */
-function StumpsFly({ delay = 0.4 }: { delay?: number }) {
+function StumpsFly() {
   const parts = [
     { x: 78.4, dx: -9, dr: -50 }, { x: 80, dx: 1, dr: 20 }, { x: 81.6, dx: 10, dr: 55 },
   ]
@@ -179,7 +179,7 @@ function StumpsFly({ delay = 0.4 }: { delay?: number }) {
         <motion.line
           key={i} x1={p.x} x2={p.x} y1={68.6} y2={71.8} stroke="#fef3c7" strokeWidth="0.7" strokeLinecap="round"
           initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0], x: [0, p.dx], y: [0, -6 - i, 5], rotate: [0, p.dr] }}
-          style={{ originX: `${p.x}px`, originY: '70px' }} transition={{ delay, duration: 0.9 }}
+          style={{ originX: `${p.x}px`, originY: '70px' }} transition={{ delay: 0.4, duration: 0.9 }}
         />
       ))}
       {[-1, 1].map((d) => (
@@ -245,10 +245,8 @@ function Ball({ className = '' }: { className?: string }) {
   )
 }
 
-function Token({ player, team, role, x, y, size, extra, delivering, celebrate, scale, moveTo }: {
+function Token({ player, team, role, x, y, size, extra, delivering, celebrate, scale }: {
   player: Player; team: Team; role: Role; x: number; y: number; size: number; extra?: React.ReactNode; delivering?: number; celebrate?: number; scale: number
-  /** Run to somewhere (the bowler to the fielder who took the catch) after a delay, in field units. */
-  moveTo?: { x: number; y: number; delay: number } | null
 }) {
   const r = ROLE[role]
   const run = useAnimationControls()
@@ -263,8 +261,8 @@ function Token({ player, team, role, x, y, size, extra, delivering, celebrate, s
     <motion.div
       className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center"
       initial={{ left: pct(x, W), top: pct(y, H), opacity: 0, scale: 0.5 }}
-      animate={{ left: pct(moveTo?.x ?? x, W), top: pct(moveTo?.y ?? y, H), opacity: 1, scale: 1 }}
-      transition={moveTo ? { type: 'spring', stiffness: 45, damping: 14, delay: moveTo.delay } : { type: 'spring', stiffness: 130, damping: 18 }}
+      animate={{ left: pct(x, W), top: pct(y, H), opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 130, damping: 18 }}
     >
       {/* everything about a token scales with the size of the field, so they never crowd each other on a small screen */}
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}>
@@ -279,20 +277,6 @@ function Token({ player, team, role, x, y, size, extra, delivering, celebrate, s
           </div>
         </motion.div>
       </div>
-    </motion.div>
-  )
-}
-
-/** A shout over whoever is celebrating (HOWZAT!, CAUGHT!), popping in beside them. */
-function Callout({ text, x, y, delay, scale }: { text: string; x: number; y: number; delay: number; scale: number }) {
-  return (
-    <motion.div
-      className="pointer-events-none absolute z-40 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-white px-2.5 py-0.5 font-display tracking-wide text-black shadow-xl"
-      style={{ left: pct(x, W), top: pct(y - 6, H), fontSize: 20 * Math.max(scale, 0.7) }}
-      initial={{ opacity: 0, scale: 0.3, y: 6 }} animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1.2, 1, 1], y: [6, -2, -2, -10] }} transition={{ delay, duration: 1.6, times: [0, 0.15, 0.75, 1] }}
-    >
-      {text}
-      <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-white" />
     </motion.div>
   )
 }
@@ -341,26 +325,7 @@ export function Stage({
   const milestone = !!event?.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')
   const strikerJoy = event && (event.boundary || milestone) ? seq + 1 : 0
   const bowlerJoy = event?.wicket && event.wicket.kind !== 'run out' ? seq + 1 : 0
-  const kind = event?.wicket?.kind ?? null
-  const stumpsHit = kind === 'bowled' || kind === 'hit wicket' || kind === 'stumped' || kind === 'run out'
-  const taker = event?.wicket?.fielderId ? fielders.find((f) => f.player.id === event.wicket!.fielderId) : undefined
-  const keeperSpot = fielders[0]
-  // when the stumps go over: right away when bowled, after the throw for a run out, after the keeper has it for a stumping
-  const stumpsAt = kind === 'run out' ? 1.25 : kind === 'stumped' ? 0.75 : 0.4
-  // the bowler runs over to the fielder who took the catch
-  const bowlerRuns = kind === 'caught' && taker ? { x: BOWLER_START.x + (taker.x - BOWLER_START.x) * 0.6, y: BOWLER_START.y + (taker.y - BOWLER_START.y) * 0.6, delay: 1.1 } : null
-  const bowlerSide = { x: BOWLER_START.x + 22, y: BOWLER_START.y + 12 } // beside the bowler, so it is not cut off at the top
-  const callout = !event?.wicket ? null
-    : kind === 'bowled' ? { text: 'BOWLED!', at: bowlerSide, delay: 0.55 }
-    : kind === 'lbw' ? { text: 'HOWZAT!', at: bowlerSide, delay: 0.5 }
-    : kind === 'caught' && taker ? { text: 'CAUGHT!', at: taker, delay: 1.0 }
-    : kind === 'caught and bowled' ? { text: 'GOT HIM!', at: bowlerSide, delay: 0.9 }
-    : kind === 'run out' && taker ? { text: 'RUN OUT!', at: taker, delay: 1.2 }
-    : kind === 'stumped' ? { text: 'STUMPED!', at: keeperSpot ?? STUMPS_BAT, delay: 0.75 }
-    : kind === 'hit wicket' ? { text: 'HIT WICKET!', at: STUMPS_BAT, delay: 0.5 }
-    : null
-  // a dismissal that needs a longer ball path: the throw for a run out
-  const path = kind === 'run out' && taker ? [BOWLER_STRIDE, HIT, { x: taker.x, y: taker.y }, STUMPS_BAT] : kind === 'stumped' && keeperSpot ? [BOWLER_STRIDE, HIT, { x: keeperSpot.x, y: keeperSpot.y }] : null
+  const stumpsHit = !!event?.wicket && ['bowled', 'lbw', 'hit wicket', 'stumped'].includes(event.wicket.kind)
   const flash = event?.boundary === 6 ? '#e879f9' : event?.wicket ? '#ef4444' : event?.boundary === 4 ? '#38bdf8' : milestone ? '#fbbf24' : null
 
   return (
@@ -402,7 +367,7 @@ export function Stage({
           )
         })}
         {event?.boundary && <Sparks key={`sp${seq}`} x={end.x} y={end.y} color={event.boundary === 6 ? '#e879f9' : '#38bdf8'} big={event.boundary === 6} />}
-        {stumpsHit && <StumpsFly key={`st${seq}`} delay={stumpsAt} />}
+        {stumpsHit && <StumpsFly key={`st${seq}`} />}
         {aimShot && (() => {
           const tip = ropePoint(aimShot.angle)
           const reach = aimShot.loft ? 0.95 : 0.8
@@ -426,12 +391,10 @@ export function Stage({
             <motion.circle
               r={six ? 1.7 : 1.15} fill="#ef4444" stroke="#fecaca" strokeWidth="0.35"
               initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 1 }}
-              animate={path
-                ? { cx: path.map((p) => p.x), cy: path.map((p) => p.y), r: 1.15, opacity: 1 }
-                : bounce
+              animate={bounce
                 ? { cx: [BOWLER_STRIDE.x, bounce.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, bounce.y, HIT.y, end.y], r: six ? [1.15, 1.15, 1.15, 2.4] : [1.15, 1.15, 1.15, 1.15], opacity: [1, 1, 1, event.boundary ? 0.35 : 1] }
                 : { cx: [BOWLER_STRIDE.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, HIT.y, end.y], r: six ? [1.15, 1.15, 2.4, 1.3] : [1.15, 1.15, 1.15], opacity: [1, 1, event.boundary ? 0.35 : 1] }}
-              transition={path ? (path.length === 4 ? { duration: 1.5, times: [0, 0.25, 0.6, 1], ease: 'easeOut' } : { duration: 1.0, times: [0, 0.4, 1], ease: 'easeOut' }) : bounce ? { duration: 1.1, times: [0, 0.2, 0.4, 1], ease: 'easeOut' } : { duration: 1.05, times: [0, 0.38, 1], ease: 'easeOut' }}
+              transition={bounce ? { duration: 1.1, times: [0, 0.2, 0.4, 1], ease: 'easeOut' } : { duration: 1.05, times: [0, 0.38, 1], ease: 'easeOut' }}
             />
           </motion.g>
         )}
@@ -465,8 +428,8 @@ export function Stage({
           key={player.id + (involved === player.id ? `-${seq}` : '')}
           className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 hover:z-40"
           style={{ left: pct(x, W), top: pct(y, H) }}
-          animate={involved === player.id ? { scale: [1, 1, 1.6, 1.15], y: [0, 0, -14, 0, -8, 0] } : (kind === 'bowled' || kind === 'lbw') && player.id === keeperSpot?.player.id ? { scale: [1, 1, 1.25, 1], y: [0, 0, -10, 0] } : { scale: 1 }}
-          transition={involved === player.id ? { duration: kind === 'run out' ? 2.0 : 1.5, delay: kind === 'run out' ? 0.5 : 0, times: [0, 0.4, 0.52, 0.66, 0.8, 1] } : { duration: 1.2, delay: 0.6, times: [0, 0.4, 0.6, 1] }}
+          animate={involved === player.id ? { scale: [1, 1, 1.6, 1.15] } : { scale: 1 }}
+          transition={{ duration: 1.3, times: [0, 0.6, 0.78, 1] }}
         >
           <div className="rounded-full transition-transform duration-150 group-hover:scale-125" style={{ boxShadow: `0 0 0 1.5px ${accentOf(bowlingTeam)}aa` }}>
             <PlayerAvatar player={player} team={bowlingTeam} size={Math.round((involved === player.id ? 38 : 28) * Math.max(scale, 0.75))} />
@@ -479,12 +442,10 @@ export function Stage({
         </motion.div>
       ))}
 
-      {callout && <Callout key={`co${seq}`} text={callout.text} x={callout.at.x} y={callout.at.y} delay={callout.delay} scale={scale} />}
-
       {/* the three people at the crease */}
       {nonStriker && <Token key={nonStriker.id} player={nonStriker} team={battingTeam} role="nonstriker" x={NON_STRIKER.x} y={NON_STRIKER.y} size={46} scale={scale} />}
       <Token key={striker.id} player={striker} team={battingTeam} role="striker" x={STRIKER.x} y={STRIKER.y} size={58} scale={scale} celebrate={strikerJoy} extra={<Bat swing={hit ? seq + 1 : 0} />} />
-      <Token key={bowler.id} player={bowler} team={bowlingTeam} role="bowler" x={BOWLER_START.x} y={BOWLER_START.y} size={54} scale={scale} delivering={seq + 1} celebrate={bowlerJoy} moveTo={bowlerRuns} extra={<Ball className="absolute -left-4 bottom-1" />} />
+      <Token key={bowler.id} player={bowler} team={bowlingTeam} role="bowler" x={BOWLER_START.x} y={BOWLER_START.y} size={54} scale={scale} delivering={seq + 1} celebrate={bowlerJoy} extra={<Ball className="absolute -left-4 bottom-1" />} />
 
       {/* a milestone or a dismissal takes over the whole field with the batsman as a stick man */}
       <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={() => onDismissMoment?.()} />}</AnimatePresence>

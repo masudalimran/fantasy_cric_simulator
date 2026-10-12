@@ -170,10 +170,13 @@ You can see it everywhere:
   same for a shot, and Space does nothing. In a friendly you run both sides, so both pads show. If you are only
   watching, a single Next ball button is all there is. The field and the batsman and bowler cards stay. Switch it off
   (in the same tab) to bring the auto-play options back.
-- **Wicket animations** (`Stage.tsx`): each dismissal plays out on the field before the batsman's moment comes up. Bowled:
-  the stumps fly and the keeper hops. LBW: the bowler appeals (HOWZAT!). Caught: the fielder takes it and celebrates and the
-  bowler runs over to him. Caught and bowled: the bowler takes it. Run out: the ball goes to the fielder and is thrown
-  to the stumps. Stumped: the ball goes to the keeper and the stumps go. Hit wicket: the stumps go.
+- **Wicket replay** (`WicketReplay.tsx`): every wicket first plays a separate screen of its own, about 4 to 5 seconds, showing
+  how it happened (tap to skip), and then the batsman's usual OUT moment comes up. The scene is the ground from above
+  with the pitch, the stumps and the people involved. Bowled: the bowler runs in and the stumps fly. LBW: it hits the pad,
+  the bowler appeals and the umpire's finger goes up. Caught: the ball goes to the fielder, he catches it and the bowler
+  runs over to him. Caught and bowled: the bowler takes it. Run out: the batsmen run, the fielder throws and the stumps go.
+  Stumped: the batsman steps out, the keeper takes it and the stumps go. Hit wicket: his own bat hits the stumps.
+  Higher auto-play speeds play it quicker. The field itself is not changed.
 - **Auto-play button**: tap to cycle 1x, 2x, 4x, off.
 - **Innings break**: the innings summary card comes up first (top scorers, best bowling, the target) with only a Close
   button, so it never starts anything. The sides stay as they were (the controls say "Innings break") until you press

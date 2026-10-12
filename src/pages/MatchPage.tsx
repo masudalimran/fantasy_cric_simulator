@@ -283,9 +283,17 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms,
             lines: [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`] })
         } else if (notable.wicket && outLine) {
-          // the dismissal plays out on the field first (stumps flying, the catch, the throw), then the batsman's moment comes up
-          const wicketDelay = sp === 4 ? 1000 : sp === 2 ? 1500 : notable.wicket.kind === 'run out' ? 2400 : 2100
-          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wicketDelay, ms,
+          // first a screen of its own showing how the wicket happened, then the batsman's moment
+          const w = notable.wicket
+          const bowlSideNow = match.sides[1 - match.innings[notable.innings].battingSide]
+          const fielderP = w.fielderId ? match.player(w.fielderId) : null
+          const bowlerP = match.player(notable.bowlerId)
+          const rate = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
+          show({
+            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(4300 * rate),
+            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})` },
+          })
+          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay, ms,
             lines: [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`] })
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
