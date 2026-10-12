@@ -9,7 +9,7 @@ import { PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
 import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { daysBetween, formatDate } from '../season/dates'
-import { acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundFor, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
+import { acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
@@ -66,7 +66,7 @@ export function MarketPage() {
   const release = (p: Player) => {
     const out = releasePlayer(season, index, season.myTeamId as string, p.id, today)
     if (out.error) setNotice(out.error)
-    else { updateSeason(() => out.season); setNotice(`${p.name} has been released. You got ${refundFor(worth(p))} coins back.`) }
+    else { updateSeason(() => out.season); setNotice(`${p.name} has been released. You got ${refundOf(season, index, season.myTeamId as string, p.id)} coins back.`) }
   }
 
   const row = (p: Player, opts: { price?: number; from?: string | null; action?: React.ReactNode; teamBadge?: Team | null }) => {
@@ -138,7 +138,7 @@ export function MarketPage() {
             <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[10px] uppercase tracking-wider text-slate-400">squad</div></div>
           </div>
         </div>
-        {win && <p className="mt-2 text-xs text-slate-400">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing gets a quarter of the player's value back.</p>}
+        {win && <p className="mt-2 text-xs text-slate-400">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him.</p>}
       </div>
 
       {notice && <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-sm text-amber-100" role="status"><span>{notice}</span><button onClick={() => setNotice(null)} className="font-bold" aria-label="Dismiss">✕</button></div>}
@@ -205,7 +205,7 @@ export function MarketPage() {
         <div className="space-y-2">
           {mine.map((p) => row(p, {
             teamBadge: me ?? null,
-            action: <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => setConfirm({ kind: 'release', player: shown(p), from: me ?? null, price: refundFor(worth(p)) })} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : `Release for ${refundFor(worth(p))} coins back`} className="shrink-0 rounded-full border border-red-400/60 px-3 py-2 text-xs font-bold leading-none text-red-200 transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-40">Release · +{refundFor(worth(p))}</button>,
+            action: <button disabled={!win || squadIds.length <= SQUAD_FLOOR} onClick={() => setConfirm({ kind: 'release', player: shown(p), from: me ?? null, price: refundOf(season, index, season.myTeamId as string, p.id) })} title={!win ? 'Market closed' : squadIds.length <= SQUAD_FLOOR ? `A squad needs ${SQUAD_FLOOR}` : `Release for ${refundOf(season, index, season.myTeamId as string, p.id)} coins back`} className="shrink-0 rounded-full border border-red-400/60 px-3 py-2 text-xs font-bold leading-none text-red-200 transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-40">Release · +{refundOf(season, index, season.myTeamId as string, p.id)}</button>,
           }))}
         </div>
       )}
@@ -249,7 +249,7 @@ export function MarketPage() {
             <div className="p-5">
               <button onClick={() => setRoomFor(null)} aria-label="Close" className="absolute right-3 top-3 rounded-lg bg-black/40 px-2.5 py-1 text-sm font-bold text-white hover:bg-black/60">✕</button>
               <h2 className="pr-10 font-display text-3xl tracking-wide text-white">Your squad is full</h2>
-              <p className="mb-3 text-sm text-slate-300">To sign <b className="text-white">{roomFor.player.name}</b> for {roomFor.price}, choose someone to release. They go back to the unsigned pool and you get a quarter of their value back.</p>
+              <p className="mb-3 text-sm text-slate-300">To sign <b className="text-white">{roomFor.player.name}</b> for {roomFor.price}, choose someone to release. They go back to the unsigned pool and you get 70% of what another team would charge for them.</p>
               <div className="space-y-1.5">
                 {squadIds.map((id) => index.get(id)).filter((p): p is Player => !!p).sort((a, b) => overall(shown(a)) - overall(shown(b))).map((p) => (
                   <button key={p.id} onClick={() => attempt(roomFor.player, roomFor.from, roomFor.price, p.id)} className="flex w-full items-center gap-3 rounded-xl border border-line bg-panel p-2 text-left transition hover:border-red-400">

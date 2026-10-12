@@ -102,7 +102,7 @@ that links to the market) and on the Home page.
   the green button does it (`MarketConfirm`). **Latest moves** shows each player's face (tap for his profile) and team
   crests that link to the team pages.
 - **Squad cap of 20**: a full squad has to release someone (they go back to the unsigned pool and the team gets a
-  quarter of their value back) before signing. A squad never goes below 13.
+  70% of what another team would charge for them) before signing. A squad never goes below 13.
 - **The computer shops too**: each window day every computer team may sign one player (the harder the difficulty the
   busier they are, `BUSY`), buying whoever improves their side most and releasing the weakest if they are full. If you wait
   too long, the player you wanted is gone. Your own team is never touched.

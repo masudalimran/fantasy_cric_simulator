@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { acceptOffer, advanceMarket, declineOffer, cpuMarketDay, developYouth, initMarket, marketValue, openWindow, playerIndex, POOL_SIZE, releasePlayer, rolloverMarket, signPlayer, SQUAD_CAP, SQUAD_FLOOR, teamOnDate } from './market'
+import { refundOf, acceptOffer, advanceMarket, declineOffer, cpuMarketDay, developYouth, initMarket, marketValue, openWindow, playerIndex, POOL_SIZE, releasePlayer, rolloverMarket, signPlayer, SQUAD_CAP, SQUAD_FLOOR, teamOnDate } from './market'
 import { sessionTeam } from './progression'
 import type { Season } from './types'
 
@@ -76,13 +76,15 @@ describe('player market', () => {
     expect(teamOnDate(out.season, target, '2030-02-01', 'naruto')).toBe('bleach')
   })
 
-  it('releases for a quarter of his value and never below the minimum squad', () => {
+  it('releases for 70% of what another team would ask and never below the minimum squad', () => {
     const s = open(mk())
     const id = s.market!.squads.bleach[15]
     const out = releasePlayer(s, index(s), 'bleach', id, '2030-01-05')
     expect(out.error).toBeUndefined()
     expect(out.season.market!.pool).toContain(id)
-    expect(out.season.market!.budgets.bleach).toBeGreaterThanOrEqual(s.market!.budgets.bleach)
+    // taking him back costs more than the release paid
+    expect(out.season.market!.asking[id]).toBeGreaterThan(refundOf(s, index(s), 'bleach', id))
+    expect(out.season.market!.budgets.bleach).toBe(s.market!.budgets.bleach + refundOf(s, index(s), 'bleach', id))
     const small = open({ ...s, market: { ...s.market!, squads: { ...s.market!.squads, bleach: s.market!.squads.bleach.slice(0, SQUAD_FLOOR) } } })
     expect(releasePlayer(small, index(s), 'bleach', small.market!.squads.bleach[0], '2030-01-05').error).toMatch(/at least/i)
   })

@@ -21,7 +21,8 @@ export const POOL_SIZE = 40
 const START_PURSE = 60
 const YEARLY_INCOME = 40
 const TITLE_BONUS = 10
-const RELEASE_REFUND = 0.25
+/** Letting a player go pays this share of what another team would charge for him, so a good player is worth real money. */
+const RELEASE_SHARE = 0.7
 
 export function marketWindows(year: number): MarketWindow[] {
   return [
@@ -70,7 +71,6 @@ export function marketValue(p: Player, form = 0, shift?: PlayerShift): number {
   return Math.max(1, Math.round(0.9 * Math.exp((eff - 40) / 15)))
 }
 
-export const refundFor = (value: number) => Math.max(0, Math.round(value * RELEASE_REFUND))
 
 // ---- Setting the market up -------------------------------------------------------------------------------------
 
@@ -149,6 +149,11 @@ export function askingFromTeam(season: Season, base: Map<string, Player>, ownerI
   return Math.round(v * (top ? 2.2 : 1.4))
 }
 
+/** What you get back for releasing a player: 70% of what another team would ask for him. */
+export function refundOf(season: Season, base: Map<string, Player>, teamId: string, playerId: string): number {
+  return Math.max(0, Math.round(askingFromTeam(season, base, teamId, playerId) * RELEASE_SHARE))
+}
+
 function remove<T>(arr: T[], x: T) { return arr.filter((y) => y !== x) }
 
 /**
@@ -167,7 +172,7 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
   if (!unsigned && !owner) return deny(season, 'That player is not available.')
   if (owner && (m.squads[owner]?.length ?? 0) <= SQUAD_FLOOR) return deny(season, 'His team cannot sell: they are down to the minimum squad.')
   const price = unsigned ? (m.asking[playerId] ?? marketValue(player)) : askingFromTeam(season, base, owner as string, playerId)
-  const refund = dropId ? refundFor(marketValue(base.get(dropId) ?? player, recentForm(season, dropId), season.shifts?.[dropId])) : 0
+  const refund = dropId ? refundOf(season, base, teamId, dropId) : 0
   if ((m.budgets[teamId] ?? 0) + refund < price) return deny(season, `Not enough coins. He costs ${price} and you have ${m.budgets[teamId] ?? 0}.`)
   if (squad.length >= SQUAD_CAP && !dropId) return deny(season, `Your squad is full (${SQUAD_CAP}). Release someone first.`)
   if (dropId && !squad.includes(dropId)) return deny(season, 'You can only release someone from your own squad.')
@@ -185,7 +190,7 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
     pool = [...pool, dropId]
     const dp = base.get(dropId)
     players[dropId] = m.players[dropId] ?? (dp as Player)
-    asking[dropId] = marketValue(dp as Player, recentForm(season, dropId), season.shifts?.[dropId])
+    asking[dropId] = askingFromTeam(season, base, teamId, dropId) // costs more to take back than the release paid, so there is no profit in it
     log.push({ id: nid(season, date) + 'r', date, playerId: dropId, name: dp?.name ?? dropId, from: teamId, to: null, fee: refund, kind: 'release' })
   }
   budgets[teamId] = (budgets[teamId] ?? 0) - price
@@ -196,7 +201,7 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
   return { season: { ...season, market: { ...m, squads, budgets, players, pool, asking, log } } }
 }
 
-/** `teamId` lets `playerId` go; he joins the unsigned pool and the team gets a quarter of his value back. */
+/** `teamId` lets `playerId` go; he joins the unsigned pool and the team gets 70% of what another team would charge for him. */
 export function releasePlayer(season: Season, base: Map<string, Player>, teamId: string, playerId: string, date: string): Outcome {
   const m = season.market
   const p = base.get(playerId)
@@ -205,8 +210,7 @@ export function releasePlayer(season: Season, base: Map<string, Player>, teamId:
   const squad = m.squads[teamId] ?? []
   if (!squad.includes(playerId)) return deny(season, 'That player is not on your squad.')
   if (squad.length <= SQUAD_FLOOR) return deny(season, `A squad needs at least ${SQUAD_FLOOR} players.`)
-  const value = marketValue(p, recentForm(season, playerId), season.shifts?.[playerId])
-  const refund = refundFor(value)
+  const refund = refundOf(season, base, teamId, playerId)
   return {
     season: {
       ...season,
@@ -216,7 +220,7 @@ export function releasePlayer(season: Season, base: Map<string, Player>, teamId:
         budgets: { ...m.budgets, [teamId]: (m.budgets[teamId] ?? 0) + refund },
         players: { ...m.players, [playerId]: m.players[playerId] ?? p },
         pool: [...m.pool, playerId],
-        asking: { ...m.asking, [playerId]: value },
+        asking: { ...m.asking, [playerId]: askingFromTeam(season, base, teamId, playerId) },
         log: [...m.log, { id: nid(season, date), date, playerId, name: p.name, from: teamId, to: null, fee: refund, kind: 'release' }],
       },
     },
@@ -330,7 +334,7 @@ export function acceptOffer(season: Season, base: Map<string, Player>, offerId: 
     const drop = [...next].map((id) => base.get(id)).filter((p): p is Player => !!p).sort((a, b) => worth(a) - worth(b))[0]
     if (drop) {
       next = remove(next, drop.id); pool = [...pool, drop.id]; players[drop.id] = m.players[drop.id] ?? drop
-      asking[drop.id] = marketValue(drop, recentForm(season, drop.id), season.shifts?.[drop.id])
+      asking[drop.id] = askingFromTeam(season, base, offer.teamId, drop.id)
       log.push({ id: `${offer.id}r`, date, playerId: drop.id, name: drop.name, from: offer.teamId, to: null, fee: 0, kind: 'release' })
     }
   }
