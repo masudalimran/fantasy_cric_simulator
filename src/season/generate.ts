@@ -217,6 +217,8 @@ export interface GenerateOptions {
   market?: MarketState
   /** Coaches and their instructions carried over from the year before. */
   coaches?: Season['coaches']
+  /** The coaches of the year before: every team gets a different one when a new year starts. */
+  previousCoaches?: Season['coaches']
   coaching?: Season['coaching']
   coachProgress?: Season['coachProgress']
   coachReport?: Season['coachReport']
@@ -224,7 +226,7 @@ export interface GenerateOptions {
 
 const structuredCloneShifts = (s: Record<string, PlayerShift>): Record<string, PlayerShift> => JSON.parse(JSON.stringify(s))
 
-export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, myTeamId = null, difficulty = 'normal', shifts, lineup, market, coaches, coaching, coachProgress, coachReport }: GenerateOptions): Season {
+export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, myTeamId = null, difficulty = 'normal', shifts, lineup, market, coaches, previousCoaches, coaching, coachProgress, coachReport }: GenerateOptions): Season {
   if (teams.length < 4) throw new Error('A season needs at least 4 teams.')
   const rng = new Rng(seed)
   const strength = new Map(teams.map((t) => [t.id, teamStrength(t)]))
@@ -303,7 +305,7 @@ export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, m
     competitions.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id))
     const built: Season = {
       id: `s${year}-${seed}`,
-      year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), graded: true, windows: marketWindows(year), market: market ?? initMarket(teams, seed), coaches: assignCoaches(teams.map((t) => t.id), seed, coaches), ...(coaching ? { coaching } : {}), ...(coachProgress ? { coachProgress } : {}), ...(coachReport ? { coachReport } : {}), ...(shifts ? { shifts, startShifts: structuredCloneShifts(shifts) } : {}), ...(lineup ? { lineup } : {}),
+      year, seed, teamIds: teams.map((t) => t.id), myTeamId: myTeamId && teams.some((t) => t.id === myTeamId) ? myTeamId : null, difficulty, roster: [], competitions, fixtures, results: {}, today: startOfYear(year), graded: true, windows: marketWindows(year), market: market ?? initMarket(teams, seed), coaches: assignCoaches(teams.map((t) => t.id), seed, coaches, previousCoaches), ...(previousCoaches ? { coachChanged: true } : {}), ...(coaching ? { coaching } : {}), ...(coachProgress ? { coachProgress } : {}), ...(coachReport ? { coachReport } : {}), ...(shifts ? { shifts, startShifts: structuredCloneShifts(shifts) } : {}), ...(lineup ? { lineup } : {}),
     }
     // every computer team's coach starts work on day one
     return startCpuCoaching(built, new Map(teams.flatMap((t) => t.players.map((p) => [p.id, p] as const))))

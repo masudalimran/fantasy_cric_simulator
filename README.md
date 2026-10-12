@@ -146,6 +146,9 @@ speciality (batting, bowling or fielding).
   running), **bowling** (accuracy, variation, stamina) or **fielding**. You set it for your team on the **My squad** page by
   tapping the coach card; the computer sets it for every other team from the first day of the career (it reviews it each month, picking the squad's
   weakest area with a nudge towards the coach's speciality).
+- **New coaches every year**: when a new season starts (1 January), every team gets a different coach from the pool (never the one
+  it had), the instructions start again, the computer's begin at once, and the Calendar opens with **A new coach has appeared**
+  and the new coach's name, with a button to set your instruction.
 - **It stays for at least a month.** When you pick one the coach says so and tells you the date you can change it again;
   you can keep it going or change it after that. A **Choose again / Set it** step comes first.
 - **Prompts**: with no instruction set, the Calendar opens a **Set coaching instruction** card with a button to My squad

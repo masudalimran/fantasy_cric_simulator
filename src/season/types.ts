@@ -162,6 +162,8 @@ export interface Season {
   changes?: Record<string, Record<string, MatchDelta>>
   /** Which coach each team has (coach ids), picked at random when the career starts and kept for its whole life. */
   coaches?: Record<string, string>
+  /** True from the first day of a new year, when every team got a new coach, until you give your new coach his first instruction. */
+  coachChanged?: boolean
   /** What each team's coach is working on (yours is set by you, the computer's by the computer, a month at a time). */
   coaching?: Record<string, Coaching>
   /** Training that has not added up to a whole rating point yet, by player and rating. */

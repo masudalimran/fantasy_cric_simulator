@@ -25,6 +25,19 @@ describe('coaches', () => {
     expect(assignCoaches(s.teamIds, 99, s.coaches)).toEqual(s.coaches) // keeping what they have
   })
 
+  it('every team gets a different coach each new year, and you are asked for a new instruction', () => {
+    let s = setFocus(base(), 'bleach', 'batting', '2030-01-01')
+    expect(s.coachChanged).toBeFalsy()
+    const next = generateSeason({ year: 2031, teams: BUILT_IN_TEAMS, seed: 5, myTeamId: 'bleach', previousCoaches: s.coaches, market: s.market })
+    for (const t of BUILT_IN_TEAMS) expect(next.coaches![t.id]).not.toBe(s.coaches![t.id])
+    expect(new Set(Object.values(next.coaches!)).size).toBe(BUILT_IN_TEAMS.length)
+    expect(next.coachChanged).toBe(true)
+    expect(needsFocus(next)).toBe(true) // yours starts empty
+    expect(coachingOf(next, 'naruto').focus).not.toBeNull() // the computer's start straight away
+    s = setFocus(next, 'bleach', 'bowling', next.today)
+    expect(s.coachChanged).toBe(false)
+  })
+
   it('you must give an instruction, and it stands for at least a month', () => {
     let s = base()
     expect(needsFocus(s)).toBe(true)

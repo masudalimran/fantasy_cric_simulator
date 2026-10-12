@@ -33,11 +33,17 @@ const ATTRS_OF: Record<CoachFocus, AttrKey[]> = {
 const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
 
 /** A different coach for every team, picked at random from the pool. Teams that already have one keep it. */
-export function assignCoaches(teamIds: string[], seed: number, existing: Record<string, string> = {}): Record<string, string> {
+export function assignCoaches(teamIds: string[], seed: number, existing: Record<string, string> = {}, previous: Record<string, string> = {}): Record<string, string> {
   const out = { ...existing }
   const taken = new Set(Object.values(out))
   const free = new Rng(seed ^ 0xc0ac4).shuffle(COACHES.filter((c) => !taken.has(c.id)))
-  for (const id of teamIds) if (!out[id]) { const c = free.shift() ?? COACHES[hash(id) % COACHES.length]; out[id] = c.id }
+  for (const id of teamIds) {
+    if (out[id]) continue
+    // a new coach is never the one the team just had
+    const at = free.findIndex((c) => c.id !== previous[id])
+    const c = (at >= 0 ? free.splice(at, 1)[0] : undefined) ?? COACHES.find((x) => x.id !== previous[id] && !Object.values(out).includes(x.id)) ?? COACHES[hash(id) % COACHES.length]
+    out[id] = c.id
+  }
   return out
 }
 
@@ -55,7 +61,7 @@ export function setFocus(season: Season, teamId: string, focus: CoachFocus, toda
   const cur = coachingOf(season, teamId)
   if (cur.focus && !canChange(cur, today)) return season
   const next: Coaching = { focus, since: today, lockedUntil: addDays(today, LOCK_DAYS), history: [...cur.history, { focus, from: today }] }
-  return { ...season, coaching: { ...season.coaching, [teamId]: next } }
+  return { ...season, coaching: { ...season.coaching, [teamId]: next }, ...(teamId === season.myTeamId ? { coachChanged: false } : {}) }
 }
 
 /** What the computer's coach works on: the squad's weakest area, with a nudge towards the coach's own speciality. */

@@ -18,12 +18,26 @@ export function CoachPrompt({ onClose, onLater }: { onClose: () => void; onLater
   const navigate = useNavigate()
   const season = useStore(selectSeason)
   const coach = season?.myTeamId ? coachOf(season, season.myTeamId) : undefined
+  const fresh = !!season?.coachChanged
   return (
     <Sheet label="Set coaching instruction" onClose={onClose} size="sm" z={86}>
       <div className="p-5 text-center">
-        <div className="mx-auto mb-2 grid h-16 w-16 place-items-center rounded-full bg-amber-400/20 text-4xl">🎓</div>
-        <h2 className="font-display text-4xl leading-none tracking-wide text-white">Set your coaching instruction</h2>
-        <p className="mt-2 text-sm text-slate-300">{coach ? <><b className="text-white">{coach.name}</b> is waiting to hear what to work on.</> : 'Your coach is waiting to hear what to work on.'} Choose batting, bowling or fielding and every player improves a little each day. Without an instruction, nobody trains.</p>
+        <div className="mx-auto mb-2 grid h-16 w-16 place-items-center rounded-full bg-amber-400/20 text-4xl">{fresh ? '✨' : '🎓'}</div>
+        {fresh && coach ? (
+          <>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.3em] text-amber-300">New year · new coach</div>
+            <h2 className="font-display text-4xl leading-none tracking-wide text-white">A new coach has appeared</h2>
+            <div className="mt-2 font-display text-5xl leading-none tracking-wide text-amber-300">{coach.name}</div>
+            <div className="text-sm text-slate-300">from {coach.game}</div>
+            <p className="mt-1 text-xs italic text-slate-400">"{coach.style}"</p>
+            <p className="mt-3 text-sm text-slate-300">Every team has a new coach this year. Tell <b className="text-white">{coach.name}</b> what to work on: batting, bowling or fielding. Without an instruction, nobody trains.</p>
+          </>
+        ) : (
+          <>
+            <h2 className="font-display text-4xl leading-none tracking-wide text-white">Set your coaching instruction</h2>
+            <p className="mt-2 text-sm text-slate-300">{coach ? <><b className="text-white">{coach.name}</b> is waiting to hear what to work on.</> : 'Your coach is waiting to hear what to work on.'} Choose batting, bowling or fielding and every player improves a little each day. Without an instruction, nobody trains.</p>
+          </>
+        )}
         <div className="mt-4 grid gap-2">
           <button onClick={() => { onClose(); navigate(paths.sessionSquad) }} className="cta-pulse cta-pulse-gold rounded-full bg-amber-400 px-6 py-3.5 font-display text-2xl leading-none tracking-wide text-black hover:bg-amber-300 active:bg-amber-300">Set coaching instruction</button>
           {onLater && <button onClick={onLater} className="rounded-full border border-line py-2.5 text-sm font-semibold text-slate-300 hover:border-slate-400">Continue without it for now</button>}
