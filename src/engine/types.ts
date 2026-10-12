@@ -79,6 +79,8 @@ export interface BallEvent {
   /** What the people in charge chose for this ball, when they chose anything. */
   shot?: ShotAim
   delivery?: DeliveryAim
+  /** For a six: how far it went, in metres. */
+  distance?: number
   /** Score once this delivery is complete. */
   score: { runs: number; wickets: number; legalBalls: number }
   /** Moments worth a callout: fifty, hundred, hat-trick, maiden, etc. */

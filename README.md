@@ -170,6 +170,14 @@ You can see it everywhere:
   same for a shot, and Space does nothing. In a friendly you run both sides, so both pads show. If you are only
   watching, a single Next ball button is all there is. The field and the batsman and bowler cards stay. Switch it off
   (in the same tab) to bring the auto-play options back.
+- **Six animation** (`SixReplay.tsx`): every six plays a short screen of its own (about 3 seconds, tap to skip): the ball
+  leaves the bat, climbs over the stands and out of the ground, and a counter runs up to how far it went in metres
+  (`sixDistance` in `engine/shots.ts`: a stable figure from the ball number and the batsman's power, no randomness). It says
+  "His longest six yet" when he beats an earlier one. The longest six of every batsman is kept in each match result
+  (`six`), shown as **Longest 6** in Stats > Batting, as a **Longest six** record (with the player and match) in Stats > Records,
+  and in player popups; matches played before this have none on record.
+- **Animations switches**: in the Controls panel (when you are not playing manually) an **Animations** section has two
+  checkboxes, **Wicket replay** and **Boundary (six) animation**; both on by default and remembered.
 - **Wicket replay** (`WicketReplay.tsx`): every wicket first plays a separate screen of its own, about 4 to 5 seconds, showing
   how it happened (tap to skip), and then the batsman's usual OUT moment comes up. The scene is the ground from above
   with the pitch, the stumps and the people involved. Bowled: the bowler runs in and the stumps fly. LBW: it hits the pad,

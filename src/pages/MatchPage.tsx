@@ -11,7 +11,7 @@ import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
-import { setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
+import { getAnimPrefs, setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
@@ -279,6 +279,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const delay = sp === 4 ? 350 : sp === 2 ? 500 : 800
         const ms = sp === 4 ? 1300 : sp === 2 ? 1800 : 2600
         const show = (m: Moment) => enqueueMoment(m)
+        // a six gets a short screen of its own: the ball leaving the ground and how far it went
+        if (notable.boundary === 6 && notable.distance && !notable.wicket && getAnimPrefs().boundary) {
+          const hitter = match.player(notable.strikerId)
+          const earlier = Math.max(0, ...inn.log.filter((e) => e.seq < notable.seq && e.strikerId === notable.strikerId && e.boundary === 6).map((e) => e.distance ?? 0), seasonStats?.bat.get(notable.strikerId)?.longSix ?? 0)
+          const rate6 = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
+          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(3300 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, longest: earlier > 0 && notable.distance > earlier } })
+        }
         if (battingMilestone && outLine) {
           show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms,
             lines: [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`] })
@@ -289,11 +296,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const fielderP = w.fielderId ? match.player(w.fielderId) : null
           const bowlerP = match.player(notable.bowlerId)
           const rate = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
-          show({
+          const wantReplay = getAnimPrefs().wicket
+          if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(4300 * rate),
             replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})` },
           })
-          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: 0, ms, // straight after the replay, no gap
+          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wantReplay ? 0 : delay, ms, // straight after the replay, no gap
             lines: [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`] })
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul

@@ -5,7 +5,7 @@ import type { Intent } from '../../engine/types'
 import { FORMATS } from '../../engine/types'
 import { PlayerAvatar, TeamCrest } from '../ui'
 import { oversText } from './format'
-import { setSwipeAim, useSwipeAim } from '../../prefs'
+import { setAnimPrefs, setSwipeAim, useAnimPrefs, useSwipeAim } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
 
 type Auto = 0 | 1 | 2 | 4
@@ -77,6 +77,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 
 export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectating = false, stops, setStops, manual = false, setManual }: Props) {
   const swipeOn = useSwipeAim()
+  const anim = useAnimPrefs()
   const [overs, setOvers] = useState(5)
   const [askForfeit, setAskForfeit] = useState(false)
   const inn = match.shown
@@ -153,6 +154,18 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           ))}
         </div>
       </Section>}
+
+      {/* ANIMATIONS: whether the big screens play */}
+      <Section title="Animations" hint="screens that take over the field">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
+            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.wicket} onChange={(e) => setAnimPrefs({ wicket: e.target.checked })} />Wicket replay
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
+            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.boundary} onChange={(e) => setAnimPrefs({ boundary: e.target.checked })} />Boundary (six) animation
+          </label>
+        </div>
+      </Section>
 
       {/* TACTICS */}
       {spectating && <Section title="Watching"><p className="rounded-lg bg-white/5 px-2.5 py-2 text-[12px] text-slate-300">This isn't your team's match. The computer runs both sides, so there are no tactics to set.</p></Section>}

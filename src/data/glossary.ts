@@ -22,6 +22,7 @@ export const GLOSSARY: Record<string, string> = {
   b: 'Balls faced.',
   '4s': 'Fours hit.',
   '6s': 'Sixes hit.',
+  'longest 6': 'The longest six he has hit, in metres, measured from the bat to where the ball landed. Only matches played since this was tracked count.',
   sr: 'Strike rate. For a batsman, runs per 100 balls (higher is faster). For a bowler, balls per wicket (lower is better).',
   'strike rate': 'Runs scored per 100 balls faced. Higher means he scores faster.',
   inns: 'Innings batted.',

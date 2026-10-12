@@ -24,6 +24,8 @@ export interface BatStat {
   ducks: number
   /** In how many matches he batted. (`matches` counts every match he was in the XI for, batting or not.) */
   batApps: number
+  /** The longest six he has hit, in metres (0 if none is on record). */
+  longSix: number
 }
 
 export interface BowlStat {
@@ -97,7 +99,7 @@ export function collect(season: Season, scope: Scope = {}, ownTeamOf?: (playerId
       if (!id || (scope.teamId && ownTeamOf && ownTeamOf(id) !== scope.teamId)) continue
       const [, runs, balls, fours, sixes, out] = line
       let s = bat.get(id)
-      if (!s) bat.set(id, (s = { id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0, batApps: 0 }))
+      if (!s) bat.set(id, (s = { id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0, batApps: 0, longSix: 0 }))
       note(seen, id, res.fixtureId); note(batSeen, id, res.fixtureId)
       s.innings++
       if (!out) s.notOuts++
@@ -107,6 +109,7 @@ export function collect(season: Season, scope: Scope = {}, ownTeamOf?: (playerId
       else if (runs >= 50) s.fifties++
       if (runs === 0 && out) s.ducks++
     }
+    for (const [i, m] of res.six ?? []) { const id = roster[i]; const s = id ? bat.get(id) : undefined; if (s && m > s.longSix) s.longSix = m }
     for (const line of res.bowl ?? []) {
       const id = roster[line[0]]
       if (!id || (scope.teamId && ownTeamOf && ownTeamOf(id) !== scope.teamId)) continue
@@ -216,7 +219,8 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   let high: RecordEntry | null = null, low: RecordEntry | null = null
   let bigRuns: RecordEntry | null = null, tight: RecordEntry | null = null, bigChase: RecordEntry | null = null
-  let topScore: RecordEntry | null = null, bestBowl: RecordEntry | null = null, mostSixes: RecordEntry | null = null
+  let topScore: RecordEntry | null = null, bestBowl: RecordEntry | null = null, mostSixes: RecordEntry | null = null, longestSix: RecordEntry | null = null
+  let longestSixM = 0
   let highSixes = 0, highRuns = -1, bestW = -1, bestR = 1e9, bigRunMargin = -1, tightMargin = 1e9, chaseRuns = -1, lowRuns = 1e9, highTotal = -1
   for (const res of Object.values(season.results)) {
     const f = byId.get(res.fixtureId)
@@ -237,6 +241,7 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
         if (res.margin === 'wickets' && winner.runs > chaseRuns) { chaseRuns = winner.runs; bigChase = { label: 'Highest successful chase', value: `${winner.runs}`, detail: f.stage, fixtureId: f.id, teamId: res.winnerId } }
       }
     }
+    for (const [i, m] of res.six ?? []) if (m > longestSixM) { longestSixM = m; longestSix = { label: 'Longest six', value: `${m} m`, detail: f.stage, fixtureId: f.id, playerId: roster[i] } }
     let sixes = 0
     let topSix = { id: '', n: 0 }
     for (const line of res.bat ?? []) {
@@ -252,7 +257,7 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
       if (wk > bestW || (wk === bestW && runs < bestR)) { bestW = wk; bestR = runs; bestBowl = { label: 'Best bowling figures', value: `${wk}/${runs}`, detail: f.stage, fixtureId: f.id, playerId: id } }
     }
   }
-  for (const r of [high, low, bigRuns, tight, bigChase, topScore, bestBowl, mostSixes]) if (r) out.push(r)
+  for (const r of [high, low, bigRuns, tight, bigChase, topScore, bestBowl, mostSixes, longestSix]) if (r) out.push(r)
   return out
 }
 
@@ -261,10 +266,11 @@ export const playerRef = (index: Map<string, PlayerRef>, id: string | undefined)
 /** Adds one player's batting lines from several seasons into a single career line. */
 export function mergeBat(list: BatStat[]): BatStat | undefined {
   if (list.length === 0) return undefined
-  const out: BatStat = { id: list[0].id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0, batApps: 0 }
+  const out: BatStat = { id: list[0].id, matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, fours: 0, sixes: 0, high: 0, highNotOut: false, fifties: 0, hundreds: 0, ducks: 0, batApps: 0, longSix: 0 }
   for (const s of list) {
     out.batApps += s.batApps; out.matches += s.matches; out.innings += s.innings; out.notOuts += s.notOuts; out.runs += s.runs; out.balls += s.balls
     out.fours += s.fours; out.sixes += s.sixes; out.fifties += s.fifties; out.hundreds += s.hundreds; out.ducks += s.ducks
+    out.longSix = Math.max(out.longSix, s.longSix)
     if (s.high > out.high || (s.high === out.high && s.highNotOut)) { out.high = s.high; out.highNotOut = s.highNotOut }
   }
   return out

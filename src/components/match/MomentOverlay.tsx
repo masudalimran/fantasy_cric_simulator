@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { RatingBadge, accentOf } from '../ui'
+import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
 import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from './Portrait'
 
@@ -11,7 +12,9 @@ import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler' | 'replay'
+  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler' | 'replay' | 'six'
+  /** For a six: how far it went. */
+  six?: SixInfo
   /** For a replay: how the wicket happened. */
   replay?: ReplayInfo
   player: Player
@@ -87,6 +90,17 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if (moment.kind === 'six' && moment.six) {
+    return (
+      <motion.div
+        data-moment="six" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
+        aria-label="Six"
+      >
+        <SixReplay info={moment.six} />
       </motion.div>
     )
   }

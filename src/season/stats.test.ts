@@ -67,6 +67,17 @@ describe('season stats', () => {
     expect(t20.matches).toBe(done.fixtures.filter((f) => f.format === 't20').length)
   })
 
+  it('tracks each batsman\'s longest six and the longest six of the season', () => {
+    const c = collect(done)
+    const longest = Math.max(0, ...[...c.bat.values()].map((b) => b.longSix))
+    expect(longest).toBeGreaterThan(61)
+    expect(longest).toBeLessThan(129)
+    const rec = seasonRecords(done).find((r) => r.label === 'Longest six')
+    expect(rec?.value).toBe(`${longest} m`)
+    // a batsman with sixes has a longest six on record
+    for (const b of c.bat.values()) if (b.sixes === 0) expect(b.longSix).toBe(0)
+  })
+
   it('reports team records and season records', () => {
     const rows = teamRecords(done)
     expect(rows).toHaveLength(20)

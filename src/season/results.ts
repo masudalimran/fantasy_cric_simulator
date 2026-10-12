@@ -38,8 +38,11 @@ export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: num
     for (const b of inn.batters) bat.push([b.id, b.runs, b.balls, b.fours, b.sixes, b.dismissal ? 1 : 0])
     for (const b of inn.bowlers.values()) bowl.push([b.id, b.legalBalls, b.runs, b.wickets, b.maidens])
   }
+  const longest = new Map<string, number>()
+  for (const inn of match.innings) for (const e of inn.log) if (e.boundary === 6 && e.distance) longest.set(e.strikerId, Math.max(longest.get(e.strikerId) ?? 0, e.distance))
+  const six = [...longest]
   const motm = computeAwards(match).motm
-  return { played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl }
+  return { six, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl }
 }
 
 export function simulateFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): RawSummary {
@@ -139,6 +142,7 @@ export function recordResult(season: Season, raw: RawSummary, teams?: Map<string
     bat: raw.bat.map(([id, ...rest]) => [idx(id), ...rest] as MatchSummary['bat'][number]),
     bowl: raw.bowl.map(([id, ...rest]) => [idx(id), ...rest] as MatchSummary['bowl'][number]),
     played: raw.played?.map(idx),
+    six: raw.six?.map(([id, m]) => [idx(id), m] as [number, number]),
   }
   const fixture = season.fixtures.find((f) => f.id === raw.fixtureId)
   const next = { ...season, roster, results: { ...season.results, [summary.fixtureId]: summary } }

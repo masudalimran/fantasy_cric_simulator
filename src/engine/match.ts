@@ -6,6 +6,7 @@ import {
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, parRunsPerOver, REF,
 } from './model'
 import { Rng, randomSeed } from './rng'
+import { sixDistance } from './shots'
 import {
   BOWL_STYLE_VALUE, DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
   type BallEvent, type BowlStyle, type DeliveryAim, type ShotAim, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
@@ -376,6 +377,7 @@ export class Match {
       score: { runs: inn.runs, wickets: inn.wickets, legalBalls: inn.legalBalls }, tags,
     }
 
+    if (runsBat === 6) ev.distance = sixDistance(ev.seq, striker.batting.power)
     if (dismissal) {
       inn.wickets++
       ev.score.wickets = inn.wickets

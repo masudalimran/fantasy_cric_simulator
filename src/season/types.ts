@@ -66,10 +66,13 @@ export interface MatchSummary {
   bowl: BowlLine[]
   /** Everyone who was in either XI (roster positions), whether or not he batted or bowled. Missing in older saves. */
   played?: number[]
+  /** The longest six each batsman hit in the match, in metres (roster position, metres). Missing in older saves. */
+  six?: [number, number][]
 }
 
 /** A summary as the engine produces it, before player ids are swapped for roster indices. */
-export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played'> & {
+export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six'> & {
+  six?: [string, number][]
   /** Ids of everyone in either XI. */
   played?: string[]
   bat: [string, number, number, number, number, 0 | 1][]

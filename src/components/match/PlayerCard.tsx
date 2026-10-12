@@ -56,7 +56,7 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
   const liveStats = match.isOver ? undefined : (() => {
     let bat: BatStat | undefined
     let bowl: BowlStat | undefined
-    for (const { line } of batting) bat = { id: player.id, matches: 1, innings: 1, notOuts: line.dismissal ? 0 : 1, runs: line.runs, balls: line.balls, fours: line.fours, sixes: line.sixes, high: line.runs, highNotOut: !line.dismissal, fifties: line.runs >= 50 && line.runs < 100 ? 1 : 0, hundreds: line.runs >= 100 ? 1 : 0, ducks: line.runs === 0 && line.dismissal ? 1 : 0, batApps: 1 }
+    for (const { line } of batting) bat = { id: player.id, matches: 1, innings: 1, notOuts: line.dismissal ? 0 : 1, runs: line.runs, balls: line.balls, fours: line.fours, sixes: line.sixes, high: line.runs, highNotOut: !line.dismissal, fifties: line.runs >= 50 && line.runs < 100 ? 1 : 0, hundreds: line.runs >= 100 ? 1 : 0, ducks: line.runs === 0 && line.dismissal ? 1 : 0, batApps: 1, longSix: 0 }
     for (const l of bowling) if (l.legalBalls > 0) bowl = { id: player.id, matches: 1, balls: l.legalBalls, runs: l.runs, wickets: l.wickets, maidens: l.maidens, bestW: l.wickets, bestR: l.runs, fiveW: l.wickets >= 5 ? 1 : 0, bowlApps: 1 }
     return { bat, bowl } // being in the XI is enough to count the match, even before he has batted or bowled
   })()

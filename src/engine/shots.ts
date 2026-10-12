@@ -33,3 +33,9 @@ export const reachFactor = (runs: number) => (runs >= 6 ? 1.12 : runs === 4 ? 1 
 
 /** The direction a ball's shot went: the one a person chose, or the stable pick from the ball number. */
 export const eventAngle = (ev: { seq: number; shot?: { angle: number } }) => ev.shot?.angle ?? shotAngle(ev.seq)
+
+/** How far a six went, in metres: a stable figure from the ball number and the batsman's power (no randomness, so a replay always agrees). */
+export function sixDistance(seq: number, power: number): number {
+  const u = frac(seq * 0.7548776662 + 0.31)
+  return Math.max(62, Math.min(128, Math.round(66 + u * 32 + (power - 60) * 0.32)))
+}

@@ -50,6 +50,7 @@ function Batting({ c, index }: { c: Collected; index: Map<string, PlayerEntry> }
     { key: 'm', label: 'M', get: (s) => s.matches, cell: (s) => s.matches },
     { key: 'inns', label: 'Inns', get: (s) => s.innings, cell: (s) => s.innings },
     { key: 'runs', label: 'Runs', get: (s) => s.runs, cell: (s) => <span className={num}>{s.runs}</span> },
+    { key: 'ls', label: 'Longest 6', get: (s) => s.longSix, cell: (s) => (s.longSix ? `${s.longSix} m` : '-') },
     { key: 'hs', label: 'HS', get: (s) => s.high + (s.highNotOut ? 0.5 : 0), cell: (s) => `${s.high}${s.highNotOut ? '*' : ''}` },
     { key: 'avg', label: 'Avg', get: (s) => average(s), cell: (s) => f1(average(s)) },
     { key: 'sr', label: 'SR', get: (s) => strikeRate(s), cell: (s) => f1(strikeRate(s)) },

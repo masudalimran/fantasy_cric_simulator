@@ -67,3 +67,21 @@ export function setManualPlay(on: boolean) {
 export function useManualPlay(): boolean {
   return useSyncExternalStore((cb) => { manualListeners.add(cb); return () => { manualListeners.delete(cb) } }, () => manual, () => false)
 }
+
+// ---- Which match animations to show ---------------------------------------------------------------------------
+export interface AnimPrefs { wicket: boolean; boundary: boolean }
+const ANIM_KEY = 'fcs.anim'
+const animListeners = new Set<() => void>()
+let anim: AnimPrefs = (() => { try { return { wicket: true, boundary: true, ...JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}') } } catch { return { wicket: true, boundary: true } } })()
+
+export const getAnimPrefs = () => anim
+export function setAnimPrefs(next: Partial<AnimPrefs>) {
+  anim = { ...anim, ...next }
+  try { localStorage.setItem(ANIM_KEY, JSON.stringify(anim)) } catch { /* just not remembered */ }
+  animListeners.forEach((l) => l())
+}
+
+/** The wicket replay and the six animation each have a switch (both on by default). */
+export function useAnimPrefs(): AnimPrefs {
+  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ({ wicket: true, boundary: true }))
+}
