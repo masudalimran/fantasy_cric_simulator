@@ -236,7 +236,7 @@ The app is built to feel like a native app on a phone (the desktop layout is unc
 - **Toss screen**: the two team sheets are tabs; the coin sits in a bar at the bottom, in thumb reach.
 - **Popups are bottom sheets** (`components/Sheet.tsx`): they slide up, have a grab handle, and drag down to dismiss.
   On a computer the same component is a centred card.
-- **Career pages**: a compact header with a sticky tab strip that scrolls sideways with your finger (tabs keep their full names and the open one is kept in view), a calendar of dots (tap a day for a sheet of its matches),
+- **Career pages**: a compact header with a sticky tab strip moved with ‹ › arrows, not by swiping (tabs keep their full names and the open one is kept in view), a calendar of dots (tap a day for a sheet of its matches),
   tables with a sticky first column, and a team chooser sheet on the Play page.
 - Layout helpers: `useIsMobile` / `useIsLandscapePhone` in `src/hooks.ts`, safe-area variables (`--sat`, `--sab`) in
   `index.css`, and `max-md:` classes. Anything phone-specific is behind these so the desktop view stays as it was.
