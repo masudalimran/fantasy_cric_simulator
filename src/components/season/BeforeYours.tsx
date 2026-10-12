@@ -5,6 +5,7 @@ import { isMine, myNextFixture, simDay, simUntil } from '../../season/results'
 import type { Season } from '../../season/types'
 import { selectSeason, useStore } from '../../store/useStore'
 import { Sheet } from '../Sheet'
+import { useCoachGate } from './CoachGate'
 import { FixtureRow, matchHref, useBaseTeamMap, useTeamMap } from './shared'
 
 /** The other teams' matches still waiting before your own next match, earliest first. */
@@ -27,6 +28,7 @@ export function BeforeYoursSheet({ onClose, onSkipped, day, until }: { onClose: 
   const teams = useTeamMap()
   const baseTeams = useBaseTeamMap()
   const navigate = useNavigate()
+  const gate = useCoachGate()
   const mine = season ? myNextFixture(season) : null
   // `day` set: the games on that one match day. `until` set: the games up to that date. Otherwise: everything before your next match.
   const limit = day ?? until
@@ -69,7 +71,7 @@ export function BeforeYoursSheet({ onClose, onSkipped, day, until }: { onClose: 
             {between.length > 0 && (
               <>
                 <p className="mb-3 text-sm text-slate-300">{limit ? 'These are the games coming up.' : `These are between today and your match on ${formatDate(mine!.date)}.`} <b className="text-white">Watch</b> one to play it yourself, <b className="text-white">Sim</b> one to simulate it and see the result, or sim them all.</p>
-                <button onClick={skipAll} className="cta-pulse cta-pulse-gold mb-3 w-full rounded-full bg-amber-400 px-6 py-3 font-display text-2xl leading-none tracking-wide text-black hover:bg-amber-300 active:bg-amber-300">
+                <button onClick={() => gate(skipAll)} className="cta-pulse cta-pulse-gold mb-3 w-full rounded-full bg-amber-400 px-6 py-3 font-display text-2xl leading-none tracking-wide text-black hover:bg-amber-300 active:bg-amber-300">
                   {limit ? `Sim ${between.length === 1 ? 'it' : `all ${between.length}`}` : `Sim the ${between.length === 1 ? 'game' : `${between.length} games`} before yours`}
                 </button>
               </>
@@ -83,7 +85,7 @@ export function BeforeYoursSheet({ onClose, onSkipped, day, until }: { onClose: 
               <h2 className="font-display text-4xl tracking-wide text-white">It's match day!</h2>
               <p className="mb-4 text-sm text-slate-300">{listed.length > 0 ? 'Those are all done. ' : ''}Your match is next.</p>
               <div className="mb-4 text-left"><FixtureRow season={season} fixture={mine} teams={teams} showCompetition /></div>
-              <button onClick={() => navigate(matchHref(season, mine))} className="cta-pulse cta-pulse-gold w-full rounded-full bg-amber-400 px-6 py-3.5 font-display text-3xl leading-none tracking-wide text-black hover:bg-amber-300 active:bg-amber-300">Play match</button>
+              <button onClick={() => gate(() => navigate(matchHref(season, mine)))} className="cta-pulse cta-pulse-gold w-full rounded-full bg-amber-400 px-6 py-3.5 font-display text-3xl leading-none tracking-wide text-black hover:bg-amber-300 active:bg-amber-300">Play match</button>
             </div>
           ) : (
             <div className="py-3 text-center">

@@ -1,3 +1,4 @@
+import { CoachCard } from './season/CoachGate'
 import { motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
@@ -255,6 +256,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           </button>
         </div>
       </div>
+
+      {session && <div className="mb-6 max-w-xl"><CoachCard teamId={team.id} /></div>}
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[3fr_2fr]">
         <section>

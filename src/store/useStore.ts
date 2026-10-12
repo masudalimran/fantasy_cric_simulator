@@ -6,6 +6,8 @@ import { BUILT_IN_TEAMS, LEGACY_TEAMS, refreshRatings } from '../data/teams'
 import { generateSeason } from '../season/generate'
 import { lastPlayedXI } from '../season/selection'
 import { advanceMarket, initMarket, marketWindows, playerIndex } from '../season/market'
+import { advanceCoaching, assignCoaches, setFocus } from '../season/coaching'
+import type { CoachFocus } from '../data/coaches'
 import { recordResult } from '../season/results'
 import { appendAction, type Action } from '../engine/replay'
 import type { Difficulty } from '../engine/types'
@@ -81,6 +83,8 @@ interface State {
   updateSeason: (fn: (s: Season) => Season) => void
   /** Older careers have no market yet: set one up (squads as they are, 40 youth in the pool, a purse each). */
   ensureMarket: () => void
+  /** Tell your coach what to work on (it stands for at least a month). */
+  setCoachFocus: (focus: CoachFocus) => void
   /** Records a finished fixture in the active session, e.g. after watching it live. */
   recordMatch: (summary: RawSummary, date: string) => void
   /** The match in progress (null when there isn't one). Lives until it ends or is discarded. */
@@ -134,10 +138,14 @@ export const useStore = create<State>()(
       ensureMarket: () =>
         set((st) => ({
           sessions: st.sessions.map((x) => {
-            if (x.id !== st.activeSessionId || (x.season.market && x.season.windows)) return x
+            if (x.id !== st.activeSessionId || (x.season.market && x.season.windows && x.season.coaches)) return x
             const teams = resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)).filter((t) => x.season.teamIds.includes(t.id))
-            return { ...x, season: { ...x.season, windows: x.season.windows ?? marketWindows(x.season.year), market: x.season.market ?? initMarket(teams, x.season.seed) } }
+            return { ...x, season: { ...x.season, windows: x.season.windows ?? marketWindows(x.season.year), market: x.season.market ?? initMarket(teams, x.season.seed), coaches: assignCoaches(x.season.teamIds, x.season.seed, x.season.coaches) } }
           }),
+        })),
+      setCoachFocus: (focus) =>
+        set((st) => ({
+          sessions: st.sessions.map((x) => (x.id === st.activeSessionId && x.season.myTeamId ? { ...x, season: setFocus(x.season, x.season.myTeamId, focus, x.season.today), updatedAt: new Date().toISOString() } : x)),
         })),
       updateSeason: (fn) =>
         set((st) => ({
@@ -145,7 +153,8 @@ export const useStore = create<State>()(
             if (x.id !== st.activeSessionId) return x
             const next = fn(x.season)
             // as the days of a market window go by, the computer teams do their shopping
-            const season = advanceMarket(x.season, next, () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), next.market))
+            const baseIndex = () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), next.market)
+            const season = advanceCoaching(x.season, advanceMarket(x.season, next, baseIndex), baseIndex)
             return { ...x, season, updatedAt: new Date().toISOString() }
           }),
         })),
@@ -158,7 +167,8 @@ export const useStore = create<State>()(
             const teams = new Map(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)).map((t) => [t.id, t]))
             const next = recordResult(x.season, summary, teams)
             const moved = { ...next, today: date > next.today ? date : next.today }
-            return { ...x, season: advanceMarket(x.season, moved, () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), moved.market)), updatedAt: new Date().toISOString() }
+            const baseIndex = () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), moved.market)
+            return { ...x, season: advanceCoaching(x.season, advanceMarket(x.season, moved, baseIndex), baseIndex), updatedAt: new Date().toISOString() }
           }),
         })),
       liveMatch: null,

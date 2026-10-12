@@ -15,6 +15,7 @@ import { Glossary } from './components/Glossary'
 import { BottomNav, MobileHeader, MoreSheet } from './components/MobileChrome'
 import { useIsMobile, useWakeLock } from './hooks'
 import { DetailsProvider } from './components/season/Details'
+import { CoachGateProvider } from './components/season/CoachGate'
 import { CompetitionsPage } from './pages/CompetitionsPage'
 import { MatchPage } from './pages/MatchPage'
 import { NewSessionPage } from './pages/NewSessionPage'
@@ -220,6 +221,7 @@ export default function App() {
 
   return (
     <DetailsProvider>
+    <CoachGateProvider>
     <Glossary />
     <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${mobile ? (showChrome ? '' : 'px-2.5') : 'pb-16'}`} style={mobile ? { paddingBottom: showChrome ? 'calc(var(--sab) + 84px)' : 'var(--sab)', paddingLeft: 'max(var(--sal), 1rem)', paddingRight: 'max(var(--sar), 1rem)' } : undefined}>
       {mobile && showChrome && <MobileHeader resuming={resuming} playTo={playTo} />}
@@ -286,6 +288,7 @@ export default function App() {
       <HowToPlay />
       <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </div>
+    </CoachGateProvider>
     </DetailsProvider>
   )
 }

@@ -11,6 +11,7 @@ import { useStore, useTeams, useViewedSeason } from '../../store/useStore'
 import type { Team } from '../../types'
 import { useDetails } from './Details'
 import { BeforeYoursSheet, matchesBefore } from './BeforeYours'
+import { useCoachGate } from './CoachGate'
 import { accentOf, PlayerAvatar, TeamCrest } from '../ui'
 import type { Player } from '../../types'
 
@@ -65,6 +66,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
 }) {
   const navigate = useNavigate()
   const [beforeOpen, setBeforeOpen] = useState(false)
+  const gate = useCoachGate() // your coach needs an instruction before a match is played, watched or simmed
   const details = useDetails()
   const baseTeams = useBaseTeamMap()
   const liveMatch = useStore((s) => s.liveMatch)
@@ -140,8 +142,8 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         )}
         {!res && playable && !waitFor && !liveHere && (
           <div className="flex gap-2">
-            <button onClick={() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : sim())} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Simulate this match: it is played for you and you just see the result">Sim</button>
-            <button onClick={() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(matchHref(season, fixture)))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? `bg-amber-400 text-black hover:bg-amber-300 ${season && myNextFixture(season)?.id === fixture.id ? 'cta-pulse cta-pulse-gold' : ''}` : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
+            <button onClick={() => gate(() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : sim()))} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Simulate this match: it is played for you and you just see the result">Sim</button>
+            <button onClick={() => gate(() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(matchHref(season, fixture))))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? `bg-amber-400 text-black hover:bg-amber-300 ${season && myNextFixture(season)?.id === fixture.id ? 'cta-pulse cta-pulse-gold' : ''}` : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
           </div>
         )}
         {res && playable && details && (

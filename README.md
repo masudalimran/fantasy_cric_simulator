@@ -129,6 +129,28 @@ Computer teams change their XI more often: form drops and recalls players, and i
 series, and sometimes league games) they rest a few regulars and give the reserves who have played least a chance,
 keeping five bowlers and a keeper. The team news says "rested" and "given a chance". Knockouts always get the best side.
 
+### Coaches
+Every team in a career has a coach, picked at random when the career starts from a pool of about 70 characters from
+video games that have no team in the game (`src/data/coaches.ts`; coaches have no portraits). A coach has a skill and a
+speciality (batting, bowling or fielding).
+- **Instruction**: each month a coach works on one thing for the whole squad: **batting** (technique, power, temperament,
+  running), **bowling** (accuracy, variation, stamina) or **fielding**. You set it for your team on the **My squad** page by
+  tapping the coach card; the computer sets it for every other team (it reviews it each month, picking the squad's
+  weakest area with a nudge towards the coach's speciality).
+- **It stays for at least a month.** When you pick one the coach says so and tells you the date you can change it again;
+  you can keep it going or change it after that. A **Choose again / Set it** step comes first.
+- **Prompts**: with no instruction set, the Calendar opens a **Set coaching instruction** card with a button to My squad
+  (it comes back the next time you open the Calendar), and playing, watching or simming a match, or skipping days, asks first
+  (you can continue without it, and it will ask again).
+- **Effect** (`season/coaching.ts`): every day each player in the area gets a little training; it adds up to one whole
+  rating point about every month or two (slower at high ratings, faster with a skilled coach or one working in his
+  speciality, at most +5 on one rating in a year). Without an instruction nobody trains. Gains go into the career's rating
+  changes, so they show up everywhere ratings do.
+- **Reports**: the coach sheet (tap the coach on My squad, or on any team's page in the career) shows his skill and style,
+  what he is working on, the points he has added this year, and a monthly report of which player got which rating up.
+- **Coaches leaderboard**: Stats > Coaches ranks every coach by the rating points he has added to his squad this year
+  (and says which coach has boosted his team the most). Tap a row to see his report.
+
 ### Ratings change as you play
 After every match each player who batted or bowled is graded against what a player of his rating normally does in
 that format. Beat it and a rating goes up by 1 or 2; fall well short and it goes down (a duck always costs a

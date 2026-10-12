@@ -1,3 +1,4 @@
+import { CoachCard } from '../components/season/CoachGate'
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
 import { overall } from '../data/builders'
@@ -109,6 +110,8 @@ export function CareerTeamPage() {
           </div>
         </div>
       </div>
+
+      <div className="max-w-xl"><CoachCard teamId={team.id} /></div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {tile('Played', record?.played ?? 0)}

@@ -127,6 +127,15 @@ export interface MarketState {
   offers?: Offer[]
 }
 
+/** What your coach is working on. Once set it stays at least a month. */
+export interface Coaching {
+  focus: import('../data/coaches').CoachFocus | null
+  /** When the instruction was given, and the first day it can be changed again. */
+  since: string | null
+  lockedUntil: string | null
+  history: { focus: import('../data/coaches').CoachFocus; from: string }[]
+}
+
 export interface Season {
   id: string
   year: number
@@ -151,6 +160,14 @@ export interface Season {
   startShifts?: Record<string, PlayerShift>
   /** What each played match did to each player's ratings (only players whose ratings moved), by fixture. */
   changes?: Record<string, Record<string, MatchDelta>>
+  /** Which coach each team has (coach ids), picked at random when the career starts and kept for its whole life. */
+  coaches?: Record<string, string>
+  /** What each team's coach is working on (yours is set by you, the computer's by the computer, a month at a time). */
+  coaching?: Record<string, Coaching>
+  /** Training that has not added up to a whole rating point yet, by player and rating. */
+  coachProgress?: Record<string, Partial<Record<AttrKey, number>>>
+  /** The rating points each team's coach has added: by month (YYYY-MM), by team, by player. This is the monthly report. */
+  coachReport?: Record<string, Record<string, Record<string, Partial<Record<AttrKey, number>>>>>
   /** Buying, selling and the unsigned pool (undefined in older saves until the market is set up). */
   market?: MarketState
   /** When the market is open this year. */
@@ -160,7 +177,7 @@ export interface Season {
 }
 
 /** The ratings a match can move. */
-export type AttrKey = 'technique' | 'power' | 'temperament' | 'running' | 'accuracy' | 'variation' | 'stamina'
+export type AttrKey = 'technique' | 'power' | 'temperament' | 'running' | 'accuracy' | 'variation' | 'stamina' | 'fielding'
 
 /** Rating points a player has gained (positive) or lost. `bat` and `bowl` are older whole-skill shifts; `a` is per rating. */
 export interface PlayerShift {

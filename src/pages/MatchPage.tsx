@@ -17,6 +17,7 @@ import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
 import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
+import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
 import { InningsBreak } from '../components/match/InningsBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
@@ -96,6 +97,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // The innings break card: shown when the first innings ends during play (not when you reopen a match that is already in the chase).
   const [breakOpen, setBreakOpen] = useState(false)
   const swipeOn = useSwipeAim()
+  const gate = useCoachGate() // your coach needs an instruction before the next match
   const manual = useManualPlay() // play every ball from the controls: no auto-play anywhere
   const [breakPopup, setBreakPopup] = useState(false) // the innings summary card (it does not start anything)
   const seenInnings = useRef(match.current.index)
@@ -431,7 +433,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // After a career match: skip the other teams' matches and go straight to the toss of your next one
   const nextMine = season ? myNextFixture(season) : null
   const nextLabel = !fixture ? null : nextMine ? 'Play my next match' : season && seasonComplete(season) ? 'See my season review' : null
-  const goNext = () => {
+  const goNext = () => gate(() => {
     if (season && matchesBefore(season).length > 0) { setBeforeOpen(true); return } // show the matches that come first
 
     const s = selectSeason(useStore.getState())
@@ -441,7 +443,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     const r = simSeasonUntil(s, mine.date, allBaseTeams)
     updateSeasonNow(() => r.season)
     navigate(matchHref(r.season, mine))
-  }
+  })
   const resultCard = match.isOver && match.result ? (
 <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-fuchsia-500/10 p-5 text-center">
           <div className="font-display text-4xl tracking-wide text-amber-300">{match.result.text}</div>

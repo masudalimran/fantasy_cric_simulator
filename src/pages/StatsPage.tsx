@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { TitlesButton } from '../components/season/TitlesButton'
 import { Link, useSearchParams } from 'react-router'
@@ -14,6 +15,8 @@ import { useDetails } from '../components/season/Details'
 import { SortTable, type Col } from '../components/season/SortTable'
 import { overall } from '../data/builders'
 import type { Season } from '../season/types'
+import { coachBoard } from '../season/coaching'
+import { CoachSheet } from '../components/season/CoachSheet'
 import { useTeams, useViewedSeason } from '../store/useStore'
 import type { MatchFormat, Player, Team } from '../types'
 
@@ -24,6 +27,7 @@ const TABS = [
   { id: 'ratings', label: 'Rating' },
   { id: 'teams', label: 'Teams' },
   { id: 'records', label: 'Records' },
+  { id: 'coaches', label: 'Coaches' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -125,6 +129,48 @@ function Teams({ rows, teams, season }: { rows: ReturnType<typeof teamRecords>; 
     { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <TitlesButton season={season} team={teams.get(r.teamId)} fixtureIds={r.titleFixtures} teams={teams} /> },
   ]
   return <SortTable rows={rows} cols={cols} rowKey={(r) => r.teamId} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} />
+}
+
+/** Which coach has made his squad better, best first. Click a row for his report. */
+function Coaches({ season, teams }: { season: Season; teams: Map<string, Team> }) {
+  const [open, setOpen] = useState<string | null>(null)
+  const board = useMemo(() => coachBoard(season), [season])
+  const best = board[0]
+  return (
+    <div className="space-y-3">
+      {best && best.total > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-400/50 bg-amber-400/10 p-3">
+          <span className="text-3xl">🏆</span>
+          <span className="text-sm text-slate-200"><b className="text-white">{best.coach.name}</b> ({best.coach.game}) has boosted <b className="text-white">{teams.get(best.teamId)?.name}</b> the most this year: <b className="text-emerald-300">+{best.total} rating points</b> across {best.players} players.</span>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-2xl border border-line bg-panel p-3">
+        <table className="w-full text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-slate-500">
+            <tr><th className="px-2 py-2 text-left font-medium">#</th><th className="px-2 py-2 text-left font-medium">Coach and team</th><th className="px-2 py-2 text-left font-medium">Working on</th><th className="px-2 py-2 text-right font-medium">Points</th><th className="px-2 py-2 text-right font-medium max-md:hidden">Players</th><th className="px-2 py-2 text-right font-medium max-md:hidden">Each</th></tr>
+          </thead>
+          <tbody>
+            {board.map((b, i) => {
+              const t = teams.get(b.teamId)
+              const focus = season.coaching?.[b.teamId]?.focus
+              return (
+                <tr key={b.teamId} onClick={() => setOpen(b.teamId)} className={`cursor-pointer border-t border-line/60 transition hover:bg-white/5 ${b.teamId === season.myTeamId ? 'bg-amber-400/10' : ''}`}>
+                  <td className="px-2 py-2 text-slate-500">{i + 1}</td>
+                  <td className="px-2 py-2"><div className="flex items-center gap-2">{t && <TeamCrest team={t} size={28} />}<div className="min-w-0"><div className="font-semibold text-white">{b.coach.name}</div><div className="truncate text-[11px] text-slate-400">{t?.name} <span className="text-slate-600">· {b.coach.game} · skill {b.coach.skill}</span></div></div></div></td>
+                  <td className="px-2 py-2 capitalize text-slate-300">{focus ?? <span className="text-slate-600">none yet</span>}</td>
+                  <td className="px-2 py-2 text-right font-bold tabular-nums text-emerald-300">{b.total ? `+${b.total}` : '0'}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-slate-300 max-md:hidden">{b.players}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-slate-400 max-md:hidden">{b.perPlayer ? b.perPlayer.toFixed(1) : '-'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-slate-500">Points are the rating points a coach has added to his squad this year. Click a coach to see his monthly report.</p>
+      <AnimatePresence>{open && <CoachSheet teamId={open} onClose={() => setOpen(null)} />}</AnimatePresence>
+    </div>
+  )
 }
 
 /** Every player's current ratings, with how far each has moved from where it started. Sorted by the current value, never by the change. */
@@ -229,7 +275,7 @@ export function StatsPage() {
         </div>
       </div>
 
-      {collected.matches === 0 && tab !== 'ratings' ? (
+      {collected.matches === 0 && tab !== 'ratings' && tab !== 'coaches' ? (
         <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">No matches played here yet. Sim a few from the <Link to={paths.session()} className="text-indigo-300 hover:underline">session</Link>.</div>
       ) : (
         <div className={tab === 'awards' || tab === 'records' ? '' : 'overflow-x-auto rounded-2xl border border-line bg-panel p-3'}>
@@ -238,6 +284,7 @@ export function StatsPage() {
           {tab === 'awards' && <Awards c={collected} index={index} />}
           {tab === 'ratings' && <Ratings index={index} />}
           {tab === 'teams' && <Teams rows={teamRows} teams={teams} season={season} />}
+          {tab === 'coaches' && <Coaches season={season} teams={teams} />}
           {tab === 'records' && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {records.map((r) => {

@@ -1,5 +1,7 @@
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { MarketOpens } from '../components/season/MarketOpens'
+import { CoachPrompt, useCoachGate } from '../components/season/CoachGate'
+import { needsFocus } from '../season/coaching'
 import { TipBanner } from '../components/TipBanner'
 import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
@@ -94,6 +96,8 @@ export function CalendarPage() {
   const mobile = useIsMobile()
   const teams = useTeamMap()
   const baseTeams = useBaseTeamMap()
+  const gate = useCoachGate()
+  const [coachDismissed, setCoachDismissed] = useState(false) // the set-instruction card is back next time you open the Calendar
   const liveFixtureId = useStore((s) => (s.liveMatch && !s.liveMatch.finished ? (s.liveMatch.fixtureId ?? null) : null))
   const { ym } = useParams()
   const [params, setParams] = useSearchParams()
@@ -144,21 +148,21 @@ export function CalendarPage() {
   // there when the popup is closed.
   const moveTo = (date: string) => updateSeason((s) => (date > s.today ? { ...s, today: date } : s))
   const goToDay = (date: string) => { moveTo(date); setPeek({ day: date }); navigate(paths.session(date.slice(0, 7)), { replace: true }) }
-  const simNextDay = () => { const nd = nextMatchDate(season); if (nd) goToDay(nd) }
+  const simNextDay = () => gate(() => { const nd = nextMatchDate(season); if (nd) goToDay(nd) })
   // A week or a month ahead: stop at the first match day on the way (and ask), or if there is none just move the date on.
-  const skipDays = (n: number) => {
+  const skipDays = (n: number) => gate(() => {
     const until = addDays(season.today, n)
     const nd = nextMatchDate(season)
     if (nd && nd <= until) goToDay(nd)
     else moveTo(until)
-  }
+  })
   const myNext = myNextFixture(season)
   const between = matchesBefore(season)
-  const skipToMine = () => {
+  const skipToMine = () => gate(() => {
     if (!myNext) return
     if (between.length > 0) setRangeOpen(true)
     else simUntil(myNext.date)
-  }
+  })
   const done = seasonComplete(season)
   const myTeam = season.myTeamId ? teams.get(season.myTeamId) : undefined
   const lastYear = [...(session?.reviews[session.reviews.length - 1]?.progress ?? [])].sort((a, b) => b.after - b.before - (a.after - a.before))
@@ -215,6 +219,7 @@ export function CalendarPage() {
         </div>
       )}
       {session && <MarketOpens season={season} sessionId={session.id} />}
+      <AnimatePresence>{myTeam && needsFocus(season) && !coachDismissed && <CoachPrompt onClose={() => setCoachDismissed(true)} onLater={() => setCoachDismissed(true)} />}</AnimatePresence>
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
 
 

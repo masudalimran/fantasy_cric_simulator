@@ -104,7 +104,7 @@ export function ReviewPage() {
       shifts = developYouth(market, shifts ?? {}, playerIndex(baseTeams, market), seed)
       market = rolloverMarket(market, titles, seed)
     }
-    const next = generateSeason({ year: season.year + 1, teams: participants, seed, myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup, market })
+    const next = generateSeason({ year: season.year + 1, teams: participants, seed, myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup, market, coaches: season.coaches, coaching: season.coaching, coachProgress: season.coachProgress, coachReport: season.coachReport })
     startNext(review, next)
     navigate(paths.session(`${next.year}-01`))
   }

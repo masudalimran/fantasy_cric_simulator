@@ -5,7 +5,7 @@ import type { MatchFormat, Player, Team } from '../types'
 import type { AttrKey, Fixture, MatchDelta, PlayerChange, PlayerShift, RawSummary, Season } from './types'
 
 export const ATTRS: AttrKey[] = ['technique', 'power', 'temperament', 'running', 'accuracy', 'variation', 'stamina']
-export const ATTR_LABEL: Record<AttrKey, string> = { technique: 'Technique', power: 'Power', temperament: 'Temperament', running: 'Running', accuracy: 'Accuracy', variation: 'Variation', stamina: 'Stamina' }
+export const ATTR_LABEL: Record<AttrKey, string> = { technique: 'Technique', power: 'Power', temperament: 'Temperament', running: 'Running', fielding: 'Fielding', accuracy: 'Accuracy', variation: 'Variation', stamina: 'Stamina' }
 
 /** The most any one rating can drift, up or down, over a career. */
 const MAX_ATTR_DRIFT = 15
@@ -19,6 +19,7 @@ export function applyShift(p: Player, s: PlayerShift | undefined): Player {
   const bat = s.bat ?? 0, bowl = s.bowl ?? 0
   return {
     ...p,
+    fielding: clampRating(p.fielding + get(s, 'fielding')),
     batting: {
       technique: clampRating(p.batting.technique + bat + get(s, 'technique')),
       power: clampRating(p.batting.power + bat + get(s, 'power')),

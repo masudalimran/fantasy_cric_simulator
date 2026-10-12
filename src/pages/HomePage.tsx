@@ -2,6 +2,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
+import { useCoachGate } from '../components/season/CoachGate'
 import { TeamCrest } from '../components/ui'
 import { matchHref, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
@@ -18,6 +19,7 @@ const tile = 'flex min-h-[76px] flex-col justify-center rounded-2xl border borde
 export function HomePage() {
   const navigate = useNavigate()
   const [beforeOpen, setBeforeOpen] = useState(false)
+  const gate = useCoachGate()
   const season = useStore(selectSeason)
   const session = useStore(selectSession)
   const live = useStore((s) => s.liveMatch)
@@ -44,7 +46,7 @@ export function HomePage() {
         {me && <div className="mb-3 flex justify-center"><TeamCrest team={me} size={72} /></div>}
         <p className="mb-4 min-h-5 text-sm text-slate-300">{next.hint}</p>
         <button
-          onClick={() => (next.mine && season && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(next.to))}
+          onClick={() => gate(() => (next.mine && season && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(next.to)))}
           className={`cta-pulse ${next.gold ? 'cta-pulse-gold bg-amber-400 active:bg-amber-300 hover:bg-amber-300' : 'bg-emerald-500 active:bg-emerald-400 hover:bg-emerald-400'} w-full rounded-full px-6 py-4 font-display text-3xl leading-none tracking-wide text-black`}
         >
           {next.label}
