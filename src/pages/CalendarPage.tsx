@@ -9,7 +9,7 @@ import { Sheet } from '../components/Sheet'
 import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { useIsMobile } from '../hooks'
 import { paths } from '../routes'
-import { addDays, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
+import { addDays, daysBetween, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
 import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
 import type { Fixture, Season } from '../season/types'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
@@ -190,6 +190,29 @@ export function CalendarPage() {
           <span className="truncate font-display text-xl leading-none tracking-wide text-fuchsia-200"><span className="md:hidden">Market is open</span><span className="max-md:hidden">The player market is open</span></span>
           <span className="shrink-0 font-display text-xl leading-none tracking-wide text-white">Go to the market ›</span>
         </Link>
+      )}
+      {season.windows && season.windows.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-line bg-panel px-3 py-2.5" aria-label="Player market schedule">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300">Player market in {season.year}</h3>
+            {myTeam && <Link to={paths.market} className="text-[11px] font-bold text-fuchsia-200 hover:underline">Open the market ›</Link>}
+          </div>
+          <ul className="space-y-1">
+            {season.windows.map((w) => {
+              const open = season.today >= w.start && season.today <= w.end
+              const done = season.today > w.end
+              return (
+                <li key={w.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                  <span className={`font-semibold ${open ? 'text-fuchsia-200' : 'text-white'}`}>{w.name}</span>
+                  <span className="text-slate-300">{formatDate(w.start)} to {formatDate(w.end)}</span>
+                  <span className={`rounded-full px-2 py-px text-[10px] font-extrabold uppercase tracking-wider ${open ? 'bg-fuchsia-400 text-black' : done ? 'bg-white/10 text-slate-400' : 'bg-white/10 text-slate-200'}`}>
+                    {open ? `open now · ${Math.max(0, daysBetween(season.today, w.end))} days left` : done ? 'closed' : `opens in ${daysBetween(season.today, w.start)} days`}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
       {session && <MarketOpens season={season} sessionId={session.id} />}
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
