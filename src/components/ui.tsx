@@ -1,3 +1,5 @@
+import { originOf } from '../data/origin'
+import { useStore } from '../store/useStore'
 import { createContext, useContext, useState } from 'react'
 import { playerImage, teamArt } from '../data/images'
 import { useHideImages } from '../prefs'
@@ -205,5 +207,18 @@ export function TeamBackdrop({ team, className = '', strength = 0.55 }: { team: 
       {src && <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover object-center" style={{ opacity: strength }} loading="lazy" />}
       <div className="absolute inset-0 bg-gradient-to-t from-panel via-panel/60 to-panel/10" />
     </div>
+  )
+}
+
+/** "From Bleach": the anime or game a player comes from, so people who do not know it can tell. Shows nothing when it is not known. */
+export function OriginTag({ playerId, className = '' }: { playerId: string; className?: string }) {
+  const custom = useStore((s) => s.customTeams)
+  const o = originOf(playerId, custom)
+  if (!o) return null
+  return (
+    <span className={`inline-flex max-w-full items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-xs text-slate-100 ${className}`} title={`${o.universe === 'game' ? 'Game' : 'Anime'}: ${o.series}`}>
+      <span aria-hidden>{o.universe === 'game' ? '🎮' : '🎌'}</span>
+      <span className="truncate"><span className="text-slate-400">From </span><b className="font-semibold">{o.series}</b></span>
+    </span>
   )
 }

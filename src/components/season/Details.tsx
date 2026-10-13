@@ -12,7 +12,7 @@ import { useTeams, useViewedSeason } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { Sheet } from '../Sheet'
-import { CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
+import { OriginTag, CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
 import { competitionName, FixtureRow, usePlayerIndex, useTeamMap } from './shared'
 
 type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string } | { kind: 'team'; id: string }
@@ -309,6 +309,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
           <div className="min-w-0">
             <h2 className="font-display text-4xl leading-none tracking-wide text-white">{player.name}</h2>
             <Link to={inCareer ? paths.careerTeam(team.id) : paths.team(team.id)} onClick={onClose} className="mt-1 flex items-center gap-2 text-sm text-slate-100 hover:underline"><TeamCrest team={team} size={22} />{team.name}</Link>
+            <div className="mt-1.5"><OriginTag playerId={player.id} /></div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
               <span className="rounded-full bg-black/40 px-2 py-0.5 font-bold text-white">{ROLE_LABEL[player.role]}</span>
               <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.hand === 'L' ? 'Left' : 'Right'}-hand bat</span>

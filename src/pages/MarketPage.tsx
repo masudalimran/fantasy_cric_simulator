@@ -9,6 +9,7 @@ import { FREE_AGENTS, useTeamMap } from '../components/season/shared'
 import { PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
 import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
+import { originOf } from '../data/origin'
 import { daysBetween, formatDate } from '../season/dates'
 import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
@@ -81,7 +82,7 @@ export function MarketPage() {
         <PlayerAvatar profile player={sp} team={opts.teamBadge ?? FREE_AGENTS} size={46} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-white">{p.name}</div>
-          <div className="truncate text-[11px] text-slate-400">{p.role}{sp.bowling ? ` · ${sp.bowling.type}` : ''}{YOUTH_BY_ID.get(p.id) ? ` · ${YOUTH_BY_ID.get(p.id)!.series}` : opts.teamBadge ? ` · ${opts.teamBadge.name}` : ''}</div>
+          <div className="truncate text-[11px] text-slate-400">{p.role}{sp.bowling ? ` · ${sp.bowling.type}` : ''}{originOf(p.id) ? ` · ${originOf(p.id)!.series}` : opts.teamBadge ? ` · ${opts.teamBadge.name}` : ''}</div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] tabular-nums text-slate-500">
             <span>BAT {Math.round((sp.batting.technique + sp.batting.power + sp.batting.temperament) / 3)}</span>
             {sp.bowling && <span>BOWL {Math.round((sp.bowling.accuracy + sp.bowling.variation) / 2)}</span>}

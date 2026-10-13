@@ -10,7 +10,7 @@ import { OverallStats } from '../season/OverallStats'
 import { CareerPath, RecentMatches } from '../season/Details'
 import { useTeamMap } from '../season/shared'
 import type { BatStat, BowlStat } from '../../season/stats'
-import { accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, tierOf } from '../ui'
+import { OriginTag, accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, tierOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { dismissalText, economy, oversText, strikeRate } from './format'
 
@@ -75,6 +75,7 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
             <div className="min-w-0">
               <h2 className="font-display text-4xl leading-none tracking-wide text-white">{player.name}</h2>
               <div className="mt-1 flex items-center gap-2 text-sm text-slate-100"><TeamLogo team={team} size={22} /><span className="truncate">{team.name}</span></div>
+              <div className="mt-1"><OriginTag playerId={player.id} /></div>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="rounded-full bg-black/40 px-2 py-0.5 font-bold text-white">{ROLE_LABEL[player.role]}</span>
                 {captain && <span className="rounded-full bg-amber-400 px-2 py-0.5 font-bold text-black">Captain</span>}

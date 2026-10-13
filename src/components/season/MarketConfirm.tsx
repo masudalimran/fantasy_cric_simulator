@@ -4,7 +4,7 @@ import { YOUTH_BY_ID } from '../../data/youthPool'
 import type { Season } from '../../season/types'
 import type { Player, Team } from '../../types'
 import { Sheet } from '../Sheet'
-import { PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
+import { OriginTag, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
 import { CareerPath, RecentMatches } from './Details'
 import { OverallStats } from './OverallStats'
 
@@ -62,6 +62,7 @@ export function MarketConfirm({ confirm, season, seasons, teams, me, purse, onCo
             <div className="min-w-0">
               <h2 className="font-display text-3xl leading-none tracking-wide text-white">{player.name}</h2>
               <div className="mt-1 flex items-center gap-2 text-sm text-slate-100">{from ? <><TeamCrest team={from} size={20} /><span className="truncate">{from.name}</span></> : <span className="text-slate-300">Free agent</span>}</div>
+              <div className="mt-1"><OriginTag playerId={player.id} /></div>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="rounded-full bg-black/40 px-2 py-0.5 font-bold text-white">{ROLE_LABEL[player.role]}</span>
                 {w && <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{w.type}</span>}

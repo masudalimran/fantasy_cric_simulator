@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
-import { RatingBadge, accentOf } from '../ui'
+import { OriginTag, RatingBadge, accentOf } from '../ui'
 import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { SixReplay, type SixInfo } from './SixReplay'
@@ -203,6 +203,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
           {moment.rating !== undefined && <RatingBadge value={moment.rating} size="sm" />}
         </div>
         <div className="text-slate-300" style={{ fontSize: 13 * scale }}>{moment.team.name}</div>
+        <div className={`mt-0.5 ${stacked ? 'flex justify-center' : ''}`} style={{ fontSize: 12 * scale }}><OriginTag playerId={moment.player.id} /></div>
         <div className="mt-1 space-y-0.5">
           {moment.lines.map((l, i) => (
             <div key={i} className={i === 0 ? 'font-extrabold text-white' : 'text-slate-300'} style={{ fontSize: (i === 0 ? 19 : 14) * scale }}>{l}</div>

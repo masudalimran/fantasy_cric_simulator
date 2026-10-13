@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { overall } from '../../data/builders'
 import type { Player, Team } from '../../types'
-import { PlayerAvatar, RatingBadge, TeamCrest, accentOf, tierOf } from '../ui'
+import { OriginTag, PlayerAvatar, RatingBadge, TeamCrest, accentOf, tierOf } from '../ui'
 import { sfx } from '../../audio/sfx'
 import { Sheet } from '../Sheet'
 
@@ -49,6 +49,7 @@ export function SigningOverlay({ signing, onClose }: { signing: Signing; onClose
         </motion.div>
 
         <motion.h2 initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="mt-4 font-display text-4xl leading-none tracking-wide text-white">{player.name}</motion.h2>
+        <div className="mt-1.5"><OriginTag playerId={player.id} /></div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.95 }} className="mt-2 flex items-center justify-center gap-3">
           <RatingBadge value={ovr} size="md" />
           <div className="text-left"><div className="font-display text-xl leading-none" style={{ color: tier.color }}>{tier.label}</div><div className="text-[11px] text-slate-300">{player.role}{bowl ? ` · ${bowl.type}` : ''} · {fee} {fee === 1 ? 'coin' : 'coins'}</div></div>

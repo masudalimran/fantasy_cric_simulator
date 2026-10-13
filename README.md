@@ -210,6 +210,7 @@ You can see it everywhere:
   if one player leads both). The cap sits on top of that player's portrait everywhere a portrait is shown inside a career
   (stats, squads, scorecards, popups, the match field), glitters with little twinkling stars and a shine, and follows the
   year you are looking at. Hover it for what it is.
+- **Origin tag** (`src/data/origin.ts`, `OriginTag` in `ui.tsx`): every player popup (profile, in-match card, moments, signing and market confirm, market rows, transfers) shows "From <anime or game>". It is derived from the player id on the fly, so running careers get it with no migration, and it follows a player who moves teams. It also covers free agents, released veterans and youth. Custom players show none.
 - **More animation screens** (`EventScreens.tsx`, each about 2.5 seconds, tap to skip, all on by default): a **four** (the ball races
   along the ground to the rope in the direction it was hit while the two nearest fielders chase it and come up short, the
   rope flashes, FOUR!), a **wide** (the ball sails wide of the stumps and the umpire stretches his arms), a **bye** (it beats the
