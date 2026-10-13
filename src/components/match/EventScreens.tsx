@@ -58,6 +58,10 @@ export function FourScreen({ info }: { info: FourInfo }) {
   const mid = { x: HIT.x + (end.x - HIT.x) * 0.55, y: HIT.y + (end.y - HIT.y) * 0.55 }
   const size = Math.max(26, Math.min(w * 0.075, 46))
   const run = 1.0 * r
+  // the two chasers run down either side of the ball's path, well apart, and finish short of the rope
+  const side = { x: -Math.sin(angle), y: Math.cos(angle) }
+  const along = { x: Math.cos(angle), y: Math.sin(angle) }
+  const spot = (base: { x: number; y: number }, i: number, off: number, back: number) => ({ x: base.x + side.x * (i ? off : -off) - along.x * back, y: base.y + side.y * (i ? off : -off) - along.y * back })
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Four">
       <div className="absolute inset-0 bg-[#070b14]" />
@@ -80,7 +84,7 @@ export function FourScreen({ info }: { info: FourInfo }) {
         <motion.div
           key={c.player.id} className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center"
           style={{ left: pc(c.x, W), top: pc(c.y, H) }}
-          animate={{ left: [pc(c.x, W), pc(mid.x + (i ? 6 : -6), W), pc(end.x + (i ? 5 : -5) * 0.5, W)], top: [pc(c.y, H), pc(mid.y + (i ? -4 : 4), H), pc(end.y + (i ? -3 : 3), H)], rotate: [0, 0, i ? 14 : -14] }}
+          animate={{ left: [pc(c.x, W), pc(spot(mid, i, 9, 0).x, W), pc(spot(end, i, 11, 5).x, W)], top: [pc(c.y, H), pc(spot(mid, i, 9, 0).y, H), pc(spot(end, i, 11, 5).y, H)], rotate: [0, 0, i ? 14 : -14] }}
           transition={{ delay: 0.25 * r, duration: 1.15 * r, ease: 'easeIn', times: [0, 0.6, 1] }}
         >
           <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={c.player} team={bowlTeam} size={size} /></span>

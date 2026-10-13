@@ -174,6 +174,9 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200" title="Off: a fifty or hundred and a wicket each show their original two screens again">
             <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.merged} onChange={(e) => setAnimPrefs({ merged: e.target.checked })} />One screen for fifties, hundreds and wickets
           </label>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200" title="On: play waits on a fifty, hundred or wicket screen until you tap it. Off: it closes by itself and play carries on">
+            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.hold} onChange={(e) => setAnimPrefs({ hold: e.target.checked })} />Wait for a tap on those screens
+          </label>
         </div>
       </Section>
 

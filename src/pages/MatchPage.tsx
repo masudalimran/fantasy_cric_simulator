@@ -175,7 +175,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     setMoment(m)
     if (!m) { busyUntil.current = 0; return }
     // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
-    if (m.kind === 'wicket' && stopsRef.current.wickets) { busyUntil.current = Infinity; return }
+    // The one-screen fifty / hundred / wicket waits for a tap too (the Animations switch lets it close by itself).
+    const finalWicket = m.kind === 'wicket' || (m.kind === 'replay' && !!m.replay?.details)
+    const heldScreen = getAnimPrefs().hold && ((m.kind === 'replay' && !!m.replay?.details) || (m.kind === 'milestone' && !!m.fist))
+    if ((finalWicket && stopsRef.current.wickets) || heldScreen) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)

@@ -51,7 +51,7 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
       )}
 
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest" style={{ color: gold }}><span className="h-2 w-2 animate-pulse rounded-full" style={{ background: gold }} />Milestone</div>
-      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Tap to continue</div>
 
       {/* the partner walks down from the other end, the scorer from his own, and they meet in the middle */}
       {partner && (

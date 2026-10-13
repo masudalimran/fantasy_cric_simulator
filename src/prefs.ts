@@ -69,10 +69,10 @@ export function useManualPlay(): boolean {
 }
 
 // ---- Which match animations to show ---------------------------------------------------------------------------
-export interface AnimPrefs { wicket: boolean; boundary: boolean; freeHit: boolean; extras: boolean; merged: boolean }
+export interface AnimPrefs { wicket: boolean; boundary: boolean; freeHit: boolean; extras: boolean; merged: boolean; hold: boolean }
 const ANIM_KEY = 'fcs.anim'
 const animListeners = new Set<() => void>()
-let anim: AnimPrefs = (() => { try { return { wicket: true, boundary: true, freeHit: true, extras: true, merged: true, ...JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}') } } catch { return { wicket: true, boundary: true, freeHit: true, extras: true, merged: true } } })()
+let anim: AnimPrefs = (() => { try { return { wicket: true, boundary: true, freeHit: true, extras: true, merged: true, hold: true, ...JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}') } } catch { return { wicket: true, boundary: true, freeHit: true, extras: true, merged: true, hold: true } } })()
 
 export const getAnimPrefs = () => anim
 export function setAnimPrefs(next: Partial<AnimPrefs>) {
@@ -83,5 +83,5 @@ export function setAnimPrefs(next: Partial<AnimPrefs>) {
 
 /** Each kind of animation screen has its own switch (all on by default). */
 export function useAnimPrefs(): AnimPrefs {
-  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ({ wicket: true, boundary: true, freeHit: true, extras: true, merged: true }))
+  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ({ wicket: true, boundary: true, freeHit: true, extras: true, merged: true, hold: true }))
 }
