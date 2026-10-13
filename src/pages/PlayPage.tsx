@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Sheet } from '../components/Sheet'
 import { RatingBadge, TeamCrest, accentOf } from '../components/ui'
+import { TeamLogo } from '../components/season/Details'
 import { useIsMobile } from '../hooks'
 import { teamStrength } from '../data/builders'
 import { randomSeed } from '../engine/rng'
@@ -187,7 +188,7 @@ export function PlayPage() {
         <div className="flex items-center gap-6">
           {[ta, tb].map((t, i) => (
             <div key={i} className="flex items-center gap-3">
-              {t ? <><TeamCrest team={t} size={56} /><div><div className="font-semibold text-white">{t.name}</div><RatingBadge value={teamStrength(t)} size="sm" /></div></> : <div className="text-slate-500">Choose team {i === 0 ? 'A' : 'B'}</div>}
+              {t ? <><TeamLogo team={t} size={56} /><div><div className="font-semibold text-white">{t.name}</div><RatingBadge value={teamStrength(t)} size="sm" /></div></> : <div className="text-slate-500">Choose team {i === 0 ? 'A' : 'B'}</div>}
               {i === 0 && <span className="px-2 font-display text-3xl text-slate-600">VS</span>}
             </div>
           ))}

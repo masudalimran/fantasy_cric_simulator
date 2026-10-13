@@ -1,7 +1,8 @@
 import type { Match } from '../../engine/match'
 import { FORMATS } from '../../engine/types'
 import { motion } from 'framer-motion'
-import { TeamCrest, accentOf } from '../ui'
+import { accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 import { parRunsPerOver } from '../../engine/model'
 import { DIFFICULTIES, type Difficulty } from '../../engine/types'
 import { oversText, runRate } from './format'
@@ -48,7 +49,7 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
       <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: `linear-gradient(100deg, ${bat.team.colors.primary}, transparent 55%)` }} />
       <div className="relative grid items-center gap-3 p-3 md:grid-cols-[1.3fr_1fr_1.3fr] md:px-5 md:py-2.5">
         <div className="flex items-center gap-4">
-          <TeamCrest team={bat.team} size={56} />
+          <TeamLogo team={bat.team} size={56} />
           <div>
             <div className="text-[11px] font-bold uppercase tracking-widest text-slate-300">{inn.index === 0 ? '1st innings' : '2nd innings'} · {match.format.toUpperCase()} · batting</div>
             <div className="font-display text-5xl leading-none" style={{ color: accentOf(bat.team) }}>
@@ -91,7 +92,7 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
                 <div className="text-xs text-slate-400">{bowl.team.series}</div>
                 <div className="text-sm text-slate-400">Setting a target</div>
               </div>
-              <TeamCrest team={bowl.team} size={44} />
+              <TeamLogo team={bowl.team} size={44} />
             </div>
           )}
         </div>
@@ -125,7 +126,7 @@ export function MobileScoreboard({ match, you, difficulty, onBack, backLabel }: 
         <button onClick={onBack} aria-label={backLabel} className="grid h-11 w-9 shrink-0 place-items-center rounded-xl text-slate-200 active:bg-white/10">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>
         </button>
-        <TeamCrest team={bat.team} size={32} />
+        <TeamLogo team={bat.team} size={32} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <motion.span key={`${inn.runs}-${inn.wickets}`} className="inline-block font-display text-[28px] leading-none" style={{ color: accent }} initial={{ scale: 1.2, filter: 'brightness(1.8)' }} animate={{ scale: 1, filter: 'brightness(1)' }} transition={{ duration: 0.3 }}>

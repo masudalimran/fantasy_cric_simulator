@@ -1,6 +1,7 @@
 import type { Match } from '../../engine/match'
 import { Sheet } from '../Sheet'
-import { PlayerAvatar, TeamCrest, accentOf } from '../ui'
+import { PlayerAvatar, accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
 
 /** The result in the style of a TV graphic: each team's score, its two best batsmen and its two best bowlers. */
@@ -19,7 +20,7 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
     return (
       <div key={side} className="overflow-hidden rounded-2xl border-2 bg-panel" style={{ borderColor: won ? '#fbbf24' : '#2b3145' }}>
         <div className="flex items-center gap-3 px-4 py-3" style={{ background: `linear-gradient(110deg, ${team.colors.primary}cc, #10131c 75%)` }}>
-          <TeamCrest team={team} size={48} />
+          <TeamLogo team={team} size={48} />
           <div className="min-w-0 flex-1">
             <div className="truncate font-display text-xl leading-none tracking-wide text-white">{team.name}</div>
             <div className="text-xs text-slate-300"><span className="font-bold text-slate-100">{side === firstSide ? '1st innings' : '2nd innings'}</span> · {batInn ? `${oversText(batInn.legalBalls)} overs` : ''}{won ? ' · Winner' : ''}</div>

@@ -1,7 +1,8 @@
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { winChanceSeries } from '../../engine/analysis'
 import type { Match } from '../../engine/match'
-import { TeamCrest, distinctAccents } from '../ui'
+import { distinctAccents } from '../ui'
+import { TeamLogo } from '../season/Details'
 
 /** An estimate of who is winning, over the course of the match. */
 export function WinChance({ match }: { match: Match }) {
@@ -20,7 +21,7 @@ export function WinChance({ match }: { match: Match }) {
       <div className="mb-3 grid grid-cols-2 gap-2">
         {[{ team: second, p: pSecond, c: c2, tag: 'chasing' }, { team: first, p: 1 - pSecond, c: c1, tag: 'defending' }].map((x) => (
           <div key={x.tag} className="rounded-xl border border-line bg-panel-2 p-2.5" style={{ boxShadow: `inset 0 -3px 0 ${x.c}` }}>
-            <div className="flex items-center gap-2"><TeamCrest team={x.team} size={26} /><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{x.tag}</div><div className="truncate text-xs font-bold text-white">{x.team.name}</div></div></div>
+            <div className="flex items-center gap-2"><TeamLogo team={x.team} size={26} /><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{x.tag}</div><div className="truncate text-xs font-bold text-white">{x.team.name}</div></div></div>
             <div className="mt-1 font-display text-4xl leading-none" style={{ color: x.c }}>{Math.round(x.p * 100)}%</div>
           </div>
         ))}

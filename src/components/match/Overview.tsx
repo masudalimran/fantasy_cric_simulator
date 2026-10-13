@@ -1,6 +1,7 @@
 import { inningsOverview } from '../../engine/analysis'
 import type { Match } from '../../engine/match'
-import { TeamCrest, accentOf } from '../ui'
+import { accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 import { ClickAvatar } from './PlayerCard'
 
 const pct = (n: number) => `${Math.round(n * 100)}%`
@@ -27,7 +28,7 @@ export function Overview({ match }: { match: Match }) {
         <div />
         {cols.map((c, i) => (
           <div key={i} className="flex items-center gap-2 rounded-xl border border-line bg-panel-2 p-2" style={{ boxShadow: `inset 0 -3px 0 ${accentOf(c.team)}` }}>
-            <TeamCrest team={c.team} size={30} />
+            <TeamLogo team={c.team} size={30} />
             <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{i === 0 ? '1st innings' : '2nd innings'}</div><div className="truncate text-xs font-bold text-white">{c.team.name}</div></div>
           </div>
         ))}

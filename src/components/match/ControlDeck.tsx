@@ -3,7 +3,8 @@ import type { Match } from '../../engine/match'
 import type { Action } from '../../engine/replay'
 import type { Intent } from '../../engine/types'
 import { FORMATS } from '../../engine/types'
-import { PlayerAvatar, TeamCrest } from '../ui'
+import { PlayerAvatar } from '../ui'
+import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
 import { setAnimPrefs, setSwipeAim, useAnimPrefs, useSwipeAim } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
@@ -259,7 +260,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
                 if (mySide !== null && side !== mySide) return null
                 return (
                   <button key={s.team.id} onClick={() => { setAskForfeit(false); setAuto(0); act({ t: 'forfeit', side }) }} className="flex items-center gap-2 rounded-lg border-2 border-red-500/70 bg-red-500/15 px-2 py-1.5 text-left text-[12px] font-bold text-white hover:bg-red-500/30">
-                    <TeamCrest team={s.team} size={24} /><span className="min-w-0 truncate">{s.team.name} forfeits</span>
+                    <TeamLogo team={s.team} size={24} /><span className="min-w-0 truncate">{s.team.name} forfeits</span>
                   </button>
                 )
               })}

@@ -30,12 +30,12 @@ export function CoachPrompt({ onClose, onLater }: { onClose: () => void; onLater
             <div className="mt-2 font-display text-5xl leading-none tracking-wide text-amber-300">{coach.name}</div>
             <div className="text-sm text-slate-300">from {coach.game}</div>
             <p className="mt-1 text-xs italic text-slate-400">"{coach.style}"</p>
-            <p className="mt-3 text-sm text-slate-300">Every team has a new coach this year. Tell <b className="text-white">{coach.name}</b> what to work on: batting, bowling or fielding. Without an instruction, nobody trains.</p>
+            <p className="mt-3 text-sm text-slate-300">Every team has a new coach this year. Tell <b className="text-white">{coach.name}</b> what to work on: batting, bowling or fielding. Without an instruction your coach only does basic work, at half the pace.</p>
           </>
         ) : (
           <>
             <h2 className="font-display text-4xl leading-none tracking-wide text-white">Set your coaching instruction</h2>
-            <p className="mt-2 text-sm text-slate-300">{coach ? <><b className="text-white">{coach.name}</b> is waiting to hear what to work on.</> : 'Your coach is waiting to hear what to work on.'} Choose batting, bowling or fielding and every player improves a little each day. Without an instruction, nobody trains.</p>
+            <p className="mt-2 text-sm text-slate-300">{coach ? <><b className="text-white">{coach.name}</b> is waiting to hear what to work on.</> : 'Your coach is waiting to hear what to work on.'} Choose batting, bowling or fielding and every player improves a little each day. Without an instruction your coach only does basic work, at half the pace.</p>
           </>
         )}
         <div className="mt-4 grid gap-2">

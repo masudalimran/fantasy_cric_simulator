@@ -5,7 +5,8 @@ import { sfx } from '../../audio/sfx'
 import type { AwardCandidate, MatchAwards } from '../../engine/awards'
 import type { Match } from '../../engine/match'
 import { strikeRate } from './format'
-import { PlayerAvatar, TeamCrest, accentOf } from '../ui'
+import { PlayerAvatar, accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 
 const GOLD = ['#fbbf24', '#f59e0b', '#fde68a', '#ffffff']
 
@@ -85,7 +86,7 @@ export function MotmOverlay({ match, awards, onClose, onScorecard }: { match: Ma
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <h2 className="font-display text-3xl leading-none tracking-wide text-white md:text-6xl">{entry.p.name}</h2>
             <div className="mt-2 flex items-center justify-center gap-2 text-base text-slate-200">
-              <TeamCrest team={entry.team} size={30} />
+              <TeamLogo team={entry.team} size={30} />
               <span className="font-semibold">{entry.team.name}</span>
               <span className="text-slate-400">· {entry.team.series}</span>
             </div>

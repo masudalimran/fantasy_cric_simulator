@@ -90,7 +90,7 @@ export function CoachSheet({ teamId, onClose }: { teamId: string; onClose: () =>
                 <div className="mt-1 text-xs text-slate-400">Since {co.since ? formatDate(co.since) : 'the start'}. {mine ? (locked ? <>You can change it again on <b className="text-white">{formatDate(co.lockedUntil as string)}</b>.</> : 'You can change it now.') : (co.lockedUntil ? `The computer reviews it on ${formatDate(co.lockedUntil)}.` : '')}</div>
               </div>
             ) : (
-              <p className="rounded-2xl border border-dashed border-amber-400/60 p-3 text-sm text-amber-200">{mine ? 'You have not told your coach what to work on yet. Until you do, nobody trains.' : 'The computer has not given an instruction yet.'}</p>
+              <p className="rounded-2xl border border-dashed border-amber-400/60 p-3 text-sm text-amber-200">{mine ? 'You have not told your coach what to work on yet. Until you do, your coach only does basic work, at half the pace.' : 'The computer has not given an instruction yet.'}</p>
             )}
           </section>
 

@@ -37,7 +37,8 @@ import { hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, s
 import { ATTR_LABEL, sessionTeam } from '../season/progression'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
 import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../store/useStore'
-import { Delta, PlayerAvatar, ROLE_LABEL, TeamCrest } from '../components/ui'
+import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
+import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
@@ -620,9 +621,9 @@ function InProgress({ live, onDiscard, wanted }: { live: LiveMatch; onDiscard: (
     <div className="mx-auto max-w-xl rounded-3xl border border-amber-400/50 bg-panel p-8 text-center">
       <div className="font-display text-4xl tracking-wide text-amber-300">A match is already in progress</div>
       <div className="mt-5 flex items-center justify-center gap-5">
-        <TeamCrest team={live.teamA} size={56} />
+        <TeamLogo team={live.teamA} size={56} />
         <span className="font-display text-3xl text-slate-500">VS</span>
-        <TeamCrest team={live.teamB} size={56} />
+        <TeamLogo team={live.teamB} size={56} />
       </div>
       <p className="mt-3 text-slate-200"><b>{live.teamA.name}</b> <span className="text-slate-400">({live.teamA.series})</span> v <b>{live.teamB.name}</b> <span className="text-slate-400">({live.teamB.series})</span></p>
       <p className="text-xs text-slate-500">{live.format.toUpperCase()} · {live.fixtureId ? 'a career match, its result counts when it finishes' : 'a friendly from the Play page'}</p>

@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import type { Match } from '../../engine/match'
-import { PlayerAvatar, TeamCrest, accentOf } from '../ui'
+import { PlayerAvatar, accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 import { oversText, runRate, strikeRate } from './format'
 
 /**
@@ -42,7 +43,7 @@ export function InningsBreak({ match, onClose }: { match: Match; onClose: () => 
         <div className="px-6 pb-4 pt-5" style={{ background: `linear-gradient(120deg, ${bat.team.colors.primary}cc, #10131c 70%)` }}>
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">Innings break</div>
           <div className="mt-1 flex items-center gap-4">
-            <TeamCrest team={bat.team} size={56} />
+            <TeamLogo team={bat.team} size={56} />
             <div className="min-w-0 flex-1">
               <div className="truncate font-display text-2xl leading-none tracking-wide text-white">{bat.team.name}</div>
               <div className="text-xs text-slate-300">{oversText(inn.legalBalls)} overs · run rate {runRate(inn)} · extras {inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legByes}</div>

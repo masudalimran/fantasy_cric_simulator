@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Match } from '../../engine/match'
-import { TeamCrest, accentOf } from '../ui'
+import { accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 
 /** Which innings an analysis tab is showing. Follows the live innings until you pick one yourself. */
 export function useInningsPick(match: Match): [number, (n: number) => void] {
@@ -23,7 +24,7 @@ export function InningsPicker({ match, idx, setIdx }: { match: Match; idx: numbe
             className={`flex items-center gap-2 px-3 py-2 text-left transition ${on ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
             style={{ boxShadow: on ? `inset 0 -3px 0 ${accentOf(team)}` : undefined }}
           >
-            <TeamCrest team={team} size={24} />
+            <TeamLogo team={team} size={24} />
             <span className="min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-wider opacity-70">{n === 0 ? '1st innings' : '2nd innings'}</span>
               <span className="block truncate text-xs font-semibold">{team.name}</span>

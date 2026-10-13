@@ -13,10 +13,10 @@ import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { Sheet } from '../Sheet'
 import { CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
-import { competitionName, usePlayerIndex, useTeamMap } from './shared'
+import { competitionName, FixtureRow, usePlayerIndex, useTeamMap } from './shared'
 
-type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string }
-interface Api { openMatch: (fixtureId: string) => void; openPlayer: (playerId: string) => void }
+type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string } | { kind: 'team'; id: string }
+interface Api { openMatch: (fixtureId: string) => void; openPlayer: (playerId: string) => void; openTeam: (teamId: string) => void }
 const Ctx = createContext<Api | null>(null)
 
 /** Open a finished match or a player from anywhere inside a career. Returns null outside one. */
@@ -361,6 +361,58 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
   )
 }
 
+// ---- A team's results ------------------------------------------------------
+
+/** Every match a team has played this season, newest first. Pick one to open its details. */
+function TeamResultsDialog({ season, teamId, z, onClose }: { season: Season; teamId: string; z: number; onClose: () => void }) {
+  const teams = useTeamMap()
+  const team = teams.get(teamId)
+  const played = useMemo(
+    () => season.fixtures.filter((f) => season.results[f.id] && (f.homeId === teamId || f.awayId === teamId)).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
+    [season, teamId],
+  )
+  if (!team) return null
+  const won = played.filter((f) => season.results[f.id].winnerId === teamId).length
+  const tied = played.filter((f) => season.results[f.id].winnerId === null).length
+  return (
+    <Shell z={z} label={`${team.name}, results`} onClose={onClose}>
+      <div className="space-y-4 p-5 md:p-6">
+        <div className="flex items-center gap-4 pr-10">
+          <TeamCrest team={team} size={64} />
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-3xl leading-none tracking-wide text-white">{team.name}</h2>
+            <div className="mt-1.5 text-sm text-slate-300">
+              {played.length === 0 ? 'No matches played yet this season.' : <><b className="text-emerald-300">{won} won</b> · <b className="text-rose-300">{played.length - won - tied} lost</b>{tied > 0 && <> · {tied} tied</>} <span className="text-slate-500">from {played.length}</span></>}
+            </div>
+            <Link to={paths.careerTeam(team.id)} onClick={onClose} className="text-xs text-indigo-300 hover:underline">Team page and squad</Link>
+          </div>
+        </div>
+        {played.length > 0 && <div className="grid gap-2">{played.map((f) => <FixtureRow key={f.id} season={season} fixture={f} teams={teams} showDate showCompetition perspective={teamId} />)}</div>}
+      </div>
+    </Shell>
+  )
+}
+
+/**
+ * A team's crest that opens its results when it is tapped, inside a career (it is a plain crest anywhere else, and for a team
+ * that is not in the career). Safe to put inside a button or a link: the tap does not reach them.
+ */
+export function TeamLogo({ team, size = 64 }: { team: Pick<Team, 'id' | 'short' | 'colors' | 'emblem' | 'logoUrl' | 'name'>; size?: number }) {
+  const api = useDetails()
+  const { season } = useViewedSeason()
+  if (!api || !season || !season.teamIds.includes(team.id)) return <TeamCrest team={team} size={size} />
+  const open = (e: React.SyntheticEvent) => { e.stopPropagation(); e.preventDefault(); api.openTeam(team.id) }
+  return (
+    <span
+      role="button" tabIndex={0} title={`${team.name}: results`} aria-label={`${team.name}, see results`}
+      onClick={open} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') open(e) }}
+      className="inline-flex shrink-0 cursor-pointer rounded-full transition hover:brightness-125 focus-visible:outline-2 focus-visible:outline-indigo-400"
+    >
+      <TeamCrest team={team} size={size} />
+    </span>
+  )
+}
+
 // ---- The host --------------------------------------------------------------
 
 /** Wrap a career's pages in this so matches and players anywhere in them can open their details in a popup. */
@@ -380,7 +432,8 @@ export function DetailsProvider({ children }: { children: React.ReactNode }) {
   const [stack, setStack] = useState<Entry[]>([])
   const openMatch = useCallback((id: string) => setStack((s) => [...s, { kind: 'match', id }]), [])
   const openPlayer = useCallback((id: string) => setStack((s) => [...s, { kind: 'player', id }]), [])
-  const api = useMemo(() => ({ openMatch, openPlayer }), [openMatch, openPlayer])
+  const openTeam = useCallback((id: string) => setStack((s) => [...s, { kind: 'team', id }]), [])
+  const api = useMemo(() => ({ openMatch, openPlayer, openTeam }), [openMatch, openPlayer, openTeam])
   const close = useCallback(() => setStack((s) => s.slice(0, -1)), [])
   // following a link (a team, a tournament) leaves every popup behind
   const { pathname } = useLocation()
@@ -401,7 +454,9 @@ export function DetailsProvider({ children }: { children: React.ReactNode }) {
       <AnimatePresence>
         {stack.map((e, i) => e.kind === 'match'
           ? (season ? <MatchDialog key={`${i}-${e.id}`} season={season} fixtureId={e.id} z={80 + i} onClose={close} /> : null)
-          : <PlayerDialog key={`${i}-${e.id}`} season={season} playerId={e.id} z={80 + i} onClose={close} />)}
+          : e.kind === 'team'
+            ? (season ? <TeamResultsDialog key={`${i}-${e.id}`} season={season} teamId={e.id} z={80 + i} onClose={close} /> : null)
+            : <PlayerDialog key={`${i}-${e.id}`} season={season} playerId={e.id} z={80 + i} onClose={close} />)}
       </AnimatePresence>
     </Ctx.Provider>
     </CapsContext.Provider>

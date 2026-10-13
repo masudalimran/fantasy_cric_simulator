@@ -4,7 +4,8 @@ import { overall, teamStrength } from '../../data/builders'
 import { keeperIn } from '../../data/squad'
 import type { NewsItem } from '../../season/selection'
 import type { Side, TossResult } from '../../engine/types'
-import { PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../ui'
+import { PlayerAvatar, RatingBadge, ROLE_LABEL, accentOf } from '../ui'
+import { TeamLogo } from '../season/Details'
 import { sfx } from '../../audio/sfx'
 import { useIsMobile } from '../../hooks'
 import { TipBanner } from '../TipBanner'
@@ -49,7 +50,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
   return (
     <section className="flex min-h-0 flex-col rounded-2xl border bg-panel p-3" style={{ borderColor: mine ? '#fbbf24' : '#252a3a' }}>
       <div className="flex shrink-0 items-center gap-3">
-        <TeamCrest team={team} size={44} />
+        <TeamLogo team={team} size={44} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate font-display text-xl leading-none tracking-wide text-white">{team.name}</h2>
@@ -187,7 +188,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
         <div className="mx-3 mb-2 grid shrink-0 grid-cols-2 gap-1 rounded-2xl bg-panel p-1" role="tablist">
           {sides.map((s, i) => (
             <button key={s.team.id} role="tab" aria-selected={shown === i} onClick={() => setShown(i as 0 | 1)} className={`flex items-center justify-center gap-2 rounded-xl px-2 py-2 text-sm font-bold transition ${shown === i ? 'bg-indigo-500 text-white' : 'text-slate-300'}`}>
-              <TeamCrest team={s.team} size={22} /><span className="truncate">{s.team.short}</span>{mySide === i && <span className="rounded bg-amber-400 px-1 text-[9px] font-extrabold text-black">YOU</span>}
+              <TeamLogo team={s.team} size={22} /><span className="truncate">{s.team.short}</span>{mySide === i && <span className="rounded bg-amber-400 px-1 text-[9px] font-extrabold text-black">YOU</span>}
             </button>
           ))}
         </div>

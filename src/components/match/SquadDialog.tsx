@@ -5,7 +5,8 @@ import { ATTR_LABEL, ratingRows } from '../../season/progression'
 import { useTeams } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { Sheet } from '../Sheet'
-import { Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from '../ui'
+import { Delta, PlayerAvatar, RatingBadge, ROLE_LABEL } from '../ui'
+import { TeamLogo } from '../season/Details'
 
 /**
  * Change a team's XI, batting order, captain and keeper just before the toss. Each player shows his rating with how
@@ -71,7 +72,7 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
   return (
     <Sheet label={`${team.name} squad`} onClose={onClose} z={80} size="xl" scroll={false}>
         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2.5 md:px-5 md:py-3">
-          <TeamCrest team={team} size={44} />
+          <TeamLogo team={team} size={44} />
           <div className="min-w-0 flex-1">
             <h2 className="truncate font-display text-2xl leading-none tracking-wide text-white md:text-3xl">{team.name} squad</h2>
             <p className="hidden text-xs text-slate-400 md:block">Click a player, then another, to swap them. The top 11 play in this batting order. Saved {scope}. Green and red show how a rating has moved since the player started.</p>
