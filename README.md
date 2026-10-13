@@ -210,6 +210,13 @@ You can see it everywhere:
   if one player leads both). The cap sits on top of that player's portrait everywhere a portrait is shown inside a career
   (stats, squads, scorecards, popups, the match field), glitters with little twinkling stars and a shine, and follows the
   year you are looking at. Hover it for what it is.
+- **More animation screens** (`EventScreens.tsx`, each about 2.5 seconds, tap to skip, all on by default): a **four** (the ball races
+  along the ground to the rope in the direction it was hit while the two nearest fielders chase it and come up short, the
+  rope flashes, FOUR!), a **wide** (the ball sails wide of the stumps and the umpire stretches his arms), a **bye** (it beats the
+  bat and the keeper, who dives and misses, and they run), a **leg bye** (off the pad and away), and a **maiden over** (six
+  zeros light up, MAIDEN! with the bowler's figures). They show for a single ball played one at a time (not when a whole over
+  or innings is simulated at once). The Controls panel's **Animations** section has a checkbox for each group: Wicket replay,
+  Boundaries (four and six), Extras (wide, bye, leg bye) and maidens, and Free hit screen. Dots, ones, twos and threes get none.
 - **Free hit** (`FreeHitScreen.tsx`): after a **no-ball** a short screen of its own plays (about 2.5 seconds, tap to skip): the
   bowler has overstepped, warning stripes, a big **FREE HIT!** and the batsman who gets the swing ("he can only be run out").
   It is the no-ball that triggers it, not the free-hit ball itself. The field then has a **red border and glow** and a

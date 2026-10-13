@@ -11,6 +11,7 @@ import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
+import { eventAngle } from '../engine/shots'
 import { getAnimPrefs, setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
@@ -274,6 +275,32 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const batsmanP = match.player(cur.strikerId)
         const bowlerP = match.player(lastEv.bowlerId)
         enqueueMoment({ key: lastEv.seq + 0.75, kind: 'freehit', player: bowlerP, team: bowl.team, title: 'FREE HIT!', lines: [], delay: spd === 4 ? 150 : spd === 2 ? 250 : 450, ms: spd === 4 ? 1400 : spd === 2 ? 1900 : 2700, freeHit: { bowler: bowlerP, bowlTeam: bowl.team, batsman: batsmanP, batTeam: bat.team, rate: spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1 } })
+      }
+      // a single ball can also earn a screen of its own: a four, an extra, a maiden over
+      if (events.length === 1 && lastEv && !lastEv.wicket) {
+        const prefs = getAnimPrefs()
+        const spd = autoRef.current
+        const rate = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
+        const delay = spd === 4 ? 150 : spd === 2 ? 250 : 450
+        const ms = Math.round(2700 * rate)
+        const innNow = match.innings[lastEv.innings]
+        const batT = match.sides[innNow.battingSide].team
+        const bowlS = match.sides[1 - innNow.battingSide]
+        if (prefs.boundary && lastEv.boundary === 4) {
+          const field = placeFielders(bowlS.xi, lastEv.bowlerId)
+          const ang = eventAngle(lastEv)
+          const diff = (f: { x: number; y: number }) => { let d = Math.abs(Math.atan2(f.y - 66, f.x - 80) - ang); if (d > Math.PI) d = 2 * Math.PI - d; return d }
+          const chasers = field.filter((f) => f.spot !== 'Wicketkeeper').sort((a, b) => diff(a) - diff(b)).slice(0, 2).map((f) => ({ player: f.player, x: f.x, y: f.y }))
+          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'four', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms, four: { batsman: match.player(lastEv.strikerId), batTeam: batT, bowlTeam: bowlS.team, angle: ang, chasers, rate } })
+        }
+        if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
+          const keeperId = match.keeperOf(bowlS === match.sides[0] ? 0 : 1)
+          enqueueMoment({ key: lastEv.seq + 0.6, kind: 'extra', player: match.player(lastEv.bowlerId), team: bowlS.team, title: lastEv.extraType.toUpperCase(), lines: [], delay, ms: Math.round(2600 * rate), extra: { kind: lastEv.extraType, runs: lastEv.extraRuns, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, batsman: match.player(lastEv.strikerId), batTeam: batT, keeper: keeperId ? match.player(keeperId) : null, rate } })
+        }
+        if (prefs.extras && lastEv.tags.includes('maiden')) {
+          const ln = innNow.bowlers.get(lastEv.bowlerId)
+          enqueueMoment({ key: lastEv.seq + 0.8, kind: 'maiden', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'MAIDEN!', lines: [], delay, ms: Math.round(2900 * rate), maiden: { bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, overs: ln ? `(${Math.floor(ln.legalBalls / 6)}.${ln.legalBalls % 6} overs, ${ln.runs} runs, ${ln.wickets} wickets)` : '', rate } })
+        }
       }
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??

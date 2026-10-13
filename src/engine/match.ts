@@ -193,6 +193,10 @@ export class Match {
     for (const s of this.sides) for (const p of s.xi) if (p.id === id) return p
     throw new Error(`Unknown player ${id}`)
   }
+  /** The wicketkeeper of a side (null if the side has none). */
+  keeperOf(side: 0 | 1): string | null {
+    return this.keeper[side]
+  }
   battingSide(inn = this.current): Side {
     return this.sides[inn.battingSide]
   }
