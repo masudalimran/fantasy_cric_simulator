@@ -52,8 +52,8 @@ function Stumps({ x, y, fly, at, rate }: { x: number; y: number; fly: boolean; a
   )
 }
 
-function Actor({ player, team, size, label, from, path, times, dur, jump, tag }: {
-  player: Player; team: Team; size: number; label?: string
+function Actor({ player, team, size, note, from, path, times, dur, jump, tag }: {
+  player: Player; team: Team; size: number; note?: string
   from: { x: number; y: number }
   /** Where the actor goes: positions at `times` (0 to 1 of `dur`). */
   path?: { x: number; y: number }[]; times?: number[]; dur: number
@@ -73,7 +73,9 @@ function Actor({ player, team, size, label, from, path, times, dur, jump, tag }:
         <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(team)}, 0 0 18px ${accentOf(team)}88` }}><PlayerAvatar player={player} team={team} size={size} /></div>
         <div className="mt-1 flex flex-col items-center gap-0.5">
           <span className="rounded bg-black/70 px-1.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: accentOf(team) }}>{tag}</span>
-          <span className="max-w-[110px] truncate rounded bg-black/60 px-1.5 text-[11px] font-semibold text-white">{label ?? player.name}</span>
+          {/* the whole name, on two lines if it is long, and the score always underneath it */}
+          <span className="max-w-[150px] rounded bg-black/60 px-1.5 text-center text-[11px] font-semibold leading-tight text-white">{player.name}</span>
+          {note && <span className="whitespace-nowrap rounded bg-black/70 px-1.5 text-[11px] font-extrabold text-red-300">{note}</span>}
         </div>
       </motion.div>
     </motion.div>
@@ -153,7 +155,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       />
       {/* the batsman, then the moment he is out */}
       <Actor
-        player={batsman} team={batTeam} size={size} tag="Out" label={`${batsman.name} ${score}`} from={{ x: 50, y: 60 }}
+        player={batsman} team={batTeam} size={size} tag="Out" note={score} from={{ x: 50, y: 60 }}
         path={kind === 'run out' ? [{ x: 50, y: 60 }, { x: 50, y: 48 }, { x: 50, y: 36 }] : kind === 'stumped' ? [{ x: 50, y: 60 }, { x: 52, y: 52 }] : undefined}
         times={kind === 'run out' ? [0, 0.4, 1] : kind === 'stumped' ? [0, 1] : undefined} dur={kind === 'run out' ? 2.2 * r : kind === 'stumped' ? 1.4 * r : 0.1}
       />
