@@ -291,8 +291,10 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
 }: {
+  /** 'next': the ball about to be bowled is a free hit. 'ball': the ball just bowled was one (its outcome is on the field). */
+  freeHit?: 'next' | 'ball' | null
   event: BallEvent | null; overEvents: BallEvent[]; note?: StageNote | null; moment?: Moment | null; onDismissMoment?: () => void
   /** A shot / delivery lined up for the next ball, drawn on the field. */
   aimShot?: ShotAim | null; aimDelivery?: DeliveryAim | null
@@ -334,8 +336,8 @@ export function Stage({
       key={wicket && event ? `w${event.seq}` : 'stage'}
       animate={wicket ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
       transition={{ duration: 0.45 }}
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-line bg-[#070b14]"
-      style={onSwipe ? { touchAction: 'none' } : undefined}
+      className={`relative aspect-[16/10] w-full overflow-hidden rounded-2xl border bg-[#070b14] ${freeHit ? 'border-2 border-red-500' : 'border-line'}`}
+      style={{ ...(onSwipe ? { touchAction: 'none' } : {}), ...(freeHit ? { boxShadow: freeHit === 'next' ? '0 0 0 2px #ef444466, 0 0 28px #ef444488' : '0 0 0 2px #ef444488, 0 0 34px #ef4444aa' } : {}) }}
       onPointerDown={onSwipe ? (e) => { swipeFrom.current = { x: e.clientX, y: e.clientY } } : undefined}
       onPointerUp={onSwipe ? (e) => {
         const from = swipeFrom.current
@@ -399,6 +401,20 @@ export function Stage({
           </motion.g>
         )}
       </svg>
+
+      {/* a free hit: a red wash and a tag, so the ball (and what it did) stands out */}
+      {freeHit && (
+        <>
+          <motion.div
+            key={`fh${freeHit}${seq}`} className="pointer-events-none absolute inset-0 z-[5]"
+            style={{ background: 'radial-gradient(ellipse at 50% 50%, transparent 45%, #ef444455 100%)', boxShadow: 'inset 0 0 60px #ef444466' }}
+            animate={freeHit === 'next' ? { opacity: [0.6, 1, 0.6] } : { opacity: 1 }} transition={freeHit === 'next' ? { duration: 1.1, repeat: Infinity } : { duration: 0.3 }}
+          />
+          <div className="pointer-events-none absolute right-2 top-2 z-30 flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-white shadow-lg">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-white" />{freeHit === 'next' ? 'Free hit next ball' : 'Free hit ball'}
+          </div>
+        </>
+      )}
 
       {/* a quick colour flash on the big moments */}
       {flash && (

@@ -69,10 +69,10 @@ export function useManualPlay(): boolean {
 }
 
 // ---- Which match animations to show ---------------------------------------------------------------------------
-export interface AnimPrefs { wicket: boolean; boundary: boolean }
+export interface AnimPrefs { wicket: boolean; boundary: boolean; freeHit: boolean }
 const ANIM_KEY = 'fcs.anim'
 const animListeners = new Set<() => void>()
-let anim: AnimPrefs = (() => { try { return { wicket: true, boundary: true, ...JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}') } } catch { return { wicket: true, boundary: true } } })()
+let anim: AnimPrefs = (() => { try { return { wicket: true, boundary: true, freeHit: true, ...JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}') } } catch { return { wicket: true, boundary: true, freeHit: true } } })()
 
 export const getAnimPrefs = () => anim
 export function setAnimPrefs(next: Partial<AnimPrefs>) {
@@ -83,5 +83,5 @@ export function setAnimPrefs(next: Partial<AnimPrefs>) {
 
 /** The wicket replay and the six animation each have a switch (both on by default). */
 export function useAnimPrefs(): AnimPrefs {
-  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ({ wicket: true, boundary: true }))
+  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ({ wicket: true, boundary: true, freeHit: true }))
 }

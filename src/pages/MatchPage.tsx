@@ -265,6 +265,16 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         return
       }
       if (!events.length || events.length > 12) return
+      // a no-ball: the next delivery is a free hit, so say so
+      if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit) {
+        const cur = match.current
+        const spd = autoRef.current
+        const bat = match.battingSide(cur)
+        const bowl = match.bowlingSide(cur)
+        const batsmanP = match.player(cur.strikerId)
+        const bowlerP = match.player(lastEv.bowlerId)
+        enqueueMoment({ key: lastEv.seq + 0.75, kind: 'freehit', player: bowlerP, team: bowl.team, title: 'FREE HIT!', lines: [], delay: spd === 4 ? 150 : spd === 2 ? 250 : 450, ms: spd === 4 ? 1400 : spd === 2 ? 1900 : 2700, freeHit: { bowler: bowlerP, bowlTeam: bowl.team, batsman: batsmanP, batTeam: bat.team, rate: spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1 } })
+      }
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??
         events.find((e) => e.wicket) ?? events.find((e) => e.boundary === 6) ?? events.find((e) => e.boundary === 4)
@@ -419,6 +429,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const bowlSide = match.bowlingSide(inn)
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
+  // a free hit: the ball about to be bowled ('next') or the one just bowled, whose outcome is on the field ('ball')
+  const freeHitState: 'next' | 'ball' | null = match.isOver ? null : inn.freeHit ? 'next' : lastHere?.freeHit ? 'ball' : null
   const striker = match.player(inn.strikerId)
   const nonStriker = match.player(inn.nonStrikerId)
   const bowlerId = inn.bowlerId ?? inn.prevBowlerId ?? bowlSide.xi.find((p) => p.bowling)?.id ?? bowlSide.xi[0].id
@@ -522,7 +534,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} {...aimProps}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} freeHit={freeHitState} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -551,7 +563,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} {...aimProps}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} freeHit={freeHitState} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -597,7 +609,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} freeHit={freeHitState} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { RatingBadge, accentOf } from '../ui'
+import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
 import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from './Portrait'
@@ -12,7 +13,9 @@ import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler' | 'replay' | 'six'
+  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit'
+  /** For a free hit: who overstepped and who gets the swing. */
+  freeHit?: FreeHitInfo
   /** For a six: how far it went. */
   six?: SixInfo
   /** For a replay: how the wicket happened. */
@@ -90,6 +93,17 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if (moment.kind === 'freehit' && moment.freeHit) {
+    return (
+      <motion.div
+        data-moment="freehit" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.2, delay: moment.delay / 1000 }}
+        aria-label="Free hit"
+      >
+        <FreeHitScreen info={moment.freeHit} />
       </motion.div>
     )
   }

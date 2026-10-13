@@ -165,6 +165,9 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
             <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.boundary} onChange={(e) => setAnimPrefs({ boundary: e.target.checked })} />Boundary (six) animation
           </label>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
+            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.freeHit} onChange={(e) => setAnimPrefs({ freeHit: e.target.checked })} />Free hit screen
+          </label>
         </div>
       </Section>
 

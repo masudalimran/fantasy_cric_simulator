@@ -210,6 +210,11 @@ You can see it everywhere:
   if one player leads both). The cap sits on top of that player's portrait everywhere a portrait is shown inside a career
   (stats, squads, scorecards, popups, the match field), glitters with little twinkling stars and a shine, and follows the
   year you are looking at. Hover it for what it is.
+- **Free hit** (`FreeHitScreen.tsx`): after a **no-ball** a short screen of its own plays (about 2.5 seconds, tap to skip): the
+  bowler has overstepped, warning stripes, a big **FREE HIT!** and the batsman who gets the swing ("he can only be run out").
+  It is the no-ball that triggers it, not the free-hit ball itself. The field then has a **red border and glow** and a
+  **FREE HIT NEXT BALL** tag while the free hit is waiting, and keeps the red border with a **FREE HIT BALL** tag after it is
+  bowled, so you can see what it did. The Controls panel's **Animations** section has a **Free hit screen** checkbox.
 - **Six animation** (`SixReplay.tsx`): every six plays a short screen of its own (about 3 seconds, tap to skip): the ball
   leaves the bat, climbs over the stands and out of the ground, and a counter runs up to how far it went in metres
   (`sixDistance` in `engine/shots.ts`: a stable figure from the ball number and the batsman's power, no randomness). It says
