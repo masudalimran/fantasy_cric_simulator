@@ -175,9 +175,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     setMoment(m)
     if (!m) { busyUntil.current = 0; return }
     // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
-    // The one-screen fifty / hundred / wicket waits for a tap too (the Animations switch lets it close by itself).
+    // The one-screen wicket waits for a tap when "pause on wickets" is on, and the fifty / hundred screen unless the Animations switch says otherwise.
     const finalWicket = m.kind === 'wicket' || (m.kind === 'replay' && !!m.replay?.details)
-    const heldScreen = getAnimPrefs().hold && ((m.kind === 'replay' && !!m.replay?.details) || (m.kind === 'milestone' && !!m.fist))
+    const heldScreen = getAnimPrefs().hold && m.kind === 'milestone' && !!m.fist
     if ((finalWicket && stopsRef.current.wickets) || heldScreen) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
@@ -359,7 +359,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const rate = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
           const wantReplay = getAnimPrefs().wicket
           const merged = wantReplay && getAnimPrefs().merged // the replay carries the OUT! details, so the second screen is not shown
-          const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`]
+          const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
           if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((merged ? 6300 : 4300) * rate),
             replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: merged ? { lines: outLines, duck: outLine.runs === 0 } : undefined },
@@ -461,6 +461,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // between the innings the screen stays on the first innings until you press Next innings
   const holding = holdNow
   holdRef.current = holding
+  // the innings break panel waits until the last wicket or ball of the innings has had its screens
+  const showBreak = holding && !moment
   match.hold = holding ? 0 : null
   const inn = match.shown
   const batSide = match.battingSide(inn)
@@ -571,7 +573,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>{holding && breakPopup && <InningsBreak match={match} onClose={() => setBreakPopup(false)} />}</AnimatePresence>
+      <AnimatePresence>{showBreak && breakPopup && <InningsBreak match={match} onClose={() => setBreakPopup(false)} />}</AnimatePresence>
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} manual={manual} setManual={setManualPlay} />
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
@@ -586,7 +588,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         <div className="fixed inset-0 z-30 flex bg-ink" data-scroll-lock style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
           <div className="flex min-w-0 flex-[1.3] flex-col">
             <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : holding ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">Innings break</b>Look the innings over, then press Next innings.</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
+            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : showBreak ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">Innings break</b>Look the innings over, then press Next innings.</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -597,7 +599,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             </div>}
           </div>
           <div className="flex min-w-0 flex-1 flex-col border-l border-line" style={{ paddingTop: 'var(--sat)' }}>
-            {!match.isOver && !holding && <MobileNowPlaying match={match} displayOver={displayOver} />}
+            {!match.isOver && !showBreak && <MobileNowPlaying match={match} displayOver={displayOver} />}
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
               {!match.isOver && resultCard}
               <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
@@ -615,7 +617,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         {overlays}
         <div className="fixed inset-0 z-30 flex flex-col bg-ink" data-scroll-lock>
           <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-          {!match.isOver && !holding && <div className="relative shrink-0">
+          {!match.isOver && !showBreak && <div className="relative shrink-0">
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -658,7 +660,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* The field and the live mini-scorecard stay pinned in view while the rest of the page scrolls. */}
-        {holding ? (
+        {showBreak ? (
           <div className="rounded-2xl border border-line bg-panel p-8 text-center text-slate-300 xl:sticky xl:top-3 xl:self-start"><b className="block font-display text-4xl tracking-wide text-white">Innings break</b>Look the innings over in the scorecard, then press <b className="text-white">Next innings</b>.</div>
         ) : (
         <div className="space-y-3 xl:sticky xl:top-3 xl:self-start">
