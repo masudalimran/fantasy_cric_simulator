@@ -22,7 +22,8 @@ export function useTeamMap(): Map<string, Team> {
   const shifts = season?.shifts
   const lineup = season?.lineup
   const myTeamId = season?.myTeamId ?? null
-  return useMemo(() => new Map(teams.map((t) => [t.id, sessionTeam(t, { shifts, lineup, myTeamId })])), [teams, shifts, lineup, myTeamId])
+  const market = season?.market
+  return useMemo(() => new Map(teams.map((t) => [t.id, sessionTeam(t, { shifts, lineup, myTeamId, market })])), [teams, shifts, lineup, myTeamId, market])
 }
 
 /** The teams as they start out (before the career's rating changes): what the simulator is given, since it applies each match's current ratings itself. */

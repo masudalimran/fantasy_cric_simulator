@@ -645,8 +645,9 @@ export function MatchPage() {
   const sessionShifts = useStore((s) => selectSeason(s)?.shifts)
   const sessionLineup = useStore((s) => selectSeason(s)?.lineup)
   const sessionMine = useStore((s) => selectSeason(s)?.myTeamId ?? null)
+  const sessionMarket = useStore((s) => selectSeason(s)?.market)
   // Matches from the session are played with the players' current ratings and your session lineup; friendlies use the team as it is.
-  const teams = useMemo(() => (query.get('fx') ? baseTeams.map((t) => sessionTeam(t, { shifts: sessionShifts, lineup: sessionLineup, myTeamId: sessionMine })) : baseTeams), [baseTeams, sessionShifts, sessionLineup, sessionMine, query])
+  const teams = useMemo(() => (query.get('fx') ? baseTeams.map((t) => sessionTeam(t, { shifts: sessionShifts, lineup: sessionLineup, myTeamId: sessionMine, market: sessionMarket })) : baseTeams), [baseTeams, sessionShifts, sessionLineup, sessionMine, sessionMarket, query])
   const live = useStore((s) => s.liveMatch)
   const startLive = useStore((s) => s.startLive)
   const discardLive = useStore((s) => s.discardLive)

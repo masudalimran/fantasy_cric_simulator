@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { overall, teamStrength } from '../data/builders'
 import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE } from '../data/squad'
 import { paths } from '../routes'
-import { applyShifts, ATTR_LABEL, playerChangeLog, ratingRows } from '../season/progression'
+import { ATTR_LABEL, playerChangeLog, ratingRows, sessionTeam } from '../season/progression'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
 import { useTeamMap } from './season/shared'
 import type { Season } from '../season/types'
@@ -218,7 +218,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   const useOriginal = () => {
     const original = teams.find((t) => t.id === id)
     if (!original) return
-    const orig = applyShifts(original, season?.shifts)
+    const orig = sessionTeam(original, { shifts: season?.shifts, lineup: undefined, myTeamId: season?.myTeamId ?? null, market: season?.market })
     updateSeason((x) => { const { lineup: _gone, ...rest } = x; return rest })
     setPlayers(orig.players); setCaptainId(orig.captainId); setKeeperId(keeperIn(orig.players.slice(0, XI_SIZE), orig.keeperId)?.id); setSelected(null)
   }
