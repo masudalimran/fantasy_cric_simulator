@@ -13,6 +13,8 @@ import type { DeliveryAim, Phase, Pitch, ShotAim } from './types'
 export const CATS = ['dot', 'one', 'two', 'three', 'four', 'six', 'wicket', 'bye', 'legbye'] as const
 const [DOT, ONE, TWO, THREE, FOUR, SIX, WICKET, BYE, LEGBYE] = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 export { DOT, ONE, TWO, THREE, FOUR, SIX, WICKET, BYE, LEGBYE }
+/** Share of free-hit balls that go for four or six. */
+const FREE_HIT_BOUNDARY = 0.85
 
 /** Rating of an average player in the pool, i.e. the point where the multipliers equal 1. */
 export const REF = { tech: 77, power: 80, temp: 80, run: 72, acc: 73, vari: 80 }
@@ -208,6 +210,20 @@ export function ballProbs(i: BallInput): BallProbs {
   const floors: [number, number][] = [[WICKET, 0.003], [SIX, 0.004], [FOUR, 0.015], [DOT, 0.06]]
   for (const [k, f] of floors) norm[k] = Math.max(norm[k], f)
   norm[WICKET] = Math.min(norm[WICKET], 0.4)
+  // A free hit is a gift: the batsman swings for the fences and about nine in ten balls go for four or six.
+  // How the boundaries split keeps the batsman's usual four-to-six balance; the rest is dot, 1, 2 or 3 in their usual proportions.
+  if (i.freeHit) {
+    const boundary = i.forfeit === 'bat' ? 0.6 : FREE_HIT_BOUNDARY
+    const wicket = Math.min(norm[WICKET], 0.004)
+    const bnd = norm[FOUR] + norm[SIX]
+    const run = [DOT, ONE, TWO, THREE].reduce((a, k) => a + norm[k], 0)
+    const rest = 1 - boundary - wicket
+    for (const k of [DOT, ONE, TWO, THREE]) norm[k] = (norm[k] / run) * rest
+    norm[FOUR] = (norm[FOUR] / bnd) * boundary
+    norm[SIX] = (norm[SIX] / bnd) * boundary
+    norm[WICKET] = wicket
+    norm[BYE] = 0; norm[LEGBYE] = 0
+  }
   const s2 = norm.reduce((a, c) => a + c, 0)
 
   return {

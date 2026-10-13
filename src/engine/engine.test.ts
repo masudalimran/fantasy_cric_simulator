@@ -17,6 +17,24 @@ describe('match engine', () => {
     expect(a.result?.text).toBe(b.result?.text)
   })
 
+  it('punishes a no-ball: the free hit goes for four or six most of the time', () => {
+    let hits = 0, boundaries = 0, wickets = 0
+    for (let seed = 0; seed < 150; seed++) {
+      for (const inn of play(seed).innings) {
+        inn.log.forEach((e, k) => {
+          const after = inn.log[k + 1]
+          if (e.extraType !== 'noball' || !after || after.freeHit !== true) return
+          hits++
+          if (after.runsBat >= 4) boundaries++
+          if (after.wicket) wickets++
+        })
+      }
+    }
+    expect(hits).toBeGreaterThan(50)
+    expect(boundaries / hits).toBeGreaterThan(0.75)
+    expect(wickets / hits).toBeLessThan(0.03)
+  })
+
   it('keeps every scorecard consistent', () => {
     for (let seed = 0; seed < 60; seed++) {
       for (const format of ['t20', 'odi'] as const) {
