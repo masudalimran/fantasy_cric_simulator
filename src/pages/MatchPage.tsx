@@ -25,6 +25,7 @@ import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
 import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
+import { fieldPlan } from '../components/match/fieldSets'
 import { dismissalText, strikeRate } from '../components/match/format'
 import { sfx } from '../audio/sfx'
 import { tagLabel } from '../engine/commentary'
@@ -120,6 +121,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [moment, setMoment] = useState<Moment | null>(null)
   const momentTimer = useRef<number | undefined>(undefined)
+  const noMirrorRef = useRef(false) // a person is aiming shots at the field: keep the right-hander's field so the gaps match
   const manualRef = useRef(false) // play manually with a side of your own to control
   const holdRef = useRef(false) // the screen is holding on the finished first innings
   const autoRef = useRef(auto)
@@ -267,6 +269,16 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       }
       if (!events.length || events.length > 12) return
       // a no-ball: the next delivery is a free hit, so say so
+      // where the bowling side stood for a ball: the field of that stage of the game
+      const placedAt = (ev: BallEvent) => {
+        const innE = match.innings[ev.innings]
+        const bowlerE = match.player(ev.bowlerId)
+        const plan = fieldPlan({
+          format: match.format, over: ev.over, maxOvers: FORMATS[match.format].overs, runs: ev.score.runs - ev.total, legalBalls: ev.score.legalBalls - (ev.legal ? 1 : 0),
+          target: innE.target, freeHit: ev.freeHit, bowlType: bowlerE.bowling?.type ?? null, hand: match.player(ev.strikerId).hand, noMirror: noMirrorRef.current,
+        })
+        return placeFielders(match.sides[1 - innE.battingSide].xi, ev.bowlerId, plan.spots)
+      }
       if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit) {
         const cur = match.current
         const spd = autoRef.current
@@ -287,7 +299,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const batT = match.sides[innNow.battingSide].team
         const bowlS = match.sides[1 - innNow.battingSide]
         if (prefs.boundary && lastEv.boundary === 4) {
-          const field = placeFielders(bowlS.xi, lastEv.bowlerId)
+          const field = placedAt(lastEv)
           const ang = eventAngle(lastEv)
           const diff = (f: { x: number; y: number }) => { let d = Math.abs(Math.atan2(f.y - 66, f.x - 80) - ang); if (d > Math.PI) d = 2 * Math.PI - d; return d }
           const chasers = field.filter((f) => f.spot !== 'Wicketkeeper').sort((a, b) => diff(a) - diff(b)).slice(0, 2).map((f) => ({ player: f.player, x: f.x, y: f.y }))
@@ -327,8 +339,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(3300 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, longest: earlier > 0 && notable.distance > earlier } })
         }
         if (battingMilestone && outLine) {
-          show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms,
-            lines: [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`] })
+          const mLines = [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
+          // one screen: the two batsmen meet in the middle and bump fists, with the innings on it (the Animations switch brings the old card back)
+          const merged = getAnimPrefs().merged
+          const mRate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
+          const partnerId = notable.strikerId === outLine.id ? notable.nonStrikerId : notable.strikerId
+          show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms: merged ? Math.round(5200 * mRate) : ms,
+            lines: mLines,
+            fist: merged ? { batsman: match.player(outLine.id), partner: partnerId && partnerId !== outLine.id ? match.player(partnerId) : null, team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', lines: mLines, rate: mRate } : undefined })
         } else if (notable.wicket && outLine) {
           // first a screen of its own showing how the wicket happened, then the batsman's moment
           const w = notable.wicket
@@ -337,12 +355,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const bowlerP = match.player(notable.bowlerId)
           const rate = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
           const wantReplay = getAnimPrefs().wicket
+          const merged = wantReplay && getAnimPrefs().merged // the replay carries the OUT! details, so the second screen is not shown
+          const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`]
           if (wantReplay) show({
-            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(4300 * rate),
-            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})` },
+            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((merged ? 6300 : 4300) * rate),
+            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: merged ? { lines: outLines, duck: outLine.runs === 0 } : undefined },
           })
-          show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wantReplay ? 0 : delay, ms, // straight after the replay, no gap
-            lines: [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)}`] })
+          if (!merged) show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wantReplay ? 0 : delay, ms, // straight after the replay, no gap
+            lines: outLines })
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
         }
@@ -464,6 +484,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const bowler = match.player(bowlerId)
   const displayOver = inn.legalBalls % 6 === 0 && inn.legalBalls > 0 && inn.bowlerId !== null && !inn.log.some((e) => e.over === match.over) ? match.over - 1 : match.over
   const overEvents = inn.log.filter((e) => e.over === displayOver)
+  // the field for this stage of the game (scenery only: the engine never reads it)
+  noMirrorRef.current = userBats && (manual || swipeOn)
+  const plan = fieldPlan({
+    format: match.format, over: displayOver, maxOvers: FORMATS[match.format].overs, runs: inn.runs, legalBalls: inn.legalBalls, target: inn.target,
+    freeHit: freeHitState !== null, bowlType: bowler.bowling?.type ?? null, hand: striker.hand, noMirror: noMirrorRef.current,
+  })
   const inningsBreak = inn.index === 1 && inn.legalBalls === 0 && !match.isOver
   const cfg = FORMATS[match.format]
   const pom = awards?.motm ?? null
@@ -561,7 +587,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} freeHit={freeHitState} {...aimProps}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} note={note} freeHit={freeHitState} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -590,7 +616,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} freeHit={freeHitState} {...aimProps}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} note={note} freeHit={freeHitState} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -636,7 +662,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id)} note={note} freeHit={freeHitState} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} note={note} freeHit={freeHitState} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />

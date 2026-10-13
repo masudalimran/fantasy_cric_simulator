@@ -216,9 +216,9 @@ export function OriginTag({ playerId, className = '' }: { playerId: string; clas
   const o = originOf(playerId, custom)
   if (!o) return null
   return (
-    <span className={`inline-flex max-w-full items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-xs text-slate-100 ${className}`} title={`${o.universe === 'game' ? 'Game' : 'Anime'}: ${o.series}`}>
+    <span className={`inline-flex max-w-full items-start gap-1 rounded-2xl bg-black/40 px-2 py-0.5 text-xs leading-snug text-slate-100 ${className}`} title={`${o.universe === 'game' ? 'Game' : 'Anime'}: ${o.series}`}>
       <span aria-hidden>{o.universe === 'game' ? '🎮' : '🎌'}</span>
-      <span className="truncate"><span className="text-slate-400">From </span><b className="font-semibold">{o.series}</b></span>
+      <span className="min-w-0 break-words"><span className="text-slate-400">From </span><b className="font-semibold">{o.series}</b></span>
     </span>
   )
 }

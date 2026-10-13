@@ -171,6 +171,9 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
             <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.freeHit} onChange={(e) => setAnimPrefs({ freeHit: e.target.checked })} />Free hit screen
           </label>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200" title="Off: a fifty or hundred and a wicket each show their original two screens again">
+            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.merged} onChange={(e) => setAnimPrefs({ merged: e.target.checked })} />One screen for fifties, hundreds and wickets
+          </label>
         </div>
       </Section>
 

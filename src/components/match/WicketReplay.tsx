@@ -11,12 +11,16 @@ export interface ReplayInfo {
   bowler: Player
   /** The fielder who took the catch, made the throw or kept (null when there was none). */
   fielder: Player | null
+  /** Where he stood in the field view (160 x 100), when known: a deep catch happens near the rope, a slip catch beside the stumps. */
+  spot?: { x: number; y: number } | null
   batTeam: Team
   bowlTeam: Team
   /** 1 = full speed. Higher auto-play speeds play it quicker. */
   rate: number
   /** Where he finished, for the caption. */
   score: string
+  /** When the replay is the only screen for the wicket: the details the separate OUT! screen would have shown. */
+  details?: { lines: string[]; duck: boolean }
 }
 
 const TITLE: Record<DismissalKind, string> = {
@@ -52,7 +56,7 @@ function Stumps({ x, y, fly, at, rate }: { x: number; y: number; fly: boolean; a
   )
 }
 
-function Actor({ player, team, size, note, from, path, times, dur, jump, tag }: {
+export function Actor({ player, team, size, note, from, path, times, dur, jump, tag }: {
   player: Player; team: Team; size: number; note?: string
   from: { x: number; y: number }
   /** Where the actor goes: positions at `times` (0 to 1 of `dur`). */
@@ -100,7 +104,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
   }, [])
   const size = Math.max(34, Math.min(w * 0.09, 64))
   const r = rate
-  const F = fielder ? spotOf(fielder.name) : { x: 80, y: 46 }
+  const F = fielder ? (info.spot ? { x: Math.min(90, Math.max(10, 50 + (info.spot.x - 80) * 0.62)), y: Math.min(76, Math.max(26, 14 + (info.spot.y - 10) * 0.8)) } : spotOf(fielder.name)) : { x: 80, y: 46 }
   const keeper = { x: 50, y: 80 }
   const stumpsFly = kind === 'bowled' || kind === 'stumped' || kind === 'run out' || kind === 'hit wicket'
   // when things happen (seconds at rate 1)
@@ -184,6 +188,18 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       >
         <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(30, Math.min(w * 0.095, 70)), WebkitTextStroke: '2px #7f1d1d', paintOrder: 'stroke fill', textShadow: '0 0 30px #ef4444aa' }}>{TITLE[kind]}</div>
         <div className="mt-1 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{sub}</div>
+        {info.details && (
+          <motion.div
+            className="mx-auto mt-1.5 inline-block max-w-[94%] rounded-xl bg-black/70 px-3 py-1.5 ring-1 ring-red-400/40"
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (T.big + 0.9) * r, duration: 0.35 }}
+          >
+            <div className="flex items-center justify-center gap-2 text-sm font-extrabold leading-tight text-white">
+              <span>{info.details.lines[1]}</span>
+              {info.details.duck && <span className="-rotate-6 rounded border-2 border-red-400 px-1.5 font-display text-xs tracking-widest text-red-300">DUCK</span>}
+            </div>
+            <div className="text-[11px] leading-tight text-slate-300">{info.details.lines[0]}</div>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   )

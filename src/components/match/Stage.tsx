@@ -41,10 +41,10 @@ const FIELD_SPOTS = [
 export interface Placed { player: Player; x: number; y: number; spot: string }
 
 /** Keeper first, then everyone else on the bowling side except the bowler, onto the field spots. */
-export function placeFielders(xi: Player[], bowlerId: string): Placed[] {
+export function placeFielders(xi: Player[], bowlerId: string, spots: { x: number; y: number; spot: string }[] = FIELD_SPOTS): Placed[] {
   const keeper = xi.find((p) => p.role === 'WK' && p.id !== bowlerId) ?? xi.find((p) => p.id !== bowlerId)
   const others = xi.filter((p) => p.id !== bowlerId && p.id !== keeper?.id)
-  return [keeper, ...others].filter((p): p is Player => !!p).slice(0, FIELD_SPOTS.length).map((player, i) => ({ player, ...FIELD_SPOTS[i] }))
+  return [keeper, ...others].filter((p): p is Player => !!p).slice(0, spots.length).map((player, i) => ({ player, ...spots[i] }))
 }
 
 /** Where a chosen delivery pitches, on the strip in the field view. */
@@ -291,8 +291,10 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
 }: {
+  /** What the fielders' stage of the game is called (powerplay, death overs...), shown as a small tag. */
+  fieldTag?: { label: string; note: string } | null
   /** 'next': the ball about to be bowled is a free hit. 'ball': the ball just bowled was one (its outcome is on the field). */
   freeHit?: 'next' | 'ball' | null
   event: BallEvent | null; overEvents: BallEvent[]; note?: StageNote | null; moment?: Moment | null; onDismissMoment?: () => void
@@ -443,9 +445,9 @@ export function Stage({
         <motion.div
           key={player.id + (involved === player.id ? `-${seq}` : '')}
           className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 hover:z-40"
-          style={{ left: pct(x, W), top: pct(y, H) }}
-          animate={involved === player.id ? { scale: [1, 1, 1.6, 1.15] } : { scale: 1 }}
-          transition={{ duration: 1.3, times: [0, 0.6, 0.78, 1] }}
+          initial={{ left: pct(x, W), top: pct(y, H) }}
+          animate={{ left: pct(x, W), top: pct(y, H), ...(involved === player.id ? { scale: [1, 1, 1.6, 1.15] } : { scale: 1 }) }}
+          transition={{ duration: 1.3, times: [0, 0.6, 0.78, 1], left: { duration: 1, ease: 'easeInOut' }, top: { duration: 1, ease: 'easeInOut' } }}
         >
           <div className="rounded-full transition-transform duration-150 group-hover:scale-125" style={{ boxShadow: `0 0 0 1.5px ${accentOf(bowlingTeam)}aa` }}>
             <PlayerAvatar player={player} team={bowlingTeam} size={Math.round((involved === player.id ? 38 : 28) * Math.max(scale, 0.75))} />
@@ -465,6 +467,14 @@ export function Stage({
 
       {/* a milestone or a dismissal takes over the whole field with the batsman as a stick man */}
       <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={() => onDismissMoment?.()} />}</AnimatePresence>
+
+      {/* which field is set, so the changes make sense */}
+      {fieldTag && (
+        <motion.div key={fieldTag.label} className="pointer-events-none absolute left-2 top-2 z-30 max-w-[60%] rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold uppercase leading-tight tracking-wider text-sky-200 ring-1 ring-sky-300/30 sm:text-[10px]" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+          {fieldTag.label}
+          <span className="block text-[8px] font-semibold normal-case tracking-normal text-slate-300 sm:text-[9px]">{fieldTag.note}</span>
+        </motion.div>
+      )}
 
       {/* a little legend so the colours mean something */}
       <div className="pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[9px] font-bold tracking-wider">

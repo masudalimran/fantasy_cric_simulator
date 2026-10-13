@@ -4,6 +4,7 @@ import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
 import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
+import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
 import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from './Portrait'
@@ -21,6 +22,8 @@ export interface Moment {
   maiden?: MaidenInfo
   /** For a free hit: who overstepped and who gets the swing. */
   freeHit?: FreeHitInfo
+  /** For a fifty or hundred: the one-screen version (the two batsmen meet and bump fists). Without it the original card is used. */
+  fist?: FistInfo
   /** For a six: how far it went. */
   six?: SixInfo
   /** For a replay: how the wicket happened. */
@@ -98,6 +101,17 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if (moment.kind === 'milestone' && moment.fist) {
+    return (
+      <motion.div
+        data-moment="milestone" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
+        aria-label="Milestone"
+      >
+        <MilestoneScreen info={moment.fist} />
       </motion.div>
     )
   }
