@@ -7,8 +7,18 @@ import type { AttrKey, Fixture, MatchDelta, PlayerChange, PlayerShift, RawSummar
 export const ATTRS: AttrKey[] = ['technique', 'power', 'temperament', 'running', 'accuracy', 'variation', 'stamina']
 export const ATTR_LABEL: Record<AttrKey, string> = { technique: 'Technique', power: 'Power', temperament: 'Temperament', running: 'Running', fielding: 'Fielding', accuracy: 'Accuracy', variation: 'Variation', stamina: 'Stamina' }
 
-/** The most any one rating can drift, up or down, over a career. */
-const MAX_ATTR_DRIFT = 15
+/** The most any one rating can drift, up or down, over a career. Wide enough for a 30 to climb past a 90 given enough years. */
+const MAX_ATTR_DRIFT = 45
+
+/**
+ * How easily a rating of `v` grows (1 = the league's middling rating, about 75). Low ratings are easy to raise, ratings at the
+ * top are hard: the same good game is worth about twice as much to a 30 as to a 75, and about a third as much to a 94.
+ * It only scales gains. Losses are the same size for everybody, so a star who keeps playing badly does fall, and one who keeps
+ * playing well holds his place, while a low player who keeps playing well keeps climbing until he meets the top.
+ */
+export function headroom(v: number): number {
+  return Math.max(0.3, Math.min(3, 0.4 + 2.4 * (Math.max(0, 99 - v) / 69)))
+}
 const clampRating = (n: number) => Math.max(1, Math.min(99, Math.round(n)))
 
 const get = (s: PlayerShift | undefined, k: AttrKey) => s?.a?.[k] ?? 0
@@ -71,8 +81,8 @@ export function applyDelta(p: Player, a: Partial<Record<AttrKey, number>>): Play
 const BAT_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number }> = { t20: { a: -34.2, b: 0.706, sd: 23.6 }, odi: { a: -37, b: 0.838, sd: 30.2 } }
 const BOWL_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number; par: number }> = { t20: { a: -9.8, b: 0.474, sd: 33.6, par: 8.2 }, odi: { a: 1.6, b: 0.167, sd: 18, par: 5.3 } }
 
-/** z of a performance, nudged back toward the middle for players already far from average (stars regress, journeymen can climb). */
-const grade = (z: number, rating: number) => z - (rating - 78) / 90
+/** A performance is judged against what a player of his own rating usually does; how much a good one is worth depends on his rating (see headroom). */
+const grade = (z: number) => z
 const points = (z: number) => (Math.abs(z) >= 2 ? 2 : Math.abs(z) >= 0.9 ? 1 : 0) * Math.sign(z)
 
 type Delta = Partial<Record<AttrKey, number>>
@@ -90,6 +100,16 @@ function pick(r: Rng, spread: [AttrKey, number][], not?: AttrKey): AttrKey {
   return list[list.length - 1][0]
 }
 const add = (d: Delta, k: AttrKey, n: number) => { d[k] = (d[k] ?? 0) + n }
+const attrOf = (p: Player, k: AttrKey): number => (k === 'fielding' ? p.fielding : ((p.batting as unknown as Record<string, number>)[k] ?? (p.bowling as unknown as Record<string, number> | null)?.[k] ?? 0))
+/** One earned point on one rating: a loss is always 1, a gain is scaled by how much room the rating has to grow (a whole number, with the remainder decided by a seeded draw). */
+function addPoint(d: Delta, p: Player, k: AttrKey, sign: number, r: Rng) {
+  if (sign < 0) return add(d, k, -1)
+  const v = attrOf(p, k)
+  if (v >= 99) return
+  const f = headroom(v)
+  const n = Math.floor(f) + (r.next() < f - Math.floor(f) ? 1 : 0)
+  if (n > 0) add(d, k, n)
+}
 
 const indexCache = new WeakMap<Map<string, Team>, Map<string, Player>>()
 function playerIndex(teams: Map<string, Team>): Map<string, Player> {
@@ -110,16 +130,17 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
     const e = BAT_EXPECT[format]
     const bs = battingScore(p.batting)
     const bp = runs + fours * 0.5 + sixes
-    let n = points(grade((bp - (e.a + e.b * bs)) / e.sd, bs))
+    let n = points(grade((bp - (e.a + e.b * bs)) / e.sd))
     if (runs === 0 && out) n = Math.min(n, -1) // a duck always costs something
     if (n === 0) continue
     const d = put(id)
     // which ratings move is spread by a seeded draw (the same for gains and losses, so no rating drifts one way);
     // a duck is the one exception: it always dents temperament
     const r = rngFor(raw.fixtureId, id)
+    const g = rngFor(`${raw.fixtureId}|gain`, id)
     const first: AttrKey = runs === 0 && out && n < 0 ? 'temperament' : pick(r, BAT_SPREAD)
-    add(d, first, Math.sign(n))
-    if (Math.abs(n) === 2) add(d, pick(r, BAT_SPREAD, first), Math.sign(n))
+    addPoint(d, p, first, Math.sign(n), g)
+    if (Math.abs(n) === 2) addPoint(d, p, pick(r, BAT_SPREAD, first), Math.sign(n), g)
   }
 
   for (const [id, balls, runs, wickets, maidens] of raw.bowl) {
@@ -130,17 +151,19 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
     const ov = balls / 6
     const econ = runs / ov
     const idx = ((wickets * 22 + maidens * 4) / ov) * 4 + (e.par - econ) * 8
-    const n = points(grade((idx - (e.a + e.b * ws)) / e.sd, ws) + 0.1)
+    const n = points(grade((idx - (e.a + e.b * ws)) / e.sd) + 0.1 + 0.033 * (85 - Math.min(ws, 85)))
     if (n === 0) continue
     const d = put(id)
     const r = rngFor(raw.fixtureId, id)
+    const g = rngFor(`${raw.fixtureId}|gain`, id)
     const first = pick(r, BOWL_SPREAD)
-    add(d, first, Math.sign(n))
-    if (Math.abs(n) === 2) add(d, pick(r, BOWL_SPREAD, first), Math.sign(n))
+    addPoint(d, p, first, Math.sign(n), g)
+    if (Math.abs(n) === 2) addPoint(d, p, pick(r, BOWL_SPREAD, first), Math.sign(n), g)
   }
 
   const out: Record<string, MatchDelta> = {}
   for (const [id, a] of deltas) {
+    if (!Object.keys(a).length) continue // a good game that a top-rated player gets nothing from
     const p = byId.get(id) as Player
     const o = overall(applyDelta(p, a)) - overall(p)
     out[id] = { o, a }

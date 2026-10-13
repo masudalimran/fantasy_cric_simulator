@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { overall } from '../data/builders'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { applyDelta, applyShift, applyShifts, gradePlayedMatches, matchChanges, seasonAttrChanges, seasonChanges, sessionTeam } from './progression'
+import { applyDelta, headroom,applyShift, applyShifts, gradePlayedMatches, matchChanges, seasonAttrChanges, seasonChanges, sessionTeam } from './progression'
 import { nextMatchDate, simDay } from './results'
 import { collect, impactPoints } from './stats'
 import type { RawSummary } from './types'
@@ -37,6 +37,16 @@ describe('rating shifts', () => {
     const season = { shifts: undefined, lineup: { order, captainId: t.players[4].id }, myTeamId: t.id }
     expect(sessionTeam(t, season).players.map((p) => p.id)).toEqual(order)
     expect(sessionTeam(BUILT_IN_TEAMS[1], season)).toBe(BUILT_IN_TEAMS[1])
+  })
+})
+
+describe('growth curve', () => {
+  it('is steep for low ratings and shallow near the top, and only ever scales gains', () => {
+    expect(headroom(30)).toBeGreaterThan(headroom(60))
+    expect(headroom(60)).toBeGreaterThan(headroom(75))
+    expect(headroom(75)).toBeGreaterThan(headroom(94))
+    expect(headroom(30) / headroom(94)).toBeGreaterThan(4)
+    expect(headroom(99)).toBeGreaterThan(0)
   })
 })
 
@@ -75,7 +85,7 @@ describe('across a season', () => {
     expect(o.some((x) => x < 0)).toBe(true)
     expect(Math.max(...o.map(Math.abs))).toBeLessThanOrEqual(4)
     // no rating strays more than the cap from where it started
-    for (const sh of Object.values(s.shifts ?? {})) for (const n of Object.values(sh.a ?? {})) expect(Math.abs(n as number)).toBeLessThanOrEqual(15)
+    for (const sh of Object.values(s.shifts ?? {})) for (const n of Object.values(sh.a ?? {})) expect(Math.abs(n as number)).toBeLessThanOrEqual(45)
   })
 
   it('rewards the players who did best', () => {

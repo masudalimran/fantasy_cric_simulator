@@ -93,12 +93,16 @@ describe('coaches', () => {
     for (let i = 1; i < board.length; i++) expect(board[i - 1].total).toBeGreaterThanOrEqual(board[i].total)
   })
 
-  it('no rating gains more than 5 points from coaching in a year', () => {
+  it('no rating gains more than 8 points from coaching in a year, and low ratings gain more than ones near the top', () => {
     let s = setFocus(base(), 'bleach', 'fielding', '2030-01-01')
     for (let m = 0; m < 11; m++) s = run(s, 30)
-    for (const g of monthReport(s, 'bleach', '2030-06')) expect(g.total).toBeLessThanOrEqual(5)
+    for (const g of monthReport(s, 'bleach', '2030-06')) expect(g.total).toBeLessThanOrEqual(8)
     const perPlayer = new Map<string, number>()
     for (const byTeam of Object.values(s.coachReport ?? {})) for (const [pid, attrs] of Object.entries(byTeam.bleach ?? {})) perPlayer.set(pid, (perPlayer.get(pid) ?? 0) + (attrs.fielding ?? 0))
-    for (const n of perPlayer.values()) expect(n).toBeLessThanOrEqual(5)
+    for (const n of perPlayer.values()) expect(n).toBeLessThanOrEqual(8)
+    const start = new Map(BUILT_IN_TEAMS.find((t) => t.id === 'bleach')!.players.map((p) => [p.id, p.fielding]))
+    const gain = (ids: string[]) => ids.reduce((n, id) => n + (perPlayer.get(id) ?? 0), 0) / Math.max(1, ids.length)
+    const ids = [...start.keys()].sort((a, b) => start.get(a)! - start.get(b)!)
+    expect(gain(ids.slice(0, 5))).toBeGreaterThan(gain(ids.slice(-5)))
   })
 })

@@ -2,7 +2,7 @@ import { COACHES, COACH_BY_ID, type Coach, type CoachFocus } from '../data/coach
 import { Rng } from '../engine/rng'
 import type { Player } from '../types'
 import { addDays } from './dates'
-import { applyShift } from './progression'
+import { applyShift, headroom } from './progression'
 import type { AttrKey, Coaching, PlayerShift, Season } from './types'
 
 /**
@@ -99,9 +99,10 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
     if (weight === 0) continue
     for (const attr of ATTRS_OF[c.focus]) {
       const now = attr === 'fielding' ? p.fielding : (p.batting as unknown as Record<string, number>)[attr] ?? (p.bowling as unknown as Record<string, number> | null)?.[attr] ?? 0
-      if (!now || now >= 97 || yearSoFar(pid, attr) >= YEARLY_CAP) continue
-      const headroom = Math.max(0.3, Math.min(1, (99 - now) / 50))
-      const add = BASE * skill * headroom * weight * (c.focus === 'fielding' ? 1.6 : 1)
+      // the same curve as match gains: a low rating is easy to raise, one near the top is hard (and its yearly limit is lower too)
+      const room = headroom(now)
+      if (!now || now >= 97 || yearSoFar(pid, attr) >= Math.max(2, Math.min(8, Math.round(YEARLY_CAP * room)))) continue
+      const add = BASE * skill * room * weight * (c.focus === 'fielding' ? 1.6 : 1)
       const have = (progress?.[pid]?.[attr] ?? 0) + add
       if (have >= 1) {
         const cur = shifts?.[pid] ?? { bat: 0, bowl: 0 }
