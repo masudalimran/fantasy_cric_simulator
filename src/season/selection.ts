@@ -17,7 +17,14 @@ export interface Form {
   recent: Map<string, number>
   /** League-wide average and spread for bowlers and for everyone else, to judge a score fairly. */
   norm: { bowl: { mean: number; sd: number }; bat: { mean: number; sd: number } }
+  /** How far above or below the usual a player's latest match was (in standard deviations), for those who played in the last few weeks. A big one is a reserve's chance to stay in the side. */
+  breakout: Map<string, number>
 }
+
+/** A match this recent still counts as a player's "moment". */
+const BREAKOUT_DAYS = 21
+/** The most a single great game adds to a player's selection rating. */
+const BREAKOUT_MAX = 10
 
 /** What each player has done in his last few matches this season (runs, boundaries, wickets, maidens). */
 export function formTable(season: Season, teams: Map<string, Team>): Form {
@@ -25,11 +32,13 @@ export function formTable(season: Season, teams: Map<string, Team>): Form {
   const date = new Map(season.fixtures.map((f) => [f.id, f.date]))
   const results = Object.values(season.results).sort((a, b) => (date.get(a.fixtureId) ?? '').localeCompare(date.get(b.fixtureId) ?? ''))
   const history = new Map<string, number[]>()
+  const lastOn = new Map<string, string>()
+  const latest = results.length ? date.get(results[results.length - 1].fixtureId) ?? '' : ''
   for (const res of results) {
     const per = new Map<string, number>()
     for (const [i, runs, , fours, sixes] of res.bat ?? []) { const id = roster[i]; if (id) per.set(id, (per.get(id) ?? 0) + runs + fours * 0.5 + sixes) }
     for (const [i, , , wk, maidens] of res.bowl ?? []) { const id = roster[i]; if (id) per.set(id, (per.get(id) ?? 0) + wk * 22 + maidens * 4) }
-    for (const [id, v] of per) { const l = history.get(id) ?? []; l.push(v); history.set(id, l) }
+    for (const [id, v] of per) { const l = history.get(id) ?? []; l.push(v); history.set(id, l); lastOn.set(id, date.get(res.fixtureId) ?? '') }
   }
   const recent = new Map<string, number>()
   const bowlers: number[] = []
@@ -48,8 +57,25 @@ export function formTable(season: Season, teams: Map<string, Team>): Form {
     const sd = Math.sqrt(xs.reduce((s, x) => s + (x - mean) ** 2, 0) / Math.max(1, xs.length)) || 1
     return { mean, sd }
   }
-  return { recent, norm: { bowl: stats(bowlers), bat: stats(others) } }
+  // each player's latest single match against what a match from that kind of player usually is
+  const single = { bowl: [] as number[], bat: [] as number[] }
+  for (const [id, list] of history) for (const v of list) single[roleOf.get(id) === 'BOWL' ? 'bowl' : 'bat'].push(v)
+  const sn = { bowl: stats(single.bowl), bat: stats(single.bat) }
+  const breakout = new Map<string, number>()
+  const cutoff = latest ? new Date(Date.parse(latest) - BREAKOUT_DAYS * 86400000).toISOString().slice(0, 10) : ''
+  for (const [id, list] of history) {
+    if ((lastOn.get(id) ?? '') < cutoff) continue
+    const n = roleOf.get(id) === 'BOWL' ? sn.bowl : sn.bat
+    breakout.set(id, (list[list.length - 1] - n.mean) / n.sd)
+  }
+  return { recent, norm: { bowl: stats(bowlers), bat: stats(others) }, breakout }
 }
+
+/** What a standout recent match is worth in selection rating: nothing for an ordinary one, up to BREAKOUT_MAX for a great one. */
+const breakoutBonus = (z: number | undefined) => (z === undefined ? 0 : Math.max(0, Math.min(BREAKOUT_MAX, (z - 0.3) * 4)))
+
+/** The average overall of a team's best eleven. */
+const strengthOf = (t: Team) => [...t.players].map(overall).sort((a, b) => b - a).slice(0, XI_SIZE).reduce((s, x) => s + x, 0) / XI_SIZE
 
 const dayNumber = (date: string) => Math.floor(Date.parse(date) / 86400000)
 
@@ -115,7 +141,7 @@ export function lastPlayedXI(season: Season, team: Team, beforeDate: string): st
  * The computer's selection for one match. It keeps the settled side but drops a player who is injured or badly
  * out of form, and brings in a bench player who is in form or simply better. It also fixes the batting order.
  */
-export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'date'> & Partial<Pick<Fixture, 'competitionId' | 'stage' | 'phase'>>, form: Form): CpuXI {
+export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'date'> & Partial<Pick<Fixture, 'competitionId' | 'stage' | 'phase'>> & { opponent?: Team }, form: Form): CpuXI {
   // "usual" = who played last time (so news says what changed since then); the settled side if there is no last game
   const last = lastPlayedXI(season, team, fixture.date)
   const usual = last ? team.players.filter((p) => last.includes(p.id)) : team.players.slice(0, XI_SIZE)
@@ -131,18 +157,21 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
     const n = p.role === 'BOWL' ? form.norm.bowl : form.norm.bat
     return Math.max(-6, Math.min(6, ((r - n.mean) / n.sd) * 3))
   }
-  const rate = (p: Player) => overall(p) + adj(p) + (usualIds.has(p.id) ? 1 : 0)
+  // a reserve who had a standout game a few days ago is in the frame, and a player who keeps doing well keeps his place
+  const rate = (p: Player) => overall(p) + adj(p) + breakoutBonus(form.breakout.get(p.id)) + (usualIds.has(p.id) ? 1 : 0)
   const batRate = (p: Player) => battingScore(p.batting) + adj(p) * 0.6 - (p.role === 'BOWL' ? 12 : 0)
   const ordered = autoPickXI(pool, rate, batRate)
   let xi = ordered.slice(0, XI_SIZE)
   // A match that hardly matters is a chance to rest a few regulars and let the reserves play
   const rested: { out: Player; in: Player }[] = []
   const matters = importance(fixture)
-  if (matters < 1 && ordered.length > XI_SIZE) {
+  // Against a clearly weaker side a strong team can afford to give the reserves a game (never in a knockout): 0 at a gap of 4 points, 1 at 14 or more
+  const easy = fixture.opponent && fixture.phase !== 'knockout' ? Math.max(0, Math.min(1, (strengthOf(team) - strengthOf(fixture.opponent) - 4) / 10)) : 0
+  if ((matters < 1 || easy > 0) && ordered.length > XI_SIZE) {
     const rng = new Rng((season.seed ^ hash(`${team.id}|${fixture.date}|${fixture.competitionId ?? ''}`)) >>> 0)
-    const chance = matters <= 0.35 ? 0.75 : 0.35
+    const chance = Math.max(matters >= 1 ? 0 : matters <= 0.35 ? 0.75 : 0.35, easy * 0.8)
     if (rng.chance(chance)) {
-      const wanted = matters <= 0.35 ? 1 + rng.int(3) : 1
+      const wanted = Math.max(matters >= 1 ? 0 : matters <= 0.35 ? 1 + rng.int(3) : 1, easy > 0 ? 1 + Math.round(easy * 2) : 0)
       const apps = recentApps(season, team, fixture.date)
       const bench0 = ordered.slice(XI_SIZE).filter((p) => !injured.has(p.id))
       const keeperNow = keeperIn(xi, team.keeperId)?.id
@@ -179,5 +208,6 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
 
 /** Applies the computer's selection to every team in a fixture that isn't yours. */
 export function cpuSelections(season: Season, fixture: Pick<Fixture, 'date'>, teams: Team[], myTeamId: string | null, form: Form): CpuXI[] {
-  return teams.map((t) => (myTeamId && t.id !== myTeamId ? pickCpuXI(t, season, fixture, form) : { team: t, news: [] }))
+  // each side knows who it is playing, so a strong team can rest players against a weak one
+  return teams.map((t) => (myTeamId && t.id !== myTeamId ? pickCpuXI(t, season, { ...fixture, opponent: teams.find((o) => o.id !== t.id) }, form) : { team: t, news: [] }))
 }

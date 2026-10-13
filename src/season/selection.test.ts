@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { overall } from '../data/builders'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { validateSquad } from '../data/squad'
 import { generateSeason } from './generate'
@@ -6,6 +7,7 @@ import { nextMatchDate, simDay } from './results'
 import { formTable, isInjured, pickCpuXI } from './selection'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
+const strengthTop = (t: (typeof BUILT_IN_TEAMS)[number]) => [...t.players].map(overall).sort((a, b) => b - a).slice(0, 11).reduce((s, x) => s + x, 0) / 11
 const season = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 21, myTeamId: BUILT_IN_TEAMS[0].id })
 
 describe('computer squad selection', () => {
@@ -51,6 +53,35 @@ describe('computer squad selection', () => {
     expect(restedKnockout).toBe(0)
   })
 
+  it('rests more players against a much weaker side than against an equal one, but never in a knockout', () => {
+    const form = formTable(season, teams)
+    const strong = BUILT_IN_TEAMS.reduce((a, b) => (strengthTop(a) >= strengthTop(b) ? a : b))
+    const weak = BUILT_IN_TEAMS.reduce((a, b) => (strengthTop(a) <= strengthTop(b) ? a : b))
+    const even = BUILT_IN_TEAMS.find((t) => t.id !== strong.id && Math.abs(strengthTop(t) - strengthTop(strong)) < 3) ?? BUILT_IN_TEAMS[1]
+    const count = (opp: typeof weak, phase: 'league' | 'knockout') => {
+      let n = 0
+      for (let d = 1; d <= 28; d++) n += pickCpuXI(strong, season, { date: `2027-04-${String(d).padStart(2, '0')}`, phase, competitionId: 'x', opponent: opp }, form).news.filter((x) => x.why === 'rested').length
+      return n
+    }
+    expect(strengthTop(strong) - strengthTop(weak)).toBeGreaterThan(8)
+    expect(count(weak, 'league')).toBeGreaterThan(count(even, 'league'))
+    expect(count(weak, 'knockout')).toBe(0)
+  })
+
+  it('a reserve with a standout game is picked ahead of where his rating puts him', () => {
+    const t = BUILT_IN_TEAMS[5]
+    const reserve = [...t.players].sort((a, b) => overall(b) - overall(a)).slice(11).filter((p) => p.role !== 'WK').reverse()[0]
+    const date = '2027-05-05'
+    const base = formTable(season, teams)
+    const plain = pickCpuXI(t, season, { date, phase: 'knockout' }, base)
+    const star = pickCpuXI(t, season, { date, phase: 'knockout' }, { ...base, breakout: new Map([[reserve.id, 3]]) })
+    expect(plain.team.players.slice(0, 11).some((p) => p.id === reserve.id)).toBe(false)
+    expect(overall(reserve)).toBeLessThan(overall(t.players[10]))
+    // a great game is worth up to ten points: enough for a close reserve, not for one far behind
+    const gap = Math.min(...t.players.slice(0, 11).map((p) => overall(p))) - overall(reserve)
+    expect(star.team.players.slice(0, 11).some((p) => p.id === reserve.id)).toBe(gap <= 9)
+  })
+
   it('drops an injured player and replaces him', () => {
     const form = formTable(season, teams)
     let seen = false
@@ -74,7 +105,7 @@ describe('computer squad selection', () => {
     // fake a form table: everyone average, bad batsman terrible, the bench player red hot
     const recent = new Map<string, number>()
     const base = formTable(generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 1 }), teams)
-    const form = { recent, norm: { bat: { mean: 30, sd: 10 }, bowl: { mean: 20, sd: 10 } } }
+    const form = { recent, norm: { bat: { mean: 30, sd: 10 }, bowl: { mean: 20, sd: 10 } }, breakout: new Map<string, number>() }
     for (const p of t.players) recent.set(p.id, p.role === 'BOWL' ? 20 : 30)
     recent.set(bad.id, 0)
     recent.set(bench.id, 80)
