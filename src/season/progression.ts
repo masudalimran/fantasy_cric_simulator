@@ -1,4 +1,5 @@
 import { Rng } from '../engine/rng'
+import { DIFFICULTIES } from '../engine/types'
 import { battingScore, bowlingScore, overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import type { MatchFormat, Player, Team } from '../types'
@@ -119,7 +120,7 @@ function playerIndex(teams: Map<string, Team>): Map<string, Player> {
 }
 
 /** Changes for the players in one match, from the match's own batting and bowling lines. Players whose ratings don't move are left out. */
-export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<string, Team>): Record<string, MatchDelta> {
+export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<string, Team>, tilt?: Map<string, number>): Record<string, MatchDelta> {
   const byId = playerIndex(teams)
   const deltas = new Map<string, Delta>()
   const put = (id: string) => { let d = deltas.get(id); if (!d) deltas.set(id, (d = {})); return d }
@@ -130,7 +131,7 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
     const e = BAT_EXPECT[format]
     const bs = battingScore(p.batting)
     const bp = runs + fours * 0.5 + sixes
-    let n = points(grade((bp - (e.a + e.b * bs)) / e.sd))
+    let n = points(grade((bp - (e.a + e.b * (bs + (tilt?.get(id) ?? 0)))) / e.sd))
     if (runs === 0 && out) n = Math.min(n, -1) // a duck always costs something
     if (n === 0) continue
     const d = put(id)
@@ -151,7 +152,7 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
     const ov = balls / 6
     const econ = runs / ov
     const idx = ((wickets * 22 + maidens * 4) / ov) * 4 + (e.par - econ) * 8
-    const n = points(grade((idx - (e.a + e.b * ws)) / e.sd) + 0.1 + 0.033 * (85 - Math.min(ws, 85)))
+    const n = points(grade((idx - (e.a + e.b * (ws + (tilt?.get(id) ?? 0)))) / e.sd) + 0.1 + 0.033 * (85 - Math.min(ws, 85)))
     if (n === 0) continue
     const d = put(id)
     const r = rngFor(raw.fixtureId, id)
@@ -171,9 +172,22 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
   return out
 }
 
+/**
+ * The difficulty tilts a career match: your players get a bonus and the computer's get theirs, so a player's runs and wickets say a little less about him than usual.
+ * Grading takes it into account (expecting more of a boosted player, less of a held-back one), so the difficulty never changes how fast anyone's ratings move.
+ */
+function difficultyTilt(season: Pick<Season, 'myTeamId' | 'difficulty'>, fixture: Fixture, teams: Map<string, Team>): Map<string, number> | undefined {
+  const me = season.myTeamId
+  if (!me || (fixture.homeId !== me && fixture.awayId !== me)) return undefined
+  const d = DIFFICULTIES[season.difficulty ?? 'normal']
+  const tilt = new Map<string, number>()
+  for (const t of teams.values()) for (const p of t.players) tilt.set(p.id, t.id === me ? d.help - d.boost : d.boost - d.help)
+  return tilt
+}
+
 /** Records a match's rating changes in the season: they take effect from the next match on. */
 export function applyMatchChanges(season: Season, fixture: Fixture, raw: RawSummary, teams: Map<string, Team>): Season {
-  const delta = matchChanges(raw, fixture.format, teams)
+  const delta = matchChanges(raw, fixture.format, teams, difficultyTilt(season, fixture, teams))
   const ids = Object.keys(delta)
   if (!ids.length) return season
   const shifts: Record<string, PlayerShift> = { ...(season.shifts ?? {}) }

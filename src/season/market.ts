@@ -105,7 +105,7 @@ export function initMarket(teams: Team[], seed: number): MarketState {
  * Carries the market into the next year: purses are topped up (more for titles won), young players develop towards
  * their potential, unsold youth go back into the reserve, and a new pool of 40 is drawn.
  */
-export function rolloverMarket(prev: MarketState, titlesByTeam: Record<string, number>, seed: number): MarketState {
+export function rolloverMarket(prev: MarketState, titlesByTeam: Record<string, number>, seed: number, extraIncome: Record<string, number> = {}): MarketState {
   const rng = new Rng(seed ^ 0xa11ce)
   const back = prev.pool.filter((id) => YOUTH_BY_ID.has(id))
   const veterans = prev.pool.filter((id) => !YOUTH_BY_ID.has(id)) // released players stay unsigned
@@ -114,10 +114,28 @@ export function rolloverMarket(prev: MarketState, titlesByTeam: Record<string, n
   const asking: Record<string, number> = {}
   for (const id of pool) { const p = YOUTH_BY_ID.get(id) ?? prev.players[id]; if (p) asking[id] = marketValue(p) }
   const budgets: Record<string, number> = {}
-  for (const [id, b] of Object.entries(prev.budgets)) budgets[id] = Math.min(150, b + YEARLY_INCOME + TITLE_BONUS * (titlesByTeam[id] ?? 0))
+  for (const [id, b] of Object.entries(prev.budgets)) budgets[id] = Math.min(150, b + YEARLY_INCOME + TITLE_BONUS * (titlesByTeam[id] ?? 0) + (extraIncome[id] ?? 0))
   return { ...prev, pool, reserve, asking, budgets }
 }
 
+
+/**
+ * Extra yearly purse for the team you manage when it is behind the strongest team: the further behind, the more, and the
+ * easier the difficulty, the bigger it is. It is the game's push, and it still has to be spent well: the climb comes from the signings.
+ */
+const CATCH_UP: Record<Difficulty, number> = { easy: 24, normal: 14, hard: 6, legend: 0 }
+/** A team this many points of XI rating behind the best gets the full amount. */
+const CATCH_UP_GAP = 12
+
+export function catchUpIncome(season: Pick<Season, 'market' | 'myTeamId' | 'difficulty' | 'shifts'>, base: Map<string, Player>): number {
+  const m = season.market
+  const me = season.myTeamId
+  if (!m || !me) return 0
+  const strength = (ids: string[]) => ids.map((id) => base.get(id)).filter((p): p is Player => !!p).map((p) => overall(applyShift(p, season.shifts?.[p.id]))).sort((a, b) => b - a).slice(0, 11).reduce((s, x, _, xs) => s + x / xs.length, 0)
+  const mine = strength(m.squads[me] ?? [])
+  const best = Math.max(...Object.values(m.squads).map(strength))
+  return Math.round((CATCH_UP[season.difficulty ?? 'normal'] ?? 0) * Math.max(0, Math.min(1, (best - mine) / CATCH_UP_GAP)))
+}
 /** How much each player with room to grow gains over a year: a share of the gap to his potential, a little different for each. */
 export function developYouth(market: MarketState, shifts: Record<string, PlayerShift>, base: Map<string, Player>, seed: number): Record<string, PlayerShift> {
   const out: Record<string, PlayerShift> = { ...shifts }

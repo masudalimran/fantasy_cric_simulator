@@ -86,7 +86,10 @@ describe('coaches', () => {
     const s = run(base(), 40)
     for (const t of BUILT_IN_TEAMS.filter((x) => x.id !== 'bleach')) expect(coachingOf(s, t.id).focus).not.toBeNull()
     expect(coachingOf(s, 'bleach').focus).toBeNull() // yours is only ever set by you
-    expect(seasonBoost(s, 'bleach').total).toBe(0)
+    // with no instruction your coach still does basic work, at half the pace of a team that has one
+    const others = BUILT_IN_TEAMS.filter((x) => x.id !== 'bleach').map((x) => seasonBoost(s, x.id).total)
+    expect(seasonBoost(s, 'bleach').total).toBeGreaterThan(0)
+    expect(seasonBoost(s, 'bleach').total).toBeLessThan(others.reduce((a, b) => a + b, 0) / others.length)
     const board = coachBoard(s)
     expect(board).toHaveLength(BUILT_IN_TEAMS.length)
     expect(board[0].total).toBeGreaterThan(0)

@@ -20,8 +20,8 @@ export const INTENT_VALUE: Record<Intent, number> = { defend: -1, normal: 0, att
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'legend'
 
 export const DIFFICULTIES: Record<Difficulty, { label: string; blurb: string; /** rating points added to every computer player (negative = weaker) */ boost: number; /** rating points added to every player on YOUR team */ help: number; /** how often the computer makes a poor tactical call (0 = never) */ blunder: number }> = {
-  easy: { label: 'Easy', blurb: 'Your team plays much better than its ratings and the computer slips up often.', boost: -6, help: 8, blunder: 0.45 },
-  normal: { label: 'Normal', blurb: 'Friendly: your team gets a helping hand and the computer is fair.', boost: 0, help: 5, blunder: 0.2 },
+  easy: { label: 'Easy', blurb: 'Your team plays much better than its ratings and the computer slips up often.', boost: -6, help: 5, blunder: 0.45 },
+  normal: { label: 'Normal', blurb: 'Friendly: your team gets a helping hand and the computer is fair.', boost: 0, help: 3, blunder: 0.2 },
   hard: { label: 'Hard', blurb: 'No help. Ratings decide it, and the computer has sharper tactics.', boost: 2, help: 0, blunder: 0.08 },
   legend: { label: 'Legend', blurb: 'The computer plays above its ratings and never gets tactics wrong.', boost: 6, help: 0, blunder: 0 },
 }

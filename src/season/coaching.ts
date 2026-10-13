@@ -83,8 +83,12 @@ function cpuChoice(season: Season, teamId: string, players: Player[], coach: Coa
 function trainTeam(season: Season, teamId: string, ids: string[], base: Map<string, Player>, date: string): Season {
   const c = coachingOf(season, teamId)
   const coach = coachOf(season, teamId)
-  if (!c.focus || !coach || (c.since && date < c.since)) return season
-  const skill = (coach.skill / 80) * (coach.specialty === c.focus ? 1.3 : 1)
+  // a team of yours with no instruction still gets basic coaching (half as effective), so one left alone does not fall behind the rest
+  let focus = c.focus
+  let effort = 1
+  if (!focus && teamId === season.myTeamId && coach) { focus = cpuChoice(season, teamId, ids.map((id) => base.get(id)).filter((p): p is Player => !!p), coach, date); effort = 0.5 }
+  if (!focus || !coach || (c.since && date < c.since)) return season
+  const skill = (coach.skill / 80) * (coach.specialty === focus ? 1.3 : 1) * effort
   const month = date.slice(0, 7)
   const year = date.slice(0, 4)
   let shifts = season.shifts
@@ -95,14 +99,14 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
     const p0 = base.get(pid)
     if (!p0) continue
     const p = applyShift(p0, shifts?.[pid])
-    const weight = c.focus === 'batting' ? (p.role === 'BOWL' ? 0.35 : 1) : c.focus === 'bowling' ? (p.bowling ? (p.role === 'BOWL' || p.role === 'AR' ? 1 : 0.5) : 0) : 1
+    const weight = focus === 'batting' ? (p.role === 'BOWL' ? 0.35 : 1) : focus === 'bowling' ? (p.bowling ? (p.role === 'BOWL' || p.role === 'AR' ? 1 : 0.5) : 0) : 1
     if (weight === 0) continue
-    for (const attr of ATTRS_OF[c.focus]) {
+    for (const attr of ATTRS_OF[focus]) {
       const now = attr === 'fielding' ? p.fielding : (p.batting as unknown as Record<string, number>)[attr] ?? (p.bowling as unknown as Record<string, number> | null)?.[attr] ?? 0
       // the same curve as match gains: a low rating is easy to raise, one near the top is hard (and its yearly limit is lower too)
       const room = headroom(now)
       if (!now || now >= 97 || yearSoFar(pid, attr) >= Math.max(2, Math.min(8, Math.round(YEARLY_CAP * room)))) continue
-      const add = BASE * skill * room * weight * (c.focus === 'fielding' ? 1.6 : 1)
+      const add = BASE * skill * room * weight * (focus === 'fielding' ? 1.6 : 1)
       const have = (progress?.[pid]?.[attr] ?? 0) + add
       if (have >= 1) {
         const cur = shifts?.[pid] ?? { bat: 0, bowl: 0 }
