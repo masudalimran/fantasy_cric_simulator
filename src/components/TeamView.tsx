@@ -7,7 +7,9 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { describeChanges, keeperIn } from '../data/squad'
 import { defaultTeam, useStore, useTeams } from '../store/useStore'
 import type { Player, Team } from '../types'
-import { accentOf, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamBackdrop, TeamCrest, tierOf } from './ui'
+import { accentOf, FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamBackdrop, TeamCrest, tierOf } from './ui'
+import { usePlayerForm } from './season/shared'
+import { useViewedSeason } from '../store/useStore'
 
 function PlayerDetail({ player, team }: { player: Player; team: Team }) {
   const accent = accentOf(team)
@@ -53,6 +55,9 @@ function PlayerDetail({ player, team }: { player: Player; team: Team }) {
 
 function PlayerRow({ player, team, pos }: { player: Player; team: Team; pos?: number }) {
   const [open, setOpen] = useState(false)
+  const formOf = usePlayerForm()
+  const { season } = useViewedSeason()
+  const inCareer = !!season?.teamIds.includes(team.id)
   const ovr = overall(player)
   const isCaptain = team.captainId === player.id
   const isKeeper = keeperIn(team.players.slice(0, 11), team.keeperId)?.id === player.id
@@ -72,6 +77,7 @@ function PlayerRow({ player, team, pos }: { player: Player; team: Team; pos?: nu
             {player.bowling ? ` · ${player.bowling.type}` : ''} · {tierOf(ovr).label}
           </div>
         </div>
+        {inCareer && <FormBar z={formOf(player.id)} />}
         <RatingBadge value={ovr} />
       </button>
       <AnimatePresence initial={false}>{open && <PlayerDetail player={player} team={team} />}</AnimatePresence>

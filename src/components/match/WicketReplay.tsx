@@ -21,6 +21,8 @@ export interface ReplayInfo {
   score: string
   /** When the replay is the only screen for the wicket: the details the separate OUT! screen would have shown. */
   details?: { lines: string[]; duck: boolean }
+  /** The batsman's card in the top-left corner: his innings and how he got out (lines[0] is how, lines[1] the score line). */
+  card?: { lines: string[]; duck: boolean }
 }
 
 const TITLE: Record<DismissalKind, string> = {
@@ -120,6 +122,7 @@ export function Actor({ player, team, size, note, from, path, times, dur, jump, 
  */
 export function WicketReplay({ info }: { info: ReplayInfo }) {
   const { kind, batsman, bowler, fielder, batTeam, bowlTeam, rate, score } = info
+  const card = info.card ?? info.details
   const box = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(640)
   useEffect(() => {
@@ -168,6 +171,20 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />Wicket replay</div>
       <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">{info.details ? 'Tap to continue' : 'Tap to skip'}</div>
 
+      {/* who is out: his picture and full name, his innings, and how he got out */}
+      {card && (
+        <motion.div
+          className="absolute left-3 top-11 z-30 flex max-w-[58%] items-center gap-2.5 rounded-xl bg-black/75 p-2 pr-3 ring-1 ring-red-400/40"
+          initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.35 }}
+        >
+          <span className="shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(batTeam)}` }}><PlayerAvatar player={batsman} team={batTeam} size={Math.max(38, Math.min(w * 0.08, 56))} /></span>
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold leading-tight text-white">{batsman.name}{card.duck && <span className="-rotate-6 rounded border-2 border-red-400 px-1.5 font-display text-xs tracking-widest text-red-300">DUCK</span>}</span>
+            <span className="block text-xs font-bold leading-tight text-red-300">{card.lines[1]}</span>
+            <span className="block text-[11px] leading-tight text-slate-300">{card.lines[0]}</span>
+          </span>
+        </motion.div>
+      )}
       {/* the ball */}
       <motion.span
         className="absolute z-30 block h-3.5 w-3.5 rounded-full border-2 border-red-200 bg-red-500 shadow-[0_0_10px_#ef4444]"
@@ -215,18 +232,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       >
         <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(30, Math.min(w * 0.095, 70)), WebkitTextStroke: '2px #7f1d1d', paintOrder: 'stroke fill', textShadow: '0 0 30px #ef4444aa' }}>{TITLE[kind]}</div>
         <div className="mt-1 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{sub}</div>
-        {info.details && (
-          <motion.div
-            className="mx-auto mt-1.5 inline-block max-w-[94%] rounded-xl bg-black/70 px-3 py-1.5 ring-1 ring-red-400/40"
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (T.big + 0.9) * r, duration: 0.35 }}
-          >
-            <div className="flex items-center justify-center gap-2 text-sm font-extrabold leading-tight text-white">
-              <span>{info.details.lines[1]}</span>
-              {info.details.duck && <span className="-rotate-6 rounded border-2 border-red-400 px-1.5 font-display text-xs tracking-widest text-red-300">DUCK</span>}
-            </div>
-            <div className="text-[11px] leading-tight text-slate-300">{info.details.lines[0]}</div>
-          </motion.div>
-        )}
+
       </motion.div>
     </div>
   )

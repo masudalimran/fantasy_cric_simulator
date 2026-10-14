@@ -7,18 +7,20 @@ import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE
 import { paths } from '../routes'
 import { ATTR_LABEL, playerChangeLog, ratingRows, sessionTeam } from '../season/progression'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
-import { useTeamMap } from './season/shared'
+import { usePlayerForm, useTeamMap } from './season/shared'
 import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
 import { Sheet } from './Sheet'
-import { accentOf, Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
+import { accentOf, Delta, FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
 function SquadCard({
-  player, team, index, selected, dragging, isCaptain, isKeeper, change, career, onSelect, onCaptain, onKeeper, onDragStart, onDrop, onDragEnd,
+  player, team, index, selected, dragging, isCaptain, isKeeper, change, career, form, showForm, onSelect, onCaptain, onKeeper, onDragStart, onDrop, onDragEnd,
 }: {
   player: Player; team: Team; index: number; selected: boolean; dragging: boolean; isCaptain: boolean; isKeeper: boolean
+  /** His recent form (see FormBar), shown when the team is in the career you have open. */
+  form?: number | null; showForm?: boolean
   /** Rating points gained or lost last year, and over the whole session so far (session squads only). */
   change?: number; career?: number
   onSelect: () => void; onCaptain: () => void; onKeeper: () => void
@@ -63,6 +65,7 @@ function SquadCard({
       >
         WK
       </button>
+      {showForm && <FormBar z={form} />}
       {change !== undefined && change !== 0 && <span title="Change to his overall rating since the career began" className="text-xs"><Delta n={change} /></span>}
       <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
     </motion.div>
@@ -157,6 +160,7 @@ function PicksPrompt({ xi, team, needCaptain, needKeeper, captainId, keeperId, o
 export function SquadView({ id, session = false }: { id: string; session?: boolean }) {
   const teams = useTeams()
   const sessionTeams = useTeamMap()
+  const formOf = usePlayerForm()
   const save = useStore((s) => s.saveTeam)
   const updateSeason = useStore((s) => s.updateSeason)
   const season = useStore(selectSeason)
@@ -225,7 +229,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
 
   const card = (p: Player, i: number) => (
     <SquadCard
-      key={p.id} player={p} team={team} index={i} change={session ? careerShift(p.id) : undefined} career={session ? careerShift(p.id) : undefined} selected={selected === i} dragging={dragIndex === i} isCaptain={captainId === p.id} isKeeper={effKeeper === p.id}
+      key={p.id} player={p} team={team} index={i} showForm={!!season?.teamIds.includes(team.id)} form={formOf(p.id)} change={session ? careerShift(p.id) : undefined} career={session ? careerShift(p.id) : undefined} selected={selected === i} dragging={dragIndex === i} isCaptain={captainId === p.id} isKeeper={effKeeper === p.id}
       onSelect={() => clickCard(i)} onCaptain={() => setCaptainId(p.id)} onKeeper={() => setKeeperId(p.id)}
       onDragStart={() => setDragIndex(i)} onDragEnd={() => setDragIndex(null)}
       onDrop={() => { if (dragIndex !== null) swap(dragIndex, i); setDragIndex(null) }}

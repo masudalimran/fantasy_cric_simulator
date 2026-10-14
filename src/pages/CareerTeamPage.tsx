@@ -3,9 +3,9 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
 import { overall } from '../data/builders'
 import { keeperIn } from '../data/squad'
-import { FixtureRow, useTeamMap } from '../components/season/shared'
+import { FixtureRow, usePlayerForm, useTeamMap } from '../components/season/shared'
 import { SortTable, type Col } from '../components/season/SortTable'
-import { PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../components/ui'
+import { FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../components/ui'
 import { paths } from '../routes'
 import { formatDate } from '../season/dates'
 import { cpuSelections, formTable, isInjured } from '../season/selection'
@@ -27,6 +27,7 @@ export function CareerTeamPage() {
   const { season, isCurrent } = useViewedSeason()
   const teams = useTeamMap()
   const base = useTeams()
+  const formOf = usePlayerForm()
   const team = teams.get(id)
 
   const data = useMemo(() => {
@@ -81,6 +82,7 @@ export function CareerTeamPage() {
         <RatingBadge value={overall(r.player)} size="sm" />
       </span>
     ) },
+    { key: 'form', label: 'Form', get: (r) => formOf(r.player.id), cell: (r) => <span className="inline-flex justify-end"><FormBar z={formOf(r.player.id)} /></span> },
     { key: 'runs', label: 'Runs', get: (r) => r.bat?.runs ?? null, cell: (r) => (r.bat ? <b className="text-white">{r.bat.runs}</b> : '-') },
     { key: 'avg', label: 'Avg', get: (r) => (r.bat ? average(r.bat) : null), cell: (r) => f1(r.bat ? average(r.bat) : null) },
     { key: 'sr', label: 'SR', get: (r) => (r.bat ? strikeRate(r.bat) : null), cell: (r) => f1(r.bat ? strikeRate(r.bat) : null) },

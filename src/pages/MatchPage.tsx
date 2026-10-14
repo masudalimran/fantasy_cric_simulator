@@ -282,7 +282,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         })
         return placeFielders(match.sides[1 - innE.battingSide].xi, ev.bowlerId, plan.spots)
       }
-      if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit) {
+      // (not when that ball ended the innings: the free hit would be shown against the next innings' batsman)
+      if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && match.current.index === lastEv.innings) {
         const cur = match.current
         const spd = autoRef.current
         const bat = match.battingSide(cur)
@@ -305,7 +306,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const field = placedAt(lastEv)
           const ang = eventAngle(lastEv)
           const diff = (f: { x: number; y: number }) => { let d = Math.abs(Math.atan2(f.y - 66, f.x - 80) - ang); if (d > Math.PI) d = 2 * Math.PI - d; return d }
-          const chasers = field.filter((f) => f.spot !== 'Wicketkeeper').sort((a, b) => diff(a) - diff(b)).slice(0, 2).map((f) => ({ player: f.player, x: f.x, y: f.y }))
+          const chasers = field.filter((f) => f.spot !== 'Wicketkeeper').sort((a, b) => diff(a) - diff(b)).slice(0, 1 + (((lastEv.seq * 2654435761) >>> 0) % 3)).map((f) => ({ player: f.player, x: f.x, y: f.y }))
           enqueueMoment({ key: lastEv.seq + 0.4, kind: 'four', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms, four: { batsman: match.player(lastEv.strikerId), batTeam: batT, bowlTeam: bowlS.team, angle: ang, chasers, rate } })
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
@@ -362,7 +363,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
           if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((merged ? 6300 : 4300) * rate),
-            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: merged ? { lines: outLines, duck: outLine.runs === 0 } : undefined },
+            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: merged ? { lines: outLines, duck: outLine.runs === 0 } : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
           })
           if (!merged) show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wantReplay ? 0 : delay, ms, // straight after the replay, no gap
             lines: outLines })
@@ -385,7 +386,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const announce = useCallback(
     (events: BallEvent[]) => {
       announceEvents(events)
-      if (!match.isOver && events.length <= 12 && !breakRef.current) enqueueIntros() // whoever has just come on gets introduced
+      // whoever has just come on gets introduced: not while the innings break is on, and not on the very ball that ended the innings
+      // (breakRef only catches up on the next render, so ask the match itself whether the innings has just moved on)
+      const inningsJustEnded = match.current.index > seenInnings.current
+      if (!match.isOver && events.length <= 12 && !breakRef.current && !inningsJustEnded) enqueueIntros()
     },
     [match, announceEvents, enqueueIntros],
   )

@@ -22,7 +22,12 @@ const Tag = ({ text, color }: { text: string; color: string }) => (
   <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest" style={{ color }}><span className="h-2 w-2 animate-pulse rounded-full" style={{ background: color }} />{text}</div>
 )
 
-// ---- FOUR: two fielders chase the ball to the rope ---------------------------------------------------------------
+/** The first word of a name (a one-word name stays whole). */
+export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name
+/** "A", "A and B", "A, B and C". */
+const joinNames = (names: string[]) => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`)
+
+// ---- FOUR: one to three fielders chase the ball to the rope ---------------------------------------------------------------
 
 export interface FourInfo {
   batsman: Player
@@ -30,7 +35,7 @@ export interface FourInfo {
   bowlTeam: Team
   /** The shot's direction on the field view (radians, screen angle). */
   angle: number
-  /** The two fielders nearest the ball's path, with where they stand (field units, 160 x 100). */
+  /** The one to three fielders nearest the ball's path, with where they stand (field units, 160 x 100). */
   chasers: { player: Player; x: number; y: number }[]
   rate: number
 }
@@ -61,7 +66,9 @@ export function FourScreen({ info }: { info: FourInfo }) {
   // the two chasers run down either side of the ball's path, well apart, and finish short of the rope
   const side = { x: -Math.sin(angle), y: Math.cos(angle) }
   const along = { x: Math.cos(angle), y: Math.sin(angle) }
-  const spot = (base: { x: number; y: number }, i: number, off: number, back: number) => ({ x: base.x + side.x * (i ? off : -off) - along.x * back, y: base.y + side.y * (i ? off : -off) - along.y * back })
+  // one to three chasers: they fan out across the ball's path (one runs straight at it, two split either side, three do both)
+  const lanes = chasers.length === 1 ? [0] : chasers.length === 2 ? [-1, 1] : [-1, 0, 1]
+  const spot = (base: { x: number; y: number }, i: number, off: number, back: number) => ({ x: base.x + side.x * lanes[i] * off - along.x * back, y: base.y + side.y * lanes[i] * off - along.y * back })
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Four">
       <div className="absolute inset-0 bg-[#070b14]" />
@@ -79,16 +86,16 @@ export function FourScreen({ info }: { info: FourInfo }) {
         style={{ left: pc(HIT.x, W), top: pc(HIT.y, H), translateX: '-50%', translateY: '-50%' }}
         animate={{ left: [pc(HIT.x, W), pc(end.x, W)], top: [pc(HIT.y, H), pc(end.y, H)] }} transition={{ delay: 0.15 * r, duration: run, ease: 'easeOut' }}
       />
-      {/* the two fielders who chase it and come up short */}
+      {/* the one to three fielders who chase it and come up short */}
       {chasers.map((c, i) => (
         <motion.div
           key={c.player.id} className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center"
           style={{ left: pc(c.x, W), top: pc(c.y, H) }}
-          animate={{ left: [pc(c.x, W), pc(spot(mid, i, 9, 0).x, W), pc(spot(end, i, 11, 5).x, W)], top: [pc(c.y, H), pc(spot(mid, i, 9, 0).y, H), pc(spot(end, i, 11, 5).y, H)], rotate: [0, 0, i ? 14 : -14] }}
+          animate={{ left: [pc(c.x, W), pc(spot(mid, i, 9, 0).x, W), pc(spot(end, i, 11, 5).x, W)], top: [pc(c.y, H), pc(spot(mid, i, 9, 0).y, H), pc(spot(end, i, 11, 5).y, H)], rotate: [0, 0, lanes[i] * 14 || -8] }}
           transition={{ delay: 0.25 * r, duration: 1.15 * r, ease: 'easeIn', times: [0, 0.6, 1] }}
         >
           <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={c.player} team={bowlTeam} size={size} /></span>
-          <span className="mt-0.5 block max-w-[84px] truncate rounded bg-black/70 px-1 text-[10px] font-semibold text-white">{c.player.name}</span>
+          <span className="mt-0.5 block whitespace-nowrap rounded bg-black/70 px-1 text-[10px] font-semibold text-white">{firstName(c.player.name)}</span>
         </motion.div>
       ))}
       <motion.div className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: pc(HIT.x, W), top: pc(HIT.y + 8, H) }} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}>
@@ -98,7 +105,7 @@ export function FourScreen({ info }: { info: FourInfo }) {
       <SkipTag />
       <motion.div className="absolute inset-x-0 bottom-[6%] z-40 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2 * r, type: 'spring', stiffness: 260, damping: 15 }}>
         <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(42, Math.min(w * 0.15, 100)), WebkitTextStroke: '2px #0c4a6e', paintOrder: 'stroke fill', textShadow: '0 0 30px #38bdf8aa' }}>FOUR!</div>
-        <div className="text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{batsman.name} beats {chasers.map((c) => c.player.name).join(' and ') || 'the field'} to the rope</div>
+        <div className="text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{batsman.name} beats {joinNames(chasers.map((c) => firstName(c.player.name))) || 'the field'} to the rope</div>
       </motion.div>
     </div>
   )

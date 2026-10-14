@@ -8,6 +8,7 @@ import { paths } from '../../routes'
 import { applyShift, sessionTeam } from '../../season/progression'
 import { playerIndex } from '../../season/market'
 import { useStore, useTeams, useViewedSeason } from '../../store/useStore'
+import { formTable } from '../../season/selection'
 import type { Team } from '../../types'
 import { useDetails } from './Details'
 import { BeforeYoursSheet, matchesBefore } from './BeforeYours'
@@ -26,6 +27,27 @@ export function useTeamMap(): Map<string, Team> {
   return useMemo(() => new Map(teams.map((t) => [t.id, sessionTeam(t, { shifts, lineup, myTeamId, market })])), [teams, shifts, lineup, myTeamId, market])
 }
 
+
+/**
+ * Recent form for every player in the career you have open: how far his last few matches were from the usual for his kind
+ * of player, in standard deviations. null when he has played fewer than two matches this season (or there is no career).
+ */
+export function usePlayerForm(): (playerId: string) => number | null {
+  const { season } = useViewedSeason()
+  const teams = useTeamMap()
+  return useMemo(() => {
+    if (!season) return () => null
+    const form = formTable(season, teams)
+    const role = new Map<string, Player['role']>()
+    for (const t of teams.values()) for (const p of t.players) role.set(p.id, p.role)
+    return (id: string) => {
+      const r = form.recent.get(id)
+      if (r === undefined) return null
+      const n = role.get(id) === 'BOWL' ? form.norm.bowl : form.norm.bat
+      return (r - n.mean) / n.sd
+    }
+  }, [season, teams])
+}
 /** The teams as they start out (before the career's rating changes): what the simulator is given, since it applies each match's current ratings itself. */
 export function useBaseTeamMap(): Map<string, Team> {
   const teams = useTeams()
