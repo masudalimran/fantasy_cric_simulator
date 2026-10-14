@@ -72,9 +72,11 @@ export function CareerTeamPage() {
             <span className="font-semibold text-white">{r.player.name}</span>
             {team.captainId === r.player.id && <span className="rounded bg-amber-400/25 px-1.5 py-px text-[10px] font-bold text-amber-300">C</span>}
             {data.keeper === r.player.id && <span className="rounded bg-sky-400/25 px-1.5 py-px text-[10px] font-bold text-sky-300">WK</span>}
-            {r.injury && <span className="rounded px-1.5 py-px text-[10px] font-bold" style={{ background: `${SEVERITY_COLOR[r.injury.severity]}30`, color: SEVERITY_COLOR[r.injury.severity] }} title={`${r.injury.severity} injury, back on ${formatDate(r.injury.back)}`}>{r.injury.name.toUpperCase()} · {Math.max(1, daysBetween(season.today, r.injury.back))}d</span>}
           </span>
-          <span className="block text-xs text-slate-400">{ROLE_LABEL[r.player.role]}{r.player.bowling ? ` · ${r.player.bowling.type}` : ''}</span>
+          <span className="block text-xs text-slate-400">
+            {ROLE_LABEL[r.player.role]}{r.player.bowling ? ` · ${r.player.bowling.type}` : ''}
+            {r.injury && <span className="ml-1.5 rounded px-1.5 py-px text-[10px] font-bold uppercase" style={{ background: `${SEVERITY_COLOR[r.injury.severity]}30`, color: SEVERITY_COLOR[r.injury.severity] }} title={`${r.injury.severity} injury, back on ${formatDate(r.injury.back)}`}>{r.injury.name} · {Math.max(1, daysBetween(season.today, r.injury.back))}d</span>}
+          </span>
         </span>
       </span>
     ) },

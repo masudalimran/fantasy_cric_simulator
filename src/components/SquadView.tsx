@@ -55,21 +55,21 @@ function SquadCard({
           {ROLE_LABEL[player.role]}{player.bowling ? ` · ${player.bowling.type}` : ''}
         </div>
       </div>
-      <button
+      {!injury && <button
         onClick={(e) => { e.stopPropagation(); onCaptain() }}
         title={isCaptain ? 'Captain' : 'Make captain'}
         className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${isCaptain ? 'bg-amber-400/25 text-amber-300' : 'text-slate-600 hover:text-slate-200'}`}
       >
         C
-      </button>
-      <button
+      </button>}
+      {!injury && <button
         onClick={(e) => { e.stopPropagation(); onKeeper() }}
         title={isKeeper ? 'Wicketkeeper' : 'Make wicketkeeper'}
         className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${isKeeper ? 'bg-sky-400/25 text-sky-300' : 'text-slate-600 hover:text-slate-200'}`}
       >
         WK
-      </button>
-      {injury && <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-tight tracking-wide" style={{ background: `${SEVERITY_COLOR[injury.severity]}30`, color: SEVERITY_COLOR[injury.severity] }} title={`${injury.severity} injury, out for ${injury.days} days, back on ${formatDate(injury.back)}`}>{injury.name} · {Math.max(1, daysBetween(today ?? injury.start, injury.back))}d</span>}
+      </button>}
+      {injury && <span className="w-28 shrink-0 truncate rounded px-1.5 py-0.5 text-center text-[10px] font-extrabold uppercase leading-tight tracking-wide" style={{ background: `${SEVERITY_COLOR[injury.severity]}30`, color: SEVERITY_COLOR[injury.severity] }} title={`${injury.severity} injury, out for ${injury.days} days, back on ${formatDate(injury.back)}`}>{injury.name} · {Math.max(1, daysBetween(today ?? injury.start, injury.back))}d</span>}
       {onPhysio && (
         <button
           onClick={(e) => { e.stopPropagation(); onPhysio() }}

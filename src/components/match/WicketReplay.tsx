@@ -174,8 +174,8 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       {/* who is out: his picture and full name, his innings, and how he got out */}
       {card && (
         <motion.div
-          className="absolute left-3 top-11 z-30 flex max-w-[58%] items-center gap-2.5 rounded-xl bg-black/75 p-2 pr-3 ring-1 ring-red-400/40"
-          initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.35 }}
+          className="absolute left-1/2 top-2 z-30 flex max-w-[60%] items-center gap-2.5 rounded-xl bg-black/75 p-2 pr-3 ring-1 ring-red-400/40"
+          style={{ x: '-50%' }} initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.35 }}
         >
           <span className="shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(batTeam)}` }}><PlayerAvatar player={batsman} team={batTeam} size={Math.max(38, Math.min(w * 0.08, 56))} /></span>
           <span className="min-w-0">
@@ -196,8 +196,8 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
 
       {/* the bowler runs in, delivers, and celebrates (or runs to the man who caught it) */}
       <Actor
-        player={bowler} team={bowlTeam} size={size} tag="Bowler" from={{ x: 50, y: 6 }}
-        path={kind === 'caught' && fielder ? [{ x: 50, y: 6 }, { x: 50, y: 18 }, { x: 50, y: 18 }, { x: F.x + (50 - F.x) * 0.25, y: F.y - 4 }] : [{ x: 50, y: 6 }, { x: 50, y: 18 }]}
+        player={bowler} team={bowlTeam} size={size} tag="Bowler" from={{ x: 50, y: 15 }}
+        path={kind === 'caught' && fielder ? [{ x: 50, y: 15 }, { x: 50, y: 18 }, { x: 50, y: 18 }, { x: F.x + (50 - F.x) * 0.25, y: F.y - 4 }] : [{ x: 50, y: 15 }, { x: 50, y: 18 }]}
         times={kind === 'caught' && fielder ? [0, 0.25, 0.6, 1] : [0, 1]} dur={kind === 'caught' && fielder ? 3.6 * r : 0.9 * r}
         jump={(kind === 'caught' && fielder ? 3.2 : T.big) * r}
       />
