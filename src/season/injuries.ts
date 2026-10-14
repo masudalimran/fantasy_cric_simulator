@@ -1,6 +1,5 @@
 import { overall } from '../data/builders'
 import type { Player, Team } from '../types'
-import { addDays } from './dates'
 import type { Season } from './types'
 
 /**
@@ -107,12 +106,11 @@ export function assignPhysio(season: Season, team: Pick<Team, 'id' | 'players'>,
   return { season: { ...season, physio: { ...season.physio, [team.id]: [...(season.physio?.[team.id] ?? []), { playerId, from: date }] } } }
 }
 
-/** Takes the physio off a player. He is open to injury again from tomorrow. */
+/** Takes the physio off a player straight away. He is open to injury again from today; days that were already covered stay covered. */
 export function releasePhysio(season: Season, teamId: string, playerId: string, date: string): Season {
   const list = season.physio?.[teamId]
   if (!list) return season
-  const tomorrow = addDays(date, 1)
-  return { ...season, physio: { ...season.physio, [teamId]: list.map((a) => (a.playerId === playerId && !a.to ? { ...a, to: tomorrow } : a)) } }
+  return { ...season, physio: { ...season.physio, [teamId]: list.map((a) => (a.playerId === playerId && !a.to ? { ...a, to: date } : a)) } }
 }
 
 

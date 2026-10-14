@@ -75,6 +75,7 @@ describe('physio', () => {
     expect(assignPhysio(s, team, fit[PHYSIOS].id, date).error).toMatch(/busy/)
     expect(assignPhysio(s, team, fit[0].id, date).error).toMatch(/already/)
     const freed = releasePhysio(s, me.id, fit[0].id, date)
+    expect(physioOf(freed, me.id, date)).toHaveLength(PHYSIOS - 1) // off straight away
     expect(physioOf(freed, me.id, addDays(date, 1))).toHaveLength(PHYSIOS - 1)
     expect(assignPhysio(freed, team, fit[PHYSIOS].id, addDays(date, 1)).error).toBeUndefined()
   })
