@@ -62,7 +62,7 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
         />
       )}
       <Actor
-        player={batsman} team={team} size={size * 1.15} tag={title.replace('!', '')} from={{ x: 50, y: 52 }}
+        player={batsman} team={team} size={size * 1.3} hero={gold} tag={title.replace('!', '')} from={{ x: 50, y: 52 }}
         path={[{ x: 50, y: 52 }, { x: MEET.x - gap, y: MEET.y }]} times={[0, 1]} dur={bump * r}
         jump={(bump + 0.15) * r}
       />

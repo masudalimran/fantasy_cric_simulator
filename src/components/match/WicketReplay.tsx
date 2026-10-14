@@ -56,8 +56,10 @@ function Stumps({ x, y, fly, at, rate }: { x: number; y: number; fly: boolean; a
   )
 }
 
-export function Actor({ player, team, size, note, from, path, times, dur, jump, tag }: {
+export function Actor({ player, team, size, note, from, path, times, dur, jump, tag, hero }: {
   player: Player; team: Team; size: number; note?: string
+  /** The star of the screen (a fifty or hundred): a pulsing glow in this colour, a thick ring and glitter all around him. */
+  hero?: string
   from: { x: number; y: number }
   /** Where the actor goes: positions at `times` (0 to 1 of `dur`). */
   path?: { x: number; y: number }[]; times?: number[]; dur: number
@@ -74,7 +76,32 @@ export function Actor({ player, team, size, note, from, path, times, dur, jump, 
       transition={{ duration: dur, times, ease: 'easeInOut' }}
     >
       <motion.div animate={jump !== undefined ? { y: [0, 0, -size * 0.35, 0, -size * 0.2, 0], scale: [1, 1, 1.15, 1, 1.08, 1] } : {}} transition={jump !== undefined ? { delay: jump, duration: 0.9, times: [0, 0.01, 0.35, 0.6, 0.8, 1] } : {}}>
-        <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(team)}, 0 0 18px ${accentOf(team)}88` }}><PlayerAvatar player={player} team={team} size={size} /></div>
+        {hero ? (
+          <div className="relative mx-auto inline-block" style={{ width: size, height: size }}>
+            <motion.div
+              className="rounded-full leading-[0]"
+              animate={{ boxShadow: [`0 0 0 4px ${hero}, 0 0 16px ${hero}aa`, `0 0 0 7px ${hero}, 0 0 52px ${hero}`, `0 0 0 4px ${hero}, 0 0 16px ${hero}aa`], scale: [1, 1.08, 1] }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <PlayerAvatar player={player} team={team} size={size} />
+            </motion.div>
+            {/* glitter all around him, twinkling one after another */}
+            {Array.from({ length: 10 }, (_, i) => {
+              const a = (i / 10) * Math.PI * 2
+              const rad = size * (0.62 + (i % 3) * 0.12)
+              return (
+                <motion.span
+                  key={i} className="pointer-events-none absolute leading-none" aria-hidden
+                  style={{ left: `calc(50% + ${Math.cos(a) * rad}px)`, top: `calc(50% + ${Math.sin(a) * rad}px)`, x: '-50%', y: '-50%', fontSize: Math.max(10, size * (i % 2 ? 0.26 : 0.36)), color: i % 3 === 0 ? '#ffffff' : hero, textShadow: `0 0 8px ${hero}` }}
+                  animate={{ opacity: [0, 1, 0], scale: [0.3, 1.25, 0.3], rotate: [0, 90] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: (i % 5) * 0.24, ease: 'easeInOut' }}
+                >✦</motion.span>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(team)}, 0 0 18px ${accentOf(team)}88` }}><PlayerAvatar player={player} team={team} size={size} /></div>
+        )}
         <div className="mt-1 flex flex-col items-center gap-0.5">
           <span className="rounded bg-black/70 px-1.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: accentOf(team) }}>{tag}</span>
           {/* the whole name, on two lines if it is long, and the score always underneath it */}

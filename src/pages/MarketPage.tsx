@@ -118,8 +118,12 @@ export function MarketPage() {
   const matches = (p: Player) => role === 'all' || p.role === role
   const pool = market.pool.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort((a, b) => overall(shown(b)) - overall(shown(a)))
   const otherTeams = Object.keys(market.squads).filter((id) => id !== season.myTeamId)
-  const pickedTeam = teamPick ?? otherTeams[0]
-  const theirs = (market.squads[pickedTeam] ?? []).map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort((a, b) => overall(shown(b)) - overall(shown(a)))
+  // every other team's players by default; a team's crest narrows it to that team
+  const pickedTeam = teamPick ?? 'all'
+  const theirs = (pickedTeam === 'all' ? otherTeams : [pickedTeam])
+    .flatMap((owner) => (market.squads[owner] ?? []).map((id) => ({ owner, p: index.get(id) })))
+    .filter((x): x is { owner: string; p: Player } => !!x.p && matches(x.p))
+    .sort((a, b) => overall(shown(b.p)) - overall(shown(a.p)))
   const mine = squadIds.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p))
   const chip = (on: boolean) => `rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${on ? 'border-indigo-400 bg-indigo-500 text-white' : 'border-line text-slate-300 hover:text-white'}`
 
@@ -199,14 +203,16 @@ export function MarketPage() {
       {view === 'teams' && (
         <div>
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            <button onClick={() => setTeamPick(null)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${pickedTeam === 'all' ? 'border-indigo-400 bg-indigo-500/20 text-white' : 'border-line text-slate-300'}`}>All teams</button>
             {otherTeams.map((id) => { const t = teams.get(id); return t ? <button key={id} onClick={() => setTeamPick(id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${pickedTeam === id ? 'border-indigo-400 bg-indigo-500/20 text-white' : 'border-line text-slate-300'}`}><TeamCrest team={t} size={20} />{t.short}</button> : null })}
           </div>
           <div className="space-y-2">
             <p className="text-xs text-slate-400">Teams charge more than a player is worth, and a lot more for their stars. A team with only {SQUAD_FLOOR} players will not sell.</p>
-            {theirs.map((p) => {
-              const price = askingFromTeam(season, index, pickedTeam, p.id)
-              const t = teams.get(pickedTeam) ?? null
-              return row(p, { teamBadge: t, action: buyBtn(p, price, pickedTeam, (market.squads[pickedTeam]?.length ?? 0) <= SQUAD_FLOOR ? 'Not for sale' : undefined) })
+            {theirs.length === 0 && <p className="rounded-2xl border border-dashed border-line p-8 text-center text-slate-400">No player matches.</p>}
+            {theirs.map(({ owner, p }) => {
+              const price = askingFromTeam(season, index, owner, p.id)
+              const t = teams.get(owner) ?? null
+              return row(p, { teamBadge: t, action: buyBtn(p, price, owner, (market.squads[owner]?.length ?? 0) <= SQUAD_FLOOR ? 'Not for sale' : undefined) })
             })}
           </div>
         </div>
