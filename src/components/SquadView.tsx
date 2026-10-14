@@ -194,6 +194,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   const [selected, setSelected] = useState<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // opening the squad with physios still to give out asks you to choose them (once per visit)
+  const [physioOpen, setPhysioOpen] = useState(() => !!season && !!team && season.myTeamId === team.id && physioOf(season, team.id, season.today).length < PHYSIOS)
 
   const check = useMemo(() => validateSquad(players, captainId, keeperId), [players, captainId, keeperId])
   const dirty = useMemo(
@@ -338,6 +340,38 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           </button>
         </div>
       </div>
+      {physioOpen && careerMine && season && (
+        <Sheet label="Choose your physios" onClose={() => setPhysioOpen(false)} size="md" z={75}>
+          <div className="space-y-3 p-5 md:p-6">
+            <div>
+              <h2 className="font-display text-3xl tracking-wide text-white">Choose your physios</h2>
+              <p className="text-sm text-slate-300">You have {PHYSIOS} physios. A player with a physio cannot be injured. Pick who they look after ({covered.length}/{PHYSIOS} chosen). A player who is already injured cannot be picked.</p>
+              {notice && <p className="mt-1 text-sm font-semibold text-amber-300" role="status">{notice}</p>}
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {[...players].sort((a, b) => overall(b) - overall(a)).map((p) => {
+                const on = covered.includes(p.id)
+                const hurtP = hurt.get(p.id)
+                return (
+                  <button key={p.id} disabled={!!hurtP && !on} onClick={() => togglePhysio(p)} className={`flex items-center gap-2 rounded-lg border-2 px-2 py-1.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${on ? 'border-emerald-400 bg-emerald-400/10' : 'border-line hover:border-slate-500'}`}>
+                    <PlayerAvatar player={p} team={team} size={30} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-white">{p.name}</span>
+                      <span className="block truncate text-[11px] text-slate-400">{ROLE_LABEL[p.role]}{hurtP ? ` · ${hurtP.name}` : ''}</span>
+                    </span>
+                    <RatingBadge value={overall(p)} size="sm" />
+                    <span className={`w-9 text-center text-[11px] font-bold ${on ? 'text-emerald-300' : 'text-slate-600'}`}>{on ? 'PHY ✓' : 'PHY'}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setPhysioOpen(false)} className="rounded-full border border-line px-4 py-2 text-sm text-slate-300 hover:border-slate-500">{covered.length >= PHYSIOS ? 'Close' : 'Later'}</button>
+              <button disabled={covered.length < PHYSIOS} onClick={() => setPhysioOpen(false)} className="rounded-full bg-indigo-500 px-6 py-2 font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40">Done</button>
+            </div>
+          </div>
+        </Sheet>
+      )}
       {askPicks && (missing.captain || missing.keeper) && (
         <PicksPrompt
           xi={players.slice(0, XI_SIZE)} team={team} needCaptain={missing.captain} needKeeper={missing.keeper}
