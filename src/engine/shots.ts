@@ -36,6 +36,14 @@ export const eventAngle = (ev: { seq: number; shot?: { angle: number } }) => ev.
 
 /** How far a six went, in metres: a stable figure from the ball number and the batsman's power (no randomness, so a replay always agrees). */
 export function sixDistance(seq: number, power: number): number {
+  // 60 to 200 m. Most sixes land between 60 and 110; a big one clears 110 to 150; a monster (150 to 200, everything lined up the batsman's way) is very rare,
+  // and a harder hitter gets both more often.
   const u = frac(seq * 0.7548776662 + 0.31)
-  return Math.max(62, Math.min(128, Math.round(66 + u * 32 + (power - 60) * 0.32)))
+  const pick = frac(seq * 0.5698402910 + 0.77)
+  const depth = frac(seq * 0.8191725134 + 0.13)
+  const pMonster = Math.max(0.004, Math.min(0.03, 0.01 + Math.max(0, power - 70) * 0.0007))
+  const pBig = Math.max(0.04, Math.min(0.22, 0.1 + (power - 60) * 0.003))
+  if (pick < pMonster) return Math.round(150 + 50 * depth ** 2)
+  if (pick < pMonster + pBig) return Math.round(110 + 40 * depth ** 1.4)
+  return Math.max(60, Math.min(125, Math.round(60 + 45 * u ** 1.3 + (power - 60) * 0.25)))
 }

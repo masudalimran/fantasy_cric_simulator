@@ -70,8 +70,8 @@ describe('season stats', () => {
   it('tracks each batsman\'s longest six and the longest six of the season', () => {
     const c = collect(done)
     const longest = Math.max(0, ...[...c.bat.values()].map((b) => b.longSix))
-    expect(longest).toBeGreaterThan(61)
-    expect(longest).toBeLessThan(129)
+    expect(longest).toBeGreaterThanOrEqual(60)
+    expect(longest).toBeLessThanOrEqual(200)
     const rec = seasonRecords(done).find((r) => r.label === 'Longest six')
     expect(rec?.value).toBe(`${longest} m`)
     // a batsman with sixes has a longest six on record
