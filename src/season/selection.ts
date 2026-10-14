@@ -1,16 +1,17 @@
 import { battingScore, overall } from '../data/builders'
 import { autoPickXI, keeperIn, XI_SIZE } from '../data/squad'
 import { Rng } from '../engine/rng'
+import { isInjuredOn, shieldFor, type Shield } from './injuries'
 import type { Player, Team } from '../types'
 import type { Fixture, Season } from './types'
 
 /** How many recent matches the selectors look at. */
 const WINDOW = 5
-/** Chance a player is out injured in any two-week stretch. */
-const INJURY_RATE = 0.05
-const INJURY_DAYS = 14
 
 const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
+
+/** Out injured for this match? The same every time it is asked. Pass the team's physio cover (shieldFor) to leave out the players a physio protects. */
+export const isInjured = (season: Pick<Season, 'seed'>, playerId: string, date: string, shield?: Shield): boolean => isInjuredOn(season, playerId, date, shield)
 
 export interface Form {
   /** Average impact over the last few matches, by player. */
@@ -77,13 +78,6 @@ const breakoutBonus = (z: number | undefined) => (z === undefined ? 0 : Math.max
 /** The average overall of a team's best eleven. */
 const strengthOf = (t: Team) => [...t.players].map(overall).sort((a, b) => b - a).slice(0, XI_SIZE).reduce((s, x) => s + x, 0) / XI_SIZE
 
-const dayNumber = (date: string) => Math.floor(Date.parse(date) / 86400000)
-
-/** Out injured for this match? Decided by a seeded draw per player per fortnight, so it is the same every time it is asked. */
-export function isInjured(season: Pick<Season, 'seed'>, playerId: string, date: string): boolean {
-  const window = Math.floor(dayNumber(date) / INJURY_DAYS)
-  return new Rng((season.seed ^ hash(playerId) ^ Math.imul(window, 7919)) >>> 0).next() < INJURY_RATE
-}
 
 /** How much a match matters to a computer team, 0 to 1: finals and knockouts are everything, friendlies very little. */
 export function importance(f: Partial<Pick<Fixture, 'phase' | 'stage'>>): number {
@@ -146,7 +140,8 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
   const last = lastPlayedXI(season, team, fixture.date)
   const usual = last ? team.players.filter((p) => last.includes(p.id)) : team.players.slice(0, XI_SIZE)
   const usualIds = new Set(usual.map((p) => p.id))
-  const injured = new Set(team.players.filter((p) => isInjured(season, p.id, fixture.date)).map((p) => p.id))
+  const shield = shieldFor(season, team) // physios keep the best players from getting hurt
+  const injured = new Set(team.players.filter((p) => isInjuredOn(season, p.id, fixture.date, shield)).map((p) => p.id))
   // never leave the side short: if too many are out, the least-bad stay in
   const healthy = team.players.filter((p) => !injured.has(p.id))
   const pool = healthy.length >= XI_SIZE ? healthy : team.players

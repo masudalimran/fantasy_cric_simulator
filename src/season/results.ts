@@ -4,6 +4,7 @@ import { Rng } from '../engine/rng'
 import { computeAwards } from '../engine/awards'
 import { FORMATS } from '../engine/types'
 import type { Team } from '../types'
+import { coverInjured } from './injuries'
 import { applyMatchChanges, sessionTeam } from './progression'
 import { cpuSelections, formTable } from './selection'
 import type { Competition, Fixture, MatchSummary, RawSummary, Season, Slot, TableRow, TeamScore } from './types'
@@ -50,8 +51,10 @@ export function simulateFixture(season: Season, fixture: Fixture, teams: Map<str
   const home0 = teams.get(fixture.homeId as string)
   const away0 = teams.get(fixture.awayId as string)
   if (!home0 || !away0) throw new Error(`Teams for ${fixture.id} are not available`)
-  const home = sessionTeam(home0, season)
-  const away = sessionTeam(away0, season)
+  // your own side plays without anyone who is injured: the best fit player from the bench takes his place
+  const cover = (t: Team) => (t.id === season.myTeamId ? coverInjured(t, season, fixture.date) : t)
+  const home = cover(sessionTeam(home0, season))
+  const away = cover(sessionTeam(away0, season))
   const seed = fixtureSeed(season, fixture.id)
   // the computer picks its own XI (form, injuries, batting order); your team plays as you set it
   const [h, a] = season.myTeamId ? cpuSelections(season, fixture, [home, away], season.myTeamId, formTable(season, teams)).map((x) => x.team) : [home, away]
@@ -156,6 +159,22 @@ export function recordResult(season: Season, raw: RawSummary, teams?: Map<string
   return resolveSeason(graded)
 }
 
+
+/**
+ * Your team cannot put out eleven fit players: the match is forfeited and the other side is given the win (no player is graded,
+ * and a forfeit counts as being all out for the net run rate).
+ */
+export function forfeitFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): Season {
+  const me = season.myTeamId
+  if (!me || !fixture.homeId || !fixture.awayId || season.results[fixture.id]) return season
+  const other = fixture.homeId === me ? fixture.awayId : fixture.homeId
+  const raw: RawSummary = {
+    fixtureId: fixture.id, winnerId: other, margin: null, superOver: false, playerOfMatchId: null, bat: [], bowl: [], played: [],
+    text: `${teams.get(me)?.name ?? 'Your team'} could not field a side and forfeited: ${teams.get(other)?.name ?? 'the other team'} are given the win`,
+    scores: { [me]: { runs: 0, wickets: 10, balls: 0, allOut: true }, [other]: { runs: 0, wickets: 0, balls: 0, allOut: false } },
+  }
+  return recordResult(season, raw, teams)
+}
 // ---- Calendar queries ----------------------------------------------------
 
 export const isPlayable = (f: Fixture) => !!f.homeId && !!f.awayId

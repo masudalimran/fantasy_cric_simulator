@@ -105,7 +105,7 @@ export function ReviewPage() {
       const extra = season.myTeamId ? { [season.myTeamId]: catchUpIncome({ ...season, market, shifts }, playerIndex(baseTeams, market)) } : {}
       market = rolloverMarket(market, titles, seed, extra)
     }
-    const next = generateSeason({ year: season.year + 1, teams: participants, seed, myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup, market, previousCoaches: season.coaches ?? {}, coachReport: season.coachReport })
+    const next = generateSeason({ year: season.year + 1, teams: participants, seed, myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup, market, previousCoaches: season.coaches ?? {}, coachReport: season.coachReport, physio: season.physio })
     startNext(review, next)
     navigate(paths.session(`${next.year}-01`))
   }

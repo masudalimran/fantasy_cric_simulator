@@ -5,6 +5,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { overall, teamStrength } from '../data/builders'
 import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE } from '../data/squad'
 import { paths } from '../routes'
+import { daysBetween, formatDate } from '../season/dates'
+import { assignPhysio, injuriesOf, PHYSIOS, physioOf, releasePhysio, SEVERITY_COLOR, type Injury } from '../season/injuries'
 import { ATTR_LABEL, playerChangeLog, ratingRows, sessionTeam } from '../season/progression'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
 import { usePlayerForm, useTeamMap } from './season/shared'
@@ -16,11 +18,13 @@ import { accentOf, Delta, FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCr
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
 function SquadCard({
-  player, team, index, selected, dragging, isCaptain, isKeeper, change, career, form, showForm, onSelect, onCaptain, onKeeper, onDragStart, onDrop, onDragEnd,
+  player, team, index, selected, dragging, isCaptain, isKeeper, change, career, form, showForm, injury, physio, onPhysio, today, onSelect, onCaptain, onKeeper, onDragStart, onDrop, onDragEnd,
 }: {
   player: Player; team: Team; index: number; selected: boolean; dragging: boolean; isCaptain: boolean; isKeeper: boolean
   /** His recent form (see FormBar), shown when the team is in the career you have open. */
   form?: number | null; showForm?: boolean
+  /** His injury (your own team, in a career) and whether a physio is on him; `onPhysio` puts one on or takes it off. */
+  injury?: Injury | null; physio?: boolean; onPhysio?: () => void; today?: string
   /** Rating points gained or lost last year, and over the whole session so far (session squads only). */
   change?: number; career?: number
   onSelect: () => void; onCaptain: () => void; onKeeper: () => void
@@ -65,6 +69,16 @@ function SquadCard({
       >
         WK
       </button>
+      {injury && <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-tight tracking-wide" style={{ background: `${SEVERITY_COLOR[injury.severity]}30`, color: SEVERITY_COLOR[injury.severity] }} title={`${injury.severity} injury, out for ${injury.days} days, back on ${formatDate(injury.back)}`}>{injury.name} · {Math.max(1, daysBetween(today ?? injury.start, injury.back))}d</span>}
+      {onPhysio && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPhysio() }}
+          title={physio ? 'A physio is on him, so he cannot be injured. Click to take the physio off.' : injury ? 'Already injured: a physio cannot be put on him' : 'Put a physio on him so he cannot be injured'}
+          className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${physio ? 'bg-emerald-400/25 text-emerald-300' : 'text-slate-600 hover:text-slate-200'} ${injury && !physio ? 'cursor-not-allowed opacity-40' : ''}`}
+        >
+          PHY
+        </button>
+      )}
       {showForm && <FormBar z={form} />}
       {change !== undefined && change !== 0 && <span title="Change to his overall rating since the career began" className="text-xs"><Delta n={change} /></span>}
       <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
@@ -179,6 +193,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   const [askPicks, setAskPicks] = useState(() => params.has('pick'))
   const [selected, setSelected] = useState<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const check = useMemo(() => validateSquad(players, captainId, keeperId), [players, captainId, keeperId])
   const dirty = useMemo(
@@ -195,7 +210,18 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   }
 
   const accent = accentOf(team)
-  const draft = { ...team, players, captainId, keeperId }
+  // injuries and physios: your own team, in the career you have open
+  const careerMine = !!season && season.myTeamId === team.id
+  const hurt = careerMine && season ? injuriesOf(season, { id: team.id, players }, season.today) : new Map<string, Injury>()
+  const covered = careerMine && season ? physioOf(season, team.id, season.today) : []
+  const togglePhysio = (p: Player) => {
+    if (!season) return
+    if (covered.includes(p.id)) { updateSeason((s) => releasePhysio(s, team.id, p.id, s.today)); setNotice(null); return }
+    const out = assignPhysio(season, { id: team.id, players }, p.id, season.today)
+    if (out.error) setNotice(out.error)
+    else { updateSeason(() => out.season); setNotice(null) }
+  }
+  const draft ={ ...team, players, captainId, keeperId }
   const swap = (a: number, b: number) => {
     setPlayers((list) => swapPlayers(list, a, b))
     setSelected(null)
@@ -229,7 +255,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
 
   const card = (p: Player, i: number) => (
     <SquadCard
-      key={p.id} player={p} team={team} index={i} showForm={!!season?.teamIds.includes(team.id)} form={formOf(p.id)} change={session ? careerShift(p.id) : undefined} career={session ? careerShift(p.id) : undefined} selected={selected === i} dragging={dragIndex === i} isCaptain={captainId === p.id} isKeeper={effKeeper === p.id}
+      key={p.id} player={p} team={team} index={i} showForm={!!season?.teamIds.includes(team.id)} form={formOf(p.id)} injury={hurt.get(p.id) ?? null} physio={covered.includes(p.id)} onPhysio={careerMine ? () => togglePhysio(p) : undefined} today={season?.today} change={session ? careerShift(p.id) : undefined} career={session ? careerShift(p.id) : undefined} selected={selected === i} dragging={dragIndex === i} isCaptain={captainId === p.id} isKeeper={effKeeper === p.id}
       onSelect={() => clickCard(i)} onCaptain={() => setCaptainId(p.id)} onKeeper={() => setKeeperId(p.id)}
       onDragStart={() => setDragIndex(i)} onDragEnd={() => setDragIndex(null)}
       onDrop={() => { if (dragIndex !== null) swap(dragIndex, i); setDragIndex(null) }}
@@ -246,6 +272,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
             <h1 className="font-display text-3xl leading-none tracking-wide md:text-5xl">{session ? `${team.name} squad` : 'Squad'}</h1>
             {session && <p className="mt-1 text-sm font-semibold text-amber-300">Only for this career. Your team's own squad outside it doesn't change.</p>}
             <p className="mt-1 text-sm text-slate-400">Drag a player onto another to swap them, or click one and then another. Top 11 play, in batting order.</p>
+            {careerMine && <p className="mt-1 text-sm text-slate-400"><b className="text-emerald-300">Physios {covered.length}/{PHYSIOS}</b> · a physio (PHY) on a player means he cannot be injured, but he cannot go on someone who is already hurt.{hurt.size > 0 && <> <b className="text-rose-300">{hurt.size} injured</b>: an injured player cannot be in the XI for a match.</>}</p>}
+            {notice && <p className="mt-1 text-sm font-semibold text-amber-300" role="status">{notice}</p>}
           </div>
         </div>
         <div className="flex items-center gap-3">

@@ -7,8 +7,9 @@ import { FixtureRow, usePlayerForm, useTeamMap } from '../components/season/shar
 import { SortTable, type Col } from '../components/season/SortTable'
 import { FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../components/ui'
 import { paths } from '../routes'
-import { formatDate } from '../season/dates'
-import { cpuSelections, formTable, isInjured } from '../season/selection'
+import { daysBetween, formatDate } from '../season/dates'
+import { injuriesOf, SEVERITY_COLOR, type Injury } from '../season/injuries'
+import { cpuSelections, formTable } from '../season/selection'
 import { average, collect, economy, strikeRate, teamRecords, type BatStat, type BowlStat } from '../season/stats'
 import { useTeams, useViewedSeason } from '../store/useStore'
 import type { Player } from '../types'
@@ -16,7 +17,7 @@ import type { Player } from '../types'
 const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
 const FORM_COLOR = { W: 'bg-emerald-500 text-black', L: 'bg-rose-500 text-white', T: 'bg-slate-500 text-white' } as const
 
-interface Row { player: Player; pos: number | null; injured: boolean; change: number; bat?: BatStat; bowl?: BowlStat }
+interface Row { player: Player; pos: number | null; injury: Injury | null; change: number; bat?: BatStat; bowl?: BowlStat }
 
 /**
  * One team inside the career: the squad it is using right now (your own lineup, or the XI the computer would
@@ -38,10 +39,11 @@ export function CareerTeamPage() {
     const c = collect(season)
     const baseTeam = base.find((t) => t.id === team.id)
     const keeper = keeperIn(used.players.slice(0, 11), used.keeperId)?.id
+    const hurtNow = injuriesOf(season, used, season.today)
     const rows: Row[] = used.players.map((p, i) => ({
       player: p,
       pos: i < 11 ? i + 1 : null,
-      injured: isInjured(season, p.id, season.today),
+      injury: hurtNow.get(p.id) ?? null,
       change: baseTeam ? overall(p) - overall(baseTeam.players.find((x) => x.id === p.id) ?? p) : 0,
       bat: c.bat.get(p.id),
       bowl: c.bowl.get(p.id),
@@ -70,7 +72,7 @@ export function CareerTeamPage() {
             <span className="font-semibold text-white">{r.player.name}</span>
             {team.captainId === r.player.id && <span className="rounded bg-amber-400/25 px-1.5 py-px text-[10px] font-bold text-amber-300">C</span>}
             {data.keeper === r.player.id && <span className="rounded bg-sky-400/25 px-1.5 py-px text-[10px] font-bold text-sky-300">WK</span>}
-            {r.injured && <span className="rounded bg-rose-500/25 px-1.5 py-px text-[10px] font-bold text-rose-300">INJURED</span>}
+            {r.injury && <span className="rounded px-1.5 py-px text-[10px] font-bold" style={{ background: `${SEVERITY_COLOR[r.injury.severity]}30`, color: SEVERITY_COLOR[r.injury.severity] }} title={`${r.injury.severity} injury, back on ${formatDate(r.injury.back)}`}>{r.injury.name.toUpperCase()} · {Math.max(1, daysBetween(season.today, r.injury.back))}d</span>}
           </span>
           <span className="block text-xs text-slate-400">{ROLE_LABEL[r.player.role]}{r.player.bowling ? ` · ${r.player.bowling.type}` : ''}</span>
         </span>

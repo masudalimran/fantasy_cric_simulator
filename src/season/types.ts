@@ -156,6 +156,8 @@ export interface Season {
   shifts?: Record<string, PlayerShift>
   /** Your own squad's batting order and captain for this session only; the team outside the session is untouched. */
   lineup?: { order: string[]; captainId: string; keeperId?: string }
+  /** Who each team's physios look after, and from when. A physio on a player means he cannot be injured; the computer's teams cover their three best players. */
+  physio?: Record<string, { playerId: string; from: string; to?: string }[]>
   /** Everybody's shifts when this season began, so "this season" changes can be told apart from earlier ones. */
   startShifts?: Record<string, PlayerShift>
   /** What each played match did to each player's ratings (only players whose ratings moved), by fixture. */

@@ -4,6 +4,7 @@ import { BUILT_IN_TEAMS } from '../data/teams'
 import { validateSquad } from '../data/squad'
 import { generateSeason } from './generate'
 import { nextMatchDate, simDay } from './results'
+import { shieldFor } from './injuries'
 import { formTable, isInjured, pickCpuXI } from './selection'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
@@ -16,8 +17,8 @@ describe('computer squad selection', () => {
     expect(isInjured(season, p, '2027-03-04')).toBe(isInjured(season, p, '2027-03-04'))
     let out = 0, n = 0
     for (const t of BUILT_IN_TEAMS) for (const pl of t.players) for (const d of ['2027-02-01', '2027-04-15', '2027-07-09', '2027-10-20']) { n++; if (isInjured(season, pl.id, d)) out++ }
-    expect(out / n).toBeGreaterThan(0.02)
-    expect(out / n).toBeLessThan(0.09)
+    expect(out / n).toBeGreaterThan(0.008)
+    expect(out / n).toBeLessThan(0.04)
   })
 
   it('always names a legal XI with a keeper and five bowlers', () => {
@@ -86,7 +87,8 @@ describe('computer squad selection', () => {
     const form = formTable(season, teams)
     let seen = false
     for (const t of BUILT_IN_TEAMS) for (const date of ['2027-01-10', '2027-03-22', '2027-05-30', '2027-08-12']) {
-      const hurt = t.players.slice(0, 11).filter((p) => isInjured(season, p.id, date))
+      const shield = shieldFor(season, t)
+      const hurt = t.players.slice(0, 11).filter((p) => isInjured(season, p.id, date, shield))
       if (!hurt.length) continue
       const { team, news } = pickCpuXI(t, season, { date }, form)
       for (const h of hurt) expect(team.players.slice(0, 11).some((p) => p.id === h.id)).toBe(false)

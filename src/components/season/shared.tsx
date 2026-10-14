@@ -13,6 +13,7 @@ import type { Team } from '../../types'
 import { useDetails } from './Details'
 import { BeforeYoursSheet, matchesBefore } from './BeforeYours'
 import { useCoachGate } from './CoachGate'
+import { SquadProblemSheet, squadProblem } from './SquadProblem'
 import { accentOf, PlayerAvatar, TeamCrest } from '../ui'
 import type { Player } from '../../types'
 
@@ -103,6 +104,10 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
   const playable = !!home && !!away
   const waitFor = !res && playable ? mustPlayFirst(season, fixture) : null
   const mine = isMine(season, fixture)
+  // your own match cannot be simulated with an injured player in the XI (and cannot be started: that page says why)
+  const [squadOpen, setSquadOpen] = useState(false)
+  const myTeam = mine && season.myTeamId ? teams.get(season.myTeamId) : undefined
+  const squadIssue = mine && !res ? squadProblem(season, myTeam, fixture) : null
   const slotText = (slot: Fixture['homeRef']) =>
     slot.kind === 'winner' ? 'Winner of an earlier match' : slot.kind === 'rank' ? `${['', '1st', '2nd', '3rd', '4th'][slot.rank] ?? slot.rank + 'th'}${slot.group ? ` in Group ${slot.group}` : ' in the table'}` : ''
 
@@ -165,7 +170,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         )}
         {!res && playable && !waitFor && !liveHere && (
           <div className="flex gap-2">
-            <button onClick={() => gate(() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : sim()))} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Simulate this match: it is played for you and you just see the result">Sim</button>
+            <button onClick={() => gate(() => (mine && squadIssue ? setSquadOpen(true) : mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : sim()))} className="rounded-lg border border-line px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-500" title="Simulate this match: it is played for you and you just see the result">Sim</button>
             <button onClick={() => gate(() => (mine && matchesBefore(season).length > 0 ? setBeforeOpen(true) : navigate(matchHref(season, fixture))))} className={`rounded-lg px-3 py-1 text-xs font-semibold ${mine ? `bg-amber-400 text-black hover:bg-amber-300 ${season && myNextFixture(season)?.id === fixture.id ? 'cta-pulse cta-pulse-gold' : ''}` : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>{mine ? 'Play' : 'Watch'}</button>
           </div>
         )}
@@ -174,6 +179,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         )}
       </div>
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{squadOpen && myTeam && <SquadProblemSheet team={myTeam} fixture={fixture} onClose={() => setSquadOpen(false)} />}</AnimatePresence>
     </div>
   )
 }

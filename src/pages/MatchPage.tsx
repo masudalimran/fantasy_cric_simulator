@@ -37,6 +37,7 @@ import { FORMATS, type BallEvent } from '../engine/types'
 import { paths } from '../routes'
 import { hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, seasonComplete, simUntil as simSeasonUntil, summarizeMatch } from '../season/results'
 import { ATTR_LABEL, sessionTeam } from '../season/progression'
+import { SquadProblemCard, squadProblem } from '../components/season/SquadProblem'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
 import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../store/useStore'
 import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
@@ -750,6 +751,9 @@ export function MatchPage() {
   // Every match dated before this one is played first (the computer plays them out) so the season goes on in order.
   const catchUp = !!fixtureNow && !!season && !season.results[fixtureNow.id] && !ready && hasEarlierUnplayed(season, fixtureNow.date)
   const alreadyDone = !!fxId && !!season?.results[fxId] && !(ready && live && !live.replay)
+  // Your match cannot start with an injured player in your XI: swap him out first (or forfeit if there are not enough fit players).
+  const myNow = season?.myTeamId ? [a0, b0].find((t) => t?.id === season.myTeamId) : undefined
+  const squadIssue = fixtureNow && season && myNow && !season.results[fixtureNow.id] && !ready ? squadProblem(season, myNow, fixtureNow) : null
   const details = useDetails()
   const updateSeason = useStore((s) => s.updateSeason)
   const leagueTeams = useBaseTeamMap()
@@ -762,9 +766,9 @@ export function MatchPage() {
   // Opening a match (from Play, the session, or a link) makes it the live one, unless another is mid-way.
   useEffect(() => {
     // (if we're already on our way out of this page, e.g. after cancelling, don't start anything)
-    if (valid && !ready && !blocked && !alreadyDone && !waitFor && !catchUp && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
+    if (valid && !ready && !blocked && !alreadyDone && !waitFor && !catchUp && !squadIssue && location.pathname.startsWith('/match/')) startLive({ format: format as MatchFormat, teamA: a as Team, teamB: b as Team, seed: Number(seed) || 1, fixtureId: query.get('fx') ?? undefined, news: picked.news, url: location.pathname + location.search })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valid, ready, blocked, key, catchUp])
+  }, [valid, ready, blocked, key, catchUp, !!squadIssue])
   useEffect(() => {
     if (catchUp && !waitFor && fixtureNow) updateSeason((s) => playEarlierMatches(s, fixtureNow.date, leagueTeams))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -801,6 +805,14 @@ export function MatchPage() {
           {fxId && <button onClick={() => details?.openMatch(fxId)} className="rounded-xl bg-sky-400 px-5 py-3 text-base font-bold text-black hover:bg-sky-300">See the match summary and scorecards</button>}
           <Link to={fx ? `${paths.session(fx.date.slice(0, 7))}?day=${fx.date}` : paths.session()} className="rounded-xl border border-line px-5 py-3 text-sm font-bold text-slate-200 hover:border-slate-400">Back to the career</Link>
         </div>
+      </div>
+    )
+  }
+  if (squadIssue && season && myNow && fixtureNow) {
+    return (
+      <div className="mx-auto max-w-xl space-y-3">
+        <SquadProblemCard season={season} team={myNow} fixture={fixtureNow} />
+        <Link to={paths.session(fixtureNow.date.slice(0, 7))} className="block rounded-xl border border-line px-5 py-3 text-center text-sm font-bold text-slate-200 hover:border-slate-400">Back to the calendar</Link>
       </div>
     )
   }
