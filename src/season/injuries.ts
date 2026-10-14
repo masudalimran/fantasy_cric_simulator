@@ -110,7 +110,7 @@ export function assignPhysio(season: Season, team: Pick<Team, 'id' | 'players'>,
 export function releasePhysio(season: Season, teamId: string, playerId: string, date: string): Season {
   const list = season.physio?.[teamId]
   if (!list) return season
-  return { ...season, physio: { ...season.physio, [teamId]: list.map((a) => (a.playerId === playerId && !a.to ? { ...a, to: date } : a)) } }
+  return { ...season, physio: { ...season.physio, [teamId]: list.map((a) => (a.playerId === playerId && a.from <= date && (!a.to || date < a.to) ? { ...a, to: date } : a)) } }
 }
 
 

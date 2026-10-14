@@ -218,10 +218,10 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   const covered = careerMine && season ? physioOf(season, team.id, season.today) : []
   const togglePhysio = (p: Player) => {
     if (!season) return
-    if (covered.includes(p.id)) { updateSeason((s) => releasePhysio(s, team.id, p.id, s.today)); setNotice(null); return }
+    if (covered.includes(p.id)) { updateSeason((s) => releasePhysio(s, team.id, p.id, s.today)); setNotice(`${p.name} no longer has a physio. He can be injured again from today.`); return }
     const out = assignPhysio(season, { id: team.id, players }, p.id, season.today)
     if (out.error) setNotice(out.error)
-    else { updateSeason(() => out.season); setNotice(null) }
+    else { updateSeason(() => out.season); setNotice(`${p.name} now has a physio, so he cannot be injured.`) }
   }
   const draft ={ ...team, players, captainId, keeperId }
   const swap = (a: number, b: number) => {

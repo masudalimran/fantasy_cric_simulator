@@ -80,6 +80,13 @@ describe('physio', () => {
     expect(assignPhysio(freed, team, fit[PHYSIOS].id, addDays(date, 1)).error).toBeUndefined()
   })
 
+  it('comes off even when an older save left the release dated for tomorrow', () => {
+    const p = fit[0]
+    const old = { ...season, physio: { [me.id]: [{ playerId: p.id, from: '2027-01-01', to: addDays(date, 1) }] } }
+    expect(physioOf(old, me.id, date)).toEqual([p.id])
+    expect(physioOf(releasePhysio(old, me.id, p.id, date), me.id, date)).toEqual([])
+  })
+
   it('cannot go on a player who is already injured', () => {
     for (const d of dayList('2027-01-01', 365)) {
       const hurt = me.players.find((p) => injuryOn(season, p.id, d))
