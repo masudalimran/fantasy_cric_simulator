@@ -181,7 +181,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (!m) { busyUntil.current = 0; return }
     // One rule: where auto-play pauses (wickets, fifties and hundreds, boundaries), that event's screen waits for a tap too.
     const st = stopsRef.current
-    if ((m.kind === 'replay' && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
+    if (((m.kind === 'replay' || m.kind === 'hattrick' || m.kind === 'haul') && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
@@ -369,6 +369,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6300 * rate),
             replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, card: { lines: outLines, duck: outLine.runs === 0 } },
           })
+          // the bowler's big moments follow the replay: three in three balls, and five wickets
+          const victimsOf = (n: number) => inn.log.filter((e) => e.wicket && e.wicket.kind !== 'run out' && e.bowlerId === notable.bowlerId).slice(-n).map((e) => ({ player: match.player(e.wicket!.playerId), team }))
+          if (wantReplay && notable.tags.includes('hat-trick')) show({ key: notable.seq + 0.6, kind: 'hattrick', player: bowlerP, team: bowlSideNow.team, title: 'HAT-TRICK!', lines: [], delay: 0, ms: Math.round(5200 * rate), hattrick: { bowler: bowlerP, bowlTeam: bowlSideNow.team, victims: victimsOf(3), rate } })
+          if (wantReplay && notable.tags.includes('five-wickets')) {
+            const ln = inn.bowlers.get(notable.bowlerId)
+            show({ key: notable.seq + 0.7, kind: 'haul', player: bowlerP, team: bowlSideNow.team, title: 'FIVE-FOR!', lines: [], delay: 0, ms: Math.round(5000 * rate), haul: { bowler: bowlerP, bowlTeam: bowlSideNow.team, victims: victimsOf(5), figures: { wickets: ln?.wickets ?? 5, runs: ln?.runs ?? 0, overs: ln ? `${Math.floor(ln.legalBalls / 6)}.${ln.legalBalls % 6}` : '' }, rate } })
+          }
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
         }

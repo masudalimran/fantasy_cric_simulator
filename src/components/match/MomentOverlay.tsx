@@ -4,6 +4,7 @@ import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
 import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
+import { HatTrickScreen, HaulScreen, type HatTrickInfo, type HaulInfo } from './BowlerScreens'
 import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
@@ -15,13 +16,16 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
   maiden?: MaidenInfo
   /** For a free hit: who overstepped and who gets the swing. */
   freeHit?: FreeHitInfo
+  /** The bowler's big moments: three in three balls, and five wickets. */
+  hattrick?: HatTrickInfo
+  haul?: HaulInfo
   /** For a fifty or hundred: the one-screen version (the two batsmen meet and bump fists). Without it the original card is used. */
   fist?: FistInfo
   /** For a six: how far it went. */
@@ -73,6 +77,17 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if ((moment.kind === 'hattrick' && moment.hattrick) || (moment.kind === 'haul' && moment.haul)) {
+    return (
+      <motion.div
+        data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
+      >
+        {moment.kind === 'hattrick' && moment.hattrick && <HatTrickScreen info={moment.hattrick} />}
+        {moment.kind === 'haul' && moment.haul && <HaulScreen info={moment.haul} />}
       </motion.div>
     )
   }

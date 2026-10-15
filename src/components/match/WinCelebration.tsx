@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
+import type { Player, Team } from '../../types'
 import { accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { MoodPortrait } from './Portrait'
@@ -17,6 +18,23 @@ function Trophy({ size = 120 }: { size?: number }) {
       <rect x="38" y="88" width="44" height="12" rx="3" fill="url(#gold)" stroke="#92400e" strokeWidth="2" />
       <path d="M46 20c-1 14 2 26 8 34" fill="none" stroke="#fff" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" />
     </svg>
+  )
+}
+
+/** The captain holds the trophy up: it rises from below with a flash of gold light, then sways above his head. */
+function TrophyLift({ captain, team }: { captain?: Player; team: Team }) {
+  useEffect(() => {
+    const t = window.setTimeout(() => confetti({ particleCount: 120, spread: 90, startVelocity: 38, origin: { x: 0.72, y: 0.3 }, colors: ['#fde68a', '#f59e0b', '#ffffff'], disableForReducedMotion: true, zIndex: 95 }), 1500)
+    return () => window.clearTimeout(t)
+  }, [])
+  return (
+    <div className="relative flex flex-col items-center">
+      <motion.div className="pointer-events-none absolute -top-6 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(circle, #fde68acc, transparent 70%)' }} initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0.5], scale: [0.3, 1.6, 1.2] }} transition={{ delay: 1.2, duration: 1.2 }} />
+      <motion.div initial={{ y: 90, scale: 0.55, opacity: 0 }} animate={{ y: [90, -14, -4], scale: [0.55, 1.15, 1], opacity: 1 }} transition={{ delay: 0.9, duration: 1.2, times: [0, 0.7, 1], ease: 'easeOut' }}>
+        <motion.div animate={{ y: [0, -8, 0], rotate: [-4, 4, -4] }} transition={{ delay: 2.2, duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}><Trophy size={110} /></motion.div>
+      </motion.div>
+      {captain && <div className="-mt-3"><MoodPortrait player={captain} team={team} size={64} mood="victory" delay={1.2} /></div>}
+    </div>
   )
 }
 
@@ -106,7 +124,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
         {team ? (
           <motion.div className="mt-5 flex items-center justify-center gap-6" initial={{ scale: 0.2, rotate: -25, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 180, damping: 11, delay: 0.25 }}>
             <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}><TeamLogo team={team} size={150} /></motion.div>
-            {final && <motion.div animate={{ y: [0, -12, 0], rotate: [-4, 4, -4] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}><Trophy size={130} /></motion.div>}
+            {final && <TrophyLift captain={side?.xi.find((p) => p.id === team.captainId) ?? side?.xi[0]} team={team} />}
           </motion.div>
         ) : (
           <div className="mt-5 flex items-center justify-center gap-6">{match.sides.map((s) => <TeamLogo key={s.team.id} team={s.team} size={110} />)}</div>

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { FreeHitScreen } from './FreeHitScreen'
 import { ExtraScreen, FourScreen, MaidenScreen } from './EventScreens'
+import { HatTrickScreen, HaulScreen } from './BowlerScreens'
 import { MilestoneScreen } from './MilestoneScreen'
 import { SixReplay } from './SixReplay'
 import { WicketReplay } from './WicketReplay'
@@ -30,6 +31,11 @@ describe('animation screens', () => {
     expect(renderToString(<MilestoneScreen info={{ batsman: p, partner: null, team: A, title: 'CENTURY!', big: true, lines: ['101 off 60 balls', 'SR 168.3'], rate: 1 }} />)).toContain('CENTURY!')
     const merged = renderToString(<WicketReplay info={{ kind: 'caught', batsman: p, bowler: q, fielder: k, spot: { x: 120, y: 30 }, batTeam: A, bowlTeam: B, rate: 1, score: '12 (9)', details: { lines: ['c Keeper b Bowler', '12 (9) · SR 133.3'], duck: false } }} />)
     expect(merged).toContain('c Keeper b Bowler')
+    const vs = [A.players[1], A.players[2], A.players[3], A.players[4], A.players[5]].map((player) => ({ player, team: A }))
+    expect(renderToString(<HatTrickScreen info={{ bowler: q, bowlTeam: B, victims: vs.slice(0, 3), rate: 1 }} />)).toContain('HAT-TRICK!')
+    const haul = renderToString(<HaulScreen info={{ bowler: q, bowlTeam: B, victims: vs, figures: { wickets: 5, runs: 23, overs: '3.4' }, rate: 1 }} />)
+    expect(haul).toContain('FIVE-FOR!')
+    expect(haul).toContain('3.4')
     expect(renderToString(<SixReplay info={{ batsman: p, team: A, distance: 98, rate: 1 }} />)).toContain('SIX!')
     for (const kind of ['bowled', 'caught', 'lbw', 'run out', 'stumped', 'caught and bowled', 'hit wicket'] as const) {
       expect(renderToString(<WicketReplay info={{ kind, batsman: p, bowler: q, fielder: k, batTeam: A, bowlTeam: B, rate: 1, score: '12 (9)' }} />)).toContain('Wicket replay')
