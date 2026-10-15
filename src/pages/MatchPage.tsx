@@ -130,6 +130,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [note, setNote] = useState<StageNote | null>(null)
   const [motmOpen, setMotmOpen] = useState(false)
   const [winOpen, setWinOpen] = useState(false)
+  const matchOverRef = useRef(false) // the match has ended and its last screens are still to play
+  const winShownRef = useRef(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [moment, setMoment] = useState<Moment | null>(null)
   const momentTimer = useRef<number | undefined>(undefined)
@@ -182,19 +184,25 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const queue = useRef<Moment[]>([])
   const current = useRef<Moment | null>(null)
   const busyUntil = useRef(0)
+  /** Once the last ball's screens have all played, the winners' celebration takes over. */
+  const openWinWhenIdle = useCallback(() => {
+    if (!matchOverRef.current || winShownRef.current || current.current || queue.current.length > 0) return
+    winShownRef.current = true
+    setWinOpen(true)
+  }, [])
   const startNextMoment = useCallback(() => {
     window.clearTimeout(momentTimer.current)
     const m = queue.current.shift() ?? null
     current.current = m
     setMoment(m)
-    if (!m) { busyUntil.current = 0; return }
+    if (!m) { busyUntil.current = 0; openWinWhenIdle(); return }
     // One rule: where auto-play pauses (wickets, fifties and hundreds, boundaries), that event's screen waits for a tap too.
     const st = stopsRef.current
     if (((m.kind === 'replay' || m.kind === 'hattrick' || m.kind === 'haul') && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
-  }, [])
+  }, [openWinWhenIdle])
   const enqueueMoment = useCallback((m: Moment) => {
     queue.current.push(m)
     if (!current.current) startNextMoment()
@@ -278,11 +286,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         else sfx.hit(lastEv.runsBat >= 2 ? 0.55 : 0.25)
       }
       if (match.isOver) {
-        // The match is over: the field has nothing left to show, so the whole screen becomes a celebration.
+        // The match is over: the last ball's own screens (a six, a wicket, a hundred) play first, then the whole screen becomes a celebration.
         setAuto(0)
-        clearMoments()
-        setWinOpen(true)
-        return
+        matchOverRef.current = true
+        winShownRef.current = false
+        window.setTimeout(openWinWhenIdle, 0)
       }
       if (!events.length || events.length > 12) return
       // a no-ball: the next delivery is a free hit, so say so
@@ -297,7 +305,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         return placeFielders(match.sides[1 - innE.battingSide].xi, ev.bowlerId, plan.spots)
       }
       // (not when that ball ended the innings: the free hit would be shown against the next innings' batsman)
-      if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && match.current.index === lastEv.innings) {
+      if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && !match.isOver && match.current.index === lastEv.innings) {
         const cur = match.current
         const spd = autoRef.current
         const bat = match.battingSide(cur)
@@ -493,7 +501,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       timeoutMoment()
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [match, showFx, showNote, enqueueMoment, clearMoments, fixture, season, playerIndex, teamMap],
+    [match, showFx, showNote, enqueueMoment, clearMoments, openWinWhenIdle, fixture, season, playerIndex, teamMap],
   )
   // between the innings the next innings' introductions wait too (this is true from the very render the innings ends)
   const holdNow = !match.isOver && (breakOpen || match.current.index > seenInnings.current)
@@ -520,12 +528,15 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (holdRef.current && ['ball', 'over', 'overs', 'wicket', 'innings', 'match', 'intent', 'bowler', 'style', 'shot', 'delivery'].includes(a.t)) return // nothing is played until Next innings is pressed
       if (a.t === 'forfeit') sfx.sadTrombone()
       else if (a.t !== 'ball') sfx.tick()
-      if (a.t !== 'forfeit') clearMoments() // the next delivery takes over from any big moment
+      // Animations are never cut short: pressing Next ball while screens are still waiting moves on to the next one instead of playing the ball.
+      // Only a ball (or a bigger sim) that actually plays takes over; changing the tactics, the aim or the bowler leaves what is on screen alone.
+      if (a.t === 'ball' && queue.current.length > 0) { sfx.tick(); dismissMoment(); return }
+      if (['ball', 'over', 'overs', 'wicket', 'innings', 'match'].includes(a.t)) clearMoments()
       const events = applyAction(match, a)
       liveAct(a)
       announce(events)
     },
-    [match, liveAct, announce, clearMoments],
+    [match, liveAct, announce, clearMoments, dismissMoment],
   )
 
   // Starting auto-play again closes a dismissal that was being held on screen.
@@ -543,6 +554,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     const step = () => {
       // wait while a wicket, milestone or introduction is on screen
       if (holdRef.current) { setAuto(0); return } // between innings nothing plays by itself
+      // never play on while a screen is up or still waiting its turn (a ball played now would cut the rest short)
+      if (current.current || queue.current.length > 0) { timer = window.setTimeout(step, 120); return }
       const wait = busyUntil.current - Date.now()
       if (wait > 0) { timer = window.setTimeout(step, Math.min(wait, 500)); return }
       const innings = match.current.index
@@ -713,6 +726,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{showBreak && breakPopup && <InningsBreak match={match} onClose={() => setBreakPopup(false)} />}</AnimatePresence>
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} manual={manual} setManual={setManualPlay} />
+      {/* the last ball's own screens (the field is gone by then) play over a dark backdrop before the celebration */}
+      <AnimatePresence>{match.isOver && moment && !winOpen && <motion.div key="finalmoment" className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="relative aspect-[16/10] w-full max-w-3xl"><AnimatePresence><MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} /></AnimatePresence></div></motion.div>}</AnimatePresence>
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
     </>
