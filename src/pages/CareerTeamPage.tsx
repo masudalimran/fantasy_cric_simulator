@@ -5,7 +5,7 @@ import { overall } from '../data/builders'
 import { keeperIn } from '../data/squad'
 import { FixtureRow, usePlayerForm, useTeamMap } from '../components/season/shared'
 import { SortTable, type Col } from '../components/season/SortTable'
-import { FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../components/ui'
+import { FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../components/ui'
 import { paths } from '../routes'
 import { daysBetween, formatDate } from '../season/dates'
 import { injuriesOf, SEVERITY_COLOR, type Injury } from '../season/injuries'
@@ -70,6 +70,7 @@ export function CareerTeamPage() {
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-semibold text-white">{r.player.name}</span>
+            <OverseasTag playerId={r.player.id} team={team} />
             {team.captainId === r.player.id && <span className="rounded bg-amber-400/25 px-1.5 py-px text-[11px] font-bold text-amber-300">C</span>}
             {data.keeper === r.player.id && <span className="rounded bg-sky-400/25 px-1.5 py-px text-[11px] font-bold text-sky-300">WK</span>}
           </span>

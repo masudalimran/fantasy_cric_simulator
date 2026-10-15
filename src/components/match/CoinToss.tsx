@@ -4,7 +4,7 @@ import { overall, teamStrength } from '../../data/builders'
 import { keeperIn } from '../../data/squad'
 import type { NewsItem } from '../../season/selection'
 import type { Side, TossResult } from '../../engine/types'
-import { PlayerAvatar, RatingBadge, ROLE_LABEL, accentOf } from '../ui'
+import { OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { sfx } from '../../audio/sfx'
 import { useIsMobile } from '../../hooks'
@@ -68,7 +68,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
             <span className="w-4 shrink-0 text-center font-display text-sm text-slate-500">{i + 1}</span>
             <PlayerAvatar profile player={p} team={team} size={24} />
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <span className="truncate text-[13px] font-semibold text-white">{p.name}</span>
+              <span className="truncate text-[13px] font-semibold text-white">{p.name}</span><OverseasTag playerId={p.id} team={team} />
               {team.captainId === p.id && <span className="rounded bg-amber-400/25 px-1 text-[11px] font-bold text-amber-300">C</span>}
               {keeper === p.id && <span className="rounded bg-sky-400/25 px-1 text-[11px] font-bold text-sky-300">WK</span>}
               {isIn(p.id) && <span className="rounded bg-emerald-400/25 px-1 text-[11px] font-bold text-emerald-300">IN</span>}

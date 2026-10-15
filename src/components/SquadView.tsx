@@ -13,7 +13,7 @@ import { usePlayerForm, useTeamMap } from './season/shared'
 import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
 import { Sheet } from './Sheet'
-import { accentOf, Delta, FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
+import { accentOf, Delta, FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
@@ -50,7 +50,7 @@ function SquadCard({
       <span className="w-6 text-center font-display text-xl text-slate-500">{inXI ? index + 1 : '·'}</span>
       <PlayerAvatar profile player={player} team={team} size={40} />
       <div className="pointer-events-none min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-white">{player.name}</div>
+        <div className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white"><span className="truncate">{player.name}</span><OverseasTag playerId={player.id} team={team} /></div>
         <div className="truncate text-xs text-slate-400">
           {ROLE_LABEL[player.role]}{player.bowling ? ` · ${player.bowling.type}` : ''}
         </div>

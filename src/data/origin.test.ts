@@ -23,3 +23,15 @@ describe('where a player is from', () => {
     expect(originOf('custom-x-hero', [mine])).toBeNull()
   })
 })
+
+import { isOverseas } from './origin'
+describe('overseas players', () => {
+  it('flags a player on a team of another anime, never on his own or when unsigned', () => {
+    const [a, b] = BUILT_IN_TEAMS
+    const p = a.players[0]
+    expect(isOverseas(p.id, a)).toBe(false)
+    expect(isOverseas(p.id, b)).toBe(true)
+    expect(isOverseas(p.id, { id: 'free-agents', series: 'Unsigned' })).toBe(false)
+    expect(isOverseas('nobody', b)).toBe(false)
+  })
+})

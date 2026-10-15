@@ -1,4 +1,4 @@
-import { originOf } from '../data/origin'
+import { isOverseas, originOf } from '../data/origin'
 import { useStore } from '../store/useStore'
 import { createContext, useContext, useState } from 'react'
 import { playerImage, teamArt } from '../data/images'
@@ -230,6 +230,15 @@ export function TeamBackdrop({ team, className = '', strength = 0.55 }: { team: 
 }
 
 /** "From Bleach": the anime or game a player comes from, so people who do not know it can tell. Shows nothing when it is not known. */
+/** A little aeroplane beside a player who came to this team from outside (another anime or game). */
+export function OverseasTag({ playerId, team, className = '', withLabel = false }: { playerId: string; team: Pick<Team, 'id' | 'series'>; className?: string; withLabel?: boolean }) {
+  const custom = useStore((s) => s.customTeams)
+  if (!isOverseas(playerId, team, custom)) return null
+  const o = originOf(playerId, custom)
+  if (withLabel) return <span className={`inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-xs text-slate-100 ${className}`} title={`Came to ${team.series} from ${o?.series}`}><span aria-hidden>✈️</span><b className="font-semibold">Overseas</b></span>
+  return <span className={`shrink-0 text-[13px] leading-none ${className}`} role="img" aria-label={`Overseas player, from ${o?.series}`} title={`Overseas: from ${o?.series}`}>✈️</span>
+}
+
 export function OriginTag({ playerId, className = '' }: { playerId: string; className?: string }) {
   const custom = useStore((s) => s.customTeams)
   const o = originOf(playerId, custom)

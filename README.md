@@ -211,6 +211,7 @@ You can see it everywhere:
   (stats, squads, scorecards, popups, the match field), glitters with little twinkling stars and a shine, and follows the
   year you are looking at. Hover it for what it is.
 - **Origin tag** (`src/data/origin.ts`, `OriginTag` in `ui.tsx`): every player popup (profile, in-match card, moments, signing and market confirm, market rows, transfers) shows "From <anime or game>". It is derived from the player id on the fly, so running careers get it with no migration, and it follows a player who moves teams. It also covers free agents, released veterans and youth. Custom players show none.
+- **Overseas aeroplane** (`isOverseas` in `origin.ts`, `OverseasTag` in `ui.tsx`): a player who plays for a team of a different anime or game than his own (bought from another team, or signed from outside) gets a small ✈️ beside his name on the squad, team page, team sheets and the market lists, and an **Overseas** chip on his profile and match card. It is worked out from his origin, so running careers get it, and it goes away if he returns to his own team.
 - **More animation screens** (`EventScreens.tsx`, each about 2.5 seconds, tap to skip, all on by default): a **four** (the ball races
   along the ground to the rope in the direction it was hit while the two nearest fielders chase it and come up short, the
   rope flashes, FOUR!), a **wide** (the ball sails wide of the stumps and the umpire stretches his arms), a **bye** (it beats the

@@ -9,6 +9,13 @@ export interface Origin { series: string; universe: Universe }
 const BUILT = new Map<string, Origin>()
 for (const t of [...BUILT_IN_TEAMS, ...LEGACY_TEAMS]) for (const p of t.players) BUILT.set(p.id, { series: t.series, universe: t.universe })
 
+/** True for a player who plays for a team of a different anime or game than his own: he was bought from another team or signed from outside. */
+export function isOverseas(playerId: string, team: Pick<Team, 'id' | 'series'>, customTeams: Team[] = []): boolean {
+  if (team.id === 'free-agents') return false
+  const o = originOf(playerId, customTeams)
+  return !!o && o.series !== team.series
+}
+
 /**
  * The anime or game a player is from, or null if it is not known (a player on a team you made yourself).
  * It follows the player, not the team he plays for now, so a player who moves in the market keeps it.

@@ -6,7 +6,7 @@ import { TransferRow } from '../components/season/TransferRow'
 import { MarketConfirm, type Confirm } from '../components/season/MarketConfirm'
 import { SigningOverlay, type Signing } from '../components/season/SigningOverlay'
 import { FREE_AGENTS, useTeamMap } from '../components/season/shared'
-import { PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
+import { OverseasTag, PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
 import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { originOf } from '../data/origin'
@@ -101,7 +101,7 @@ export function MarketPage() {
       <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-line bg-panel p-2.5">
         <PlayerAvatar profile player={sp} team={opts.teamBadge ?? FREE_AGENTS} size={46} />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-white">{p.name}</div>
+          <div className="flex min-w-0 items-center gap-1.5 font-semibold text-white"><span className="truncate">{p.name}</span>{opts.teamBadge && <OverseasTag playerId={p.id} team={opts.teamBadge} />}</div>
           <div className="truncate text-[11px] text-slate-400">{p.role}{sp.bowling ? ` · ${sp.bowling.type}` : ''}{originOf(p.id) ? ` · ${originOf(p.id)!.series}` : opts.teamBadge ? ` · ${opts.teamBadge.name}` : ''}</div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] tabular-nums text-slate-500">
             <span>BAT {Math.round((sp.batting.technique + sp.batting.power + sp.batting.temperament) / 3)}</span>
