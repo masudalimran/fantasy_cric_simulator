@@ -284,6 +284,32 @@ export const sfx = {
       }, 0)
     })
   },
+  /** The fielders' appeal, "How's that?!": a group shout of an open "how" rising into a sharp "zat", with a hiss on the z. */
+  howzat() {
+    safely((c) => {
+      crowdVoices(c, 8, { dur: 0.4, f0: 300, f1: 500, formants: [[700, 5, 1], [1100, 6, 0.8], [2500, 8, 0.15]], peak: 0.75, type: 'sawtooth', stagger: 0.05 })
+      burst(c, { at: 0.34, dur: 0.1, type: 'highpass', freq: 5200, q: 1, peak: 0.1, attack: 0.01 })
+      crowdVoices(c, 8, { at: 0.38, dur: 0.6, f0: 560, f1: 620, formants: [[850, 5, 1], [1700, 7, 0.7], [2600, 8, 0.15]], peak: 0.85, type: 'sawtooth', stagger: 0.06 })
+      burst(c, { at: 0.3, dur: 0.9, type: 'bandpass', freq: 900, q: 0.6, peak: 0.1, attack: 0.15 })
+    })
+  },
+  /** The beeps of the third umpire "checking": a few quick tones climbing in pitch. */
+  thinking(beeps = 6) {
+    safely((c) => { for (let i = 0; i < beeps; i++) tone(c, { at: i * 0.28, dur: 0.1, freq: 1100 + i * 90, type: 'square', peak: 0.05 }) })
+  },
+  /** The big screen flashing OUT: a low stinger and the fielding side's roar. */
+  decisionOut() {
+    safely((c) => {
+      tone(c, { dur: 0.5, freq: 230, freqEnd: 90, type: 'sawtooth', peak: 0.22 })
+      burst(c, { dur: 0.25, type: 'lowpass', freq: 500, q: 0.6, peak: 0.25, attack: 0.005 })
+    })
+    sfx.celebrate()
+  },
+  /** NOT OUT: the same stinger turned upside down, and the crowd's sigh of relief. */
+  decisionNotOut() {
+    safely((c) => tone(c, { dur: 0.45, freq: 300, freqEnd: 520, type: 'triangle', peak: 0.16 }))
+    sfx.aww(0.5)
+  },
   tick() {
     safely((c) => tone(c, { dur: 0.04, freq: 1200, type: 'triangle', peak: 0.08 }))
   },

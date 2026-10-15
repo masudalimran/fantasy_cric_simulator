@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { DismissalKind } from '../../engine/types'
 import type { Player, Team } from '../../types'
 import type { Track } from '../../season/moments'
+import { sfx } from '../../audio/sfx'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BallTrackView } from './ReviewScreens'
 
@@ -139,6 +140,12 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
   const size = Math.max(34, Math.min(w * 0.09, 64))
   const r = rate
   const tracked = kind === 'lbw' && !!info.track
+  // an appeal for lbw, a stumping or a catch behind starts with the fielders' shout
+  useEffect(() => {
+    if (kind !== 'lbw' && kind !== 'stumped') return
+    const t = window.setTimeout(() => sfx.howzat(), 600 * r)
+    return () => window.clearTimeout(t)
+  }, [kind, r])
   const F = fielder ? (info.spot ? { x: Math.min(90, Math.max(10, 50 + (info.spot.x - 80) * 0.62)), y: Math.min(76, Math.max(26, 14 + (info.spot.y - 10) * 0.8)) } : spotOf(fielder.name)) : { x: 80, y: 46 }
   const keeper = { x: 50, y: 80 }
   const stumpsFly = kind === 'bowled' || kind === 'stumped' || kind === 'run out' || kind === 'hit wicket'

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
+import { sfx } from '../../audio/sfx'
 import type { Track } from '../../season/moments'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar } from '../ui'
@@ -134,6 +135,11 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
   const asker = by === 'bat' ? batsman : bowler
   const askTeam = by === 'bat' ? batTeam : bowlTeam
   const verdict = out ? 'OUT' : 'NOT OUT'
+  // the appeal, the beeps while the picture is checked, then the decision
+  useEffect(() => {
+    const ts = [window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 2300 * r), window.setTimeout(() => (out ? sfx.decisionOut() : sfx.decisionNotOut()), 5600 * r)]
+    return () => ts.forEach(clearTimeout)
+  }, [out, r])
   const sub = info.kind === 'edge' ? 'A clear spike: the decision stands' : out ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
   return (
     <div ref={box} className="absolute inset-0" aria-label="Review">
@@ -165,6 +171,10 @@ export interface RunOutInfo { batsman: Player; batTeam: Team; fielder: Player | 
 export function RunOutReview({ info }: { info: RunOutInfo }) {
   const { batsman, batTeam, cm, text, rate: r } = info
   const [box, w] = useWidth()
+  useEffect(() => {
+    const ts = [window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 1300 * r), window.setTimeout(() => sfx.decisionOut(), 4200 * r)]
+    return () => ts.forEach(clearTimeout)
+  }, [r])
   const gap = Math.min(30, 4 + cm * 0.38) // the gap drawn between the bat and the line, in picture units
   return (
     <div ref={box} className="absolute inset-0" aria-label="Run out decision">
