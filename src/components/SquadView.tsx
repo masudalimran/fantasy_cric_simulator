@@ -58,14 +58,14 @@ function SquadCard({
       {!injury && <button
         onClick={(e) => { e.stopPropagation(); onCaptain() }}
         title={isCaptain ? 'Captain' : 'Make captain'}
-        className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${isCaptain ? 'bg-amber-400/25 text-amber-300' : 'text-slate-600 hover:text-slate-200'}`}
+        className={`rounded px-1 py-0.5 text-[11px] font-bold max-md:px-1 ${isCaptain ? 'bg-amber-400/25 text-amber-300' : 'text-slate-600 hover:text-slate-200'}`}
       >
         C
       </button>}
       {!injury && <button
         onClick={(e) => { e.stopPropagation(); onKeeper() }}
         title={isKeeper ? 'Wicketkeeper' : 'Make wicketkeeper'}
-        className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${isKeeper ? 'bg-sky-400/25 text-sky-300' : 'text-slate-600 hover:text-slate-200'}`}
+        className={`rounded px-1 py-0.5 text-[11px] font-bold max-md:px-1 ${isKeeper ? 'bg-sky-400/25 text-sky-300' : 'text-slate-600 hover:text-slate-200'}`}
       >
         WK
       </button>}
@@ -74,12 +74,12 @@ function SquadCard({
         <button
           onClick={(e) => { e.stopPropagation(); onPhysio() }}
           title={physio ? 'A physio is on him, so he cannot be injured. Click to take the physio off.' : injury ? 'Already injured: a physio cannot be put on him' : 'Put a physio on him so he cannot be injured'}
-          className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${physio ? 'bg-emerald-400/25 text-emerald-300' : 'text-slate-600 hover:text-slate-200'} ${injury && !physio ? 'cursor-not-allowed opacity-40' : ''}`}
+          className={`rounded px-1 py-0.5 text-[11px] font-bold max-md:px-1 ${physio ? 'bg-emerald-400/25 text-emerald-300' : 'text-slate-600 hover:text-slate-200'} ${injury && !physio ? 'cursor-not-allowed opacity-40' : ''}`}
         >
           PHY
         </button>
       )}
-      {showForm && <FormBar z={form} />}
+      {showForm && <span className="max-md:hidden"><FormBar z={form} /></span>}
       {change !== undefined && change !== 0 && <span title="Change to his overall rating since the career began" className="text-xs"><Delta n={change} /></span>}
       <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
     </motion.div>
@@ -272,9 +272,15 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           <TeamCrest team={team} size={56} />
           <div>
             <h1 className="font-display text-3xl leading-none tracking-wide md:text-5xl">{session ? `${team.name} squad` : 'Squad'}</h1>
-            {session && <p className="mt-1 text-sm font-semibold text-amber-300">Only for this career. Your team's own squad outside it doesn't change.</p>}
-            <p className="mt-1 text-sm text-slate-400">Drag a player onto another to swap them, or click one and then another. Top 11 play, in batting order.</p>
-            {careerMine && <p className="mt-1 text-sm text-slate-400"><b className="text-emerald-300">Physios {covered.length}/{PHYSIOS}</b> · a physio (PHY) on a player means he cannot be injured, but he cannot go on someone who is already hurt.{hurt.size > 0 && <> <b className="text-rose-300">{hurt.size} injured</b>: an injured player cannot be in the XI for a match.</>}</p>}
+            {careerMine && <p className="mt-1 text-sm text-slate-300"><b className="text-emerald-300">Physios {covered.length}/{PHYSIOS}</b>{hurt.size > 0 && <> · <b className="text-rose-300">{hurt.size} injured</b></>}</p>}
+            <details className="group mt-1 text-sm text-slate-400">
+              <summary className="cursor-pointer list-none font-semibold text-slate-300">How this works <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></summary>
+              <div className="mt-1 space-y-1">
+                {session && <p className="font-semibold text-amber-300">Only for this career. Your team's own squad outside it doesn't change.</p>}
+                <p>Drag a player onto another to swap them, or tap one and then another. Top 11 play, in batting order.</p>
+                {careerMine && <p>A physio (PHY) on a player means he cannot be injured, but he cannot go on someone who is already hurt. An injured player cannot be in the XI for a match.</p>}
+              </div>
+            </details>
             {notice && <p className="mt-1 text-sm font-semibold text-amber-300" role="status">{notice}</p>}
           </div>
         </div>

@@ -147,8 +147,13 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-0.5">
-          <span className="text-[11px] font-semibold text-slate-400">Pause on</span>
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-[12px] text-slate-300">
+            <span className="font-semibold text-slate-400">Pause on</span>
+            <span className="min-w-0 flex-1 truncate">{([['wickets', 'wickets'], ['milestones', 'fifties and hundreds'], ['boundaries', 'boundaries'], ['innings', 'innings end']] as const).filter(([k]) => stops[k]).map(([, l]) => l).join(', ') || 'nothing'}</span>
+            <span className="text-slate-500 transition group-open:rotate-90">›</span>
+          </summary>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {([['wickets', 'Wickets'], ['milestones', 'Fifties and hundreds'], ['boundaries', 'Boundaries'], ['innings', 'Innings end']] as const).map(([k, label]) => (
             <label key={k} className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
               <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={stops[k]} onChange={(e) => setStops({ ...stops, [k]: e.target.checked })} />
@@ -156,6 +161,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
             </label>
           ))}
         </div>
+        </details>
       </Section>}
 
       {/* ANIMATIONS: whether the big screens play */}
