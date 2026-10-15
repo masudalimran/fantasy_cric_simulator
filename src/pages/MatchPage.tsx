@@ -50,8 +50,10 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
-import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, cheersAfter, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor } from '../season/moments'
+import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor } from '../season/moments'
 import { toEvent } from '../season/reel'
+import { quipFor } from '../data/quips'
+import type { AmbientInfo } from '../components/match/AmbientScreens'
 import { keyPlayers } from '../season/preview'
 import { seasonBests, superOverOutcome } from '../season/stories'
 import { winChanceSeries } from '../engine/analysis'
@@ -246,6 +248,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       const bat = match.battingSide(inn)
       const bowl = match.bowlingSide(inn)
       enqueueMoment({ key: introSeq.current++, kind: 'target', player: match.player(inn.strikerId), team: bat.team, title: 'TARGET', lines: [], delay: 0, ms: Math.round(5200 * (sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1)), target: { chasing: bat.team, defending: bowl.team, target: inn.target, balls: FORMATS[match.format].overs * 6, format: match.format, rate: sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1 } })
+      if (getAnimPrefs().cheer && ambientLights(match.seed)) enqueueMoment({ key: introSeq.current++, kind: 'ambient', player: match.player(inn.strikerId), team: bat.team, title: 'FLOODLIGHTS', lines: [], delay: 0, ms: Math.round(5200 * (sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1)), ambient: { variant: 'lights', teams: [bat.team, bowl.team], rate: sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1 } })
     }
     const ms = (sp === 4 ? 7000 : sp === 2 ? 9000 : 12000) / (quick ? 2 : 1) // long enough to read in full; a click moves on sooner
     const mk = (kind: 'batsman' | 'bowler', id: string): Moment => {
@@ -488,16 +491,42 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         ]
         enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 600, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1, reel } })
       }
-      // the cheerleaders come out now and then after a boundary or a wicket (never one right after another)
+      // screens that only break up the game, now and then: the cheerleaders, the stands, a huddle, fireworks after a boundary or a wicket,
+      // and at the end of some overs the wave, the fan cam, the commentators or a blimp (never two within 30 balls)
       const cheerMoment = () => {
-        if (!lastEv || events.length !== 1 || match.isOver || !getAnimPrefs().cheer || !(lastEv.boundary || lastEv.wicket)) return
-        if (lastEv.seq - lastCheer.current < 30 || !cheersAfter(lastEv.seq)) return
-        lastCheer.current = lastEv.seq
+        if (!lastEv || events.length !== 1 || match.isOver || !getAnimPrefs().cheer || lastEv.seq - lastCheer.current < 30) return
         const innE = match.innings[lastEv.innings]
-        const team = lastEv.wicket ? match.sides[1 - innE.battingSide].team : match.sides[innE.battingSide].team
+        const batT = match.sides[innE.battingSide].team
+        const bowlS = match.sides[1 - innE.battingSide]
         const spd = autoRef.current
         const rate = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
-        enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, why: lastEv.wicket ? 'wicket' : 'boundary', rate } })
+        const put = (ambient: AmbientInfo, ms: number, title: string, team: Team) => {
+          lastCheer.current = lastEv.seq
+          enqueueMoment({ key: lastEv.seq + 0.97, kind: 'ambient', player: match.player(lastEv.strikerId), team, title, lines: [], delay: 300, ms: Math.round(ms * rate), ambient })
+        }
+        const teamMark = Math.floor(lastEv.score.runs / 50) * 50
+        if (teamMark >= 100 && lastEv.score.runs - lastEv.total < teamMark && lastEv.score.runs >= teamMark && ambientPick(lastEv.seq, 2) === 0) { put({ variant: 'fireworks', team: batT, rate }, 4200, 'FIREWORKS', batT); return }
+        if ((lastEv.boundary || lastEv.wicket) && cheersAfter(lastEv.seq)) {
+          const team = lastEv.wicket ? bowlS.team : batT
+          const pool = lastEv.wicket ? ['cheer', 'huddle'] : lastEv.boundary === 6 && innE.legalBalls >= 90 ? ['cheer', 'stands', 'fireworks'] : ['cheer', 'stands']
+          const v = pool[ambientPick(lastEv.seq, pool.length)]
+          if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, why: lastEv.wicket ? 'wicket' : 'boundary', rate } }) }
+          else if (v === 'huddle') put({ variant: 'huddle', team, players: bowlS.xi.slice(0, 8), rate }, 3800, 'HUDDLE', team)
+          else if (v === 'fireworks') put({ variant: 'fireworks', team, rate }, 4200, 'FIREWORKS', team)
+          else put({ variant: 'stands', team, rate }, 3800, 'THE STANDS', team)
+          return
+        }
+        // a quiet moment at the end of an over
+        if (lastEv.legal && lastEv.score.legalBalls % 6 === 0 && !innE.done && lastEv.seq - lastCheer.current >= 36 && ambientOver(lastEv.seq)) {
+          const over = lastEv.score.legalBalls / 6
+          const chase = innE.target !== null ? { need: innE.target - innE.runs, balls: FORMATS[match.format].overs * 6 - innE.legalBalls } : null
+          const v = ['wave', 'fancam', 'box', 'blimp'][ambientPick(lastEv.seq + 1, 4)]
+          const happy = lastEv.score.runs / Math.max(1, lastEv.score.legalBalls) * 6 >= 7.5
+          if (v === 'wave') put({ variant: 'wave', teams: [batT, bowlS.team], rate }, 4800, 'THE WAVE', batT)
+          else if (v === 'fancam') put({ variant: 'fancam', team: batT, mood: happy ? 'happy' : 'shock', seed: lastEv.seq, rate }, 4400, 'FAN CAM', batT)
+          else if (v === 'blimp') put({ variant: 'blimp', team: batT, rate }, 4600, 'BLIMP', batT)
+          else put({ variant: 'box', lines: [`${batT.short} are ${lastEv.score.runs}/${lastEv.score.wickets} after ${over} ${over === 1 ? 'over' : 'overs'}.`, quipFor(lastEv.seq, chase)], rate }, 5200, "COMMENTATORS' CORNER", batT)
+        }
       }
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??

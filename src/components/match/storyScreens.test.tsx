@@ -7,7 +7,9 @@ import type { AwardCandidate } from '../../engine/awards'
 import type { Side } from '../../engine/types'
 import { fieldPlan } from './fieldSets'
 import { BigMatchIntro, LineupReveal } from './LineupScreens'
+import { AmbientScreen, type AmbientInfo } from './AmbientScreens'
 import { CheerScreen } from './CheerScreen'
+import { quipFor } from '../../data/quips'
 import { PhaseScreen, RecordScreen, SuperOverScreen, SwingScreen, TargetScreen, TensionScreen } from './StoryScreens'
 import { SnickoView, ReviewScreen } from './ReviewScreens'
 import { trackFor } from '../../season/moments'
@@ -39,6 +41,23 @@ describe('story screens', () => {
     expect(html).toContain('GO ')
     expect(html).toContain(A.colors.primary)
     expect(html).toContain(A.colors.secondary)
+  })
+
+  it('every break-the-monotony screen renders its words', () => {
+    const xi = A.players.slice(0, 8)
+    const cases: [AmbientInfo, string][] = [
+      [{ variant: 'stands', team: A, rate: 1 }, 'ARMY!'],
+      [{ variant: 'wave', teams: [A, B], rate: 1 }, 'THE WAVE!'],
+      [{ variant: 'huddle', team: A, players: xi, rate: 1 }, 'HUDDLE!'],
+      [{ variant: 'fancam', team: A, mood: 'happy', seed: 3, rate: 1 }, 'fan'],
+      [{ variant: 'box', lines: ['one', 'two'], rate: 1 }, 'IN THE BOX'],
+      [{ variant: 'blimp', team: A, rate: 1 }, 'GO '],
+      [{ variant: 'lights', teams: [A, B], rate: 1 }, 'FLOODLIGHTS ON!'],
+      [{ variant: 'fireworks', team: A, rate: 1 }, 'FIREWORKS!'],
+    ]
+    for (const [info, text] of cases) expect(renderToString(<AmbientScreen info={info} />)).toContain(text)
+    expect(quipFor(5, null)).toBe(quipFor(5, null))
+    expect(quipFor(5, { need: 40, balls: 12 }).length).toBeGreaterThan(10)
   })
 
   it('pre-match intros render', () => {
