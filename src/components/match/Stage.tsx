@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import type { BallEvent, DeliveryAim, ShotAim } from '../../engine/types'
 import { eventAngle, reachFactor } from '../../engine/shots'
+import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { MomentOverlay, type Moment } from './MomentOverlay'
 
@@ -106,7 +107,8 @@ function Crowd({ colors, pulse }: { colors: string[]; pulse: number }) {
   )
 }
 
-function Ground({ battingColor }: { battingColor: string }) {
+function Ground({ battingColor, pitch = 'balanced' }: { battingColor: string; pitch?: PitchKind }) {
+  const colors = pitchColors(pitch)
   const stripes = Array.from({ length: 22 }, (_, i) => i)
   return (
     <>
@@ -114,7 +116,7 @@ function Ground({ battingColor }: { battingColor: string }) {
         <radialGradient id="stands" cx="50%" cy="50%" r="70%"><stop offset="0" stopColor="#111a2e" /><stop offset="1" stopColor="#070b14" /></radialGradient>
         <radialGradient id="light" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#fff7d6" stopOpacity="0.55" /><stop offset="1" stopColor="#fff7d6" stopOpacity="0" /></radialGradient>
         <radialGradient id="shade" cx="50%" cy="50%" r="60%"><stop offset="0.55" stopColor="#000" stopOpacity="0" /><stop offset="1" stopColor="#000" stopOpacity="0.45" /></radialGradient>
-        <linearGradient id="pitch" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#bf9a5f" /><stop offset="0.5" stopColor="#d7b87c" /><stop offset="1" stopColor="#bf9a5f" /></linearGradient>
+        <linearGradient id="pitch" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor={colors.strip[0]} /><stop offset="0.5" stopColor={colors.strip[1]} /><stop offset="1" stopColor={colors.strip[2]} /></linearGradient>
         <clipPath id="outfield"><ellipse cx={CX} cy={CY} rx={RX} ry={RY} /></clipPath>
       </defs>
       <rect width={W} height={H} fill="url(#stands)" />
@@ -124,7 +126,7 @@ function Ground({ battingColor }: { battingColor: string }) {
       <ellipse cx={CX} cy={CY} rx={RX + 2.6} ry={RY + 2.6} fill="none" stroke={battingColor} strokeWidth="2.4" strokeDasharray="7 2.5" opacity="0.85" />
       <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="#1a6a3a" />
       <g clipPath="url(#outfield)">
-        {stripes.map((i) => <rect key={i} x={14 + i * 6} y={0} width="6" height={H} fill={i % 2 ? '#1c7040' : '#176236'} />)}
+        {stripes.map((i) => <rect key={i} x={14 + i * 6} y={0} width="6" height={H} fill={i % 2 ? colors.grass[0] : colors.grass[1]} />)}
         <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="url(#shade)" />
       </g>
       <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="none" stroke="#fff" strokeWidth="0.75" opacity="0.9" />
@@ -291,8 +293,10 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
 }: {
+  /** The kind of pitch, which tints the grass and the strip. */
+  pitch?: PitchKind
   /** What the fielders' stage of the game is called (powerplay, death overs...), shown as a small tag. */
   fieldTag?: { label: string; note: string } | null
   /** 'next': the ball about to be bowled is a free hit. 'ball': the ball just bowled was one (its outcome is on the field). */
@@ -355,7 +359,7 @@ export function Stage({
       } : undefined}
     >
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
-        <Ground battingColor={battingTeam.colors.primary} />
+        <Ground battingColor={battingTeam.colors.primary} pitch={pitch} />
         <Crowd colors={[battingTeam.colors.primary, battingTeam.colors.secondary, bowlingTeam.colors.primary, bowlingTeam.colors.secondary]} pulse={crowdPulse} />
 
         {/* shot lines for this over, the latest one drawn as it happens */}

@@ -156,15 +156,16 @@ export const sfx = {
   /** Bat on ball. `power` is 0 (a soft push) to 1 (a full swing). */
   hit(power = 0.5) {
     safely((c) => {
-      burst(c, { dur: 0.07, type: 'bandpass', freq: 1900 + power * 900, q: 1.3, peak: 0.25 + power * 0.4 })
-      tone(c, { dur: 0.1, freq: 190, freqEnd: 70, peak: 0.2 + power * 0.25 })
+      const v = 0.85 + Math.random() * 0.3 // no two bat cracks sound quite the same
+      burst(c, { dur: 0.07, type: 'bandpass', freq: (1900 + power * 900) * v, q: 1.3, peak: 0.25 + power * 0.4 })
+      tone(c, { dur: 0.1, freq: 190 * v, freqEnd: 70, peak: 0.2 + power * 0.25 })
     })
   },
   /** The crowd's disappointed "awwww", sinking in pitch. */
-  aww(strength = 1) {
+  aww(strength = 1, at = 0) {
     safely((c) => {
-      crowdVoices(c, 9, { dur: 1.15, f0: 360, f1: 215, formants: AW, peak: 0.55 * strength, type: 'sawtooth', stagger: 0.18, vibrato: 3 })
-      burst(c, { dur: 1.3, type: 'lowpass', freq: 650, q: 0.5, peak: 0.12 * strength, attack: 0.25 })
+      crowdVoices(c, 9, { at, dur: 1.15, f0: 360, f1: 215, formants: AW, peak: 0.55 * strength, type: 'sawtooth', stagger: 0.18, vibrato: 3 })
+      burst(c, { at, dur: 1.3, type: 'lowpass', freq: 650, q: 0.5, peak: 0.12 * strength, attack: 0.25 })
     })
   },
   /** A rising "ahhhh" cheer with clapping. */
@@ -207,12 +208,27 @@ export const sfx = {
     sfx.whistle(0.5)
     sfx.pops(4)
   },
+  /** The crowd goes quiet as the ball is on its way: a low hush that dips in, then the stumps rattle and the "awww". */
   wicket() {
     safely((c) => {
-      for (let i = 0; i < 7; i++) burst(c, { at: i * 0.035 + Math.random() * 0.02, dur: 0.05, type: 'highpass', freq: 3200, q: 2, peak: 0.28 }) // stumps rattling
-      tone(c, { dur: 0.18, freq: 140, freqEnd: 55, peak: 0.35 })
+      burst(c, { dur: 0.8, type: 'lowpass', freq: 260, freqEnd: 90, q: 0.6, peak: 0.1, attack: 0.5 })
+      const at = 0.78
+      for (let i = 0; i < 7; i++) burst(c, { at: at + i * 0.035 + Math.random() * 0.02, dur: 0.05, type: 'highpass', freq: 3200, q: 2, peak: 0.28 }) // stumps rattling
+      tone(c, { at, dur: 0.18, freq: 140, freqEnd: 55, peak: 0.35 })
     })
-    sfx.aww(1)
+    sfx.aww(1, 0.85)
+  },
+  /** Two fists meeting: a soft thud, then the milestone applause. */
+  fistBump() {
+    safely((c) => {
+      tone(c, { at: 1.65, dur: 0.14, freq: 120, freqEnd: 55, peak: 0.35 })
+      burst(c, { at: 1.65, dur: 0.06, type: 'lowpass', freq: 900, q: 0.8, peak: 0.25, attack: 0.002 })
+    })
+    sfx.milestone()
+  },
+  /** A short rising swoosh for a screen sliding in (the match preview). */
+  whoosh() {
+    safely((c) => burst(c, { dur: 0.35, type: 'bandpass', freq: 400, freqEnd: 2600, q: 0.8, peak: 0.12, attack: 0.15 }))
   },
   /** Bowler's side celebrating: a short, sharp cheer. */
   celebrate() {

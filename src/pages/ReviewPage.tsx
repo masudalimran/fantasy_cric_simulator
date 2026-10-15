@@ -1,7 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { useDetails } from '../components/season/Details'
+import { SeasonRecap } from '../components/season/SeasonRecap'
+import { markSeen, useSeen } from '../tips'
+import { buildRecap } from '../season/recap'
 import { useTeamMap } from '../components/season/shared'
 import { DIFFICULTIES, type Difficulty } from '../engine/types'
 import { randomSeed } from '../engine/rng'
@@ -77,6 +80,10 @@ export function ReviewPage() {
   const navigate = useNavigate()
   const details = useDetails()
   const review = useMemo(() => (season ? buildReview(season, teams) : null), [season, teams])
+  const recapKey = session && review ? `recap:${session.id}:${review.year}` : ''
+  const recapSeen = useSeen(recapKey)
+  const [recapOpen, setRecapOpen] = useState<boolean | null>(null) // null: not decided yet (it opens by itself once, when the season is complete)
+  const cards = useMemo(() => (season && review && session && review.played > 0 ? buildRecap(season, review, session.reviews ?? [], (id) => teams.get(id)?.name ?? id) : []), [season, review, session, teams])
 
   if (!season || !session) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">No career yet. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Create one</Link>.</div>
   if (!review) return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">Season reviews are for careers where you manage a team. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Start a new career</Link> to try it.</div>
@@ -113,6 +120,8 @@ export function ReviewPage() {
   return (
     <div>
       <Link to={paths.session()} className="mb-4 inline-block text-sm text-slate-400 hover:text-white">← Back to the career</Link>
+      {cards.length > 0 && <button onClick={() => setRecapOpen(true)} className={`mb-4 block w-full rounded-2xl border-2 border-indigo-300/70 bg-gradient-to-b from-indigo-400 to-indigo-600 px-4 py-3 text-center font-display text-2xl leading-none tracking-wide text-white sm:w-auto ${complete && !recapSeen ? 'cta-pulse' : ''}`}>▶ Watch your {review.year} recap</button>}
+      {(recapOpen ?? (complete && !recapSeen)) && cards.length > 0 && <SeasonRecap cards={cards} team={team} onClose={() => { setRecapOpen(false); markSeen(recapKey) }} />}
       <div className="relative overflow-hidden rounded-3xl border border-line bg-panel p-6" style={{ background: `linear-gradient(110deg, ${team.colors.primary}99, #10131c 65%)` }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-5">

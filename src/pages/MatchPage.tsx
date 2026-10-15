@@ -26,6 +26,9 @@ import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
 import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
 import { fieldPlan } from '../components/match/fieldSets'
+import { describePitch } from '../engine/pitchInfo'
+import { MatchPreview } from '../components/match/MatchPreview'
+import { formOf, headToHead } from '../season/preview'
 import { dismissalText, strikeRate } from '../components/match/format'
 import { sfx } from '../audio/sfx'
 import { tagLabel } from '../engine/commentary'
@@ -39,7 +42,7 @@ import { hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, s
 import { ATTR_LABEL, sessionTeam } from '../season/progression'
 import { SquadProblemCard, squadProblem } from '../components/season/SquadProblem'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
-import { matchKey, selectSeason, useStore, useTeams, type LiveMatch } from '../store/useStore'
+import { matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMatch } from '../store/useStore'
 import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, useBaseTeamMap, useTeamMap } from '../components/season/shared'
@@ -91,7 +94,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const discardLive = useStore((s) => s.discardLive)
   const finishLive = useStore((s) => s.finishLive)
   // `?skip` opens straight into play (handy for links and testing)
-  const [phase, setPhase] = useState<'toss' | 'play'>(() => (live.phase === 'play' || new URLSearchParams(location.search).has('skip') ? 'play' : 'toss'))
+  const [phase, setPhase] = useState<'pre' | 'toss' | 'play'>(() => (live.phase === 'play' || new URLSearchParams(location.search).has('skip') ? 'play' : live.tossed ? 'toss' : 'pre'))
   const [fx, setFx] = useState<FxEvent | null>(null)
   const [auto, setAuto] = useState<0 | 1 | 2 | 4>(0)
   // What makes auto-play stop by itself. Anything left unticked just plays on.
@@ -131,6 +134,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   // A calendar fixture: save the result when the match ends (unless it was already played).
   const season = useStore(selectSeason)
+  const history = useStore((s) => selectSession(s)?.history)
   const [beforeOpen, setBeforeOpen] = useState(false)
   const updateSeasonNow = useStore((s) => s.updateSeason)
   const allBaseTeams = useBaseTeamMap()
@@ -251,11 +255,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (match.isOver) {
         // the celebration (or defeat) screen has its own sound
       } else if (lastEv && events.length <= 12) {
-        if (lastEv.wicket) haptic([40, 50, 40])
+        if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) haptic([30, 80, 30, 60, 90]) // the fist bump
+        else if (lastEv.wicket) haptic([60, 40, 90])
         else if (lastEv.boundary === 6) haptic([20, 30, 20])
         else if (lastEv.boundary === 4) haptic(18)
         if (lastEv.tags.includes('hat-trick')) sfx.hatTrick()
-        else if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'five-wickets')) sfx.milestone()
+        else if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) sfx.fistBump()
+        else if (lastEv.tags.includes('five-wickets')) sfx.milestone()
         else if (lastEv.wicket) sfx.wicket()
         else if (lastEv.boundary === 6) sfx.six()
         else if (lastEv.boundary === 4) sfx.four()
@@ -456,6 +462,21 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, match, act, manual])
 
+  if (phase === 'pre') {
+    const seasons = fixture && season ? [...(history ?? []), season] : null
+    const [sa, sb] = match.sides
+    const compName = fixture ? (() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : '' })() : ''
+    return (
+      <MatchPreview
+        sides={match.sides} mySide={match.mySide} subtitle={fixture ? `${compName} · ${fixture.stage}` : `Friendly · ${match.format.toUpperCase()}`}
+        forms={seasons ? [formOf(seasons, sa.team.id), formOf(seasons, sb.team.id)] : null}
+        h2h={seasons ? headToHead(seasons, sa.team.id, sb.team.id) : null}
+        extra={(() => { const pi = describePitch(match.pitch); return <div className="inline-flex max-w-full items-start gap-2 rounded-2xl bg-white/5 px-3 py-1.5 text-left"><span className="text-lg" aria-hidden>{pi.icon}</span><span className="text-sm leading-snug"><b className="text-white">{pi.label}.</b> <span className="text-slate-300">{pi.tip}</span></span></div> })()}
+        onNext={() => setPhase('toss')}
+        onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) }}
+      />
+    )
+  }
   if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
 
   // between the innings the screen stays on the first innings until you press Next innings
@@ -491,6 +512,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const overEvents = inn.log.filter((e) => e.over === displayOver)
   // the field for this stage of the game (scenery only: the engine never reads it)
   noMirrorRef.current = userBats && (manual || swipeOn)
+  const pitchKind = describePitch(match.pitch).kind
   const plan = fieldPlan({
     format: match.format, over: displayOver, maxOvers: FORMATS[match.format].overs, runs: inn.runs, legalBalls: inn.legalBalls, target: inn.target,
     freeHit: freeHitState !== null, bowlType: bowler.bowling?.type ?? null, hand: striker.hand, noMirror: noMirrorRef.current,
@@ -592,7 +614,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} note={note} freeHit={freeHitState} {...aimProps}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} note={note} freeHit={freeHitState} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -621,7 +643,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} note={note} freeHit={freeHitState} {...aimProps}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} note={note} freeHit={freeHitState} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -667,7 +689,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} note={note} freeHit={freeHitState} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} note={note} freeHit={freeHitState} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />
