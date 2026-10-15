@@ -1,0 +1,145 @@
+import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import type { Player, Team } from '../../types'
+import { OriginTag, PlayerAvatar, accentOf } from '../ui'
+
+function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+  const box = useRef<HTMLDivElement>(null)
+  const [w, setW] = useState(640)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return [box, w]
+}
+
+// ---- A partnership of 50, 100... --------------------------------------------------------------------------------
+
+export interface PartnershipInfo {
+  a: Player; b: Player; team: Team
+  /** The mark passed: 50, 100... */
+  mark: number
+  runs: number; balls: number
+  aRuns: number; aBalls: number; bRuns: number; bBalls: number
+  rate: number
+}
+
+/** Two batsmen together: they walk toward each other and clasp hands, then the stand's size slams in with who made what. Click to skip. */
+export function PartnershipScreen({ info }: { info: PartnershipInfo }) {
+  const { a, b, team, mark, runs, balls, aRuns, aBalls, bRuns, bBalls, rate: r } = info
+  const [box, w] = useWidth()
+  const size = Math.max(40, Math.min(w * 0.13, 68))
+  const total = Math.max(1, aRuns + bRuns)
+  const aShare = Math.round((aRuns / total) * 100)
+  const accent = accentOf(team)
+  const word = mark >= 100 ? `${mark} STAND!` : `${mark} PARTNERSHIP!`
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label={`${mark} partnership`}>
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #1e7a44, #0f3d24 78%)' }} />
+      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 30%, ${accent}44, transparent 62%)` }} />
+      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-emerald-300"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />Partnership</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
+
+      {/* the two walk together */}
+      {[[a, -1], [b, 1]].map(([p, side]) => (
+        <motion.div key={(p as Player).id} className="absolute z-20 -translate-x-1/2 text-center" style={{ top: '14%' }}
+          initial={{ left: `${50 + (side as number) * 42}%`, opacity: 0 }} animate={{ left: `${50 + (side as number) * 13}%`, opacity: 1 }} transition={{ duration: 1.3 * r, ease: 'easeOut' }}>
+          <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accent}, 0 0 20px ${accent}88` }}><PlayerAvatar player={p as Player} team={team} size={size} /></div>
+          <div className="mx-auto mt-1 max-w-[120px] truncate rounded bg-black/70 px-1.5 text-[11px] font-semibold text-white">{(p as Player).name}</div>
+          <div className="text-[11px] font-extrabold text-amber-200">{p === a ? `${aRuns} (${aBalls})` : `${bRuns} (${bBalls})`}</div>
+        </motion.div>
+      ))}
+      <motion.span className="absolute left-1/2 z-30 -translate-x-1/2 select-none" style={{ top: '17%', fontSize: size * 0.6 }} aria-hidden initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.5, 1], opacity: 1 }} transition={{ delay: 1.2 * r, duration: 0.5 * r }}>🤝</motion.span>
+
+      <motion.div className="absolute inset-x-0 bottom-[3%] z-40 px-3 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.5 * r, type: 'spring', stiffness: 260, damping: 15 }}>
+        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(32, Math.min(w * 0.1, 76)), WebkitTextStroke: '2px #052e16', paintOrder: 'stroke fill', textShadow: '0 0 30px #34d399aa' }}>{word}</div>
+        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{runs} runs off {balls} balls</div>
+        {/* who made what */}
+        <div className="mx-auto mt-1.5 flex h-2 max-w-xs overflow-hidden rounded-full bg-black/50" aria-hidden>
+          <motion.div className="h-full" style={{ background: '#fbbf24' }} initial={{ width: 0 }} animate={{ width: `${aShare}%` }} transition={{ delay: 1.9 * r, duration: 0.7 * r }} />
+          <div className="h-full flex-1" style={{ background: '#38bdf8' }} />
+        </div>
+        <div className="mx-auto mt-0.5 flex max-w-xs justify-between text-[11px] font-bold"><span className="text-amber-300">{a.name.split(' ')[0]} {aRuns}</span><span className="text-sky-300">{bRuns} {b.name.split(' ')[0]}</span></div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ---- The strategic timeout: a TV screen for 30 seconds ----------------------------------------------------------
+
+export interface TimeoutChannel {
+  /** The small label on the TV: HIGHLIGHT, THE INNINGS SO FAR... */
+  tag: string
+  title: string
+  big?: string
+  lines: string[]
+  players?: { player: Player; team: Team; label?: string }[]
+}
+
+export interface TimeoutInfo {
+  /** "After 7 overs: 54/2". */
+  headline: string
+  teamNames: [string, string]
+  channels: TimeoutChannel[]
+  /** How long it lasts, in seconds (30 at normal speed, shorter when auto-play is fast). */
+  seconds: number
+  rate: number
+}
+
+/** Both teams talk tactics while a TV shows a highlight from an earlier match (or, early on, stats and fun facts). Click to carry on. */
+export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
+  const { headline, teamNames, channels, seconds } = info
+  const [box, w] = useWidth()
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const t0 = Date.now()
+    const id = window.setInterval(() => setElapsed((Date.now() - t0) / 1000), 250)
+    return () => window.clearInterval(id)
+  }, [])
+  const dwell = seconds / Math.max(1, channels.length)
+  const idx = Math.min(channels.length - 1, Math.floor(elapsed / dwell))
+  const ch = channels[idx]
+  const left = Math.max(0, Math.ceil(seconds - elapsed))
+  const small = w < 520
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Strategic timeout" style={{ background: 'linear-gradient(160deg,#10151f,#05070b)' }}>
+      {/* the two teams in a huddle, along the top */}
+      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between bg-black/60 px-3 py-1.5">
+        <span className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />Strategic timeout</span>
+        <span className="font-display text-xl leading-none tabular-nums text-white" aria-label="Seconds left">0:{String(left).padStart(2, '0')}</span>
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">{small ? 'Tap' : 'Tap to carry on'}</span>
+      </div>
+      {/* the TV */}
+      <div className="absolute inset-x-[5%] bottom-[15%] top-[14%] overflow-hidden rounded-xl border-2 border-slate-500/70 bg-black shadow-[0_0_30px_#38bdf844]">
+        <motion.div key={idx} className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-3 pt-3 text-center" style={{ background: 'radial-gradient(ellipse at 50% 35%, #12385d, #060b14 85%)' }} initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: [0, 1, 0.92, 1], scale: 1 }} transition={{ duration: 0.5 }}>
+          <div className="rounded bg-sky-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">{ch.tag}</div>
+          {ch.players && ch.players.length > 0 && (
+            <div className="flex items-center justify-center gap-3">
+              {ch.players.map((p) => (
+                <div key={p.player.id} className="text-center">
+                  <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(p.team)}, 0 0 18px ${accentOf(p.team)}88` }}><PlayerAvatar player={p.player} team={p.team} size={Math.max(34, Math.min(w * 0.095, 60))} /></div>
+                  {p.label && <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-300">{p.label}</div>}
+                  {ch.players!.length > 1 && <div className="max-w-[110px] truncate text-[11px] font-semibold text-white">{p.player.name}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="max-w-full truncate text-sm font-bold text-white">{ch.title}</div>
+          {ch.big && <div className="font-display leading-none tracking-wide text-amber-300" style={{ fontSize: Math.max(26, Math.min(w * 0.085, 56)), textShadow: '0 0 24px #fbbf2488' }}>{ch.big}</div>}
+          <div className="space-y-0.5">{ch.lines.map((l, i) => <div key={i} className="text-xs leading-tight text-slate-300">{l}</div>)}</div>
+          {ch.players?.length === 1 && !small && <div className="text-[11px]"><OriginTag playerId={ch.players[0].player.id} /></div>}
+        </motion.div>
+        <div className="pointer-events-none absolute inset-0 opacity-[0.09]" style={{ background: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)' }} />
+        <div className="absolute right-2 top-2 flex items-center gap-1 rounded bg-red-600 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white"><span className="h-1.5 w-1.5 rounded-full bg-white" />LIVE</div>
+      </div>
+      {/* the progress of the 30 seconds, and the teams */}
+      <div className="absolute inset-x-[5%] bottom-[9%] z-20 h-1.5 overflow-hidden rounded-full bg-white/15">
+        <motion.div className="h-full rounded-full bg-amber-400" initial={{ width: '100%' }} animate={{ width: '0%' }} transition={{ duration: seconds, ease: 'linear' }} />
+      </div>
+      <div className="absolute inset-x-0 bottom-1.5 z-20 truncate px-3 text-center text-[11px] font-semibold text-slate-300">{headline} · <span className="text-slate-400">{teamNames[0]} v {teamNames[1]}</span></div>
+    </div>
+  )
+}

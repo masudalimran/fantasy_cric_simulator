@@ -98,7 +98,7 @@ function CapBadge({ kind, size }: { kind: CapKind; size: number }) {
 }
 
 /** `profile`: clicking the portrait opens the player's profile (when the app offers one). */
-export function PlayerAvatar({ player, team, size = 44, profile = false }: { player: Pick<Player, 'id' | 'name' | 'imageUrl'>; team: Pick<Team, 'colors'>; size?: number; profile?: boolean }) {
+export function PlayerAvatar({ player, team, size = 44, profile = false }: { player: Pick<Player, 'id' | 'name' | 'imageUrl'>; team: Pick<Team, 'colors'> & Partial<Pick<Team, 'id' | 'series'>>; size?: number; profile?: boolean }) {
   const open = useContext(ProfileContext)
   const hideImages = useHideImages()
   const [failed, setFailed] = useState(false)
@@ -121,8 +121,16 @@ export function PlayerAvatar({ player, team, size = 44, profile = false }: { pla
       )}
     </div>
   )
-  if (!cap || size < 22) return face
-  return <div className="relative shrink-0" style={{ width: size, height: size }}>{face}<CapBadge kind={cap} size={size} /></div>
+  // a little aeroplane on the corner of a player who came from another anime or game
+  const over = size >= 30 && !!team.id && !!team.series && isOverseas(player.id, { id: team.id, series: team.series })
+  if ((!cap || size < 22) && !over) return face
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      {face}
+      {cap && size >= 22 && <CapBadge kind={cap} size={size} />}
+      {over && <span className="pointer-events-none absolute -bottom-0.5 -left-0.5 grid place-items-center rounded-full bg-black/80 leading-none ring-1 ring-white/40" style={{ width: Math.max(14, size * 0.32), height: Math.max(14, size * 0.32), fontSize: Math.max(9, size * 0.2) }} title="Overseas player" aria-hidden>✈️</span>}
+    </div>
+  )
 }
 
 /** +3 in green or -2 in red; nothing when there is no change. */

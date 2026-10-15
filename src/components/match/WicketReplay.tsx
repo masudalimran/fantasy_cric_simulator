@@ -2,7 +2,9 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { DismissalKind } from '../../engine/types'
 import type { Player, Team } from '../../types'
+import type { Track } from '../../season/moments'
 import { PlayerAvatar, accentOf } from '../ui'
+import { BallTrackView } from './ReviewScreens'
 
 /** Everything a replay needs to tell the story of one dismissal. */
 export interface ReplayInfo {
@@ -21,6 +23,8 @@ export interface ReplayInfo {
   score: string
   /** When the replay is the only screen for the wicket: the details the separate OUT! screen would have shown. */
   details?: { lines: string[]; duck: boolean }
+  /** For an lbw: what ball tracking found. When set the replay is the tracking picture instead of the view from above. */
+  track?: Track
   /** The batsman's card in the top-left corner: his innings and how he got out (lines[0] is how, lines[1] the score line). */
   card?: { lines: string[]; duck: boolean }
 }
@@ -134,11 +138,12 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
   }, [])
   const size = Math.max(34, Math.min(w * 0.09, 64))
   const r = rate
+  const tracked = kind === 'lbw' && !!info.track
   const F = fielder ? (info.spot ? { x: Math.min(90, Math.max(10, 50 + (info.spot.x - 80) * 0.62)), y: Math.min(76, Math.max(26, 14 + (info.spot.y - 10) * 0.8)) } : spotOf(fielder.name)) : { x: 80, y: 46 }
   const keeper = { x: 50, y: 80 }
   const stumpsFly = kind === 'bowled' || kind === 'stumped' || kind === 'run out' || kind === 'hit wicket'
   // when things happen (seconds at rate 1)
-  const T = { run: 0.9, hit: 1.6, big: kind === 'caught' ? 2.5 : kind === 'run out' ? 2.4 : kind === 'caught and bowled' ? 2.1 : kind === 'stumped' ? 2.0 : 1.7 }
+  const T = { run: 0.9, hit: 1.6, big: kind === 'caught' ? 2.5 : kind === 'run out' ? 2.4 : kind === 'caught and bowled' ? 2.1 : kind === 'stumped' ? 2.0 : kind === 'lbw' && info.track ? 3.4 : 1.7 }
 
   // the ball's journey as positions over time
   const ball: { x: number[]; y: number[]; s: number[]; times: number[]; dur: number } =
@@ -160,12 +165,18 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
 
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label={`How the wicket happened: ${TITLE[kind]}`}>
+      {tracked ? (
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #0f2a45, #060b14 80%)' }}><BallTrackView track={info.track as Track} out rate={r} compact /></div>
+      ) : (
+        <>
       {/* the ground from above, with the pitch down the middle */}
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 55%, #1e7a44, #0f3d24 75%)' }} />
       <div className="absolute left-1/2 top-[16%] h-[60%] w-[9%] -translate-x-1/2 rounded bg-gradient-to-r from-[#bf9a5f] via-[#d7b87c] to-[#bf9a5f]" />
       {[21, 73].map((y) => <div key={y} className="absolute left-[44%] right-[44%] h-px bg-white/70" style={{ top: `${y}%` }} />)}
       <Stumps x={STUMPS_BOWL.x} y={STUMPS_BOWL.y - 1} fly={false} at={0} rate={r} />
       <Stumps x={STUMPS_BAT.x} y={STUMPS_BAT.y + 1} fly={stumpsFly} at={kind === 'run out' ? 2.1 : kind === 'stumped' ? 1.8 : T.hit} rate={r} />
+        </>
+      )}
 
       {/* the replay tag */}
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />Wicket replay</div>
@@ -185,6 +196,8 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
           </span>
         </motion.div>
       )}
+      {!tracked && (
+        <>
       {/* the ball */}
       <motion.span
         className="absolute z-30 block h-3.5 w-3.5 rounded-full border-2 border-red-200 bg-red-500 shadow-[0_0_10px_#ef4444]"
@@ -216,11 +229,13 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
           jump={(kind === 'caught' ? 2.4 : kind === 'run out' ? 2.3 : 2.0) * r}
         />
       )}
+        </>
+      )}
 
       {/* the umpire, for an lbw: the finger goes up */}
       {kind === 'lbw' && (
-        <motion.div className="absolute z-20 text-center" style={{ left: '66%', top: '40%' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 * r }}>
-          <motion.div animate={{ y: [14, 0], rotate: [0, -8, 0], scale: [0.6, 1.4, 1.2] }} transition={{ delay: 2.1 * r, duration: 0.6 }} className="text-5xl">☝️</motion.div>
+        <motion.div className="absolute z-20 text-center" style={tracked ? { right: '4%', top: '38%' } : { left: '66%', top: '40%' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: (tracked ? 3.0 : 1.6) * r }}>
+          <motion.div animate={{ y: [14, 0], rotate: [0, -8, 0], scale: [0.6, 1.4, 1.2] }} transition={{ delay: (tracked ? 3.4 : 2.1) * r, duration: 0.6 }} className="text-5xl">☝️</motion.div>
           <span className="rounded bg-black/70 px-1.5 text-[11px] font-bold uppercase tracking-wider text-white">Umpire</span>
         </motion.div>
       )}

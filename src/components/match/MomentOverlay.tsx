@@ -6,6 +6,8 @@ import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, t
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { DuckScreen, HatTrickScreen, HaulScreen, type DuckInfo, type HatTrickInfo, type HaulInfo } from './BowlerScreens'
 import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
+import { ReviewScreen, RunOutReview, type ReviewInfo, type RunOutInfo } from './ReviewScreens'
+import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInfo } from './TimeoutScreens'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
 import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
@@ -16,7 +18,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -26,6 +28,11 @@ export interface Moment {
   /** The bowler's big moments: three in three balls, and five wickets. */
   hattrick?: HatTrickInfo
   duck?: DuckInfo
+  /** A review (the T signal and ball tracking), a run out sent upstairs, the strategic timeout TV, and a partnership milestone. */
+  review?: ReviewInfo
+  runout?: RunOutInfo
+  timeout?: TimeoutInfo
+  partnership?: PartnershipInfo
   haul?: HaulInfo
   /** For a fifty or hundred: the one-screen version (the two batsmen meet and bump fists). Without it the original card is used. */
   fist?: FistInfo
@@ -78,6 +85,19 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if ((moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
+    return (
+      <motion.div
+        data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
+      >
+        {moment.kind === 'review' && moment.review && <ReviewScreen info={moment.review} />}
+        {moment.kind === 'runout' && moment.runout && <RunOutReview info={moment.runout} />}
+        {moment.kind === 'timeout' && moment.timeout && <TimeoutScreen info={moment.timeout} />}
+        {moment.kind === 'partnership' && moment.partnership && <PartnershipScreen info={moment.partnership} />}
       </motion.div>
     )
   }

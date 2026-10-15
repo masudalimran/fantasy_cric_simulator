@@ -45,11 +45,15 @@ import { cpuSelections, formTable, type NewsItem } from '../season/selection'
 import { matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMatch } from '../store/useStore'
 import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
-import { competitionName, matchHref, useBaseTeamMap, useTeamMap } from '../components/season/shared'
+import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
+import { isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from '../season/moments'
+import { keyPlayers } from '../season/preview'
+import { teamStrength } from '../data/builders'
+import type { TimeoutChannel } from '../components/match/TimeoutScreens'
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TipBanner } from '../components/TipBanner'
-import type { MatchFormat, Team } from '../types'
+import type { MatchFormat, Player, Team } from '../types'
 
 /** How long auto-play waits before the next ball. Big moments hold for a few seconds (shorter at higher speeds). */
 function delayAfter(ev: BallEvent | undefined, speed: 1 | 2 | 4): number {
@@ -65,6 +69,9 @@ function delayAfter(ev: BallEvent | undefined, speed: 1 | 2 | 4): number {
     : 0
   return Math.max(base, hold / (speed === 1 ? 1 : speed === 2 ? 1.4 : 1.8))
 }
+
+/** Strategic timeouts: after this many completed overs of each innings. */
+const TIMEOUT_AFTER: Record<MatchFormat, number[]> = { t20: [7, 14], odi: [12, 30] }
 
 const STOPS_KEY = 'fcs.autostops'
 const DEFAULT_STOPS: AutoStops = { wickets: true, milestones: true, boundaries: false, innings: true }
@@ -139,6 +146,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const updateSeasonNow = useStore((s) => s.updateSeason)
   const allBaseTeams = useBaseTeamMap()
   const teamMap = useTeamMap()
+  const playerIndex = usePlayerIndex()
   const recordMatch = useStore((s) => s.recordMatch)
   const fixture = fixtureId ? season?.fixtures.find((f) => f.id === fixtureId) : undefined
   const alreadyPlayed = live.replay
@@ -336,10 +344,63 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           showNote({ key: lastEv.seq + 0.3, tone: 'milestone', title: `${mark} UP`, sub: `${t.name} ${lastEv.score.runs}/${lastEv.score.wickets} in ${Math.floor(lastEv.score.legalBalls / 6)}.${lastEv.score.legalBalls % 6} overs` })
         }
       }
+      // single-ball extras: a stand of 50, 100..., and the odd review of a not-out
+      if (lastEv && events.length === 1) {
+        const prefs = getAnimPrefs()
+        const spd = autoRef.current
+        const rate = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
+        const delay = spd === 4 ? 150 : spd === 2 ? 250 : 450
+        const innE = match.innings[lastEv.innings]
+        const batT = match.sides[innE.battingSide].team
+        const bowlS = match.sides[1 - innE.battingSide]
+        const mark = prefs.milestone ? partnershipMark(innE.log, lastEv) : null
+        if (mark) {
+          const pt = partnershipAt(innE.log, lastEv)
+          enqueueMoment({ key: lastEv.seq + 0.35, kind: 'partnership', player: match.player(pt.a.id), team: batT, title: `${mark} PARTNERSHIP`, lines: [], delay, ms: Math.round(4200 * rate), partnership: { a: match.player(pt.a.id), b: match.player(pt.b.id), team: batT, mark, runs: pt.runs, balls: pt.balls, aRuns: pt.a.runs, aBalls: pt.a.balls, bRuns: pt.b.runs, bBalls: pt.b.balls, rate } })
+        }
+        if (prefs.reviews && !lastEv.wicket && lastEv.legal && !lastEv.freeHit && lastEv.runsBat === 0 && !lastEv.extraType && isNotOutReview(lastEv.seq)) {
+          enqueueMoment({ key: lastEv.seq + 0.45, kind: 'review', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'REVIEW', lines: [], delay, ms: Math.round(8200 * rate), review: { by: 'field', batsman: match.player(lastEv.strikerId), batTeam: batT, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, out: false, track: trackFor(lastEv.seq, false), rate } })
+        }
+      }
+      // the strategic timeout: a TV screen for 30 seconds at set points in each innings (after the over is complete and nothing else is on)
+      const timeoutMoment = () => {
+        if (!lastEv || !getAnimPrefs().timeout || !lastEv.legal || lastEv.score.legalBalls % 6 !== 0) return
+        const innE = match.innings[lastEv.innings]
+        const done = lastEv.score.legalBalls / 6
+        if (innE.done || match.isOver || !TIMEOUT_AFTER[match.format].includes(done)) return
+        const spd = autoRef.current
+        const seconds = spd === 4 ? 8 : spd === 2 ? 15 : 30
+        const bt = match.sides[innE.battingSide].team
+        const wt = match.sides[1 - innE.battingSide]
+        const btSide = match.sides[innE.battingSide]
+        const hl = fixture && season ? recentHighlight(season, fixture.id) : null
+        const hp = hl ? playerIndex.get(hl.playerId) : undefined
+        const fixtureTeams = hl ? [hl.homeId, hl.awayId].map((id) => (id ? (teamMap.get(id)?.name ?? '') : '')).filter(Boolean).join(' v ') : ''
+        const watch = [keyPlayers(btSide.xi).bat && { player: keyPlayers(btSide.xi).bat!, team: bt, label: 'Top bat' }, keyPlayers(wt.xi).bowl && { player: keyPlayers(wt.xi).bowl!, team: wt.team, label: 'Top bowler' }].filter((x): x is { player: Player; team: Team; label: string } => !!x)
+        const log = innE.log
+        const fours = log.filter((e) => e.boundary === 4).length
+        const sixes = log.filter((e) => e.boundary === 6).length
+        const dots = log.filter((e) => e.legal && e.runsBat === 0 && !e.extraRuns).length
+        const rr = innE.legalBalls ? ((innE.runs / innE.legalBalls) * 6).toFixed(2) : '0.00'
+        const pt = partnershipAt(log, lastEv)
+        const longest = Math.max(0, ...log.map((e) => e.distance ?? 0))
+        const pitch = describePitch(match.pitch)
+        const need = innE.target !== null ? innE.target - innE.runs : null
+        const left = FORMATS[match.format].overs * 6 - innE.legalBalls
+        const channels: TimeoutChannel[] = [
+          hl && hp
+            ? { tag: 'Highlight from an earlier match', title: hp.player.name, big: hl.headline, lines: [hl.detail, [fixtureTeams, formatDate(hl.date)].filter(Boolean).join(' · ')], players: [{ player: hp.player, team: hp.team, label: hl.kind === 'bat' ? 'With the bat' : 'With the ball' }] }
+            : { tag: 'Players to watch', title: 'No highlights yet: here is who to watch', lines: ['The best bat and the best bowler on show today'], players: watch },
+          { tag: 'The innings so far', title: bt.name, big: `${innE.runs}/${innE.wickets}`, lines: [`${Math.floor(innE.legalBalls / 6)} overs · run rate ${rr}`, `${fours} ${fours === 1 ? 'four' : 'fours'} · ${sixes} ${sixes === 1 ? 'six' : 'sixes'} · ${dots} dot balls`, `The current stand: ${pt.runs} off ${pt.balls}`] },
+          { tag: 'Tactics board', title: `${pitch.icon} ${pitch.label}`, lines: [pitch.tip, need !== null && need > 0 ? `${bt.short} need ${need} off ${left} balls` : `${bt.short} are looking for a big finish`] },
+          { tag: 'Did you know?', title: 'A few numbers', lines: [`${btSide.team.short}'s XI averages ${teamStrength({ ...btSide.team, players: btSide.xi })}, ${wt.team.short}'s ${teamStrength({ ...wt.team, players: wt.xi })}`, longest > 0 ? `The longest six so far went ${longest} m` : `No six has been hit yet`, `${dots} of ${innE.legalBalls} balls have been dots (${innE.legalBalls ? Math.round((dots / innE.legalBalls) * 100) : 0}%)`] },
+        ]
+        enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 600, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1 } })
+      }
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??
         events.find((e) => e.wicket) ?? events.find((e) => e.boundary === 6) ?? events.find((e) => e.boundary === 4)
-      if (!notable) return
+      if (!notable) { timeoutMoment(); return }
       const team = match.sides[match.innings[notable.innings].battingSide].team
       const colors = [team.colors.primary, team.colors.secondary, '#ffffff']
       const milestone = notable.tags.find((t) => tagLabel[t] && t !== 'maiden' && t !== 'duck')
@@ -378,9 +439,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const rate = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
           const wantReplay = getAnimPrefs().wicket
           const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
+          const reviews = getAnimPrefs().reviews
+          // a run out goes to the third umpire first; some lbw outs are reviewed by the batsman first
+          if (reviews && w.kind === 'run out') { const gap = runOutGap(notable.seq); show({ key: notable.seq + 0.3, kind: 'runout', player: match.player(outLine.id), team, title: 'RUN OUT?', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(7200 * rate), runout: { batsman: match.player(outLine.id), batTeam: team, fielder: fielderP, bowlTeam: bowlSideNow.team, cm: gap.cm, text: gap.text, rate } }) }
+          if (reviews && w.kind === 'lbw' && lbwWasReviewed(notable.seq)) show({ key: notable.seq + 0.3, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(5000 * rate), review: { by: 'bat', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
           if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6300 * rate),
-            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, card: { lines: outLines, duck: outLine.runs === 0 } },
+            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, track: w.kind === 'lbw' ? trackFor(notable.seq, true) : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
           })
           // the bowler's big moments follow the replay: three in three balls, and five wickets
           const victimsOf = (n: number) => inn.log.filter((e) => e.wicket && e.wicket.kind !== 'run out' && e.bowlerId === notable.bowlerId).slice(-n).map((e) => ({ player: match.player(e.wicket!.playerId), team }))
@@ -399,8 +464,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       else if (notable.wicket) showFx({ key: notable.seq, kind: 'wicket', text: '', colors })
       else if (notable.boundary === 6) showFx({ key: notable.seq, kind: 'six', text: 'SIX!', colors })
       else showFx({ key: notable.seq, kind: 'four', text: 'FOUR!', colors })
+      timeoutMoment()
     },
-    [match, showFx, showNote, enqueueMoment, clearMoments],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [match, showFx, showNote, enqueueMoment, clearMoments, fixture, season, playerIndex, teamMap],
   )
   // between the innings the next innings' introductions wait too (this is true from the very render the innings ends)
   const holdNow = !match.isOver && (breakOpen || match.current.index > seenInnings.current)

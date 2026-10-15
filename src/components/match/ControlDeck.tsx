@@ -175,7 +175,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
         <details className="group">
           <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200">Advanced <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></summary>
           <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5">
-            {([['wicket', 'Wicket replay'], ['milestone', 'Fifties and hundreds'], ['six', 'Sixes'], ['four', 'Fours'], ['extras', 'Extras and maidens'], ['freeHit', 'Free hit']] as [keyof AnimPrefs, string][]).map(([k, label]) => (
+            {([['wicket', 'Wicket replay'], ['milestone', 'Fifties and hundreds'], ['six', 'Sixes'], ['four', 'Fours'], ['extras', 'Extras and maidens'], ['freeHit', 'Free hit'], ['reviews', 'Reviews and third umpire'], ['timeout', 'Strategic timeouts']] as [keyof AnimPrefs, string][]).map(([k, label]) => (
               <label key={k} className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
                 <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim[k]} onChange={(e) => setAnimPrefs({ [k]: e.target.checked })} />{label}
               </label>

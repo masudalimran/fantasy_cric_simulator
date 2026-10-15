@@ -5,6 +5,9 @@ import { FreeHitScreen } from './FreeHitScreen'
 import { ExtraScreen, FourScreen, MaidenScreen } from './EventScreens'
 import { DuckScreen, HatTrickScreen, HaulScreen } from './BowlerScreens'
 import { SeriesAward } from '../season/SeriesAward'
+import { ReviewScreen, RunOutReview } from './ReviewScreens'
+import { PartnershipScreen, TimeoutScreen } from './TimeoutScreens'
+import { runOutGap, trackFor } from '../../season/moments'
 import { MilestoneScreen } from './MilestoneScreen'
 import { SixReplay } from './SixReplay'
 import { WicketReplay } from './WicketReplay'
@@ -43,6 +46,17 @@ describe('animation screens', () => {
     expect(renderToString(<SeriesAward player={p} team={A} tournament="Cup" lines={['40 impact points', '210 runs']} onClose={() => undefined} />)).toContain('MAN OF THE SERIES')
     expect(renderToString(<WicketReplay info={{ kind: 'stumped', batsman: p, bowler: q, fielder: k, batTeam: A, bowlTeam: B, rate: 1, score: '3 (4)' }} />)).toContain('Slow motion')
     expect(renderToString(<MilestoneScreen info={{ batsman: p, partner: k, team: A, title: 'CENTURY!', big: true, lines: ['100 off 55 balls'], rate: 1 }} />)).toContain('CENTURY!')
+    const rv = (out: boolean) => renderToString(<ReviewScreen info={{ by: out ? 'bat' : 'field', batsman: p, batTeam: A, bowler: q, bowlTeam: B, out, track: trackFor(9, out), rate: 1 }} />)
+    expect(rv(true)).toContain('REVIEW!')
+    expect(rv(true)).toContain('Pitching')
+    expect(rv(false)).toContain('NOT OUT')
+    const g = runOutGap(5)
+    expect(renderToString(<RunOutReview info={{ batsman: p, batTeam: A, fielder: k, bowlTeam: B, cm: g.cm, text: g.text, rate: 1 }} />)).toContain('RUN OUT?')
+    expect(renderToString(<WicketReplay info={{ kind: 'lbw', batsman: p, bowler: q, fielder: null, batTeam: A, bowlTeam: B, rate: 1, score: '3 (4)', track: trackFor(3, true) }} />)).toContain('Impact')
+    expect(renderToString(<PartnershipScreen info={{ a: p, b: k, team: A, mark: 100, runs: 104, balls: 61, aRuns: 60, aBalls: 33, bRuns: 40, bBalls: 28, rate: 1 }} />)).toContain('100 STAND!')
+    const tv = renderToString(<TimeoutScreen info={{ headline: 'After 7 overs: 54/2', teamNames: ['A', 'B'], seconds: 30, rate: 1, channels: [{ tag: 'Highlight from an earlier match', title: p.name, big: '112 (58)', lines: ['9 fours'], players: [{ player: p, team: A }] }, { tag: 'The innings so far', title: 'A', big: '54/2', lines: [] }] }} />)
+    expect(tv).toContain('Strategic timeout')
+    expect(tv).toContain('112 (58)')
     expect(renderToString(<SixReplay info={{ batsman: p, team: A, distance: 98, rate: 1 }} />)).toContain('SIX!')
     for (const kind of ['bowled', 'caught', 'lbw', 'run out', 'stumped', 'caught and bowled', 'hit wicket'] as const) {
       expect(renderToString(<WicketReplay info={{ kind, batsman: p, bowler: q, fielder: k, batTeam: A, bowlTeam: B, rate: 1, score: '12 (9)' }} />)).toContain('Wicket replay')
