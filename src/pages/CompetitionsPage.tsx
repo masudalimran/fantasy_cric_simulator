@@ -168,7 +168,7 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
 function AllTournaments({ season, teams }: { season: Season; teams: Map<string, Team> }) {
   const rows = useMemo(() => teamRecords(season), [season])
   const played = season.fixtures.filter((f) => season.results[f.id]).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
-  const upcoming = season.fixtures.filter((f) => !season.results[f.id] && f.homeId && f.awayId).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8)
+  const upcoming = season.fixtures.filter((f) => !season.results[f.id] && f.homeId && f.awayId).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5)
   type Row = (typeof rows)[number]
   const winPct = (r: Row) => (r.won / Math.max(r.played, 1)) * 100
   const cols: Col<Row>[] = [
@@ -187,20 +187,20 @@ function AllTournaments({ season, teams }: { season: Season; teams: Map<string, 
     { key: 'titles', label: 'Titles', get: (r) => r.titles, cell: (r) => <TitlesButton season={season} team={teams.get(r.teamId)} fixtureIds={r.titleFixtures} teams={teams} /> },
   ]
   return (
-    <div className="min-w-0 space-y-5">
-      <div className="rounded-3xl border border-line bg-panel p-5 md:p-6" style={{ borderTop: '4px solid #94a3b8' }}>
+    <div className="min-w-0 space-y-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="font-display text-4xl leading-none tracking-wide text-white">All tournaments</h2>
-        <p className="mt-1.5 text-sm text-slate-300">Every tournament and friendly series put together. {played.length} of {season.fixtures.length} matches played.</p>
+        <p className="text-sm text-slate-400">{played.length} of {season.fixtures.length} matches played</p>
       </div>
-      <section>
+      {rows.length > 0 && <section>
         <h3 className="mb-2 font-display text-3xl tracking-wide">Team record, all competitions</h3>
         <div className="overflow-x-auto rounded-2xl border border-line bg-panel p-3">
           {rows.length === 0
             ? <p className="p-6 text-center text-sm text-slate-400">No matches have been played yet.</p>
             : <SortTable rows={rows} cols={cols} rowKey={(r) => r.teamId} lead={(i) => <td className="w-10 px-2 text-center text-slate-500">{i + 1}</td>} rowClass={(r) => (r.teamId === season.myTeamId ? 'bg-amber-400/10' : '')} />}
         </div>
-        <p className="mt-1 text-[11px] text-slate-500">Click a column to sort. Titles count tournament finals won.</p>
-      </section>
+        <p className="mt-1 text-[11px] text-slate-500">Tap a column to sort. Titles count tournament finals won.</p>
+      </section>}
       {played.length > 0 && (
         <section>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

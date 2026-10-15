@@ -161,7 +161,7 @@ export function MarketPage() {
             <h2 className="font-display text-4xl leading-none tracking-wide text-white">Player market</h2>
             <p className="mt-1 text-sm text-slate-300">
               {win
-                ? <>It closes on <b className="text-white">{formatDate(win.end)}</b> ({Math.max(0, daysBetween(today, win.end))} days left). Computer teams are shopping too, so good players do not wait.</>
+                ? <>Closes <b className="text-white">{formatDate(win.end)}</b> ({Math.max(0, daysBetween(today, win.end))} days left). Good players do not wait.</>
                 : next ? <>The next window is the <b className="text-white">{next.name}</b>, {formatDate(next.start)} to {formatDate(next.end)} ({daysBetween(today, next.start)} days away).</> : 'No more windows this year.'}
             </p>
           </div>
@@ -170,7 +170,7 @@ export function MarketPage() {
             <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[11px] uppercase tracking-wider text-slate-400">squad</div></div>
           </div>
         </div>
-        {win && <p className="mt-2 text-xs text-slate-400">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him.</p>}
+        {win && <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer font-semibold text-slate-300">How it works</summary><p className="mt-1">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him. Computer teams are shopping too.</p></details>}
       </div>
 
       {notice && <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-sm text-amber-100" role="status"><span>{notice}</span><button onClick={() => setNotice(null)} className="font-bold" aria-label="Dismiss">✕</button></div>}

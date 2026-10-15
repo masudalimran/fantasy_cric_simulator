@@ -25,3 +25,6 @@ dist-ssr
 
 # Raw Cricsheet downloads (regenerate with scripts/baselines.mjs)
 data/raw
+
+# Claude Code: personal settings stay local
+.claude/settings.local.json

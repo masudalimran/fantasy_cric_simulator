@@ -476,12 +476,12 @@ export function Stage({
       {fieldTag && (
         <motion.div key={fieldTag.label} className="pointer-events-none absolute left-2 top-2 z-30 max-w-[60%] rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold uppercase leading-tight tracking-wider text-sky-200 ring-1 ring-sky-300/30 sm:text-[11px]" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           {fieldTag.label}
-          <span className="block text-[10px] font-semibold normal-case tracking-normal text-slate-300 sm:text-[10px]">{fieldTag.note}</span>
+          <span className="block text-[10px] font-semibold normal-case tracking-normal text-slate-300 max-sm:hidden">{fieldTag.note}</span>
         </motion.div>
       )}
 
       {/* a little legend so the colours mean something */}
-      <div className="pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[10px] font-bold tracking-wider">
+      <div className="pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[10px] font-bold tracking-wider max-sm:hidden">
         <span className="rounded bg-amber-400 px-1.5 py-0.5 text-black">BATTING: {battingTeam.name}</span>
         <span className="rounded bg-red-500 px-1.5 py-0.5 text-white">BOWLING: {bowlingTeam.name}</span>
       </div>

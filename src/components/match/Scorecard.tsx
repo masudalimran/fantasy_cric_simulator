@@ -21,7 +21,7 @@ export function Scorecard({ match }: { match: Match }) {
     <div>
       {/* Which innings you're reading: a header for the score, and a switcher once there are two */}
       <div className="mb-4 overflow-hidden rounded-xl border border-line" style={{ background: `linear-gradient(100deg, ${bat.team.colors.primary}66, transparent 70%)` }}>
-        <div className="flex items-center gap-3 p-3">
+        <div className={`flex items-center gap-3 p-3 ${live ? 'max-md:hidden' : ''}`}>
           <TeamLogo team={bat.team} size={46} />
           <div className="min-w-0">
             <div className="text-[11px] font-bold uppercase tracking-widest text-slate-300">

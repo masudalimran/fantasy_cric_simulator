@@ -1,11 +1,10 @@
 import { Link } from 'react-router'
 import { paths } from '../../routes'
-import { daysBetween, formatDate } from '../../season/dates'
+import { daysBetween } from '../../season/dates'
 import { PHYSIOS, physioOf } from '../../season/injuries'
 import { needsFocus } from '../../season/coaching'
-import { myNextFixture, seasonComplete } from '../../season/results'
+import { seasonComplete } from '../../season/results'
 import type { Season } from '../../season/types'
-import { useTeamMap } from './shared'
 
 interface Row { key: string; tone: string; icon: string; text: React.ReactNode; to?: string; onClick?: () => void }
 
@@ -13,16 +12,10 @@ const when = (n: number) => (n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} 
 
 /** What needs doing today in your career, in a few lines you can tap: the next match, the coach, the market, your physios. */
 export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => void }) {
-  const teams = useTeamMap()
   const mine = season.myTeamId
   if (!mine) return null
   const rows: Row[] = []
-  const next = myNextFixture(season)
-  if (next) {
-    const opp = teams.get(next.homeId === mine ? (next.awayId ?? '') : (next.homeId ?? ''))
-    const n = daysBetween(season.today, next.date)
-    rows.push({ key: 'match', tone: '#fbbf24', icon: '🏏', to: `${paths.session(next.date.slice(0, 7))}?day=${next.date}`, text: <>Next match: <b className="text-white">{opp?.name ?? 'TBD'}</b> {when(n)} <span className="text-slate-400">({formatDate(next.date)})</span></> })
-  } else if (seasonComplete(season)) {
+  if (seasonComplete(season)) {
     rows.push({ key: 'done', tone: '#34d399', icon: '🏆', to: paths.review, text: <>The season is over: <b className="text-white">see how it went</b></> })
   }
   if (needsFocus(season)) rows.push({ key: 'coach', tone: '#818cf8', icon: '🎓', onClick: onCoach, text: <>Your coach needs an instruction: <b className="text-white">choose a focus</b></> })

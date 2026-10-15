@@ -14,7 +14,7 @@ import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { useIsMobile } from '../hooks'
 import { paths } from '../routes'
 import { addDays, daysBetween, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
-import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
+import { isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
 import type { Fixture, Season } from '../season/types'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 
@@ -172,7 +172,6 @@ export function CalendarPage() {
   const dayFixtures = selected ? (byDate.get(selected) ?? []) : []
   const pending = nextMatchDate(season)
   const btn = 'rounded-lg border border-line bg-panel px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-40'
-  const doneComps = season.competitions.filter((c) => competitionStatus(season, c).status === 'done').length
 
   return (
     <div>
@@ -180,31 +179,30 @@ export function CalendarPage() {
         <div>
           <h2 className="font-display text-4xl tracking-wide">Calendar</h2>
           <p className="text-sm text-slate-400">{season.year} · 
-            Today is <b className="text-amber-300">{formatDate(season.today)}</b> · {Object.keys(season.results).length}/{season.fixtures.length} matches played · {doneComps}/{season.competitions.length} competitions finished
+            Today is <b className="text-amber-300">{formatDate(season.today)}</b> · {Object.keys(season.results).length}/{season.fixtures.length} matches played
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           {myTeam && <button className={`${myNext && myNext.date > season.today ? 'cta-pulse cta-pulse-gold ' : ''}w-full rounded-full border-2 border-amber-200 bg-gradient-to-b from-amber-300 to-amber-500 px-6 py-3 font-display text-2xl leading-none tracking-wide text-black shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:animate-none sm:w-auto`} disabled={!myNext} onClick={skipToMine} title="Shows the other teams' matches before yours, so you can watch or sim them">{between.length > 0 ? `Sim the ${between.length === 1 ? 'game' : `${between.length} games`} before yours` : 'Go to my next match'}</button>}
+          <details className="group w-full sm:w-auto">
+            <summary className="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-center text-sm font-semibold text-slate-200 transition hover:border-indigo-400">Skip ahead <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></summary>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
           <button className="w-full rounded-full border-2 border-indigo-300/70 bg-gradient-to-b from-indigo-400 to-indigo-600 px-6 py-2.5 font-display text-xl leading-none tracking-wide text-white shadow-[0_0_16px_rgba(99,102,241,.45)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto" disabled={!pending} onClick={simNextDay}>Skip to next match day</button>
-          <button className={btn} disabled={!pending} onClick={() => skipDays(7)}>Skip a week</button>
-          <button className={btn} disabled={!pending} onClick={() => skipDays(30)}>Skip 30 days</button>
+            <button className={btn} disabled={!pending} onClick={() => skipDays(7)}>Skip a week</button>
+            <button className={btn} disabled={!pending} onClick={() => skipDays(30)}>Skip 30 days</button>
+                <p className="w-full text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>
+            </div>
+          </details>
         </div>
       </div>
-      {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
       {myTeam && <TodayCard season={season} onCoach={() => setCoachDismissed(false)} />}
-      {season.windows?.some((w) => season.today >= w.start && season.today <= w.end) && (
-        <Link to={paths.market} className="mb-4 flex items-center justify-between gap-3 whitespace-nowrap rounded-full border-2 border-fuchsia-400/70 bg-fuchsia-500/15 px-4 py-2.5 transition hover:bg-fuchsia-500/25 active:bg-fuchsia-500/30" title="Sign young talent or buy stars before the window closes">
-          <span className="truncate font-display text-xl leading-none tracking-wide text-fuchsia-200"><span className="md:hidden">Market is open</span><span className="max-md:hidden">The player market is open</span></span>
-          <span className="shrink-0 font-display text-xl leading-none tracking-wide text-white">Go to the market ›</span>
-        </Link>
-      )}
       {season.windows && season.windows.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-line bg-panel px-3 py-2.5" aria-label="Player market schedule">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300">Player market in {season.year}</h3>
+        <details className="group mb-5 rounded-2xl border border-line bg-panel px-3 py-2.5" aria-label="Player market schedule">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300">Market dates in {season.year} <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></h3>
             {myTeam && <Link to={paths.market} className="text-[11px] font-bold text-fuchsia-200 hover:underline">Open the market ›</Link>}
-          </div>
-          <ul className="space-y-1">
+          </summary>
+          <ul className="mt-2 space-y-1">
             {season.windows.map((w) => {
               const open = season.today >= w.start && season.today <= w.end
               const done = season.today > w.end
@@ -219,7 +217,7 @@ export function CalendarPage() {
               )
             })}
           </ul>
-        </div>
+        </details>
       )}
       {session && <MarketOpens season={season} sessionId={session.id} />}
       {session && myTeam && <MarketClosed season={season} sessionId={session.id} />}
@@ -275,6 +273,11 @@ export function CalendarPage() {
           <Link to={paths.session(next) + location.search} className={btn} aria-label="Next month">→</Link>
         </div>
         <Link to={paths.session(season.today.slice(0, 7)) + location.search} className="text-sm text-amber-300 hover:underline">Jump to today</Link>
+      </div>
+
+      <details className="group mb-4" open={!!(teamFilter || formatFilter)}>
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-line px-3.5 py-1.5 text-sm font-semibold text-slate-300 transition hover:border-indigo-400">Filter matches{(teamFilter || formatFilter) ? <span className="ml-1 rounded-full bg-amber-400 px-1.5 text-[11px] font-extrabold text-black">on</span> : null} <span className="text-slate-500 transition group-open:rotate-90">›</span></summary>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
         {myTeam && <button onClick={() => setParam('team', teamFilter === myTeam.id ? '' : myTeam.id)} className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${teamFilter === myTeam.id ? 'border-amber-400 bg-amber-400 text-black' : 'border-amber-400/60 text-amber-200 hover:bg-amber-400/10'}`}>My matches</button>}
         <select value={teamFilter} onChange={(e) => setParam('team', e.target.value)} className="rounded-lg border border-line bg-panel px-3 py-2 text-sm">
           <option value="">All teams</option>
@@ -285,8 +288,8 @@ export function CalendarPage() {
             <button key={v} onClick={() => setParam('format', v)} className={`px-4 py-1.5 transition ${formatFilter === v ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>{l}</button>
           ))}
         </div>
-        <Link to={paths.competitions} className="ml-auto text-sm text-indigo-300 hover:underline">All tournaments →</Link>
-      </div>
+        </div>
+      </details>
 
       <div className="grid gap-5 xl:grid-cols-[3fr_1.4fr]">
         <div>
