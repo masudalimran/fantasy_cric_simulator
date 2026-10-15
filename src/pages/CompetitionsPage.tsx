@@ -1,4 +1,7 @@
+import { AnimatePresence } from 'framer-motion'
 import { useMemo, useState } from 'react'
+import { SeriesAward } from '../components/season/SeriesAward'
+import { markSeen, useSeen } from '../tips'
 import { TitlesButton } from '../components/season/TitlesButton'
 import { Link, useNavigate, useParams } from 'react-router'
 import { FixtureRow, PlayerCell, competitionColor, competitionName, usePlayerIndex, useTeamMap } from '../components/season/shared'
@@ -9,7 +12,7 @@ import { competitionStatus, tableFor } from '../season/results'
 import { collect, mostValuable, teamRecords, topBatsmen, topBowlers } from '../season/stats'
 import { SortTable, type Col } from '../components/season/SortTable'
 import type { Competition, Fixture, Season } from '../season/types'
-import { useViewedSeason } from '../store/useStore'
+import { selectSession, useStore, useViewedSeason } from '../store/useStore'
 import type { Team } from '../types'
 
 const STATUS_STYLE: Record<string, string> = { upcoming: 'text-slate-400 border-line', live: 'text-emerald-300 border-emerald-500/50', done: 'text-amber-300 border-amber-500/50' }
@@ -73,6 +76,10 @@ const sectionOf = (f: Fixture) =>
 
 function Tournament({ season, comp, teams }: { season: Season; comp: Competition; teams: Map<string, Team> }) {
   const index = usePlayerIndex()
+  const sessionId = useStore(selectSession)?.id ?? ''
+  const awardKey = `series:${sessionId}:${season.year}:${comp.id}`
+  const awardSeen = useSeen(awardKey)
+  const [awardOpen, setAwardOpen] = useState<boolean | null>(null) // opens by itself the first time you look at a finished tournament
   const [view, setView] = useState<'results' | 'upcoming'>('upcoming')
   const stats = useMemo(() => collect(season, { competitionId: comp.id }), [season, comp.id])
   const form = useMemo(() => formOf(season, comp), [season, comp])
@@ -89,6 +96,9 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
   const orange = stats.matches > 0 ? topBatsmen(stats, 1)[0] : undefined
   const purple = stats.matches > 0 ? topBowlers(stats, 1)[0] : undefined
   const mvp = stats.matches > 0 ? mostValuable(stats, 1)[0] : undefined
+  const mvpEntry = mvp ? index.get(mvp.id) : undefined
+  const awardLines = mvp ? (() => { const b = stats.bat.get(mvp.id); const w = stats.bowl.get(mvp.id); return [`${Math.round(mvp.points)} impact points`, ...(b && b.runs > 0 ? [`${b.runs} runs · best ${b.high}${b.highNotOut ? '*' : ''}`] : []), ...(w && w.wickets > 0 ? [`${w.wickets} wickets`] : [])] })() : []
+  const showAward = st.status === 'done' && !!mvpEntry && (awardOpen ?? !awardSeen)
 
   return (
     <div className="min-w-0 space-y-5">
@@ -129,9 +139,12 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
         </section>
       )}
 
+      <AnimatePresence>{showAward && mvpEntry && <SeriesAward key="award" player={mvpEntry.player} team={mvpEntry.team} tournament={competitionName(comp, teams)} lines={awardLines} onClose={() => { setAwardOpen(false); markSeen(awardKey) }} />}</AnimatePresence>
+
       {(orange || purple || mvp) && (
         <section>
           <h3 className="mb-2 font-display text-3xl tracking-wide">Leaders</h3>
+          {st.status === 'done' && mvpEntry && <button onClick={() => setAwardOpen(true)} className="mb-3 rounded-full border-2 border-amber-300/70 bg-amber-400/15 px-4 py-2 text-sm font-extrabold text-amber-200 active:bg-amber-400/25">🏅 Watch the Man of the series</button>}
           <div className="grid gap-3 md:grid-cols-3">
             {orange && <div className={card}><div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-widest text-orange-300"><span className="h-3 w-3 rounded-full bg-orange-500" />Orange Cap · most runs</div><PlayerCell id={orange.id} index={index} size={44} /><div className="mt-2 font-display text-3xl text-white">{orange.runs} <span className="font-sans text-sm text-slate-500">runs, HS {orange.high}{orange.highNotOut ? '*' : ''}</span></div></div>}
             {purple && <div className={card}><div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-widest text-purple-300"><span className="h-3 w-3 rounded-full bg-purple-500" />Purple Cap · most wickets</div><PlayerCell id={purple.id} index={index} size={44} /><div className="mt-2 font-display text-3xl text-white">{purple.wickets} <span className="font-sans text-sm text-slate-500">wickets, best {purple.bestW}/{purple.bestR}</span></div></div>}

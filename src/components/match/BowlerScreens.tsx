@@ -119,3 +119,31 @@ export function HaulScreen({ info }: { info: HaulInfo }) {
     </div>
   )
 }
+
+export interface DuckInfo { batsman: Player; batTeam: Team; bowler: Player; bowlTeam: Team; /** Out to the first ball he faced. */ golden: boolean; balls: number; rate: number }
+
+/** Out for nothing: a duck waddles across the field past the gloomy batsman. A golden duck (the first ball) is gilded. Click to skip. */
+export function DuckScreen({ info }: { info: DuckInfo }) {
+  const { batsman, batTeam, bowler, golden, balls, rate: r } = info
+  const [box, w] = useWidth()
+  const colour = golden ? '#fbbf24' : '#cbd5e1'
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label={golden ? 'Golden duck' : 'Duck'}>
+      <div className="absolute inset-0" style={{ background: golden ? 'radial-gradient(ellipse at 50% 45%, #713f12, #0d0a05 78%)' : 'radial-gradient(ellipse at 50% 45%, #334155, #0a0c12 78%)' }} />
+      <div className="absolute left-3 top-3 z-30 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest" style={{ color: colour }}>{golden ? 'Golden duck' : 'Duck'}</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
+      <motion.span className="absolute z-30 select-none" style={{ top: '58%', fontSize: Math.max(40, Math.min(w * 0.14, 80)), filter: golden ? 'drop-shadow(0 0 14px #fbbf24)' : undefined }} aria-hidden
+        initial={{ left: '-18%' }} animate={{ left: '108%', rotate: [-8, 8, -8, 8, -8, 8, -8] }} transition={{ delay: 0.5 * r, duration: 2.4 * r, ease: 'linear' }}>🦆</motion.span>
+      <div className="absolute inset-x-0 top-[16%] z-20 text-center">
+        <motion.div className="inline-block rounded-full leading-[0] grayscale" style={{ boxShadow: `0 0 0 4px ${colour}` }} initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * r }}>
+          <PlayerAvatar player={batsman} team={batTeam} size={Math.max(48, Math.min(w * 0.15, 84))} />
+        </motion.div>
+        <div className="mt-1 text-sm font-bold text-white">{batsman.name} <span className="font-semibold" style={{ color: colour }}>0 ({balls})</span></div>
+      </div>
+      <motion.div className="absolute inset-x-0 bottom-[6%] z-40 px-3 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 260, damping: 15 }}>
+        <div className="font-display leading-none tracking-wide" style={{ color: colour, fontSize: Math.max(34, Math.min(w * 0.12, 84)), WebkitTextStroke: '2px #0b0d14', paintOrder: 'stroke fill', textShadow: `0 0 28px ${colour}99` }}>{golden ? 'GOLDEN DUCK!' : 'DUCK!'}</div>
+        <div className="mt-1 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{golden ? `${bowler.name} gets him first ball` : `${bowler.name} sends him back without a run`}</div>
+      </motion.div>
+    </div>
+  )
+}

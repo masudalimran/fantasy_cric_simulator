@@ -293,8 +293,10 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
 }: {
+  /** The chase in its last two overs: what is needed, off how many balls (it pulses in the last over). */
+  chase?: { need: number; balls: number; wickets: number } | null
   /** The kind of pitch, which tints the grass and the strip. */
   pitch?: PitchKind
   /** What the fielders' stage of the game is called (powerplay, death overs...), shown as a small tag. */
@@ -471,6 +473,17 @@ export function Stage({
 
       {/* a milestone or a dismissal takes over the whole field with the batsman as a stick man */}
       <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={() => onDismissMoment?.()} />}</AnimatePresence>
+
+      {/* the finish of a chase: how many are needed off how many balls */}
+      {chase && chase.need > 0 && chase.balls > 0 && chase.balls <= 12 && (
+        <motion.div
+          className="pointer-events-none absolute bottom-2 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-1 text-center text-[11px] font-extrabold uppercase tracking-wider text-white ring-2"
+          style={{ ['--tw-ring-color' as string]: chase.balls <= 6 ? '#ef4444' : '#fbbf2499' }}
+          animate={chase.balls <= 6 ? { scale: [1, 1.07, 1], boxShadow: ['0 0 0 #ef444400', '0 0 18px #ef4444cc', '0 0 0 #ef444400'] } : { scale: 1 }} transition={{ duration: 1, repeat: Infinity }}
+        >
+          Need <b className="text-amber-300">{chase.need}</b> off <b className="text-amber-300">{chase.balls}</b> {chase.balls === 1 ? 'ball' : 'balls'} <span className="text-slate-400">· {chase.wickets} {chase.wickets === 1 ? 'wicket' : 'wickets'} left</span>
+        </motion.div>
+      )}
 
       {/* which field is set, so the changes make sense */}
       {fieldTag && (

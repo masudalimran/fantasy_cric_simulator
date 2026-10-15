@@ -195,15 +195,17 @@ export function ExtraScreen({ info }: { info: ExtraInfo }) {
 
 // ---- MAIDEN: six dots in a row --------------------------------------------------------------------------------
 
-export interface MaidenInfo { bowler: Player; bowlTeam: Team; overs: string; rate: number }
+export interface MaidenInfo { bowler: Player; bowlTeam: Team; overs: string; rate: number; /** Maidens in a row by this bowler, this one included (2 or more gets its own pressure effect). */ streak?: number }
 
 export function MaidenScreen({ info }: { info: MaidenInfo }) {
-  const { bowler, bowlTeam, overs, rate } = info
+  const { bowler, bowlTeam, overs, rate, streak = 1 } = info
   const { box, w } = useWidth()
   const r = rate
+  const word = ['', 'MAIDEN!', 'TWO IN A ROW!', 'THREE IN A ROW!'][Math.min(streak, 3)] ?? 'MAIDEN!'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Maiden over">
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 55%, #064e3b, #04140f 78%)' }} />
+      {streak >= 2 && <motion.div className="pointer-events-none absolute inset-0 z-10" style={{ boxShadow: 'inset 0 0 70px #ef4444aa', background: 'radial-gradient(ellipse at 50% 50%, transparent 45%, #7f1d1d66 100%)' }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 0.9, repeat: Infinity }} />}
       <Tag text="Maiden over" color="#34d399" />
       <SkipTag />
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 px-4 text-center">
@@ -215,8 +217,8 @@ export function MaidenScreen({ info }: { info: MaidenInfo }) {
             <motion.span key={i} className="grid h-7 w-7 place-items-center rounded-full border-2 border-emerald-300 bg-emerald-400/20 text-sm font-extrabold text-emerald-200" initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.4, 1], opacity: 1 }} transition={{ delay: (0.35 + i * 0.16) * r, duration: 0.3 }}>0</motion.span>
           ))}
         </div>
-        <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(40, Math.min(w * 0.13, 88)), WebkitTextStroke: '2px #064e3b', paintOrder: 'stroke fill', textShadow: '0 0 30px #34d399aa' }} initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.45 * r, type: 'spring', stiffness: 260, damping: 15 }}>MAIDEN!</motion.div>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.7 * r }} className="text-sm font-semibold text-slate-100"><b className="text-emerald-300">{bowler.name}</b> gives away nothing: six dot balls. {overs}</motion.div>
+        <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(40, Math.min(w * 0.13, 88)), WebkitTextStroke: '2px #064e3b', paintOrder: 'stroke fill', textShadow: '0 0 30px #34d399aa' }} initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.45 * r, type: 'spring', stiffness: 260, damping: 15 }}>{word}</motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.7 * r }} className="text-sm font-semibold text-slate-100"><b className="text-emerald-300">{bowler.name}</b> gives away nothing: six dot balls. {overs}{streak >= 2 && <span className="ml-1 font-extrabold text-red-300">The pressure is building.</span>}</motion.div>
       </div>
     </div>
   )

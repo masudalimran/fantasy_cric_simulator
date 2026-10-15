@@ -225,6 +225,29 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
         </motion.div>
       )}
 
+      {/* a stumping: a close-up in slow motion on the gloves and the bails */}
+      {kind === 'stumped' && (() => {
+        const lens = Math.max(96, Math.min(w * 0.36, 160))
+        const at = (T.big + 0.15) * r
+        return (
+          <motion.div
+            className="pointer-events-none absolute left-1/2 top-[40%] z-[35] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-4 border-amber-300 shadow-[0_0_40px_#fbbf24aa]"
+            style={{ width: lens, height: lens, background: 'radial-gradient(circle at 50% 60%, #3a2c10, #0b0907)' }}
+            initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1, 1, 0.9], opacity: [0, 1, 1, 0] }} transition={{ delay: at, duration: 2.6 * r, times: [0, 0.15, 0.8, 1] }}
+          >
+            <div className="absolute inset-x-0 bottom-[22%] flex justify-center gap-[8%]">
+              {[0, 1, 2].map((i) => <span key={i} className="block rounded-full bg-amber-100" style={{ width: lens * 0.05, height: lens * 0.42 }} />)}
+            </div>
+            {[-1, 1].map((d) => (
+              <motion.span key={d} className="absolute left-1/2 block rounded-full bg-amber-400" style={{ width: lens * 0.2, height: lens * 0.04, top: '36%' }}
+                animate={{ x: [0, d * lens * 0.28], y: [0, -lens * 0.22, lens * 0.1], rotate: [0, d * 220], opacity: [1, 1, 0.8] }} transition={{ delay: at + 0.25 * r, duration: 1.6 * r, ease: 'easeOut' }} />
+            ))}
+            <motion.span className="absolute left-[10%] top-[58%] block select-none" style={{ fontSize: lens * 0.3 }} aria-hidden animate={{ x: [0, lens * 0.18] }} transition={{ delay: at, duration: 0.5 * r }}>🧤</motion.span>
+            <span className="absolute inset-x-0 top-[8%] text-center text-[10px] font-extrabold uppercase tracking-widest text-amber-200">Slow motion</span>
+          </motion.div>
+        )
+      })()}
+
       {/* the word, slamming in as it happens */}
       <motion.div
         className="absolute inset-x-0 bottom-[2%] z-40 text-center"

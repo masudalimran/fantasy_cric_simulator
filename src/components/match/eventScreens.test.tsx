@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { FreeHitScreen } from './FreeHitScreen'
 import { ExtraScreen, FourScreen, MaidenScreen } from './EventScreens'
-import { HatTrickScreen, HaulScreen } from './BowlerScreens'
+import { DuckScreen, HatTrickScreen, HaulScreen } from './BowlerScreens'
+import { SeriesAward } from '../season/SeriesAward'
 import { MilestoneScreen } from './MilestoneScreen'
 import { SixReplay } from './SixReplay'
 import { WicketReplay } from './WicketReplay'
@@ -36,6 +37,12 @@ describe('animation screens', () => {
     const haul = renderToString(<HaulScreen info={{ bowler: q, bowlTeam: B, victims: vs, figures: { wickets: 5, runs: 23, overs: '3.4' }, rate: 1 }} />)
     expect(haul).toContain('FIVE-FOR!')
     expect(haul).toContain('3.4')
+    expect(renderToString(<DuckScreen info={{ batsman: p, batTeam: A, bowler: q, bowlTeam: B, golden: true, balls: 1, rate: 1 }} />)).toContain('GOLDEN DUCK!')
+    expect(renderToString(<DuckScreen info={{ batsman: p, batTeam: A, bowler: q, bowlTeam: B, golden: false, balls: 4, rate: 1 }} />)).toContain('DUCK!')
+    expect(renderToString(<MaidenScreen info={{ bowler: q, bowlTeam: B, overs: '(2.0 overs, 0 runs, 0 wickets)', rate: 1, streak: 2 }} />)).toContain('TWO IN A ROW!')
+    expect(renderToString(<SeriesAward player={p} team={A} tournament="Cup" lines={['40 impact points', '210 runs']} onClose={() => undefined} />)).toContain('MAN OF THE SERIES')
+    expect(renderToString(<WicketReplay info={{ kind: 'stumped', batsman: p, bowler: q, fielder: k, batTeam: A, bowlTeam: B, rate: 1, score: '3 (4)' }} />)).toContain('Slow motion')
+    expect(renderToString(<MilestoneScreen info={{ batsman: p, partner: k, team: A, title: 'CENTURY!', big: true, lines: ['100 off 55 balls'], rate: 1 }} />)).toContain('CENTURY!')
     expect(renderToString(<SixReplay info={{ batsman: p, team: A, distance: 98, rate: 1 }} />)).toContain('SIX!')
     for (const kind of ['bowled', 'caught', 'lbw', 'run out', 'stumped', 'caught and bowled', 'hit wicket'] as const) {
       expect(renderToString(<WicketReplay info={{ kind, batsman: p, bowler: q, fielder: k, batTeam: A, bowlTeam: B, rate: 1, score: '12 (9)' }} />)).toContain('Wicket replay')

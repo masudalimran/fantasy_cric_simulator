@@ -4,7 +4,7 @@ import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
 import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
-import { HatTrickScreen, HaulScreen, type HatTrickInfo, type HaulInfo } from './BowlerScreens'
+import { DuckScreen, HatTrickScreen, HaulScreen, type DuckInfo, type HatTrickInfo, type HaulInfo } from './BowlerScreens'
 import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
@@ -16,7 +16,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -25,6 +25,7 @@ export interface Moment {
   freeHit?: FreeHitInfo
   /** The bowler's big moments: three in three balls, and five wickets. */
   hattrick?: HatTrickInfo
+  duck?: DuckInfo
   haul?: HaulInfo
   /** For a fifty or hundred: the one-screen version (the two batsmen meet and bump fists). Without it the original card is used. */
   fist?: FistInfo
@@ -80,7 +81,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  if ((moment.kind === 'hattrick' && moment.hattrick) || (moment.kind === 'haul' && moment.haul)) {
+  if ((moment.kind === 'hattrick' && moment.hattrick) || (moment.kind === 'haul' && moment.haul) || (moment.kind === 'duck' && moment.duck)) {
     return (
       <motion.div
         data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
@@ -88,6 +89,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       >
         {moment.kind === 'hattrick' && moment.hattrick && <HatTrickScreen info={moment.hattrick} />}
         {moment.kind === 'haul' && moment.haul && <HaulScreen info={moment.haul} />}
+        {moment.kind === 'duck' && moment.duck && <DuckScreen info={moment.duck} />}
       </motion.div>
     )
   }

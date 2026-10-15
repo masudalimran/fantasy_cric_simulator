@@ -35,10 +35,11 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const size = Math.max(40, Math.min(w * 0.1, 70))
+  const compact = w < 520 // a phone: smaller portraits, higher up, so the card underneath has room
+  const size = compact ? Math.max(34, Math.min(w * 0.085, 48)) : Math.max(40, Math.min(w * 0.1, 70))
   const gold = big ? '#fde68a' : '#fbbf24'
   // the meeting point, and when the fists touch (seconds at rate 1)
-  const MEET = { x: 50, y: 30 }
+  const MEET = { x: 50, y: compact ? 22 : 30 }
   const bump = 1.7
   const gap = 12.5
   return (
@@ -56,14 +57,14 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
       {/* the partner walks down from the other end, the scorer from his own, and they meet in the middle */}
       {partner && (
         <Actor
-          player={partner} team={team} size={size * 0.85} tag="Partner" from={{ x: 50, y: 10 }}
-          path={[{ x: 50, y: 10 }, { x: MEET.x + gap, y: MEET.y }]} times={[0, 1]} dur={bump * r}
+          player={partner} team={team} size={size * 0.85} tag="Partner" from={{ x: 50, y: 4 }}
+          path={[{ x: 50, y: 4 }, { x: MEET.x + gap, y: MEET.y }]} times={[0, 1]} dur={bump * r}
           jump={(bump + 0.15) * r}
         />
       )}
       <Actor
-        player={batsman} team={team} size={size * 1.3} hero={gold} tag={title.replace('!', '')} from={{ x: 50, y: 52 }}
-        path={[{ x: 50, y: 52 }, { x: MEET.x - gap, y: MEET.y }]} times={[0, 1]} dur={bump * r}
+        player={batsman} team={team} size={size * 1.3} hero={gold} tag={title.replace('!', '')} from={{ x: 50, y: 46 }}
+        path={[{ x: 50, y: 46 }, { x: MEET.x - gap, y: MEET.y }]} times={[0, 1]} dur={bump * r}
         jump={(bump + 0.15) * r}
       />
 
@@ -79,6 +80,16 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
         </>
       )}
 
+      {/* a hundred or more: the helmet comes off and the bat goes up to the sky */}
+      {big && (
+        <>
+          <motion.span className="absolute z-30 select-none" style={{ left: `${MEET.x - gap}%`, top: `${MEET.y - 10}%`, fontSize: size * 0.55 }} aria-hidden
+            initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0], x: [0, -size * 0.8, -size * 1.6], y: [0, -size * 1.0, size * 0.4], rotate: [0, -140, -300] }} transition={{ delay: (bump + 0.35) * r, duration: 1.3 * r, times: [0, 0.1, 0.7, 1] }}>⛑️</motion.span>
+          <motion.span className="absolute z-30 select-none" style={{ left: `${MEET.x - gap + 4}%`, top: `${MEET.y - 14}%`, fontSize: size * 0.7 }} aria-hidden
+            initial={{ opacity: 0, y: size * 0.5, rotate: 40 }} animate={{ opacity: [0, 1, 1], y: [size * 0.5, -size * 0.4, -size * 0.4], rotate: [40, -10, -10], scale: [0.8, 1.2, 1.1] }} transition={{ delay: (bump + 0.5) * r, duration: 0.9 * r }}>🏏</motion.span>
+        </>
+      )}
+
       {/* the word, and the innings behind it */}
       <motion.div
         className="absolute inset-x-0 bottom-[2%] z-40 px-3 text-center"
@@ -88,7 +99,7 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
         <motion.div className="mt-1 inline-block max-w-[96%] rounded-xl bg-black/70 px-3 py-1.5 ring-1" style={{ ['--tw-ring-color' as string]: `${gold}66` }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (bump + 0.7) * r, duration: 0.35 }}>
           <div className="text-sm font-extrabold leading-tight text-white">{batsman.name}<span className="font-semibold text-slate-300"> · {team.name}</span></div>
           {lines.map((l, i) => <div key={i} className={i === 0 ? 'text-base font-extrabold leading-tight' : 'text-[11px] leading-tight text-slate-300'} style={i === 0 ? { color: gold } : undefined}>{l}</div>)}
-          <div className="mt-0.5 flex justify-center text-[11px]"><OriginTag playerId={batsman.id} /></div>
+          {!compact && <div className="mt-0.5 flex justify-center text-[11px]"><OriginTag playerId={batsman.id} /></div>}
         </motion.div>
       </motion.div>
     </div>
