@@ -79,7 +79,7 @@ export function CoachCard({ teamId }: { teamId: string }) {
       <button onClick={() => setOpen(true)} className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition hover:brightness-110 ${needs ? 'cta-pulse border-amber-400 bg-amber-400/10' : 'border-line bg-panel'}`}>
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-2xl">🎓</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold uppercase tracking-widest text-amber-300">{mine ? 'Your coach' : 'Coach'}</span>
+          <span className="block text-[11px] font-extrabold uppercase tracking-widest text-amber-300">{mine ? 'Your coach' : 'Coach'}</span>
           <span className="block truncate font-display text-2xl leading-none tracking-wide text-white">{coach.name}</span>
           <span className="block truncate text-xs text-slate-400">{coach.game} · {co?.focus ? `working on ${co.focus}` : needs ? 'tap to set the instruction' : 'no instruction yet'}</span>
         </span>

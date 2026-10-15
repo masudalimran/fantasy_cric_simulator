@@ -69,7 +69,7 @@ function SquadCard({
       >
         WK
       </button>}
-      {injury && <span className="w-28 shrink-0 truncate rounded px-1.5 py-0.5 text-center text-[10px] font-extrabold uppercase leading-tight tracking-wide" style={{ background: `${SEVERITY_COLOR[injury.severity]}30`, color: SEVERITY_COLOR[injury.severity] }} title={`${injury.severity} injury, out for ${injury.days} days, back on ${formatDate(injury.back)}`}>{injury.name} · {Math.max(1, daysBetween(today ?? injury.start, injury.back))}d</span>}
+      {injury && <span className="w-28 shrink-0 truncate rounded px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase leading-tight tracking-wide" style={{ background: `${SEVERITY_COLOR[injury.severity]}30`, color: SEVERITY_COLOR[injury.severity] }} title={`${injury.severity} injury, out for ${injury.days} days, back on ${formatDate(injury.back)}`}>{injury.name} · {Math.max(1, daysBetween(today ?? injury.start, injury.back))}d</span>}
       {onPhysio && (
         <button
           onClick={(e) => { e.stopPropagation(); onPhysio() }}
@@ -147,7 +147,7 @@ function PicksPrompt({ xi, team, needCaptain, needKeeper, captainId, keeperId, o
           <button key={p.id} onClick={() => set(p.id)} className={`flex items-center gap-2 rounded-lg border-2 px-2 py-1.5 text-left transition ${value === p.id ? 'bg-white/10' : 'border-line hover:border-slate-500'}`} style={value === p.id ? { borderColor: color } : undefined}>
             <PlayerAvatar player={p} team={team} size={28} />
             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{p.name}</span>
-            <span className="text-[10px] text-slate-400">{ROLE_LABEL[p.role]}</span>
+            <span className="text-[11px] text-slate-400">{ROLE_LABEL[p.role]}</span>
           </button>
         ))}
       </div>

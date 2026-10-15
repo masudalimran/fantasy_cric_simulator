@@ -54,7 +54,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate font-display text-xl leading-none tracking-wide text-white">{team.name}</h2>
-            {mine && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black">YOUR TEAM</span>}
+            {mine && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[11px] font-extrabold text-black">YOUR TEAM</span>}
           </div>
           <div className="truncate text-[11px] text-slate-400">{team.series} · Playing XI in batting order</div>
         </div>
@@ -69,9 +69,9 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
             <PlayerAvatar profile player={p} team={team} size={24} />
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
               <span className="truncate text-[13px] font-semibold text-white">{p.name}</span>
-              {team.captainId === p.id && <span className="rounded bg-amber-400/25 px-1 text-[10px] font-bold text-amber-300">C</span>}
-              {keeper === p.id && <span className="rounded bg-sky-400/25 px-1 text-[10px] font-bold text-sky-300">WK</span>}
-              {isIn(p.id) && <span className="rounded bg-emerald-400/25 px-1 text-[10px] font-bold text-emerald-300">IN</span>}
+              {team.captainId === p.id && <span className="rounded bg-amber-400/25 px-1 text-[11px] font-bold text-amber-300">C</span>}
+              {keeper === p.id && <span className="rounded bg-sky-400/25 px-1 text-[11px] font-bold text-sky-300">WK</span>}
+              {isIn(p.id) && <span className="rounded bg-emerald-400/25 px-1 text-[11px] font-bold text-emerald-300">IN</span>}
             </span>
             <span className="hidden shrink-0 text-[11px] text-slate-400 xl:block">{ROLE_LABEL[p.role]}{p.bowling ? ` · ${p.bowling.type}` : ''}</span>
             <RatingBadge value={overall(p)} size="sm" />
@@ -82,7 +82,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
       {/* two lines of fixed height, always there, so both sheets stay the same size whether or not anyone is in or out */}
       <div className="mt-1.5 shrink-0 space-y-1 text-[11px]" aria-label="Changes to the XI">
         <div className="flex h-[22px] items-center gap-2 overflow-hidden whitespace-nowrap">
-          <span className="w-12 shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-center text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">▲ In</span>
+          <span className="w-12 shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-emerald-300">▲ In</span>
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ins.length === 0 ? <span className="text-slate-600">no changes</span> : ins.map((p) => (
             <span key={p.id} className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 py-0.5 pl-0.5 pr-2" title={`${p.name} comes in`}>
@@ -92,7 +92,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
           </div>
         </div>
         <div className="flex h-[22px] items-center gap-2 overflow-hidden whitespace-nowrap">
-          <span className="w-12 shrink-0 rounded bg-rose-500/20 px-1.5 py-0.5 text-center text-[10px] font-extrabold uppercase tracking-wider text-rose-300">▼ Out</span>
+          <span className="w-12 shrink-0 rounded bg-rose-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-rose-300">▼ Out</span>
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {outs.length === 0 ? <span className="text-slate-600">no changes</span> : outs.map((n) => {
             const p = team.players.find((x) => x.id === n.playerId)
@@ -188,7 +188,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
         <div className="mx-3 mb-2 grid shrink-0 grid-cols-2 gap-1 rounded-2xl bg-panel p-1" role="tablist">
           {sides.map((s, i) => (
             <button key={s.team.id} role="tab" aria-selected={shown === i} onClick={() => setShown(i as 0 | 1)} className={`flex items-center justify-center gap-2 rounded-xl px-2 py-2 text-sm font-bold transition ${shown === i ? 'bg-indigo-500 text-white' : 'text-slate-300'}`}>
-              <TeamLogo team={s.team} size={22} /><span className="truncate">{s.team.short}</span>{mySide === i && <span className="rounded bg-amber-400 px-1 text-[9px] font-extrabold text-black">YOU</span>}
+              <TeamLogo team={s.team} size={22} /><span className="truncate">{s.team.short}</span>{mySide === i && <span className="rounded bg-amber-400 px-1 text-[10px] font-extrabold text-black">YOU</span>}
             </button>
           ))}
         </div>

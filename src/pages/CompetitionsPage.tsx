@@ -49,14 +49,14 @@ function Standings({ title, season, comp, group, teams, form }: { title: string;
             return (
               <tr key={r.teamId} className={`border-t border-line/60 ${mine ? 'bg-amber-400/10' : ''} ${i < qualifiers || r.played === 0 ? '' : 'text-slate-400'}`} style={i === qualifiers - 1 && qualifiers ? { borderBottom: '2px dashed #3b4258' } : undefined}>
                 <td className="px-2 py-1.5 tabular-nums text-slate-500">{i + 1}</td>
-                <td className="px-2 py-1.5"><Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={26} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[9px] font-extrabold text-black">YOU</span>}</Link></td>
+                <td className="px-2 py-1.5"><Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={26} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[10px] font-extrabold text-black">YOU</span>}</Link></td>
                 <td className="px-2 text-right tabular-nums">{r.played}</td>
                 <td className="px-2 text-right tabular-nums">{r.won}</td>
                 <td className="px-2 text-right tabular-nums">{r.lost}</td>
                 <td className="px-2 text-right tabular-nums">{r.tied}</td>
                 <td className="px-2 text-right tabular-nums text-slate-400">{r.nrr >= 0 ? '+' : ''}{r.nrr.toFixed(2)}</td>
                 <td className="px-2 text-right font-bold tabular-nums text-white">{r.points}</td>
-                <td className="px-2"><span className="flex gap-0.5">{(form.get(r.teamId) ?? []).slice(-5).map((x, k) => <span key={k} className={`grid h-4 w-4 place-items-center rounded-sm text-[9px] font-extrabold ${FORM_COLOR[x]}`}>{x}</span>)}</span></td>
+                <td className="px-2"><span className="flex gap-0.5">{(form.get(r.teamId) ?? []).slice(-5).map((x, k) => <span key={k} className={`grid h-4 w-4 place-items-center rounded-sm text-[10px] font-extrabold ${FORM_COLOR[x]}`}>{x}</span>)}</span></td>
               </tr>
             )
           })}
@@ -99,7 +99,7 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
             <div>
               <h2 className="font-display text-4xl leading-none tracking-wide text-white">{competitionName(comp, teams)}</h2>
               <div className="mt-1.5 text-sm text-slate-300">{origin ? <>Founded by <Link to={paths.careerTeam(origin.id)} className="text-indigo-300 hover:underline">{origin.name}</Link> <span className="text-slate-400">({origin.series})</span></> : 'Friendly series'} · {comp.format.toUpperCase()} · {comp.kind}</div>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">{formatDate(comp.startDate)} – {formatDate(comp.endDate)} · {st.played}/{st.total} played <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${STATUS_STYLE[st.status]}`}>{st.status}</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">{formatDate(comp.startDate)} – {formatDate(comp.endDate)} · {st.played}/{st.total} played <span className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wider ${STATUS_STYLE[st.status]}`}>{st.status}</span></div>
             </div>
           </div>
           {champ && (
@@ -175,7 +175,7 @@ function AllTournaments({ season, teams }: { season: Season; teams: Map<string, 
     { key: 'team', label: 'Team', align: 'left', get: (r) => teams.get(r.teamId)?.name ?? r.teamId, cell: (r) => {
       const t = teams.get(r.teamId)
       const mine = r.teamId === season.myTeamId
-      return <Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[9px] font-extrabold text-black">YOU</span>}</Link>
+      return <Link to={t ? paths.careerTeam(t.id) : '#'} className="flex items-center gap-2 hover:text-white">{t && <TeamCrest team={t} size={28} />}<span className={`font-medium ${mine ? 'text-amber-200' : 'text-slate-100'}`}>{t?.name ?? r.teamId}</span>{mine && <span className="rounded bg-amber-400 px-1 py-px text-[10px] font-extrabold text-black">YOU</span>}</Link>
     } },
     { key: 'p', label: 'P', get: (r) => r.played, cell: (r) => r.played },
     { key: 'w', label: 'W', get: (r) => r.won, cell: (r) => r.won },

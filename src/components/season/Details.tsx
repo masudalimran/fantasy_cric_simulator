@@ -94,7 +94,7 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
         </div>
         <div className="grid gap-3 p-3">
           <div>
-            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Batting</div>
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Batting</div>
             {bats.map((l) => (
               <div key={l[0]} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
                 {who(idOf(l[0]), team)}
@@ -103,7 +103,7 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
             ))}
           </div>
           <div>
-            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Bowling · {opp.team?.name}</div>
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Bowling · {opp.team?.name}</div>
             {bowls.map((l) => (
               <div key={l[0]} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
                 {who(idOf(l[0]), opp.team as Team)}
@@ -123,7 +123,7 @@ function MatchDialog({ season, fixtureId, z, onClose }: { season: Season; fixtur
     const team = s.team as Team
     return (
       <section key={team.id} className="rounded-2xl border border-line bg-panel p-3">
-        <h3 className="mb-1 flex items-center gap-2 font-display text-2xl tracking-wide text-white"><TeamCrest team={team} size={26} />{team.name} <span className="rounded bg-white/10 px-1.5 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wider text-slate-300">{i === 0 ? '1st innings' : '2nd innings'}</span> <span className="ml-auto text-xl text-slate-300">{s.score?.runs}/{s.score?.wickets} <span className="text-sm text-slate-500">({s.score ? overs(s.score.balls) : ''} ov)</span></span></h3>
+        <h3 className="mb-1 flex items-center gap-2 font-display text-2xl tracking-wide text-white"><TeamCrest team={team} size={26} />{team.name} <span className="rounded bg-white/10 px-1.5 py-0.5 font-sans text-[11px] font-bold uppercase tracking-wider text-slate-300">{i === 0 ? '1st innings' : '2nd innings'}</span> <span className="ml-auto text-xl text-slate-300">{s.score?.runs}/{s.score?.wickets} <span className="text-sm text-slate-500">({s.score ? overs(s.score.balls) : ''} ov)</span></span></h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-1.5 text-left font-medium">Batting</th><th className={th}>R</th><th className={th}>B</th><th className={th}>4s</th><th className={th}>6s</th><th className={th}>SR</th></tr></thead>
@@ -254,7 +254,7 @@ export function RecentMatches({ season, playerId, teamId, teams }: { season: Sea
             {recent.map((r) => (
               <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
                 <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(r.date)}</span>
-                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">{r.own && <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/5 py-0.5 pl-0.5 pr-1.5 text-[10px] font-bold text-slate-200" title={`He played for ${r.own.name}`}><TeamCrest team={r.own} size={14} />{r.own.short}</span>}v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 text-slate-300">{r.own && <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/5 py-0.5 pl-0.5 pr-1.5 text-[11px] font-bold text-slate-200" title={`He played for ${r.own.name}`}><TeamCrest team={r.own} size={14} />{r.own.short}</span>}v {r.vs && <TeamCrest team={r.vs} size={18} />}<span className="truncate">{r.vs?.name}</span></span>
                 <span className="shrink-0 tabular-nums text-white">{r.bat ? `${r.bat[1]}${r.bat[5] ? '' : '*'} (${r.bat[2]})` : ''}{r.bat && r.bowl ? ' · ' : ''}{r.bowl ? `${r.bowl[3]}/${r.bowl[2]}` : ''}</span>
                 <span className="flex w-28 shrink-0 flex-wrap items-center justify-end gap-x-1.5 text-xs" title="How that match changed his ratings">
                   {r.attrs && Object.keys(r.attrs).length > 0
@@ -299,7 +299,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
   const potm = c?.potm.get(player.id) ?? 0
   const tPlayed = c ? (c.played.get(player.id) ?? Math.max(b?.matches ?? 0, w?.matches ?? 0)) : undefined
   const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
-  const stat = (label: string, value: React.ReactNode) => <div className="rounded-xl bg-white/5 px-3 py-2"><div className="cursor-help text-[10px] font-bold uppercase tracking-widest text-slate-500" data-gloss={label}>{label}</div><div className="font-display text-2xl leading-tight text-white">{value}</div></div>
+  const stat = (label: string, value: React.ReactNode) => <div className="rounded-xl bg-white/5 px-3 py-2"><div className="cursor-help text-[11px] font-bold uppercase tracking-widest text-slate-500" data-gloss={label}>{label}</div><div className="font-display text-2xl leading-tight text-white">{value}</div></div>
 
   return (
     <Shell z={z} label={`${player.name}, player profile`} onClose={onClose}>
@@ -327,13 +327,13 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tPlayed !== undefined && stat('Matches', tPlayed)}{potm > 0 && stat('Man of the Match', potm)}</div>
               {b && (
                 <div>
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bat apps', b.batApps)}{stat('Runs', b.runs)}{stat('Average', f1(average(b)))}{stat('Strike rate', f1(strikeRate(b)))}{stat('Best', `${b.high}${b.highNotOut ? '*' : ''}`)}{stat('50s / 100s', `${b.fifties} / ${b.hundreds}`)}{stat('Fours / sixes', `${b.fours} / ${b.sixes}`)}{stat('Longest six', b.longSix > 0 ? `${b.longSix} m` : '-')}</div>
                 </div>
               )}
               {w && (
                 <div>
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bowl apps', w.bowlApps)}{stat('Wickets', w.wickets)}{stat('Economy', f1(bowlEcon(w), 2))}{stat('Bowling avg', f1(bowlAverage(w)))}{stat('Best', `${w.bestW}/${w.bestR}`)}{stat('5-wicket hauls', w.fiveW)}</div>
                 </div>
               )}

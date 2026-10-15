@@ -272,7 +272,7 @@ function Token({ player, team, role, x, y, size, extra, delivering, celebrate, s
             {extra}
           </div>
           <div className="mt-1 flex flex-col items-center gap-0.5">
-            <span className={`rounded px-1.5 py-px text-[9px] font-extrabold tracking-wider ${r.tag}`}>{r.label}</span>
+            <span className={`rounded px-1.5 py-px text-[10px] font-extrabold tracking-wider ${r.tag}`}>{r.label}</span>
             <span className="max-w-[110px] truncate rounded bg-black/70 px-1.5 text-[11px] font-semibold text-white" style={{ borderBottom: `2px solid ${accentOf(team)}` }}>{player.name}</span>
           </div>
         </motion.div>
@@ -455,7 +455,7 @@ export function Stage({
           {/* name tag on hover */}
           <div className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-2.5 py-1 text-center opacity-0 shadow-lg ring-1 ring-white/20 transition-opacity duration-100 group-hover:opacity-100">
             <div className="text-xs font-bold text-white">{player.name}</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accentOf(bowlingTeam) }}>{spot}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accentOf(bowlingTeam) }}>{spot}</div>
           </div>
         </motion.div>
       ))}
@@ -470,14 +470,14 @@ export function Stage({
 
       {/* which field is set, so the changes make sense */}
       {fieldTag && (
-        <motion.div key={fieldTag.label} className="pointer-events-none absolute left-2 top-2 z-30 max-w-[60%] rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold uppercase leading-tight tracking-wider text-sky-200 ring-1 ring-sky-300/30 sm:text-[10px]" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <motion.div key={fieldTag.label} className="pointer-events-none absolute left-2 top-2 z-30 max-w-[60%] rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold uppercase leading-tight tracking-wider text-sky-200 ring-1 ring-sky-300/30 sm:text-[11px]" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           {fieldTag.label}
-          <span className="block text-[8px] font-semibold normal-case tracking-normal text-slate-300 sm:text-[9px]">{fieldTag.note}</span>
+          <span className="block text-[10px] font-semibold normal-case tracking-normal text-slate-300 sm:text-[10px]">{fieldTag.note}</span>
         </motion.div>
       )}
 
       {/* a little legend so the colours mean something */}
-      <div className="pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[9px] font-bold tracking-wider">
+      <div className="pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[10px] font-bold tracking-wider">
         <span className="rounded bg-amber-400 px-1.5 py-0.5 text-black">BATTING: {battingTeam.name}</span>
         <span className="rounded bg-red-500 px-1.5 py-0.5 text-white">BOWLING: {bowlingTeam.name}</span>
       </div>

@@ -29,14 +29,14 @@ export function Partnerships({ match }: { match: Match }) {
           return (
             <div key={p.wicket} className={`rounded-lg border px-2.5 py-1.5 ${p.unbroken ? 'border-amber-400/50 bg-amber-400/5' : 'border-line bg-panel-2'}`} title={p.endedBy ? `Ended when ${match.player(p.endedBy).name} was out` : undefined}>
               <div className="flex items-center gap-2">
-                <span className="w-7 shrink-0 text-[10px] font-extrabold uppercase text-slate-400">{nth(p.wicket)}</span>
+                <span className="w-7 shrink-0 text-[11px] font-extrabold uppercase text-slate-400">{nth(p.wicket)}</span>
                 <ClickAvatar player={a} team={team} size={20} />
                 <span className="min-w-0 truncate text-xs font-semibold text-white">{a.name} <span className="font-normal text-slate-400">{p.aRuns}({p.aBalls})</span></span>
                 <span className="text-slate-600">&amp;</span>
                 <ClickAvatar player={b} team={team} size={20} />
                 <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white">{b.name} <span className="font-normal text-slate-400">{p.bRuns}({p.bBalls})</span></span>
-                {p.unbroken && <span className="shrink-0 rounded bg-amber-400 px-1 py-px text-[9px] font-extrabold text-black">{inn.done ? 'NOT OUT' : 'NOW'}</span>}
-                {p.runs === best && list.length > 1 && <span className="shrink-0 rounded bg-emerald-500 px-1 py-px text-[9px] font-extrabold text-black">BEST</span>}
+                {p.unbroken && <span className="shrink-0 rounded bg-amber-400 px-1 py-px text-[10px] font-extrabold text-black">{inn.done ? 'NOT OUT' : 'NOW'}</span>}
+                {p.runs === best && list.length > 1 && <span className="shrink-0 rounded bg-emerald-500 px-1 py-px text-[10px] font-extrabold text-black">BEST</span>}
                 <span className="shrink-0 text-right text-sm font-extrabold tabular-nums text-white">{p.runs}<span className="ml-0.5 text-[11px] font-normal text-slate-400">({p.balls})</span></span>
               </div>
               <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-black/30">

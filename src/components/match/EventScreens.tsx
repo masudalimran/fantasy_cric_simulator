@@ -17,7 +17,7 @@ function useWidth() {
   return { box, w }
 }
 
-const SkipTag = () => <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
+const SkipTag = () => <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
 const Tag = ({ text, color }: { text: string; color: string }) => (
   <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest" style={{ color }}><span className="h-2 w-2 animate-pulse rounded-full" style={{ background: color }} />{text}</div>
 )
@@ -95,7 +95,7 @@ export function FourScreen({ info }: { info: FourInfo }) {
           transition={{ delay: 0.25 * r, duration: 1.15 * r, ease: 'easeIn', times: [0, 0.6, 1] }}
         >
           <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={c.player} team={bowlTeam} size={size} /></span>
-          <span className="mt-0.5 block whitespace-nowrap rounded bg-black/70 px-1 text-[10px] font-semibold text-white">{firstName(c.player.name)}</span>
+          <span className="mt-0.5 block whitespace-nowrap rounded bg-black/70 px-1 text-[11px] font-semibold text-white">{firstName(c.player.name)}</span>
         </motion.div>
       ))}
       <motion.div className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: pc(HIT.x, W), top: pc(HIT.y + 8, H) }} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}>
@@ -176,7 +176,7 @@ export function ExtraScreen({ info }: { info: ExtraInfo }) {
       {kind === 'wide' && (
         <motion.div className="absolute z-20 text-center" style={{ left: '24%', top: '46%' }} initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>
           <div className="text-5xl">🙆</div>
-          <span className="rounded bg-black/70 px-1.5 text-[10px] font-bold uppercase tracking-wider text-white">Umpire</span>
+          <span className="rounded bg-black/70 px-1.5 text-[11px] font-bold uppercase tracking-wider text-white">Umpire</span>
         </motion.div>
       )}
       {(kind === 'bye' || kind === 'legbye') && (

@@ -70,12 +70,12 @@ export function CareerTeamPage() {
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-semibold text-white">{r.player.name}</span>
-            {team.captainId === r.player.id && <span className="rounded bg-amber-400/25 px-1.5 py-px text-[10px] font-bold text-amber-300">C</span>}
-            {data.keeper === r.player.id && <span className="rounded bg-sky-400/25 px-1.5 py-px text-[10px] font-bold text-sky-300">WK</span>}
+            {team.captainId === r.player.id && <span className="rounded bg-amber-400/25 px-1.5 py-px text-[11px] font-bold text-amber-300">C</span>}
+            {data.keeper === r.player.id && <span className="rounded bg-sky-400/25 px-1.5 py-px text-[11px] font-bold text-sky-300">WK</span>}
           </span>
           <span className="block text-xs text-slate-400">
             {ROLE_LABEL[r.player.role]}{r.player.bowling ? ` · ${r.player.bowling.type}` : ''}
-            {r.injury && <span className="ml-1.5 rounded px-1.5 py-px text-[10px] font-bold uppercase" style={{ background: `${SEVERITY_COLOR[r.injury.severity]}30`, color: SEVERITY_COLOR[r.injury.severity] }} title={`${r.injury.severity} injury, back on ${formatDate(r.injury.back)}`}>{r.injury.name} · {Math.max(1, daysBetween(season.today, r.injury.back))}d</span>}
+            {r.injury && <span className="ml-1.5 rounded px-1.5 py-px text-[11px] font-bold uppercase" style={{ background: `${SEVERITY_COLOR[r.injury.severity]}30`, color: SEVERITY_COLOR[r.injury.severity] }} title={`${r.injury.severity} injury, back on ${formatDate(r.injury.back)}`}>{r.injury.name} · {Math.max(1, daysBetween(season.today, r.injury.back))}d</span>}
           </span>
         </span>
       </span>
@@ -108,8 +108,8 @@ export function CareerTeamPage() {
               <h2 className="font-display text-4xl leading-none tracking-wide text-white">{team.name}</h2>
               <div className="mt-1.5 text-sm text-slate-300">{team.series} · home: {team.home}</div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                {data.mine && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black">YOUR TEAM</span>}
-                {form.length > 0 && <span className="flex items-center gap-1 text-xs text-slate-400">Form <span className="flex gap-0.5">{form.map((x, i) => <span key={i} className={`grid h-5 w-5 place-items-center rounded-sm text-[10px] font-extrabold ${FORM_COLOR[x]}`}>{x}</span>)}</span></span>}
+                {data.mine && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[11px] font-extrabold text-black">YOUR TEAM</span>}
+                {form.length > 0 && <span className="flex items-center gap-1 text-xs text-slate-400">Form <span className="flex gap-0.5">{form.map((x, i) => <span key={i} className={`grid h-5 w-5 place-items-center rounded-sm text-[11px] font-extrabold ${FORM_COLOR[x]}`}>{x}</span>)}</span></span>}
                 <Link to={paths.team(team.id)} className="text-xs text-indigo-300 hover:underline">Team page (starting squad)</Link>
               </div>
             </div>

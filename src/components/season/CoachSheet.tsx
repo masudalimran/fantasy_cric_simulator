@@ -103,7 +103,7 @@ export function CoachSheet({ teamId, onClose }: { teamId: string; onClose: () =>
                     <button key={f} onClick={() => setPick(f)} className={`rounded-2xl border-2 p-3 text-left transition hover:brightness-125 ${!co.focus ? 'cta-pulse' : ''}`} style={{ borderColor: co.focus === f ? COLOR[f] : '#2b3145', background: co.focus === f ? `${COLOR[f]}1f` : '#10131c' }}>
                       <div className="font-display text-2xl leading-none tracking-wide" style={{ color: COLOR[f] }}>{ICON[f]} {FOCUS_LABEL[f]}</div>
                       <div className="mt-1 text-[11px] leading-snug text-slate-400">{FOCUS_BLURB[f]}</div>
-                      {coach.specialty === f && <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">His speciality</div>}
+                      {coach.specialty === f && <div className="mt-1 text-[11px] font-bold uppercase tracking-wider text-amber-300">His speciality</div>}
                     </button>
                   ))}
                 </div>

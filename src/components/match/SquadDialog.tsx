@@ -80,7 +80,7 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
           </div>
           <button onClick={onClose} aria-label="Close" className="order-2 rounded-lg border border-line px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400 md:order-none">✕</button>
           <div className="order-3 flex w-full items-center gap-3 md:order-none md:w-auto">
-            <div className="text-center"><RatingBadge value={teamStrength({ ...team, players: players.slice(0, XI_SIZE) })} size="md" /><div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">XI rating</div></div>
+            <div className="text-center"><RatingBadge value={teamStrength({ ...team, players: players.slice(0, XI_SIZE) })} size="md" /><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">XI rating</div></div>
             <button onClick={() => { const xi = autoPickXI(players); setPlayers(xi); setKeeperId(keeperIn(xi.slice(0, XI_SIZE))?.id); setSelected(null) }} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-indigo-400" title="A balanced XI: one keeper, five bowling options, the best of the rest">Auto-pick XI</button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
+import { TodayCard } from '../components/season/TodayCard'
 import { MarketOpens } from '../components/season/MarketOpens'
 import { MarketClosed } from '../components/season/MarketClosed'
 import { CoachPrompt, useCoachGate } from '../components/season/CoachGate'
@@ -42,7 +43,7 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
         <span className="flex max-w-full flex-wrap items-center justify-center gap-[3px] px-0.5">
           {shown.map((f) => { const comp = compOf(f); return <span key={f.id} className={`h-1.5 w-1.5 rounded-full ${season.results[f.id] ? 'opacity-40' : ''}`} style={{ background: comp ? competitionColor(comp, teams) : '#94a3b8' }} /> })}
         </span>
-        <span className="h-3 text-[9px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : win && !mineWaiting && !allPlayed ? <span className="text-[9px] font-extrabold text-fuchsia-300">$</span> : mineWaiting ? <span className="text-[11px] text-amber-300">★</span> : allPlayed ? <span className="text-emerald-400">✓</span> : mine ? <span className="text-amber-300/70">★</span> : ''}</span>
+        <span className="h-3 text-[10px] font-semibold leading-3 text-slate-500">{fixtures.length > 3 ? `+${fixtures.length - 3}` : win && !mineWaiting && !allPlayed ? <span className="text-[10px] font-extrabold text-fuchsia-300">$</span> : mineWaiting ? <span className="text-[11px] text-amber-300">★</span> : allPlayed ? <span className="text-emerald-400">✓</span> : mine ? <span className="text-amber-300/70">★</span> : ''}</span>
       </button>
     )
   }
@@ -53,22 +54,22 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
         selected ? 'border-indigo-400 bg-indigo-400/10' : today ? 'border-2 border-sky-400 bg-sky-400/10 shadow-[0_0_14px_#38bdf844]' : fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_14px_#fbbf2433]' : 'border-line bg-panel hover:border-slate-600'
       } ${inMonth ? '' : 'opacity-35'} ${win ? 'ring-1 ring-fuchsia-400/60' : ''}`}
     >
-      {win && date === win.start && <span className="mb-0.5 rounded bg-fuchsia-500 px-1 text-center text-[9px] font-extrabold text-white">{win.name.toUpperCase()} OPENS</span>}
-      {win && date === win.end && <span className="mb-0.5 rounded bg-fuchsia-500/60 px-1 text-center text-[9px] font-extrabold text-white">MARKET CLOSES</span>}
+      {win && date === win.start && <span className="mb-0.5 rounded bg-fuchsia-500 px-1 text-center text-[10px] font-extrabold text-white">{win.name.toUpperCase()} OPENS</span>}
+      {win && date === win.end && <span className="mb-0.5 rounded bg-fuchsia-500/60 px-1 text-center text-[10px] font-extrabold text-white">MARKET CLOSES</span>}
       <div className="flex items-center justify-between">
         <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-semibold ${today ? 'bg-sky-400 font-extrabold text-black' : 'text-slate-400'}`}>{Number(date.slice(8))}</span>
-        {today && <span className="rounded bg-sky-400 px-1 text-[9px] font-extrabold text-black">TODAY</span>}
-        {!today && fixtures.length > 0 && <span className="text-[10px] text-slate-600">{fixtures.length}</span>}
+        {today && <span className="rounded bg-sky-400 px-1 text-[10px] font-extrabold text-black">TODAY</span>}
+        {!today && fixtures.length > 0 && <span className="text-[11px] text-slate-600">{fixtures.length}</span>}
       </div>
       {fixtures.some((f) => isMine(season, f)) && (
-        <div className={`mt-1 rounded px-1 py-0.5 text-center text-[10px] font-extrabold ${fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'bg-amber-400 text-black' : 'bg-amber-400/25 text-amber-200'}`}>★ YOUR MATCH</div>
+        <div className={`mt-1 rounded px-1 py-0.5 text-center text-[11px] font-extrabold ${fixtures.some((f) => isMine(season, f) && !season.results[f.id]) ? 'bg-amber-400 text-black' : 'bg-amber-400/25 text-amber-200'}`}>★ YOUR MATCH</div>
       )}
       <div className="mt-1 space-y-0.5">
         {shown.map((f) => {
           const comp = compOf(f)
           const played = !!season.results[f.id]
           return (
-            <div key={f.id} className="rounded px-1 py-0.5 text-[10px] leading-tight" style={{ background: `${comp ? competitionColor(comp, teams) : '#94a3b8'}22`, borderLeft: `2px solid ${comp ? competitionColor(comp, teams) : '#94a3b8'}` }}>
+            <div key={f.id} className="rounded px-1 py-0.5 text-[11px] leading-tight" style={{ background: `${comp ? competitionColor(comp, teams) : '#94a3b8'}22`, borderLeft: `2px solid ${comp ? competitionColor(comp, teams) : '#94a3b8'}` }}>
               {fixtureTeams(f, teams) ? (
                 fixtureTeams(f, teams)!.map((t, i) => (
                   <div key={i} className={`flex items-center gap-1 ${played && season.results[f.id]?.winnerId !== t.id ? 'text-slate-500' : played ? 'font-semibold text-white' : 'text-slate-100'}`}>
@@ -83,7 +84,7 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
             </div>
           )
         })}
-        {fixtures.length > shown.length && <div className="px-1 text-[10px] text-slate-500">+{fixtures.length - shown.length} more</div>}
+        {fixtures.length > shown.length && <div className="px-1 text-[11px] text-slate-500">+{fixtures.length - shown.length} more</div>}
       </div>
     </button>
   )
@@ -190,6 +191,7 @@ export function CalendarPage() {
         </div>
       </div>
       {pending && <p className="-mt-3 mb-4 text-xs text-slate-400">Skip plays the other teams' matches for you. It always stops before one of yours.</p>}
+      {myTeam && <TodayCard season={season} onCoach={() => setCoachDismissed(false)} />}
       {season.windows?.some((w) => season.today >= w.start && season.today <= w.end) && (
         <Link to={paths.market} className="mb-4 flex items-center justify-between gap-3 whitespace-nowrap rounded-full border-2 border-fuchsia-400/70 bg-fuchsia-500/15 px-4 py-2.5 transition hover:bg-fuchsia-500/25 active:bg-fuchsia-500/30" title="Sign young talent or buy stars before the window closes">
           <span className="truncate font-display text-xl leading-none tracking-wide text-fuchsia-200"><span className="md:hidden">Market is open</span><span className="max-md:hidden">The player market is open</span></span>
@@ -210,7 +212,7 @@ export function CalendarPage() {
                 <li key={w.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                   <span className={`font-semibold ${open ? 'text-fuchsia-200' : 'text-white'}`}>{w.name}</span>
                   <span className="text-slate-300">{formatDate(w.start)} to {formatDate(w.end)}</span>
-                  <span className={`rounded-full px-2 py-px text-[10px] font-extrabold uppercase tracking-wider ${open ? 'bg-fuchsia-400 text-black' : done ? 'bg-white/10 text-slate-400' : 'bg-white/10 text-slate-200'}`}>
+                  <span className={`rounded-full px-2 py-px text-[11px] font-extrabold uppercase tracking-wider ${open ? 'bg-fuchsia-400 text-black' : done ? 'bg-white/10 text-slate-400' : 'bg-white/10 text-slate-200'}`}>
                     {open ? `open now · ${Math.max(0, daysBetween(season.today, w.end))} days left` : done ? 'closed' : `opens in ${daysBetween(season.today, w.start)} days`}
                   </span>
                 </li>
@@ -332,7 +334,7 @@ export function CalendarPage() {
                     <Link key={c.id} to={paths.competition(c.id)} className="flex items-center gap-2 rounded-lg border border-line p-2 hover:border-slate-500">
                       {origin && <TeamCrest team={origin} size={26} />}
                       <span className="truncate text-sm text-slate-200">{c.name}</span>
-                      <span className="ml-auto text-[10px] uppercase text-slate-500">{c.format}</span>
+                      <span className="ml-auto text-[11px] uppercase text-slate-500">{c.format}</span>
                     </Link>
                   )
                 })}

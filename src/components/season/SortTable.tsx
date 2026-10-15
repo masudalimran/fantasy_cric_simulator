@@ -60,7 +60,7 @@ export function SortTable<T>({ rows, cols, rowKey, lead, rowClass, initial }: {
               <th key={c.key} className={`px-2 py-2 font-medium ${c.align === 'left' ? 'text-left max-md:sticky max-md:left-0 max-md:z-[1] max-md:bg-panel' : 'text-right'}`} aria-sort={on ? (sort!.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                 <button onClick={() => click(c)} title={c.title ?? `Sort by ${c.label}`} className={`inline-flex cursor-pointer items-center gap-1 uppercase tracking-wider transition hover:text-white ${on ? 'text-white' : ''}`}>
                   {c.label}
-                  <span className={`w-2.5 text-[9px] ${on ? 'text-sky-300' : 'text-transparent'}`} aria-hidden>{on ? (sort!.dir === 'asc' ? '▲' : '▼') : '▼'}</span>
+                  <span className={`w-2.5 text-[10px] ${on ? 'text-sky-300' : 'text-transparent'}`} aria-hidden>{on ? (sort!.dir === 'asc' ? '▲' : '▼') : '▼'}</span>
                 </button>
               </th>
             )

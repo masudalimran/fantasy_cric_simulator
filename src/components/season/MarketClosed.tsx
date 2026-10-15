@@ -33,9 +33,9 @@ export function MarketClosed({ season, sessionId }: { season: Season; sessionId:
           <div className="mt-1 font-display text-2xl tracking-wide text-fuchsia-200">{win.name}</div>
           <p className="mt-1 text-xs text-slate-400">{formatDate(win.start)} to {formatDate(win.end)}</p>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-3xl leading-none text-white">{moves.length}</div><div className="text-[10px] uppercase tracking-wider text-slate-400">transfers</div></div>
-            <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-3xl leading-none text-amber-300">{yours.length}</div><div className="text-[10px] uppercase tracking-wider text-slate-400">yours</div></div>
-            <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-3xl leading-none text-white">{biggest ? biggest.fee : '-'}</div><div className="text-[10px] uppercase tracking-wider text-slate-400">biggest deal</div></div>
+            <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-3xl leading-none text-white">{moves.length}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">transfers</div></div>
+            <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-3xl leading-none text-amber-300">{yours.length}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">yours</div></div>
+            <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-3xl leading-none text-white">{biggest ? biggest.fee : '-'}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">biggest deal</div></div>
           </div>
           {biggest && <p className="mt-2 text-xs text-slate-300">Biggest deal: <b className="text-white">{biggest.name}</b> for {biggest.fee} {biggest.fee === 1 ? 'coin' : 'coins'}.</p>}
           {moves.length === 0 && <p className="mt-2 text-xs text-slate-400">Nobody made a move this time.</p>}

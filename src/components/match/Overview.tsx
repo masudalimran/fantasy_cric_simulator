@@ -29,7 +29,7 @@ export function Overview({ match }: { match: Match }) {
         {cols.map((c, i) => (
           <div key={i} className="flex items-center gap-2 rounded-xl border border-line bg-panel-2 p-2" style={{ boxShadow: `inset 0 -3px 0 ${accentOf(c.team)}` }}>
             <TeamLogo team={c.team} size={30} />
-            <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{i === 0 ? '1st innings' : '2nd innings'}</div><div className="truncate text-xs font-bold text-white">{c.team.name}</div></div>
+            <div className="min-w-0"><div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{i === 0 ? '1st innings' : '2nd innings'}</div><div className="truncate text-xs font-bold text-white">{c.team.name}</div></div>
           </div>
         ))}
         {rows.map((r) => (

@@ -7,7 +7,7 @@ import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
-import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from './Portrait'
+import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
 
 /**
  * A big moment that takes over the field for a few seconds, TV-graphic style: a milestone, a dismissal, or the
@@ -15,7 +15,7 @@ import { BallIcon, BatIcon, MoodPortrait, StarIcon, StumpsIcon, type Mood } from
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'wicket' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
+  kind: 'milestone' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -39,37 +39,9 @@ export interface Moment {
   rating?: number
   /** A hundred or more gets the full golden treatment. */
   big?: boolean
-  duck?: boolean
   /** Wait this long (ms) so the delivery that caused it can be seen first, then show for `ms`. */
   delay: number
   ms: number
-}
-
-function Rain() {
-  return (
-    <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-40" preserveAspectRatio="none" viewBox="0 0 100 100">
-      {Array.from({ length: 34 }, (_, i) => {
-        const x = (i * 29) % 100
-        return (
-          <motion.line key={i} x1={x} y1={-10} x2={x - 3} y2={-4} stroke="#94a3b8" strokeWidth="0.25" strokeLinecap="round"
-            animate={{ y: [0, 120] }} transition={{ duration: 0.9 + (i % 5) * 0.12, repeat: Infinity, ease: 'linear', delay: (i % 9) * 0.11 }} />
-        )
-      })}
-    </svg>
-  )
-}
-
-function Stars({ color }: { color: string }) {
-  return (
-    <>
-      {Array.from({ length: 14 }, (_, i) => (
-        <motion.span
-          key={i} className="pointer-events-none absolute text-lg" style={{ left: `${(i * 37) % 96}%`, bottom: -10, color }}
-          animate={{ y: [0, -520], opacity: [0, 1, 0], rotate: [0, 180] }} transition={{ duration: 2.6 + (i % 4) * 0.4, repeat: Infinity, delay: (i % 7) * 0.3, ease: 'easeOut' }}
-        >✦</motion.span>
-      ))}
-    </>
-  )
 }
 
 /** A sweep of team colour across the screen, for introductions. */
@@ -150,21 +122,16 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  const wicket = moment.kind === 'wicket'
-  const milestone = moment.kind === 'milestone'
   const intro = moment.kind === 'batsman' || moment.kind === 'bowler'
   const accent = accentOf(moment.team)
   // narrow (a phone): the portrait goes on top and the words below it; wide: side by side as before
   const stacked = w < 520
   const fig = stacked ? Math.max(84, Math.min(w * 0.3, 118)) : Math.max(110, Math.min(w * 0.3, 210))
   const scale = stacked ? Math.max(0.5, Math.min(w / 640, 0.66)) : Math.max(0.62, Math.min(w / 730, 1.1))
-  const mood: Mood = wicket ? 'sad' : milestone ? (moment.big ? 'victory' : 'cheer') : 'intro'
-  const titleColor = wicket ? '#f87171' : milestone ? '#fbbf24' : accent
-  const Badge = wicket ? StumpsIcon : milestone ? StarIcon : moment.kind === 'bowler' ? BallIcon : BatIcon
-  const bg = wicket
-    ? 'linear-gradient(170deg,#1c0b10,#0a0a12 70%)'
-    : milestone ? `radial-gradient(ellipse at 28% 70%, ${accent}55, transparent 62%), linear-gradient(160deg,#0b1220,#1a1530)`
-    : `radial-gradient(ellipse at 25% 50%, ${accent}66, transparent 60%), linear-gradient(160deg,#0b1220,#10131c)`
+  const mood: Mood = 'intro'
+  const titleColor = accent
+  const Badge = moment.kind === 'bowler' ? BallIcon : BatIcon
+  const bg = `radial-gradient(ellipse at 25% 50%, ${accent}66, transparent 60%), linear-gradient(160deg,#0b1220,#10131c)`
 
   return (
     <motion.div
@@ -172,24 +139,19 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       data-moment={moment.kind}
       onClick={onDismiss}
       className={`absolute inset-0 z-[45] flex cursor-pointer justify-center overflow-hidden rounded-2xl ${stacked ? 'flex-col items-center gap-1.5 px-3 text-center' : 'items-center gap-[4%] px-[5%]'}`}
-      style={{ background: bg, boxShadow: wicket ? 'inset 0 0 90px rgba(239,68,68,.38)' : milestone ? 'inset 0 0 90px rgba(251,191,36,.3)' : `inset 0 0 80px ${accent}44` }}
+      style={{ background: bg, boxShadow: `inset 0 0 80px ${accent}44` }}
       initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18, delay: 0 } }}
       transition={{ duration: moment.delay === 0 ? 0.5 : 0.28, delay: moment.delay / 1000, ease: 'easeOut' }} // straight after a replay: it fades in as the replay fades out
-      aria-label={wicket ? 'Wicket' : milestone ? 'Milestone' : moment.kind === 'bowler' ? 'Bowler introduction' : 'Batsman introduction'}
+      aria-label={moment.kind === 'bowler' ? 'Bowler introduction' : 'Batsman introduction'}
     >
       {intro && (
         <>
           {/* time left, and a way out: click anywhere to carry on */}
           <motion.div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 origin-left" style={{ background: accent }} initial={{ scaleX: 1 }} animate={{ scaleX: 0 }} transition={{ duration: moment.ms / 1000 + 0.35, delay: moment.delay / 1000, ease: 'linear' }} />
-          <div className={`pointer-events-none absolute right-3 rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 ${stacked ? 'top-2' : 'bottom-2.5'}`}>{stacked ? 'Tap to continue' : 'Click anywhere to continue'}</div>
+          <div className={`pointer-events-none absolute right-3 rounded-full bg-black/40 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300 ${stacked ? 'top-2' : 'bottom-2.5'}`}>{stacked ? 'Tap to continue' : 'Click anywhere to continue'}</div>
         </>
       )}
-      {wicket ? <Rain /> : milestone ? (
-        <>
-          <motion.div className="pointer-events-none absolute -left-[10%] top-[8%] h-[120%] w-[70%] opacity-30" style={{ background: 'conic-gradient(from 0deg, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400, #fbbf24aa, #fbbf2400)', borderRadius: '50%' }} animate={{ rotate: 360 }} transition={{ duration: 14, repeat: Infinity, ease: 'linear' }} />
-          <Stars color={moment.big ? '#fde68a' : accent} />
-        </>
-      ) : <Sweep color={accent} />}
+      <Sweep color={accent} />
 
       <div className="relative shrink-0" style={{ width: fig, height: fig }}>
         <MoodPortrait player={moment.player} team={moment.team} size={fig} mood={mood} delay={moment.delay / 1000} />
@@ -233,7 +195,6 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
             ))}
           </div>
         )}
-        {moment.duck && <div className="mt-2 inline-block -rotate-6 rounded border-2 border-red-400 px-2 py-0.5 font-display tracking-widest text-red-300" style={{ fontSize: 22 * scale }}>DUCK</div>}
       </motion.div>
     </motion.div>
   )

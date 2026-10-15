@@ -69,8 +69,8 @@ function PlayerRow({ player, team, pos }: { player: Player; team: Team; pos?: nu
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-white">
             {player.name}
-            {isCaptain && <span className="ml-2 rounded bg-amber-400/20 px-1.5 py-0.5 align-middle text-[10px] font-bold text-amber-300">C</span>}
-            {isKeeper && <span className="ml-1.5 rounded bg-sky-400/20 px-1.5 py-0.5 align-middle text-[10px] font-bold text-sky-300">WK</span>}
+            {isCaptain && <span className="ml-2 rounded bg-amber-400/20 px-1.5 py-0.5 align-middle text-[11px] font-bold text-amber-300">C</span>}
+            {isKeeper && <span className="ml-1.5 rounded bg-sky-400/20 px-1.5 py-0.5 align-middle text-[11px] font-bold text-sky-300">WK</span>}
           </div>
           <div className="truncate text-xs text-slate-400">
             {ROLE_LABEL[player.role]}

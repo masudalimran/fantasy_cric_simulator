@@ -72,7 +72,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
             {mine.xi.map((p, i) => (
               <div key={p.id} className="text-center">
                 <MoodPortrait player={p} team={mine.team} size={64} mood="sad" delay={(i % 5) * 0.15} />
-                <div className="mx-auto mt-1.5 w-[72px] truncate text-[10px] font-semibold text-slate-400">{p.name.split(' ')[0]}</div>
+                <div className="mx-auto mt-1.5 w-[72px] truncate text-[11px] font-semibold text-slate-400">{p.name.split(' ')[0]}</div>
               </div>
             ))}
           </div>
@@ -124,7 +124,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
             {side.xi.map((p, i) => (
               <div key={p.id} className="text-center">
                 <MoodPortrait player={p} team={side.team} size={72} mood={i % 4 === 0 ? 'victory' : 'cheer'} delay={(i % 6) * 0.09} />
-                <div className="mx-auto mt-2 w-[80px] truncate text-[10px] font-semibold text-slate-200">{p.name.split(' ')[0]}</div>
+                <div className="mx-auto mt-2 w-[80px] truncate text-[11px] font-semibold text-slate-200">{p.name.split(' ')[0]}</div>
               </div>
             ))}
           </div>

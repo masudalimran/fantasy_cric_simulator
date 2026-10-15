@@ -68,12 +68,12 @@ export function CareerLayout() {
         <div className="mb-2 flex items-center gap-2.5 rounded-2xl border border-line bg-panel px-3 py-2.5">
           {mine && <TeamCrest team={mine} size={38} />}
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}</div>
+            <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}</div>
             <h1 className="truncate font-display text-2xl leading-none tracking-wide text-white">{session.name}</h1>
             {mine && <div className="truncate text-xs text-slate-300">You manage <b className="text-white">{mine.name}</b></div>}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
-            <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider" style={{ background: `${COLOR[diff]}26`, color: COLOR[diff] }}>{DIFFICULTIES[diff].label}</span>
+            <span className="rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ background: `${COLOR[diff]}26`, color: COLOR[diff] }}>{DIFFICULTIES[diff].label}</span>
             {canLookBack && viewed.years.length > 1 && (
               <select value={viewed.year ?? season.year} onChange={(e) => setViewYear(Number(e.target.value) === season.year ? null : Number(e.target.value))} className="rounded-lg border border-line bg-panel-2 px-2 py-1 text-xs font-semibold text-white" aria-label="Choose the year to look at">
                 {[...viewed.years].reverse().map((y) => <option key={y} value={y}>{y}{y === season.year ? ' (now)' : ''}</option>)}

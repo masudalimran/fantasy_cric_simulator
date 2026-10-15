@@ -63,8 +63,8 @@ export function MarketOpens({ season, sessionId }: { season: Season; sessionId: 
               Sign young talent and buy stars until <b className="text-white">{formatDate(win.end)}</b> ({left} days). The other teams are shopping too, so good players do not wait.
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }} className="mt-4 grid grid-cols-2 gap-2 text-center">
-              <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-4xl leading-none text-amber-300">{purse}</div><div className="text-[10px] uppercase tracking-wider text-slate-400">coins to spend</div></div>
-              <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-4xl leading-none text-white">{squad}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[10px] uppercase tracking-wider text-slate-400">in your squad</div></div>
+              <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-4xl leading-none text-amber-300">{purse}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">coins to spend</div></div>
+              <div className="rounded-2xl bg-white/5 p-2"><div className="font-display text-4xl leading-none text-white">{squad}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[11px] uppercase tracking-wider text-slate-400">in your squad</div></div>
             </motion.div>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.35 }} className="mt-5 grid gap-2">
               <button onClick={() => { close(); navigate(paths.market) }} className="cta-pulse cta-pulse-gold rounded-full bg-amber-400 px-6 py-3.5 font-display text-2xl leading-none tracking-wide text-black hover:bg-amber-300 active:bg-amber-300">Go to the market</button>

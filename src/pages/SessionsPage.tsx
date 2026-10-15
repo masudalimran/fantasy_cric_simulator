@@ -43,7 +43,7 @@ function SessionCard({ session, active }: { session: SessionFile; active: boolea
             <div className="mt-1 flex items-center gap-2 text-sm text-slate-200">
               <TeamCrest team={teams.get(s.myTeamId)!} size={24} />
               <span>You manage <b className="text-white">{teams.get(s.myTeamId)!.name}</b></span>
-              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-200" title="Fixed when the career started">{DIFFICULTIES[s.difficulty ?? 'normal'].label}</span>
+              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-200" title="Fixed when the career started">{DIFFICULTIES[s.difficulty ?? 'normal'].label}</span>
             </div>
           )}
           <div className="mt-0.5 text-xs text-slate-500">

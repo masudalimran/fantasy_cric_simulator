@@ -30,7 +30,7 @@ export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel 
           ) : (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5v13a1 1 0 0 0 1.5.86L13 14v4.5a1 1 0 0 0 1.5.86l8-6a1 1 0 0 0 0-1.72l-8-6A1 1 0 0 0 13 6.5V11L4.5 4.64A1 1 0 0 0 3 5.5z" /></svg>
           )}
-          {auto > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-white px-1.5 text-[10px] font-extrabold leading-4 text-indigo-700">{auto}x</span>}
+          {auto > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-white px-1.5 text-[11px] font-extrabold leading-4 text-indigo-700">{auto}x</span>}
         </button>}
       </div>
     </div>

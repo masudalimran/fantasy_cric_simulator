@@ -138,7 +138,7 @@ export function Delta({ n, className = '' }: { n: number; className?: string }) 
  */
 export function FormBar({ z, className = '' }: { z: number | null | undefined; className?: string }) {
   if (z === null || z === undefined) {
-    return <div className={`flex w-14 shrink-0 flex-col gap-0.5 ${className}`} title="No form yet: he needs a couple of matches this season"><div className="h-1.5 rounded-full bg-white/10" /><span className="text-center text-[9px] font-semibold uppercase leading-none tracking-wide text-slate-600">no form</span></div>
+    return <div className={`flex w-14 shrink-0 flex-col gap-0.5 ${className}`} title="No form yet: he needs a couple of matches this season"><div className="h-1.5 rounded-full bg-white/10" /><span className="text-center text-[10px] font-semibold uppercase leading-none tracking-wide text-slate-600">no form</span></div>
   }
   const c = Math.max(-2, Math.min(2, z))
   const pct = Math.round(((c + 2) / 4) * 100)
@@ -146,7 +146,7 @@ export function FormBar({ z, className = '' }: { z: number | null | undefined; c
   return (
     <div className={`flex w-14 shrink-0 flex-col gap-0.5 ${className}`} title={`Form: ${label.toLowerCase()} over his last matches (${z >= 0 ? '+' : ''}${z.toFixed(1)} against what is usual for him)`}>
       <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(pct, 6)}%`, background: color }} /></div>
-      <span className="text-center text-[9px] font-bold uppercase leading-none tracking-wide" style={{ color }}>{label}</span>
+      <span className="text-center text-[10px] font-bold uppercase leading-none tracking-wide" style={{ color }}>{label}</span>
     </div>
   )
 }

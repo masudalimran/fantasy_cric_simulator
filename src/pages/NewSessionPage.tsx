@@ -87,7 +87,7 @@ export function NewSessionPage() {
               <button key={t.id} onClick={() => setMyTeamId(t.id)} aria-pressed={on} className={`flex items-center gap-3 rounded-xl border-2 p-2.5 text-left transition ${on ? 'border-amber-400 bg-amber-400/10' : 'border-line bg-panel hover:border-slate-500'}`}>
                 <TeamCrest team={t} size={40} />
                 <div className="min-w-0 flex-1"><div className="text-sm font-semibold leading-tight text-white">{t.name}</div><div className="truncate text-xs text-slate-500">{t.series}</div></div>
-                <div className="flex flex-col items-end gap-1"><RatingBadge value={teamStrength(t)} size="sm" />{on && <span className="rounded bg-amber-400 px-1.5 py-px text-[9px] font-extrabold text-black">YOU</span>}</div>
+                <div className="flex flex-col items-end gap-1"><RatingBadge value={teamStrength(t)} size="sm" />{on && <span className="rounded bg-amber-400 px-1.5 py-px text-[10px] font-extrabold text-black">YOU</span>}</div>
               </button>
             )
           })}
@@ -137,7 +137,7 @@ export function NewSessionPage() {
               <button key={t.id} onClick={() => toggle(t.id)} aria-pressed={on} className={`flex items-center gap-3 rounded-xl border p-2 text-left transition ${isMe ? 'border-amber-400/70 bg-amber-400/10' : on ? 'border-emerald-400/60 bg-emerald-400/10' : 'border-line bg-panel opacity-50 hover:opacity-80'}`}>
                 <TeamCrest team={t} size={32} />
                 <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-white">{t.name}</span>
-                <span className={`text-[10px] font-bold ${isMe ? 'text-amber-300' : on ? 'text-emerald-300' : 'text-slate-600'}`}>{isMe ? 'YOU' : on ? 'IN' : 'OUT'}</span>
+                <span className={`text-[11px] font-bold ${isMe ? 'text-amber-300' : on ? 'text-emerald-300' : 'text-slate-600'}`}>{isMe ? 'YOU' : on ? 'IN' : 'OUT'}</span>
               </button>
             )
           })}

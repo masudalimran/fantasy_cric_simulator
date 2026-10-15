@@ -51,7 +51,7 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
       )}
 
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest" style={{ color: gold }}><span className="h-2 w-2 animate-pulse rounded-full" style={{ background: gold }} />Milestone</div>
-      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Tap to continue</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to continue</div>
 
       {/* the partner walks down from the other end, the scorer from his own, and they meet in the middle */}
       {partner && (
@@ -88,7 +88,7 @@ export function MilestoneScreen({ info }: { info: FistInfo }) {
         <motion.div className="mt-1 inline-block max-w-[96%] rounded-xl bg-black/70 px-3 py-1.5 ring-1" style={{ ['--tw-ring-color' as string]: `${gold}66` }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (bump + 0.7) * r, duration: 0.35 }}>
           <div className="text-sm font-extrabold leading-tight text-white">{batsman.name}<span className="font-semibold text-slate-300"> · {team.name}</span></div>
           {lines.map((l, i) => <div key={i} className={i === 0 ? 'text-base font-extrabold leading-tight' : 'text-[11px] leading-tight text-slate-300'} style={i === 0 ? { color: gold } : undefined}>{l}</div>)}
-          <div className="mt-0.5 flex justify-center text-[10px]"><OriginTag playerId={batsman.id} /></div>
+          <div className="mt-0.5 flex justify-center text-[11px]"><OriginTag playerId={batsman.id} /></div>
         </motion.div>
       </motion.div>
     </div>

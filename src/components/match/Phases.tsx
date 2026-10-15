@@ -36,9 +36,9 @@ export function Phases({ match }: { match: Match }) {
 
       {sets.map((s, i) => (
         <section key={i} className="rounded-xl border border-line bg-panel-2 p-3">
-          <div className="mb-2 flex items-center gap-2"><TeamLogo team={s.team} size={26} /><div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{i === 0 ? '1st innings' : '2nd innings'}</div><div className="text-sm font-bold text-white">{s.team.name}</div></div></div>
+          <div className="mb-2 flex items-center gap-2"><TeamLogo team={s.team} size={26} /><div><div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{i === 0 ? '1st innings' : '2nd innings'}</div><div className="text-sm font-bold text-white">{s.team.name}</div></div></div>
           <table className="w-full text-xs">
-            <thead className="text-[10px] uppercase tracking-wider text-slate-500">
+            <thead className="text-[11px] uppercase tracking-wider text-slate-500">
               <tr><th className="py-1 text-left font-medium">Phase</th><th className="text-right font-medium">Overs</th><th className="text-right font-medium">Runs</th><th className="text-right font-medium">RR</th><th className="text-right font-medium">Wkts</th><th className="text-right font-medium">4s/6s</th><th className="text-right font-medium">Dots</th></tr>
             </thead>
             <tbody>

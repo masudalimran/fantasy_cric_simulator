@@ -37,7 +37,7 @@ export function MobileHeader({ resuming, playTo }: { resuming: boolean; playTo: 
 /** The tab bar along the bottom, like a native app: Teams, Career, a big Play button, More. */
 export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; playTo: string; onMore: () => void }) {
   const { pathname } = useLocation()
-  const item = (active: boolean) => `flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 text-[10px] font-bold tracking-wide transition ${active ? 'text-white' : 'text-slate-500'}`
+  const item = (active: boolean) => `flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 text-[11px] font-bold tracking-wide transition ${active ? 'text-white' : 'text-slate-500'}`
   const playActive = pathname.startsWith('/play')
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-[60] border-t border-line/70 bg-ink/92 backdrop-blur-xl" style={{ paddingBottom: 'var(--sab)', paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
@@ -53,7 +53,7 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
             {Icon.play}
             {resuming && <span className="absolute right-3.5 top-0.5 h-3 w-3 animate-pulse rounded-full bg-red-500 ring-2 ring-ink" />}
           </span>
-          <span className={`absolute bottom-1.5 text-[10px] font-bold tracking-wide ${playActive || resuming ? 'text-emerald-300' : 'text-slate-500'}`}>{resuming ? 'Live' : 'Play'}</span>
+          <span className={`absolute bottom-1.5 text-[11px] font-bold tracking-wide ${playActive || resuming ? 'text-emerald-300' : 'text-slate-500'}`}>{resuming ? 'Live' : 'Play'}</span>
         </NavLink>
         <NavLink to={paths.sessions} className={() => item(pathname.startsWith('/career'))}>
           <span className={pathname.startsWith('/career') ? 'text-indigo-300' : ''}>{Icon.career}</span>Career

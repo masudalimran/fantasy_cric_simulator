@@ -53,7 +53,7 @@ function ImageUrlField({ player, onChange }: { player: Player; onChange: (url: s
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-line bg-panel-2">
         {status !== 'error' && <img key={shown} src={shown} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover object-top" onLoad={() => usable && setStatus('ok')} onError={() => usable && setStatus('error')} />}
         {(status === 'error' || (!usable && !player.imageUrl)) && status !== 'ok' && (
-          <div className="absolute inset-0 grid place-items-center p-1 text-center text-[10px] text-slate-500">{status === 'error' ? 'Could not load' : 'No image'}</div>
+          <div className="absolute inset-0 grid place-items-center p-1 text-center text-[11px] text-slate-500">{status === 'error' ? 'Could not load' : 'No image'}</div>
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -101,7 +101,7 @@ function LogoUrlField({ team, onChange }: { team: Team; onChange: (url: string |
   return (
     <div className="flex items-center gap-4 md:col-span-6">
       <div className="flex shrink-0 items-center gap-3">
-        <div className="text-center"><TeamCrest team={{ ...team, logoUrl: usable ? url : undefined }} size={72} /><div className="mt-1 text-[10px] text-slate-500">{usable && status === 'ok' ? 'Your logo' : 'Preview'}</div></div>
+        <div className="text-center"><TeamCrest team={{ ...team, logoUrl: usable ? url : undefined }} size={72} /><div className="mt-1 text-[11px] text-slate-500">{usable && status === 'ok' ? 'Your logo' : 'Preview'}</div></div>
         {usable && <img src={url} alt="" className="hidden" referrerPolicy="no-referrer" onLoad={() => setStatus('ok')} onError={() => setStatus('error')} />}
       </div>
       <div className="min-w-0 flex-1">

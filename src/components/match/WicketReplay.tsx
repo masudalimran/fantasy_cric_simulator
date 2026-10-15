@@ -105,7 +105,7 @@ export function Actor({ player, team, size, note, from, path, times, dur, jump, 
           <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(team)}, 0 0 18px ${accentOf(team)}88` }}><PlayerAvatar player={player} team={team} size={size} /></div>
         )}
         <div className="mt-1 flex flex-col items-center gap-0.5">
-          <span className="rounded bg-black/70 px-1.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: accentOf(team) }}>{tag}</span>
+          <span className="rounded bg-black/70 px-1.5 text-[11px] font-extrabold uppercase tracking-wider" style={{ color: accentOf(team) }}>{tag}</span>
           {/* the whole name, on two lines if it is long, and the score always underneath it */}
           <span className="max-w-[150px] rounded bg-black/60 px-1.5 text-center text-[11px] font-semibold leading-tight text-white">{player.name}</span>
           {note && <span className="whitespace-nowrap rounded bg-black/70 px-1.5 text-[11px] font-extrabold text-red-300">{note}</span>}
@@ -169,7 +169,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
 
       {/* the replay tag */}
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />Wicket replay</div>
-      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">{info.details ? 'Tap to continue' : 'Tap to skip'}</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">{info.details ? 'Tap to continue' : 'Tap to skip'}</div>
 
       {/* who is out: his picture and full name, his innings, and how he got out */}
       {card && (
@@ -221,7 +221,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       {kind === 'lbw' && (
         <motion.div className="absolute z-20 text-center" style={{ left: '66%', top: '40%' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 * r }}>
           <motion.div animate={{ y: [14, 0], rotate: [0, -8, 0], scale: [0.6, 1.4, 1.2] }} transition={{ delay: 2.1 * r, duration: 0.6 }} className="text-5xl">☝️</motion.div>
-          <span className="rounded bg-black/70 px-1.5 text-[10px] font-bold uppercase tracking-wider text-white">Umpire</span>
+          <span className="rounded bg-black/70 px-1.5 text-[11px] font-bold uppercase tracking-wider text-white">Umpire</span>
         </motion.div>
       )}
 

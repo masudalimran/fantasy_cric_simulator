@@ -29,7 +29,7 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
         </div>
         <div className="grid gap-3 p-3">
           <div>
-            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Batting</div>
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Batting</div>
             {bats.map((b) => (
               <div key={b.id} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
                 <PlayerAvatar player={match.player(b.id)} team={team} size={26} />
@@ -39,7 +39,7 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
             ))}
           </div>
           <div>
-            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Bowling · {oppTeam.name}</div>
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Bowling · {oppTeam.name}</div>
             {bowls.map((l) => (
               <div key={l.id} className="flex items-center gap-2 border-t border-line/60 py-1 text-sm first:border-0">
                 <PlayerAvatar player={match.player(l.id)} team={oppTeam} size={26} />

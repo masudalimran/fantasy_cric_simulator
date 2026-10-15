@@ -6,13 +6,13 @@ import { FORMATS } from '../../engine/types'
 import { PlayerAvatar } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
-import { setAnimPrefs, setSwipeAim, useAnimPrefs, useSwipeAim } from '../../prefs'
+import { animLevelOf, setAnimLevel, setAnimPrefs, setSwipeAim, useAnimPrefs, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
 
 type Auto = 0 | 1 | 2 | 4
 
 /** Moments that stop auto-play by themselves. */
-export interface AutoStops { wickets: boolean; boundaries: boolean; innings: boolean }
+export interface AutoStops { wickets: boolean; milestones: boolean; boundaries: boolean; innings: boolean }
 
 interface Props {
   match: Match
@@ -57,7 +57,7 @@ function Fold({ title, hint, badge, children }: { title: string; hint?: string; 
     <details className="group px-3 py-2.5" open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
       <summary className="flex cursor-pointer list-none items-baseline justify-between gap-2">
         <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200">{title} <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></h3>
-        {badge ? <span className="truncate rounded bg-amber-400 px-1.5 py-px text-[10px] font-extrabold text-black">{badge}</span> : hint && <p className="truncate text-[11px] text-slate-500">{hint}</p>}
+        {badge ? <span className="truncate rounded bg-amber-400 px-1.5 py-px text-[11px] font-extrabold text-black">{badge}</span> : hint && <p className="truncate text-[11px] text-slate-500">{hint}</p>}
       </summary>
       <div className="mt-2 space-y-2">{children}</div>
     </details>
@@ -120,24 +120,26 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           </button>
           <button className={solid} onClick={() => act({ t: 'over' })}>Finish over</button>
         </div>
+        <Fold title="More ways to play" hint="sim ahead, next wicket, finish">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-semibold text-slate-400">Sim</span>
-          <div className="flex h-9 items-center overflow-hidden rounded-lg bg-slate-700">
-            <button className="grid h-9 w-8 place-items-center text-base font-bold text-white hover:bg-slate-600" aria-label="Fewer overs" onClick={() => setOvers((n) => Math.max(1, n - 1))}>−</button>
-            <div className="w-16 text-center text-[13px] font-bold text-white">{overs} {overs === 1 ? 'over' : 'overs'}</div>
-            <button className="grid h-9 w-8 place-items-center text-base font-bold text-white hover:bg-slate-600" aria-label="More overs" onClick={() => setOvers((n) => Math.min(cfg.overs, n + 1))}>+</button>
+            <span className="text-[11px] font-semibold text-slate-400">Sim</span>
+            <div className="flex h-9 items-center overflow-hidden rounded-lg bg-slate-700">
+              <button className="grid h-9 w-8 place-items-center text-base font-bold text-white hover:bg-slate-600" aria-label="Fewer overs" onClick={() => setOvers((n) => Math.max(1, n - 1))}>−</button>
+              <div className="w-16 text-center text-[13px] font-bold text-white">{overs} {overs === 1 ? 'over' : 'overs'}</div>
+              <button className="grid h-9 w-8 place-items-center text-base font-bold text-white hover:bg-slate-600" aria-label="More overs" onClick={() => setOvers((n) => Math.min(cfg.overs, n + 1))}>+</button>
+            </div>
+            <button className={`${base} bg-indigo-500 text-white hover:bg-indigo-400`} onClick={() => act({ t: 'overs', n: overs })}>Go</button>
           </div>
-          <button className={`${base} bg-indigo-500 text-white hover:bg-indigo-400`} onClick={() => act({ t: 'overs', n: overs })}>Go</button>
-        </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          <button className={solid} onClick={() => act({ t: 'wicket' })}>Next wicket</button>
-          <button className={solid} onClick={() => act({ t: 'innings' })}>End innings</button>
-          <button className={`${base} bg-emerald-700 text-white hover:bg-emerald-600`} onClick={() => act({ t: 'match' })}>Finish match</button>
-        </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            <button className={solid} onClick={() => act({ t: 'wicket' })}>Next wicket</button>
+            <button className={solid} onClick={() => act({ t: 'innings' })}>End innings</button>
+            <button className={`${base} bg-emerald-700 text-white hover:bg-emerald-600`} onClick={() => act({ t: 'match' })}>Finish match</button>
+          </div>
+        </Fold>
       </Section>
 
       {/* AUTO-PLAY (not shown when you play manually) */}
-      {!manual && <Section title="Auto-play" hint="pauses only where ticked">
+      {!manual && <Section title="Auto-play" hint="where it pauses, that screen waits for a tap">
         <div className="grid grid-cols-4 overflow-hidden rounded-lg bg-slate-700">
           {([0, 1, 2, 4] as const).map((v) => (
             <button key={v} onClick={() => setAuto(v)} className={`h-8 text-[13px] font-bold transition ${auto === v ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>
@@ -147,7 +149,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-0.5">
           <span className="text-[11px] font-semibold text-slate-400">Pause on</span>
-          {([['wickets', 'Wickets'], ['boundaries', 'Boundaries'], ['innings', 'Innings end']] as const).map(([k, label]) => (
+          {([['wickets', 'Wickets'], ['milestones', 'Fifties and hundreds'], ['boundaries', 'Boundaries'], ['innings', 'Innings end']] as const).map(([k, label]) => (
             <label key={k} className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
               <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={stops[k]} onChange={(e) => setStops({ ...stops, [k]: e.target.checked })} />
               {label}
@@ -157,28 +159,24 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
       </Section>}
 
       {/* ANIMATIONS: whether the big screens play */}
-      <Section title="Animations" hint="screens that take over the field">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
-            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.wicket} onChange={(e) => setAnimPrefs({ wicket: e.target.checked })} />Wicket replay
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
-            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.boundary} onChange={(e) => setAnimPrefs({ boundary: e.target.checked })} />Boundaries (four and six)
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
-            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.extras} onChange={(e) => setAnimPrefs({ extras: e.target.checked })} />Extras (wide, bye, leg bye) and maidens
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
-            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.freeHit} onChange={(e) => setAnimPrefs({ freeHit: e.target.checked })} />Free hit screen
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200" title="Off: a fifty or hundred and a wicket each show their original two screens again">
-            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.merged} onChange={(e) => setAnimPrefs({ merged: e.target.checked })} />One screen for fifties, hundreds and wickets
-          </label>
-          <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200" title="On: play waits on a fifty or hundred screen until you tap it. Off: it closes by itself and play carries on">
-            <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim.hold} onChange={(e) => setAnimPrefs({ hold: e.target.checked })} />Wait for a tap on fifty and hundred screens
-          </label>
+      <Fold title="Animations" hint={animLevelOf(anim) ? { full: 'all screens', light: 'big moments only', off: 'none' }[animLevelOf(anim) as AnimLevel] : 'custom'}>
+        <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-slate-700">
+          {([['full', 'Full'], ['light', 'Light'], ['off', 'Off']] as const).map(([l, label]) => (
+            <button key={l} onClick={() => setAnimLevel(l)} className={`h-8 text-[13px] font-bold transition ${animLevelOf(anim) === l ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
+          ))}
         </div>
-      </Section>
+        <p className="text-[11px] leading-snug text-slate-400">Light keeps wickets, sixes, fifties and hundreds, and skips the rest.</p>
+        <details className="group">
+          <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200">Advanced <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></summary>
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            {([['wicket', 'Wicket replay'], ['milestone', 'Fifties and hundreds'], ['six', 'Sixes'], ['four', 'Fours'], ['extras', 'Extras and maidens'], ['freeHit', 'Free hit']] as [keyof AnimPrefs, string][]).map(([k, label]) => (
+              <label key={k} className="flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-slate-200">
+                <input type="checkbox" className="h-3.5 w-3.5 cursor-pointer accent-indigo-500" checked={anim[k]} onChange={(e) => setAnimPrefs({ [k]: e.target.checked })} />{label}
+              </label>
+            ))}
+          </div>
+        </details>
+      </Fold>
 
       {/* TACTICS */}
       {spectating && <Section title="Watching"><p className="rounded-lg bg-white/5 px-2.5 py-2 text-[12px] text-slate-300">This isn't your team's match. The computer runs both sides, so there are no tactics to set.</p></Section>}
@@ -222,7 +220,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
             return (
               <button key={id} title={hint} onClick={() => act({ t: 'style', side: bowlSide, v: id })} className="flex h-12 flex-col items-center justify-center rounded-lg border-2 transition hover:brightness-125" style={{ borderColor: on ? color : '#2b3145', background: on ? `${color}26` : '#1a1f2e' }}>
                 <span className="text-[12px] font-bold text-white">{label}</span>
-                <span className="text-[9px] leading-tight text-slate-400">{id === 'safe' ? 'fewer wickets' : id === 'aggressive' ? 'more wickets' : 'balanced'}</span>
+                <span className="text-[10px] leading-tight text-slate-400">{id === 'safe' ? 'fewer wickets' : id === 'aggressive' ? 'more wickets' : 'balanced'}</span>
               </button>
             )
           })}
@@ -243,9 +241,9 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
                 <PlayerAvatar player={p} team={bowl.team} size={26} />
                 <span className="min-w-0 flex-1 leading-tight">
                   <span className="block truncate text-[12px] font-bold text-white">{p.name}</span>
-                  <span className="block truncate text-[10px] text-slate-400">{p.bowling?.type} · {oversText(line?.legalBalls ?? 0)} ov{line ? ` · ${line.wickets}/${line.runs}` : ''}</span>
+                  <span className="block truncate text-[11px] text-slate-400">{p.bowling?.type} · {oversText(line?.legalBalls ?? 0)} ov{line ? ` · ${line.wickets}/${line.runs}` : ''}</span>
                 </span>
-                {on && <span className="rounded bg-red-500 px-1 py-px text-[9px] font-extrabold text-white">NEXT</span>}
+                {on && <span className="rounded bg-red-500 px-1 py-px text-[10px] font-extrabold text-white">NEXT</span>}
               </button>
             )
           })}

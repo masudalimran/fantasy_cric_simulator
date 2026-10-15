@@ -69,10 +69,28 @@ export function useManualPlay(): boolean {
 }
 
 // ---- Which match animations to show ---------------------------------------------------------------------------
-export interface AnimPrefs { wicket: boolean; boundary: boolean; freeHit: boolean; extras: boolean; merged: boolean; hold: boolean }
+/** Each group of animation screens has its own switch; `animLevel` flips them all at once. */
+export interface AnimPrefs { wicket: boolean; six: boolean; four: boolean; milestone: boolean; freeHit: boolean; extras: boolean }
+const ANIM_ALL: AnimPrefs = { wicket: true, six: true, four: true, milestone: true, freeHit: true, extras: true }
+/** Full: every screen. Light: only the big three (wickets, sixes, fifties and hundreds). Off: none. */
+export type AnimLevel = 'full' | 'light' | 'off'
+const ANIM_LEVELS: Record<AnimLevel, AnimPrefs> = {
+  full: ANIM_ALL,
+  light: { wicket: true, six: true, four: false, milestone: true, freeHit: false, extras: false },
+  off: { wicket: false, six: false, four: false, milestone: false, freeHit: false, extras: false },
+}
 const ANIM_KEY = 'fcs.anim'
 const animListeners = new Set<() => void>()
-let anim: AnimPrefs = (() => { try { return { wicket: true, boundary: true, freeHit: true, extras: true, merged: true, hold: true, ...JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}') } } catch { return { wicket: true, boundary: true, freeHit: true, extras: true, merged: true, hold: true } } })()
+let anim: AnimPrefs = (() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ANIM_KEY) ?? '{}')
+    // older saves had one switch for both boundary screens
+    if (typeof saved.boundary === 'boolean') { saved.six ??= saved.boundary; saved.four ??= saved.boundary }
+    const out = { ...ANIM_ALL }
+    for (const k of Object.keys(ANIM_ALL) as (keyof AnimPrefs)[]) if (typeof saved[k] === 'boolean') out[k] = saved[k]
+    return out
+  } catch { return { ...ANIM_ALL } }
+})()
 
 export const getAnimPrefs = () => anim
 export function setAnimPrefs(next: Partial<AnimPrefs>) {
@@ -80,8 +98,13 @@ export function setAnimPrefs(next: Partial<AnimPrefs>) {
   try { localStorage.setItem(ANIM_KEY, JSON.stringify(anim)) } catch { /* just not remembered */ }
   animListeners.forEach((l) => l())
 }
+export const setAnimLevel = (l: AnimLevel) => setAnimPrefs(ANIM_LEVELS[l])
+/** Which level the current switches add up to, or null when they are mixed. */
+export function animLevelOf(p: AnimPrefs): AnimLevel | null {
+  return (Object.keys(ANIM_LEVELS) as AnimLevel[]).find((l) => (Object.keys(ANIM_ALL) as (keyof AnimPrefs)[]).every((k) => p[k] === ANIM_LEVELS[l][k])) ?? null
+}
 
 /** Each kind of animation screen has its own switch (all on by default). */
 export function useAnimPrefs(): AnimPrefs {
-  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ({ wicket: true, boundary: true, freeHit: true, extras: true, merged: true, hold: true }))
+  return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ANIM_ALL)
 }

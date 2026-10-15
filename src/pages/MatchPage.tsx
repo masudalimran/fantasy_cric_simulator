@@ -64,7 +64,7 @@ function delayAfter(ev: BallEvent | undefined, speed: 1 | 2 | 4): number {
 }
 
 const STOPS_KEY = 'fcs.autostops'
-const DEFAULT_STOPS: AutoStops = { wickets: true, boundaries: false, innings: true }
+const DEFAULT_STOPS: AutoStops = { wickets: true, milestones: true, boundaries: false, innings: true }
 function loadStops(): AutoStops {
   try { return { ...DEFAULT_STOPS, ...JSON.parse(localStorage.getItem(STOPS_KEY) ?? '{}') } } catch { return DEFAULT_STOPS }
 }
@@ -175,11 +175,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     current.current = m
     setMoment(m)
     if (!m) { busyUntil.current = 0; return }
-    // With "pause on wickets" ticked the dismissal stays up until you resume, play the next ball or click it.
-    // The one-screen wicket waits for a tap when "pause on wickets" is on, and the fifty / hundred screen unless the Animations switch says otherwise.
-    const finalWicket = m.kind === 'wicket' || (m.kind === 'replay' && !!m.replay?.details)
-    const heldScreen = getAnimPrefs().hold && m.kind === 'milestone' && !!m.fist
-    if ((finalWicket && stopsRef.current.wickets) || heldScreen) { busyUntil.current = Infinity; return }
+    // One rule: where auto-play pauses (wickets, fifties and hundreds, boundaries), that event's screen waits for a tap too.
+    const st = stopsRef.current
+    if ((m.kind === 'replay' && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
@@ -303,7 +301,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const innNow = match.innings[lastEv.innings]
         const batT = match.sides[innNow.battingSide].team
         const bowlS = match.sides[1 - innNow.battingSide]
-        if (prefs.boundary && lastEv.boundary === 4) {
+        if (prefs.four && lastEv.boundary === 4) {
           const field = placedAt(lastEv)
           const ang = eventAngle(lastEv)
           const diff = (f: { x: number; y: number }) => { let d = Math.abs(Math.atan2(f.y - 66, f.x - 80) - ang); if (d > Math.PI) d = 2 * Math.PI - d; return d }
@@ -334,40 +332,37 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         // timings shrink with the auto-play speed so a celebration never outlasts the pause that makes room for it
         const sp = autoRef.current
         const delay = sp === 4 ? 350 : sp === 2 ? 500 : 800
-        const ms = sp === 4 ? 1300 : sp === 2 ? 1800 : 2600
         const show = (m: Moment) => enqueueMoment(m)
         // a six gets a short screen of its own: the ball leaving the ground and how far it went
-        if (notable.boundary === 6 && notable.distance && !notable.wicket && getAnimPrefs().boundary) {
+        if (notable.boundary === 6 && notable.distance && !notable.wicket && getAnimPrefs().six) {
           const hitter = match.player(notable.strikerId)
           const earlier = Math.max(0, ...inn.log.filter((e) => e.seq < notable.seq && e.strikerId === notable.strikerId && e.boundary === 6).map((e) => e.distance ?? 0), seasonStats?.bat.get(notable.strikerId)?.longSix ?? 0)
           const rate6 = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
           show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(3300 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, longest: earlier > 0 && notable.distance > earlier } })
         }
         if (battingMilestone && outLine) {
-          const mLines = [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
-          // one screen: the two batsmen meet in the middle and bump fists, with the innings on it (the Animations switch brings the old card back)
-          const merged = getAnimPrefs().merged
-          const mRate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
-          const partnerId = notable.strikerId === outLine.id ? notable.nonStrikerId : notable.strikerId
-          show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms: merged ? Math.round(5200 * mRate) : ms,
-            lines: mLines,
-            fist: merged ? { batsman: match.player(outLine.id), partner: partnerId && partnerId !== outLine.id ? match.player(partnerId) : null, team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', lines: mLines, rate: mRate } : undefined })
+          // the two batsmen meet in the middle and bump fists, with the innings on it
+          if (getAnimPrefs().milestone) {
+            const mLines = [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
+            const mRate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
+            const partnerId = notable.strikerId === outLine.id ? notable.nonStrikerId : notable.strikerId
+            show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', delay, ms: Math.round(5200 * mRate),
+              lines: mLines,
+              fist: { batsman: match.player(outLine.id), partner: partnerId && partnerId !== outLine.id ? match.player(partnerId) : null, team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', lines: mLines, rate: mRate } })
+          }
         } else if (notable.wicket && outLine) {
-          // first a screen of its own showing how the wicket happened, then the batsman's moment
+          // one screen for the wicket: how it happened, and his innings on a card
           const w = notable.wicket
           const bowlSideNow = match.sides[1 - match.innings[notable.innings].battingSide]
           const fielderP = w.fielderId ? match.player(w.fielderId) : null
           const bowlerP = match.player(notable.bowlerId)
           const rate = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
           const wantReplay = getAnimPrefs().wicket
-          const merged = wantReplay && getAnimPrefs().merged // the replay carries the OUT! details, so the second screen is not shown
           const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
           if (wantReplay) show({
-            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((merged ? 6300 : 4300) * rate),
-            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: merged ? { lines: outLines, duck: outLine.runs === 0 } : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
+            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6300 * rate),
+            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, card: { lines: outLines, duck: outLine.runs === 0 } },
           })
-          if (!merged) show({ key: notable.seq, kind: 'wicket', player: match.player(outLine.id), team, title: 'OUT!', duck: outLine.runs === 0, delay: wantReplay ? 0 : delay, ms, // straight after the replay, no gap
-            lines: outLines })
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
         }

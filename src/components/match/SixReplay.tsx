@@ -68,7 +68,7 @@ export function SixReplay({ info }: { info: SixInfo }) {
       <div className="absolute inset-x-0 top-[52%] h-[2px] bg-white/80" />
 
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300"><span className="h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />{monster ? 'Monster six' : 'Six'}</div>
-      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
 
       {/* the batsman, and the ball leaving the bat in an arc over the rope and out of the ground */}
       <motion.div className="absolute bottom-[6%] left-[8%] z-20 text-center" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.4 }}>

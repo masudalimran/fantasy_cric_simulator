@@ -28,7 +28,7 @@ export function Matchups({ match }: { match: Match }) {
               <tr>
                 <th className="py-1 text-left font-medium text-slate-500">Batsman</th>
                 {bowlers.map((w) => (
-                  <th key={w} className="px-1 text-center font-medium"><div className="flex flex-col items-center gap-0.5"><ClickAvatar player={match.player(w)} team={bowl} size={22} /><span className="max-w-[58px] truncate text-[10px] text-slate-300">{match.player(w).name.split(' ')[0]}</span></div></th>
+                  <th key={w} className="px-1 text-center font-medium"><div className="flex flex-col items-center gap-0.5"><ClickAvatar player={match.player(w)} team={bowl} size={22} /><span className="max-w-[58px] truncate text-[11px] text-slate-300">{match.player(w).name.split(' ')[0]}</span></div></th>
                 ))}
               </tr>
             </thead>

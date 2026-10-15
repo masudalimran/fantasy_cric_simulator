@@ -96,8 +96,8 @@ export function DeliveryPad({ value, onChange, paceLabels, manual }: { value: De
               )
             }))}
           </div>
-          <div className="mt-1 flex justify-between text-[9px] text-slate-400"><span>leg</span><span>stumps</span><span>off</span></div>
-          <div className="text-center text-[9px] text-slate-500">top = short, bottom = yorker (batsman)</div>
+          <div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>leg</span><span>stumps</span><span>off</span></div>
+          <div className="text-center text-[10px] text-slate-500">top = short, bottom = yorker (batsman)</div>
         </div>
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-slate-700">

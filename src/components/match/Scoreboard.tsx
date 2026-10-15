@@ -13,8 +13,8 @@ const LEVEL_COLOR: Record<Difficulty, string> = { easy: '#34d399', normal: '#38b
 function Who({ side, you }: { side: 0 | 1; you: 0 | 1 | null | undefined }) {
   if (you === null || you === undefined) return null
   return side === you
-    ? <span className="ml-1.5 rounded bg-amber-400 px-1.5 py-px align-middle text-[9px] font-extrabold tracking-wider text-black">YOU</span>
-    : <span className="ml-1.5 rounded bg-slate-500 px-1.5 py-px align-middle text-[9px] font-extrabold tracking-wider text-white">CPU</span>
+    ? <span className="ml-1.5 rounded bg-amber-400 px-1.5 py-px align-middle text-[10px] font-extrabold tracking-wider text-black">YOU</span>
+    : <span className="ml-1.5 rounded bg-slate-500 px-1.5 py-px align-middle text-[10px] font-extrabold tracking-wider text-white">CPU</span>
 }
 
 /**
@@ -71,8 +71,8 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
             <div className="absolute inset-y-0 w-px bg-white/60" style={{ left: `${((pp * 6) / total) * 100}%` }} />
             <div className="absolute inset-y-0 w-px bg-white/60" style={{ left: `${((death * 6) / total) * 100}%` }} />
           </div>
-          <div className="mx-auto mt-1 flex max-w-xs justify-between text-[10px] uppercase tracking-wider text-slate-400"><span>Powerplay</span><span>Middle</span><span>Death</span></div>
-          {difficulty && you !== null && you !== undefined && <div className="mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider" style={{ background: `${LEVEL_COLOR[difficulty]}26`, color: LEVEL_COLOR[difficulty] }} title="The difficulty you chose for this career">{DIFFICULTIES[difficulty].label} difficulty</div>}
+          <div className="mx-auto mt-1 flex max-w-xs justify-between text-[11px] uppercase tracking-wider text-slate-400"><span>Powerplay</span><span>Middle</span><span>Death</span></div>
+          {difficulty && you !== null && you !== undefined && <div className="mt-1.5 inline-block rounded px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider" style={{ background: `${LEVEL_COLOR[difficulty]}26`, color: LEVEL_COLOR[difficulty] }} title="The difficulty you chose for this career">{DIFFICULTIES[difficulty].label} difficulty</div>}
           {inn.freeHit && <div className="mt-2 inline-block rounded bg-amber-400 px-2 py-0.5 text-xs font-extrabold text-black">FREE HIT NEXT</div>}
         </div>
 
@@ -134,7 +134,7 @@ export function MobileScoreboard({ match, you, difficulty, onBack, backLabel }: 
             </motion.span>
             <span className="font-display text-base leading-none text-white">{oversText(inn.legalBalls)}<span className="text-xs text-slate-400"> / {cfg.overs}</span></span>
           </div>
-          <div className="truncate text-[10px] font-semibold leading-tight text-slate-200">
+          <div className="truncate text-[11px] font-semibold leading-tight text-slate-200">
             {bat.team.name}<Who side={inn.battingSide} you={you} />
             <span className="font-normal text-slate-400"> · {inn.index === 0 ? '1st' : '2nd'} inns · {match.format.toUpperCase()}</span>
           </div>
@@ -143,20 +143,20 @@ export function MobileScoreboard({ match, you, difficulty, onBack, backLabel }: 
           {inn.target !== null ? (
             <>
               <div className="font-display text-base leading-none text-white">Need {Math.max(inn.target - inn.runs, 0)}</div>
-              <div className="text-[10px] text-slate-300">off {ballsLeft} · RRR <b className="text-white">{rrr !== null ? rrr.toFixed(2) : '-'}</b></div>
+              <div className="text-[11px] text-slate-300">off {ballsLeft} · RRR <b className="text-white">{rrr !== null ? rrr.toFixed(2) : '-'}</b></div>
             </>
           ) : (
             <>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Projected</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Projected</div>
               <div className="font-display text-base leading-none text-white">{projected}</div>
             </>
           )}
         </div>
       </div>
-      <div className="relative flex items-center justify-between gap-2 px-3 pb-1.5 text-[10px] text-slate-300">
+      <div className="relative flex items-center justify-between gap-2 px-3 pb-1.5 text-[11px] text-slate-300">
         <span>CRR <b className="text-white">{runRate(inn)}</b>{inn.target !== null && <> · Target <b className="text-white">{inn.target}</b></>}</span>
         <span className="truncate text-slate-400">vs {bowl.team.name}<Who side={(1 - inn.battingSide) as 0 | 1} you={you} />{difficulty && you !== null && you !== undefined && <span className="ml-1.5 font-bold" style={{ color: LEVEL_COLOR[difficulty] }}>{DIFFICULTIES[difficulty].label}</span>}</span>
-        {inn.freeHit && <span className="rounded bg-amber-400 px-1.5 py-px text-[10px] font-extrabold text-black">FREE HIT</span>}
+        {inn.freeHit && <span className="rounded bg-amber-400 px-1.5 py-px text-[11px] font-extrabold text-black">FREE HIT</span>}
       </div>
       <div className="relative h-1 bg-white/10">
         <div className="absolute inset-y-0 left-0" style={{ width: `${(inn.legalBalls / total) * 100}%`, background: accent }} />

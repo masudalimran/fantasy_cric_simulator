@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Sheet } from '../components/Sheet'
 import { TransferRow } from '../components/season/TransferRow'
@@ -15,6 +15,7 @@ import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, n
 import { applyShift } from '../season/progression'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
+import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
 
 const stars = (potential: number) => Math.max(1, Math.min(5, Math.round((potential - 50) / 8)))
@@ -40,6 +41,11 @@ export function MarketPage() {
   const [signed, setSigned] = useState<Signing | null>(null)
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [role, setRole] = useState<'all' | Player['role']>('all')
+  const [q, setQ] = useState('') // search by name or anime
+  const [sortBy, setSortBy] = useState<'rating' | 'price' | 'name'>('rating')
+  const [series, setSeries] = useState('all') // only players from one anime or game
+  const [undo, setUndo] = useState<{ text: string; before: Season; logLen: number } | null>(null)
+  const undoTimer = useRef<number | undefined>(undefined)
 
   const market = season?.market
   const index = useMemo(() => playerIndex(base, market), [base, market])
@@ -55,10 +61,24 @@ export function MarketPage() {
   const shown = (p: Player) => applyShift(p, season.shifts?.[p.id])
   const worth = (p: Player) => marketValue(p, recentForm(season, p.id), season.shifts?.[p.id])
 
+  // A few seconds to take a signing or a release back, as long as nothing else has happened in the market since.
+  const offerUndo = (text: string, before: Season, after: Season) => {
+    window.clearTimeout(undoTimer.current)
+    setUndo({ text, before, logLen: after.market?.log.length ?? 0 })
+    undoTimer.current = window.setTimeout(() => setUndo(null), 12000)
+  }
+  const takeBack = () => {
+    if (!undo) return
+    window.clearTimeout(undoTimer.current)
+    if ((season.market?.log.length ?? 0) === undo.logLen) { updateSeason(() => undo.before); setNotice('Done, it never happened.') }
+    else setNotice('Too late to undo: the market has moved on.')
+    setUndo(null)
+  }
   const attempt = (p: Player, from: string | null, price: number, dropId?: string) => {
     const out = signPlayer(season, index, season.myTeamId as string, p.id, today, dropId)
     if (out.error) { setNotice(out.error); return }
     updateSeason(() => out.season)
+    offerUndo(`Signed ${p.name} for ${price} coins.`, season, out.season)
     setNotice(null)
     setRoomFor(null)
     if (me) setSigned({ player: shown(p), to: me, from: from ? (teams.get(from) ?? null) : null, fee: price, kind: from ? 'buy' : 'sign' })
@@ -70,7 +90,7 @@ export function MarketPage() {
   const release = (p: Player) => {
     const out = releasePlayer(season, index, season.myTeamId as string, p.id, today)
     if (out.error) setNotice(out.error)
-    else { updateSeason(() => out.season); setNotice(`${p.name} has been released. You got ${refundOf(season, index, season.myTeamId as string, p.id)} coins back.`) }
+    else { updateSeason(() => out.season); offerUndo(`${p.name} released. You got ${refundOf(season, index, season.myTeamId as string, p.id)} coins back.`, season, out.season) }
   }
 
   const row = (p: Player, opts: { price?: number; from?: string | null; action?: React.ReactNode; teamBadge?: Team | null }) => {
@@ -83,7 +103,7 @@ export function MarketPage() {
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-white">{p.name}</div>
           <div className="truncate text-[11px] text-slate-400">{p.role}{sp.bowling ? ` · ${sp.bowling.type}` : ''}{originOf(p.id) ? ` · ${originOf(p.id)!.series}` : opts.teamBadge ? ` · ${opts.teamBadge.name}` : ''}</div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] tabular-nums text-slate-500">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] tabular-nums text-slate-500">
             <span>BAT {Math.round((sp.batting.technique + sp.batting.power + sp.batting.temperament) / 3)}</span>
             {sp.bowling && <span>BOWL {Math.round((sp.bowling.accuracy + sp.bowling.variation) / 2)}</span>}
             <span>FLD {sp.fielding}</span>
@@ -115,16 +135,21 @@ export function MarketPage() {
     setNotice(o ? `${index.get(o.playerId)?.name ?? 'He'} has joined ${teams.get(o.teamId)?.name ?? 'them'}. You got ${o.fee} coins.` : null)
   }
 
-  const matches = (p: Player) => role === 'all' || p.role === role
-  const pool = market.pool.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort((a, b) => overall(shown(b)) - overall(shown(a)))
+  const needle = q.trim().toLowerCase()
+  const matches = (p: Player) => (role === 'all' || p.role === role) && (series === 'all' || originOf(p.id)?.series === series) && (!needle || p.name.toLowerCase().includes(needle) || (originOf(p.id)?.series ?? '').toLowerCase().includes(needle))
+  const seriesList = [...new Set([...index.keys()].map((id) => originOf(id)?.series).filter((x): x is string => !!x))].sort()
+  const byOrder = (price: (p: Player) => number) => (a: Player, b: Player) =>
+    sortBy === 'name' ? a.name.localeCompare(b.name) : sortBy === 'price' ? price(a) - price(b) : overall(shown(b)) - overall(shown(a))
+  const pool = market.pool.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort(byOrder((p) => market.asking[p.id] ?? 0))
   const otherTeams = Object.keys(market.squads).filter((id) => id !== season.myTeamId)
   // every other team's players by default; a team's crest narrows it to that team
   const pickedTeam = teamPick ?? 'all'
+  const owners = new Map<string, string>()
   const theirs = (pickedTeam === 'all' ? otherTeams : [pickedTeam])
-    .flatMap((owner) => (market.squads[owner] ?? []).map((id) => ({ owner, p: index.get(id) })))
+    .flatMap((owner) => (market.squads[owner] ?? []).map((id) => { owners.set(id, owner); return { owner, p: index.get(id) } }))
     .filter((x): x is { owner: string; p: Player } => !!x.p && matches(x.p))
-    .sort((a, b) => overall(shown(b.p)) - overall(shown(a.p)))
-  const mine = squadIds.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p))
+    .sort((a, b) => byOrder((p) => askingFromTeam(season, index, owners.get(p.id) ?? '', p.id))(a.p, b.p))
+  const mine = squadIds.map((id) => index.get(id)).filter((p): p is Player => !!p && matches(p)).sort(byOrder(worth))
   const chip = (on: boolean) => `rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${on ? 'border-indigo-400 bg-indigo-500 text-white' : 'border-line text-slate-300 hover:text-white'}`
 
   return (
@@ -141,8 +166,8 @@ export function MarketPage() {
             </p>
           </div>
           <div className="flex items-center gap-4 text-center">
-            <div><div className="font-display text-4xl leading-none text-amber-300">{purse}</div><div className="text-[10px] uppercase tracking-wider text-slate-400">coins</div></div>
-            <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[10px] uppercase tracking-wider text-slate-400">squad</div></div>
+            <div><div className="font-display text-4xl leading-none text-amber-300">{purse}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">coins</div></div>
+            <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[11px] uppercase tracking-wider text-slate-400">squad</div></div>
           </div>
         </div>
         {win && <p className="mt-2 text-xs text-slate-400">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him.</p>}
@@ -188,8 +213,19 @@ export function MarketPage() {
         <button className={chip(view === 'unsigned')} onClick={() => setView('unsigned')}>Unsigned ({market.pool.length})</button>
         <button className={chip(view === 'teams')} onClick={() => setView('teams')}>Other teams</button>
         <button className={chip(view === 'squad')} onClick={() => setView('squad')}>My squad ({squadIds.length})</button>
-        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="ml-auto rounded-lg border border-line bg-panel-2 px-2 py-1.5 text-sm text-white" aria-label="Filter by role">
+      </div>}
+
+      {view !== 'transfers' && <div className="mb-3 grid grid-cols-2 gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a name or anime" aria-label="Search players" className="col-span-2 rounded-lg border border-line bg-panel-2 px-3 py-2 text-sm text-white placeholder:text-slate-500" />
+        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="rounded-lg border border-line bg-panel-2 px-2 py-2 text-sm text-white" aria-label="Filter by role">
           <option value="all">All roles</option><option value="BAT">Batsmen</option><option value="BOWL">Bowlers</option><option value="AR">All-rounders</option><option value="WK">Keepers</option>
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="rounded-lg border border-line bg-panel-2 px-2 py-2 text-sm text-white" aria-label="Sort players">
+          <option value="rating">Best rated first</option><option value="price">Cheapest first</option><option value="name">Name A to Z</option>
+        </select>
+        <select value={series} onChange={(e) => setSeries(e.target.value)} className="col-span-2 rounded-lg border border-line bg-panel-2 px-2 py-2 text-sm text-white" aria-label="Filter by anime or game">
+          <option value="all">Any anime or game</option>
+          {seriesList.map((x) => <option key={x} value={x}>{x}</option>)}
         </select>
       </div>}
 
@@ -287,6 +323,12 @@ export function MarketPage() {
               else if (c.offerId) takeOffer(c.offerId)
             }}
           />
+        )}
+        {undo && !signed && !confirm && (
+          <div key="undo" className="fixed inset-x-3 bottom-20 z-[60] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border border-amber-400/60 bg-panel px-4 py-3 shadow-2xl" role="status">
+            <span className="text-sm text-slate-100">{undo.text}</span>
+            <button onClick={takeBack} className="shrink-0 rounded-full bg-amber-400 px-4 py-1.5 text-sm font-extrabold text-black active:bg-amber-300">Undo</button>
+          </div>
         )}
         {signed && <SigningOverlay signing={signed} onClose={() => setSigned(null)} />}
       </AnimatePresence>

@@ -26,7 +26,7 @@ export function InningsPicker({ match, idx, setIdx }: { match: Match; idx: numbe
           >
             <TeamLogo team={team} size={24} />
             <span className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-wider opacity-70">{n === 0 ? '1st innings' : '2nd innings'}</span>
+              <span className="block text-[11px] font-bold uppercase tracking-wider opacity-70">{n === 0 ? '1st innings' : '2nd innings'}</span>
               <span className="block truncate text-xs font-semibold">{team.name}</span>
             </span>
           </button>

@@ -59,7 +59,7 @@ export function SigningOverlay({ signing, onClose }: { signing: Signing; onClose
           {tiles.map(([label, v], i) => (
             <motion.div key={label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05 + i * 0.08 }} className="rounded-xl bg-white/5 px-1 py-1.5">
               <div className="font-display text-2xl leading-none text-white">{v}</div>
-              <div className="truncate text-[9px] uppercase tracking-wider text-slate-400">{label}</div>
+              <div className="truncate text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
             </motion.div>
           ))}
         </div>

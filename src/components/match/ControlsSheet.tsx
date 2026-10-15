@@ -24,7 +24,7 @@ function Tip({ label, hint, align = 'center', children }: { label: string; hint?
         className={`pointer-events-none absolute bottom-full z-50 mb-2.5 whitespace-nowrap rounded-lg bg-black px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/20 transition-opacity duration-100 group-focus-within:opacity-100 group-hover:opacity-100 ${align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2'}`}
       >
         {label}
-        {hint && <kbd className="ml-2 rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold text-slate-200">{hint}</kbd>}
+        {hint && <kbd className="ml-2 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200">{hint}</kbd>}
       </div>
     </div>
   )
@@ -87,7 +87,7 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
             ) : (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5v13a1 1 0 0 0 1.5.86L13 14v4.5a1 1 0 0 0 1.5.86l8-6a1 1 0 0 0 0-1.72l-8-6A1 1 0 0 0 13 6.5V11L4.5 4.64A1 1 0 0 0 3 5.5z" /></svg>
             )}
-            {auto > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-white px-1.5 text-[10px] font-extrabold leading-4 text-indigo-700">{auto}x</span>}
+            {auto > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-white px-1.5 text-[11px] font-extrabold leading-4 text-indigo-700">{auto}x</span>}
           </button>
         </Tip>}
         {!holdLabel && !manual && <Tip label="Match controls" hint="C" align="right">

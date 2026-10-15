@@ -6,7 +6,7 @@ import type { Season } from '../../season/types'
 const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
 const tile = (label: string, value: React.ReactNode) => (
   <div key={label} className="rounded-lg bg-white/5 px-2.5 py-1.5">
-    <div className="cursor-help text-[10px] font-bold uppercase tracking-widest text-slate-500" data-gloss={label}>{label}</div>
+    <div className="cursor-help text-[11px] font-bold uppercase tracking-widest text-slate-500" data-gloss={label}>{label}</div>
     <div className="font-display text-xl leading-tight text-white">{value}</div>
   </div>
 )
@@ -31,19 +31,19 @@ export function OverallStats({ playerId, seasons, live }: { playerId: string; se
 
   const block = (title: string, l: { bat?: ReturnType<typeof mergeBat>; bowl?: ReturnType<typeof mergeBowl>; potm: number; played: number }) => (
     <div key={title}>
-      <h4 className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">{title}</h4>
+      <h4 className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">{title}</h4>
       {l.played || l.bat || l.bowl || l.potm ? (
         <div className="space-y-2">
           <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Matches', l.played)}{l.potm > 0 && tile('Man of the Match', l.potm)}</div>
           {l.bat && (
             <div>
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
+              <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-amber-300/90">Batting</div>
               <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Bat apps', l.bat.batApps)}{tile('Runs', l.bat.runs)}{tile('Average', f1(average(l.bat)))}{tile('Strike rate', f1(strikeRate(l.bat), 0))}{tile('Best', `${l.bat.high}${l.bat.highNotOut ? '*' : ''}`)}{tile('50s / 100s', `${l.bat.fifties} / ${l.bat.hundreds}`)}{tile('Fours / sixes', `${l.bat.fours} / ${l.bat.sixes}`)}{tile('Longest six', l.bat.longSix > 0 ? `${l.bat.longSix} m` : '-')}</div>
             </div>
           )}
           {l.bowl && (
             <div>
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
+              <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
               <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Bowl apps', l.bowl.bowlApps)}{tile('Wickets', l.bowl.wickets)}{tile('Economy', f1(economy(l.bowl), 2))}{tile('Bowling avg', f1(bowlAverage(l.bowl)))}{tile('Best', `${l.bowl.bestW}/${l.bowl.bestR}`)}{tile('5-wicket hauls', l.bowl.fiveW)}</div>
             </div>
           )}
