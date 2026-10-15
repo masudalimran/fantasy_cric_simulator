@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
+import type { BallEvent } from '../../engine/types'
 import type { Player, Team } from '../../types'
 import { OriginTag, PlayerAvatar, accentOf } from '../ui'
+import { Stage, type Placed } from './Stage'
 
 function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const box = useRef<HTMLDivElement>(null)
@@ -79,7 +81,21 @@ export interface TimeoutChannel {
   players?: { player: Player; team: Team; label?: string }[]
 }
 
+/** Real footage: balls from an earlier match played again on the real field view, small, on the TV. */
+export interface TimeoutReel {
+  player: Player; team: Team; kind: 'bat' | 'bowl'
+  /** "112 (58)" or "5/23", and "Soul Reapers v Hidden Leaf · 3 Jan 2026". */
+  headline: string; versus: string
+  balls: BallEvent[]
+  striker: Player; nonStriker: Player | null; bowler: Player
+  battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
+}
+
+const captionOf = (b: BallEvent) => (b.wicket ? 'WICKET!' : b.boundary === 6 ? 'SIX!' : b.boundary === 4 ? 'FOUR!' : b.runsBat >= 2 ? `${b.runsBat} RUNS` : 'DOT BALL')
+
 export interface TimeoutInfo {
+  /** The highlight reel, played for the first two thirds of the timeout (none in a first game or when no match has a saved reel yet). */
+  reel?: TimeoutReel
   /** "After 7 overs: 54/2". */
   headline: string
   teamNames: [string, string]
@@ -99,8 +115,14 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
     const id = window.setInterval(() => setElapsed((Date.now() - t0) / 1000), 250)
     return () => window.clearInterval(id)
   }, [])
-  const dwell = seconds / Math.max(1, channels.length)
-  const idx = Math.min(channels.length - 1, Math.floor(elapsed / dwell))
+  const reel = info.reel
+  const reelSecs = reel && reel.balls.length ? Math.round((seconds * 2) / 3) : 0
+  const inReel = !!reel && elapsed < reelSecs
+  const clipDwell = reel ? reelSecs / Math.max(1, reel.balls.length) : 1
+  const clip = reel ? Math.min(reel.balls.length - 1, Math.floor(elapsed / clipDwell)) : 0
+  const rest = Math.max(1, seconds - reelSecs)
+  const dwell = rest / Math.max(1, channels.length)
+  const idx = Math.min(channels.length - 1, Math.max(0, Math.floor((elapsed - reelSecs) / dwell)))
   const ch = channels[idx]
   const left = Math.max(0, Math.ceil(seconds - elapsed))
   const small = w < 520
@@ -114,6 +136,19 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
       </div>
       {/* the TV */}
       <div className="absolute inset-x-[5%] bottom-[15%] top-[14%] overflow-hidden rounded-xl border-2 border-slate-500/70 bg-black shadow-[0_0_30px_#38bdf844]">
+        {inReel && reel && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black" aria-label="Highlight reel">
+            <div className="relative h-full" style={{ aspectRatio: '16 / 10' }}>
+              <Stage
+                event={reel.balls[clip]} overEvents={[]} striker={reel.striker} nonStriker={reel.nonStriker} bowler={reel.bowler}
+                battingTeam={reel.battingTeam} bowlingTeam={reel.bowlingTeam} fielders={reel.fielders}
+              />
+            </div>
+            <div className="pointer-events-none absolute left-1.5 top-1.5 z-30 rounded bg-sky-500 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] text-white">Highlights · {clip + 1}/{reel.balls.length}</div>
+            <motion.div key={`cap${clip}`} className="pointer-events-none absolute bottom-1.5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-0.5 font-display text-lg leading-none tracking-wide text-amber-300 ring-1 ring-amber-300/60" initial={{ opacity: 0, scale: 1.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}>{captionOf(reel.balls[clip])}</motion.div>
+            <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-30 max-w-[42%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{reel.player.name} <span className="text-amber-300">{reel.headline}</span></div>
+          </div>
+        )}
         <motion.div key={idx} className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-3 pt-3 text-center" style={{ background: 'radial-gradient(ellipse at 50% 35%, #12385d, #060b14 85%)' }} initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: [0, 1, 0.92, 1], scale: 1 }} transition={{ duration: 0.5 }}>
           <div className="rounded bg-sky-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-white">{ch.tag}</div>
           {ch.players && ch.players.length > 0 && (
@@ -133,7 +168,7 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
           {ch.players?.length === 1 && !small && <div className="text-[11px]"><OriginTag playerId={ch.players[0].player.id} /></div>}
         </motion.div>
         <div className="pointer-events-none absolute inset-0 opacity-[0.09]" style={{ background: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)' }} />
-        <div className="absolute right-2 top-2 flex items-center gap-1 rounded bg-red-600 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white"><span className="h-1.5 w-1.5 rounded-full bg-white" />LIVE</div>
+        <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded bg-red-600 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white"><span className="h-1.5 w-1.5 rounded-full bg-white" />LIVE</div>
       </div>
       {/* the progress of the 30 seconds, and the teams */}
       <div className="absolute inset-x-[5%] bottom-[9%] z-20 h-1.5 overflow-hidden rounded-full bg-white/15">

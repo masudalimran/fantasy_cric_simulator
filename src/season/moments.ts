@@ -1,4 +1,5 @@
 import type { BallEvent } from '../engine/types'
+import { decodeBall, type ReelBall } from './reel'
 import type { Season } from './types'
 
 // ---- A highlight from an earlier match, for the strategic timeout ------------------------------------------------
@@ -110,3 +111,48 @@ export function trackFor(seq: number, out: boolean): Track {
 export const isNotOutReview = (seq: number) => hash(seq, 6) < 0.034
 /** True for roughly a third of lbw outs, where the batsman asks for a review first. */
 export const lbwWasReviewed = (seq: number) => hash(seq, 7) < 0.4
+
+// ---- A highlight reel from an earlier match ---------------------------------------------------------------------
+
+export interface ReelHighlight {
+  playerId: string
+  kind: 'bat' | 'bowl'
+  headline: string
+  detail: string
+  homeId: string | null
+  awayId: string | null
+  date: string
+  balls: ReelBall[]
+}
+
+/** The best saved reel among the last few matches (not the one being played), or null: matches played before reels existed have none. */
+export function recentReel(season: Season, excludeFixtureId?: string, look = 10): ReelHighlight | null {
+  const byId = new Map(season.fixtures.map((f) => [f.id, f]))
+  const roster = season.roster ?? []
+  const recent = Object.values(season.results)
+    .filter((r) => r.reel && r.fixtureId !== excludeFixtureId && byId.has(r.fixtureId))
+    .sort((a, b) => byId.get(b.fixtureId)!.date.localeCompare(byId.get(a.fixtureId)!.date))
+    .slice(0, look)
+  let best: { score: number; h: ReelHighlight } | null = null
+  for (const r of recent) {
+    const reel = r.reel!
+    const id = roster[reel.p]
+    const f = byId.get(r.fixtureId)!
+    if (!id || reel.e.length === 0) continue
+    const base = { playerId: id, kind: reel.k, homeId: f.homeId, awayId: f.awayId, date: f.date, balls: reel.e.map(decodeBall) }
+    if (reel.k === 'bat') {
+      const line = r.bat.find((l) => l[0] === reel.p)
+      if (!line) continue
+      const [, runs, balls, fours, sixes] = line
+      const score = runs + sixes * 2 + (runs >= 100 ? 25 : runs >= 50 ? 10 : 0)
+      if (!best || score > best.score) best = { score, h: { ...base, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` } }
+    } else {
+      const line = r.bowl.find((l) => l[0] === reel.p)
+      if (!line) continue
+      const [, balls, runs, wickets, maidens] = line
+      const score = wickets * 22 - runs * 0.3 + maidens * 3 + (wickets >= 5 ? 20 : wickets >= 3 ? 8 : 0)
+      if (!best || score > best.score) best = { score, h: { ...base, headline: `${wickets}/${runs}`, detail: `in ${Math.floor(balls / 6)}.${balls % 6} overs` } }
+    }
+  }
+  return best?.h ?? null
+}

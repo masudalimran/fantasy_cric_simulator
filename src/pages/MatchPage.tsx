@@ -47,10 +47,11 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
-import { isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from '../season/moments'
+import { isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, recentHighlight, recentReel, runOutGap, trackFor } from '../season/moments'
+import { toEvent } from '../season/reel'
 import { keyPlayers } from '../season/preview'
 import { teamStrength } from '../data/builders'
-import type { TimeoutChannel } from '../components/match/TimeoutScreens'
+import type { TimeoutChannel, TimeoutReel } from '../components/match/TimeoutScreens'
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TipBanner } from '../components/TipBanner'
 import type { MatchFormat, Player, Team } from '../types'
@@ -374,6 +375,31 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const wt = match.sides[1 - innE.battingSide]
         const btSide = match.sides[innE.battingSide]
         const hl = fixture && season ? recentHighlight(season, fixture.id) : null
+        // real footage: the best balls of a recent match, played again on the field view
+        let reel: TimeoutReel | undefined
+        const rl = fixture && season ? recentReel(season, fixture.id) : null
+        const focus = rl ? playerIndex.get(rl.playerId) : undefined
+        if (rl && focus) {
+          const oppId = [rl.homeId, rl.awayId].find((id) => id && id !== focus.team.id) ?? rl.awayId
+          const opp = oppId ? teamMap.get(oppId) : undefined
+          if (opp) {
+            const oppXI = opp.players.slice(0, 11)
+            const ownXI = focus.team.players.slice(0, 11)
+            const k = rl.kind
+            const striker = k === 'bat' ? focus.player : (keyPlayers(oppXI).bat ?? oppXI[0])
+            const nonStriker = (k === 'bat' ? ownXI : oppXI).find((p) => p.id !== striker.id) ?? null
+            const bowler = k === 'bowl' ? focus.player : (keyPlayers(oppXI).bowl ?? oppXI[1] ?? oppXI[0])
+            const batTeam = k === 'bat' ? focus.team : opp
+            const bowlTeam = k === 'bat' ? opp : focus.team
+            const ids = { striker: striker.id, nonStriker: nonStriker?.id ?? striker.id, bowler: bowler.id }
+            reel = {
+              player: focus.player, team: focus.team, kind: k, headline: rl.headline,
+              versus: [teamMap.get(rl.homeId ?? '')?.name, teamMap.get(rl.awayId ?? '')?.name].filter(Boolean).join(' v ') + ` · ${formatDate(rl.date)}`,
+              balls: rl.balls.map((b, i) => toEvent(b, ids, i)), striker, nonStriker, bowler, battingTeam: batTeam, bowlingTeam: bowlTeam,
+              fielders: placeFielders(k === 'bat' ? oppXI : ownXI, bowler.id),
+            }
+          }
+        }
         const hp = hl ? playerIndex.get(hl.playerId) : undefined
         const fixtureTeams = hl ? [hl.homeId, hl.awayId].map((id) => (id ? (teamMap.get(id)?.name ?? '') : '')).filter(Boolean).join(' v ') : ''
         const watch = [keyPlayers(btSide.xi).bat && { player: keyPlayers(btSide.xi).bat!, team: bt, label: 'Top bat' }, keyPlayers(wt.xi).bowl && { player: keyPlayers(wt.xi).bowl!, team: wt.team, label: 'Top bowler' }].filter((x): x is { player: Player; team: Team; label: string } => !!x)
@@ -388,14 +414,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const need = innE.target !== null ? innE.target - innE.runs : null
         const left = FORMATS[match.format].overs * 6 - innE.legalBalls
         const channels: TimeoutChannel[] = [
-          hl && hp
+          ...(reel ? [] : [hl && hp
             ? { tag: 'Highlight from an earlier match', title: hp.player.name, big: hl.headline, lines: [hl.detail, [fixtureTeams, formatDate(hl.date)].filter(Boolean).join(' · ')], players: [{ player: hp.player, team: hp.team, label: hl.kind === 'bat' ? 'With the bat' : 'With the ball' }] }
-            : { tag: 'Players to watch', title: 'No highlights yet: here is who to watch', lines: ['The best bat and the best bowler on show today'], players: watch },
+            : { tag: 'Players to watch', title: 'No highlights yet: here is who to watch', lines: ['The best bat and the best bowler on show today'], players: watch }]),
           { tag: 'The innings so far', title: bt.name, big: `${innE.runs}/${innE.wickets}`, lines: [`${Math.floor(innE.legalBalls / 6)} overs · run rate ${rr}`, `${fours} ${fours === 1 ? 'four' : 'fours'} · ${sixes} ${sixes === 1 ? 'six' : 'sixes'} · ${dots} dot balls`, `The current stand: ${pt.runs} off ${pt.balls}`] },
           { tag: 'Tactics board', title: `${pitch.icon} ${pitch.label}`, lines: [pitch.tip, need !== null && need > 0 ? `${bt.short} need ${need} off ${left} balls` : `${bt.short} are looking for a big finish`] },
           { tag: 'Did you know?', title: 'A few numbers', lines: [`${btSide.team.short}'s XI averages ${teamStrength({ ...btSide.team, players: btSide.xi })}, ${wt.team.short}'s ${teamStrength({ ...wt.team, players: wt.xi })}`, longest > 0 ? `The longest six so far went ${longest} m` : `No six has been hit yet`, `${dots} of ${innE.legalBalls} balls have been dots (${innE.legalBalls ? Math.round((dots / innE.legalBalls) * 100) : 0}%)`] },
         ]
-        enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 600, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1 } })
+        enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 600, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1, reel } })
       }
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??
