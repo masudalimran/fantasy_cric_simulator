@@ -16,7 +16,7 @@ export function setMuted(muted: boolean) {
   if (master) master.gain.value = muted ? 0 : 0.55
 }
 
-function audio(): AudioContext | null {
+export function audio(): AudioContext | null {
   if (isMuted()) return null
   if (!ctx) {
     const C = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -30,6 +30,9 @@ function audio(): AudioContext | null {
   return ctx
 }
 
+/** Joins a node to the main volume (the mute switch and master level apply). */
+export const connectMaster = (n: AudioNode) => { n.connect(master as GainNode) }
+
 function noise(c: AudioContext): AudioBuffer {
   if (!noiseBuf) {
     noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate)
@@ -39,9 +42,9 @@ function noise(c: AudioContext): AudioBuffer {
   return noiseBuf
 }
 
-interface NoiseOpts { at?: number; dur: number; type: BiquadFilterType; freq: number; q?: number; peak: number; attack?: number; freqEnd?: number }
+export interface NoiseOpts { /** Where to send it instead of the main volume (the music has its own). */ to?: AudioNode; at?: number; dur: number; type: BiquadFilterType; freq: number; q?: number; peak: number; attack?: number; freqEnd?: number }
 /** Filtered noise with a simple attack/decay envelope. */
-function burst(c: AudioContext, o: NoiseOpts) {
+export function burst(c: AudioContext, o: NoiseOpts) {
   const t = c.currentTime + (o.at ?? 0)
   const src = c.createBufferSource()
   src.buffer = noise(c)
@@ -56,13 +59,13 @@ function burst(c: AudioContext, o: NoiseOpts) {
   g.gain.setValueAtTime(0.0001, t)
   g.gain.exponentialRampToValueAtTime(o.peak, t + attack)
   g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur)
-  src.connect(f).connect(g).connect(master as GainNode)
+  src.connect(f).connect(g).connect((o.to ?? master) as AudioNode)
   src.start(t, Math.random())
   src.stop(t + o.dur + 0.05)
 }
 
-interface ToneOpts { at?: number; dur: number; freq: number; freqEnd?: number; type?: OscillatorType; peak: number }
-function tone(c: AudioContext, o: ToneOpts) {
+export interface ToneOpts { to?: AudioNode; at?: number; dur: number; freq: number; freqEnd?: number; type?: OscillatorType; peak: number }
+export function tone(c: AudioContext, o: ToneOpts) {
   const t = c.currentTime + (o.at ?? 0)
   const osc = c.createOscillator()
   osc.type = o.type ?? 'sine'
@@ -72,7 +75,7 @@ function tone(c: AudioContext, o: ToneOpts) {
   g.gain.setValueAtTime(0.0001, t)
   g.gain.exponentialRampToValueAtTime(o.peak, t + 0.006)
   g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur)
-  osc.connect(g).connect(master as GainNode)
+  osc.connect(g).connect((o.to ?? master) as AudioNode)
   osc.start(t)
   osc.stop(t + o.dur + 0.05)
 }

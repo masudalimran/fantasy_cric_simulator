@@ -50,7 +50,7 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
-import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, recentHighlight, recentReel, runOutGap, trackFor } from '../season/moments'
+import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, cheersAfter, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor } from '../season/moments'
 import { toEvent } from '../season/reel'
 import { keyPlayers } from '../season/preview'
 import { seasonBests, superOverOutcome } from '../season/stories'
@@ -138,6 +138,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [upgradesOpen, setUpgradesOpen] = useState(false)
   const [winOpen, setWinOpen] = useState(false)
   const upgradesSeen = useRef(false) // the rating-upgrade screen has been shown for this match
+  const shownReels = useRef(new Set<string>()) // the highlight reels the timeouts of this match have used, so none repeats
+  const lastCheer = useRef(-100)
   const lastSwing = useRef(-100) // the ball a momentum screen last played on, so they do not come one after another
   const matchOverRef = useRef(false) // the match has ended and its last screens are still to play
   const winShownRef = useRef(false)
@@ -423,7 +425,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const overWkts = thisOver.filter((e) => e.wicket).length
           const teamMark = Math.floor(lastEv.score.runs / 50) * 50
           const teamBanner = teamMark >= 100 && lastEv.score.runs - lastEv.total < teamMark
-          if (!teamBanner && (overRuns >= 12 || overWkts >= 2)) showNote({ key: lastEv.seq + 0.2, tone: overWkts >= 2 ? 'wicket' : overRuns >= 18 ? 'six' : 'four', title: `Over ${done}: ${overRuns} ${overRuns === 1 ? 'run' : 'runs'}`, sub: `${match.player(lastEv.bowlerId).name}${overWkts ? ` · ${overWkts} ${overWkts === 1 ? 'wicket' : 'wickets'}` : ''}` })
+          if (!teamBanner && (overRuns >= 12 || overWkts >= 2)) showNote({ small: true, key: lastEv.seq + 0.2, tone: overWkts >= 2 ? 'wicket' : overRuns >= 18 ? 'six' : 'four', title: `Over ${done}: ${overRuns} ${overRuns === 1 ? 'run' : 'runs'}`, sub: `${match.player(lastEv.bowlerId).name}${overWkts ? ` · ${overWkts} ${overWkts === 1 ? 'wicket' : 'wickets'}` : ''}` })
         }
       }
       // the strategic timeout: a TV screen for 30 seconds at set points in each innings (after the over is complete and nothing else is on)
@@ -440,7 +442,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const hl = fixture && season ? recentHighlight(season, fixture.id) : null
         // real footage: the best balls of a recent match, played again on the field view
         let reel: TimeoutReel | undefined
-        const rl = fixture && season ? recentReel(season, fixture.id) : null
+        const rl = fixture && season ? pickReel(reelCandidates(season, fixture.id), shownReels.current, match.seed + shownReels.current.size * 7919 + lastEv.seq) : null
         const focus = rl ? playerIndex.get(rl.playerId) : undefined
         if (rl && focus) {
           const oppId = [rl.homeId, rl.awayId].find((id) => id && id !== focus.team.id) ?? rl.awayId
@@ -486,10 +488,21 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         ]
         enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 600, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1, reel } })
       }
+      // the cheerleaders come out now and then after a boundary or a wicket (never one right after another)
+      const cheerMoment = () => {
+        if (!lastEv || events.length !== 1 || match.isOver || !getAnimPrefs().cheer || !(lastEv.boundary || lastEv.wicket)) return
+        if (lastEv.seq - lastCheer.current < 30 || !cheersAfter(lastEv.seq)) return
+        lastCheer.current = lastEv.seq
+        const innE = match.innings[lastEv.innings]
+        const team = lastEv.wicket ? match.sides[1 - innE.battingSide].team : match.sides[innE.battingSide].team
+        const spd = autoRef.current
+        const rate = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
+        enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, why: lastEv.wicket ? 'wicket' : 'boundary', rate } })
+      }
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??
         events.find((e) => e.wicket) ?? events.find((e) => e.boundary === 6) ?? events.find((e) => e.boundary === 4)
-      if (!notable) { timeoutMoment(); finalMoments(); window.setTimeout(openWinWhenIdle, 0); return }
+      if (!notable) { timeoutMoment(); cheerMoment(); finalMoments(); window.setTimeout(openWinWhenIdle, 0); return }
       const team = match.sides[match.innings[notable.innings].battingSide].team
       const colors = [team.colors.primary, team.colors.secondary, '#ffffff']
       const milestone = notable.tags.find((t) => tagLabel[t] && t !== 'maiden' && t !== 'duck')
@@ -582,6 +595,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       else if (notable.boundary === 6) showFx({ key: notable.seq, kind: 'six', text: 'SIX!', colors })
       else showFx({ key: notable.seq, kind: 'four', text: 'FOUR!', colors })
       timeoutMoment()
+      cheerMoment()
       finalMoments()
       window.setTimeout(openWinWhenIdle, 0)
     },

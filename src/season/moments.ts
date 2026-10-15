@@ -111,12 +111,15 @@ export function trackFor(seq: number, out: boolean): Track {
 export const isNotOutReview = (seq: number) => hash(seq, 6) < 0.034
 /** True for about two in five caught-behind outs, where the batsman asks for a review (the sound graph) first. */
 export const edgeWasReviewed = (seq: number) => hash(seq, 8) < 0.4
+/** True for about one boundary or wicket in three, where the cheerleaders come out. */
+export const cheersAfter = (seq: number) => hash(seq, 9) < 0.34
 /** True for roughly a third of lbw outs, where the batsman asks for a review first. */
 export const lbwWasReviewed = (seq: number) => hash(seq, 7) < 0.4
 
 // ---- A highlight reel from an earlier match ---------------------------------------------------------------------
 
 export interface ReelHighlight {
+  fixtureId: string
   playerId: string
   kind: 'bat' | 'bowl'
   headline: string
@@ -127,34 +130,51 @@ export interface ReelHighlight {
   balls: ReelBall[]
 }
 
-/** The best saved reel among the last few matches (not the one being played), or null: matches played before reels existed have none. */
-export function recentReel(season: Season, excludeFixtureId?: string, look = 10): ReelHighlight | null {
+/** Every saved reel among the last few matches (not the one being played): the best play of each. Matches played before reels existed have none. */
+export function reelCandidates(season: Season, excludeFixtureId?: string, look = 24): ReelHighlight[] {
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   const roster = season.roster ?? []
   const recent = Object.values(season.results)
     .filter((r) => r.reel && r.fixtureId !== excludeFixtureId && byId.has(r.fixtureId))
     .sort((a, b) => byId.get(b.fixtureId)!.date.localeCompare(byId.get(a.fixtureId)!.date))
     .slice(0, look)
-  let best: { score: number; h: ReelHighlight } | null = null
+  const out: ReelHighlight[] = []
   for (const r of recent) {
     const reel = r.reel!
     const id = roster[reel.p]
     const f = byId.get(r.fixtureId)!
     if (!id || reel.e.length === 0) continue
-    const base = { playerId: id, kind: reel.k, homeId: f.homeId, awayId: f.awayId, date: f.date, balls: reel.e.map(decodeBall) }
+    const base = { fixtureId: r.fixtureId, playerId: id, kind: reel.k, homeId: f.homeId, awayId: f.awayId, date: f.date, balls: reel.e.map(decodeBall) }
     if (reel.k === 'bat') {
       const line = r.bat.find((l) => l[0] === reel.p)
       if (!line) continue
       const [, runs, balls, fours, sixes] = line
-      const score = runs + sixes * 2 + (runs >= 100 ? 25 : runs >= 50 ? 10 : 0)
-      if (!best || score > best.score) best = { score, h: { ...base, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` } }
+      out.push({ ...base, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` })
     } else {
       const line = r.bowl.find((l) => l[0] === reel.p)
       if (!line) continue
-      const [, balls, runs, wickets, maidens] = line
-      const score = wickets * 22 - runs * 0.3 + maidens * 3 + (wickets >= 5 ? 20 : wickets >= 3 ? 8 : 0)
-      if (!best || score > best.score) best = { score, h: { ...base, headline: `${wickets}/${runs}`, detail: `in ${Math.floor(balls / 6)}.${balls % 6} overs` } }
+      const [, balls, runs, wickets] = line
+      out.push({ ...base, headline: `${wickets}/${runs}`, detail: `in ${Math.floor(balls / 6)}.${balls % 6} overs` })
     }
   }
-  return best?.h ?? null
+  return out
+}
+
+/** One reel picked from the candidates, never one in `used` (until every one has been shown), chosen at random from a seed. */
+export function pickReel(cands: ReelHighlight[], used: Set<string>, seed: number): ReelHighlight | null {
+  if (cands.length === 0) return null
+  let pool = cands.filter((c) => !used.has(c.fixtureId))
+  if (pool.length === 0) { used.clear(); pool = cands }
+  const pick = pool[Math.floor(hash(seed, 11) * pool.length) % pool.length]
+  used.add(pick.fixtureId)
+  return pick
+}
+
+/** The best saved reel among the last few matches (not the one being played), or null. */
+export function recentReel(season: Season, excludeFixtureId?: string, look = 10): ReelHighlight | null {
+  const score = (h: ReelHighlight) => {
+    const n = parseInt(h.headline, 10)
+    return h.kind === 'bat' ? n : n * 22
+  }
+  return reelCandidates(season, excludeFixtureId, look).sort((a, b) => score(b) - score(a))[0] ?? null
 }

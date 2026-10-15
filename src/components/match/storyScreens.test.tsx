@@ -7,6 +7,7 @@ import type { AwardCandidate } from '../../engine/awards'
 import type { Side } from '../../engine/types'
 import { fieldPlan } from './fieldSets'
 import { BigMatchIntro, LineupReveal } from './LineupScreens'
+import { CheerScreen } from './CheerScreen'
 import { PhaseScreen, RecordScreen, SuperOverScreen, SwingScreen, TargetScreen, TensionScreen } from './StoryScreens'
 import { SnickoView, ReviewScreen } from './ReviewScreens'
 import { trackFor } from '../../season/moments'
@@ -31,6 +32,13 @@ describe('story screens', () => {
     const rv = renderToString(<ReviewScreen info={{ by: 'bat', kind: 'edge', batsman: p, batTeam: A, bowler: q, bowlTeam: B, out: true, track: trackFor(3, true), rate: 1 }} />)
     expect(rv).toContain('Spike')
     expect(renderToString(<SnickoView />)).toContain('BALL PASSES BAT')
+  })
+
+  it('the cheerleaders render in the team colours', () => {
+    const html = renderToString(<CheerScreen info={{ team: A, why: 'boundary', rate: 1 }} />)
+    expect(html).toContain('GO ')
+    expect(html).toContain(A.colors.primary)
+    expect(html).toContain(A.colors.secondary)
   })
 
   it('pre-match intros render', () => {

@@ -283,7 +283,7 @@ function Token({ player, team, role, x, y, size, extra, delivering, celebrate, s
   )
 }
 
-export interface StageNote { key: number; tone: 'wicket' | 'six' | 'four' | 'milestone'; title: string; sub: string }
+export interface StageNote { key: number; tone: 'wicket' | 'six' | 'four' | 'milestone'; title: string; sub: string; /** A slim banner for small news (the over summary). */ small?: boolean }
 
 const NOTE_STYLE: Record<StageNote['tone'], string> = {
   wicket: 'from-red-600 to-red-800 text-white',
@@ -434,11 +434,11 @@ export function Stage({
         {note && (
           <motion.div
             key={note.key}
-            className={`pointer-events-none absolute left-1/2 top-3 z-40 -translate-x-1/2 rounded-xl bg-gradient-to-b px-6 py-2 text-center shadow-2xl ring-2 ring-white/40 ${NOTE_STYLE[note.tone]}`}
+            className={`pointer-events-none absolute left-1/2 z-40 -translate-x-1/2 bg-gradient-to-b text-center shadow-2xl ring-white/40 ${note.small ? 'top-2 rounded-lg px-3 py-0.5 ring-1' : 'top-3 rounded-xl px-6 py-2 ring-2'} ${NOTE_STYLE[note.tone]}`}
             initial={{ y: -60, opacity: 0, scale: 0.8 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -40, opacity: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}
           >
-            <div className="font-display text-3xl leading-none tracking-wider">{note.title}</div>
-            <div className="mt-0.5 text-xs font-semibold opacity-90">{note.sub}</div>
+            <div className={`font-display leading-none tracking-wider ${note.small ? 'text-sm' : 'text-3xl'}`}>{note.title}</div>
+            <div className={`font-semibold opacity-90 ${note.small ? 'text-[10px] leading-tight' : 'mt-0.5 text-xs'}`}>{note.sub}</div>
           </motion.div>
         )}
       </AnimatePresence>

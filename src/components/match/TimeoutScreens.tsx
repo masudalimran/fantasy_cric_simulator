@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
+import { startMusic } from '../../audio/music'
 import type { BallEvent } from '../../engine/types'
 import type { Player, Team } from '../../types'
 import { OriginTag, PlayerAvatar, accentOf } from '../ui'
@@ -110,6 +111,13 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
   const { headline, teamNames, channels, seconds } = info
   const [box, w] = useWidth()
   const [elapsed, setElapsed] = useState(0)
+  const [tune, setTune] = useState('')
+  // music for the timeout: one of a few tunes, a different one each time, fading out when it ends or the screen is closed
+  useEffect(() => {
+    const m = startMusic(seconds)
+    setTune(m.name)
+    return m.stop
+  }, [seconds])
   useEffect(() => {
     const t0 = Date.now()
     const id = window.setInterval(() => setElapsed((Date.now() - t0) / 1000), 250)
@@ -131,6 +139,7 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
       {/* the two teams in a huddle, along the top */}
       <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between bg-black/60 px-3 py-1.5">
         <span className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />Strategic timeout</span>
+        {tune && <span className="hidden rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-slate-300 sm:inline">♪ {tune}</span>}
         <span className="font-display text-xl leading-none tabular-nums text-white" aria-label="Seconds left">0:{String(left).padStart(2, '0')}</span>
         <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">{small ? 'Tap' : 'Tap to carry on'}</span>
       </div>
