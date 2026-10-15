@@ -1,5 +1,11 @@
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TodayCard } from '../components/season/TodayCard'
+import { DeadlineDay, InjuryNews, NewCoachScreen, PlayoffNews, type InjuryRow } from '../components/season/NewsScreens'
+import { COACHES } from '../data/coaches'
+import { injuriesOf } from '../season/injuries'
+import { openWindow, SQUAD_CAP } from '../season/market'
+import { playoffStatus } from '../season/stories'
+import { markSeen, useSeenSet } from '../tips'
 import { MarketOpens } from '../components/season/MarketOpens'
 import { MarketClosed } from '../components/season/MarketClosed'
 import { CoachPrompt, useCoachGate } from '../components/season/CoachGate'
@@ -99,6 +105,34 @@ export function CalendarPage() {
   const teams = useTeamMap()
   const baseTeams = useBaseTeamMap()
   const gate = useCoachGate()
+  // News that opens by itself, once each: a new injury, the playoff race, a new coach, deadline day
+  const seenSet = useSeenSet()
+  const sid = session?.id ?? ''
+  const news = useMemo(() => {
+    if (!season || !season.myTeamId || !sid) return null
+    const mineTeam = teams.get(season.myTeamId)
+    if (!mineTeam) return null
+    const hurt: InjuryRow[] = []
+    const keys: string[] = []
+    for (const [id, injury] of injuriesOf(season, mineTeam, season.today)) {
+      const key = `inj:${sid}:${id}:${injury.start}`
+      const player = mineTeam.players.find((p) => p.id === id)
+      if (player && injury.start <= season.today && !seenSet.has(key)) { hurt.push({ player, team: mineTeam, injury }); keys.push(key) }
+    }
+    if (hurt.length > 0) return { kind: 'injury' as const, rows: hurt, keys }
+    for (const comp of season.competitions) {
+      const st = playoffStatus(season, comp, season.myTeamId)
+      const key = `po:${sid}:${season.year}:${comp.id}:${st}`
+      if (st && !seenSet.has(key)) return { kind: 'playoff' as const, status: st, comp: comp.name, team: mineTeam, keys: [key] }
+    }
+    const coach = season.coachChanged ? COACHES.find((c) => c.id === season.coaches?.[season.myTeamId as string]) : undefined
+    const ckey = `coach:${sid}:${season.year}`
+    if (coach && !seenSet.has(ckey)) return { kind: 'coach' as const, coach, team: mineTeam, keys: [ckey] }
+    const win = openWindow(season, season.today)
+    const dkey = win ? `deadline:${sid}:${season.year}:${win.id}` : ''
+    if (win && season.today === win.end && !seenSet.has(dkey)) return { kind: 'deadline' as const, win, keys: [dkey] }
+    return null
+  }, [season, sid, teams, seenSet])
   const [coachDismissed, setCoachDismissed] = useState(false) // the set-instruction card is back next time you open the Calendar
   const liveFixtureId = useStore((s) => (s.liveMatch && !s.liveMatch.finished ? (s.liveMatch.fixtureId ?? null) : null))
   const { ym } = useParams()
@@ -225,6 +259,12 @@ export function CalendarPage() {
       <TipBanner id="calendar" title="This is your year">Press the glowing gold <b>Play</b> button to play your next match. Or press <b>Sim</b> to sim the other teams' matches first.</TipBanner>
 
 
+      <AnimatePresence>
+        {news?.kind === 'injury' && <InjuryNews key="inj" rows={news.rows} onClose={() => news.keys.forEach(markSeen)} />}
+        {news?.kind === 'playoff' && <PlayoffNews key={`po${news.keys[0]}`} status={news.status} team={news.team} competition={news.comp} onClose={() => news.keys.forEach(markSeen)} />}
+        {news?.kind === 'coach' && <NewCoachScreen key="coach" coach={news.coach} team={news.team} onClose={() => news.keys.forEach(markSeen)} />}
+        {news?.kind === 'deadline' && season && <DeadlineDay key="deadline" windowName={news.win.name} coins={season.market?.budgets[season.myTeamId ?? ''] ?? 0} squad={season.market?.squads[season.myTeamId ?? '']?.length ?? 0} cap={SQUAD_CAP} offers={(season.market?.offers ?? []).filter((o) => o.expires >= season.today).length} onMarket={() => { news.keys.forEach(markSeen); navigate(paths.market) }} onClose={() => news.keys.forEach(markSeen)} />}
+      </AnimatePresence>
       <AnimatePresence>{peek && <BeforeYoursSheet day={peek.day} until={peek.until} onClose={() => setPeek(null)} />}</AnimatePresence>
       <AnimatePresence>{rangeOpen && myNext && <BeforeYoursSheet onClose={() => setRangeOpen(false)} onSkipped={setStopped} />}</AnimatePresence>
 

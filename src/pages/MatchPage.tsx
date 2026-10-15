@@ -28,6 +28,9 @@ import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
 import { fieldPlan } from '../components/match/fieldSets'
 import { describePitch } from '../engine/pitchInfo'
 import { MatchPreview } from '../components/match/MatchPreview'
+import { BigMatchIntro, LineupReveal } from '../components/match/LineupScreens'
+import { UpgradeScreen, type UpgradeRow } from '../components/season/NewsScreens'
+import { upgradesFrom } from '../season/stories'
 import { formOf, headToHead } from '../season/preview'
 import { dismissalText, strikeRate } from '../components/match/format'
 import { sfx } from '../audio/sfx'
@@ -47,9 +50,11 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { formatDate } from '../season/dates'
-import { isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, recentHighlight, recentReel, runOutGap, trackFor } from '../season/moments'
+import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, recentHighlight, recentReel, runOutGap, trackFor } from '../season/moments'
 import { toEvent } from '../season/reel'
 import { keyPlayers } from '../season/preview'
+import { seasonBests, superOverOutcome } from '../season/stories'
+import { winChanceSeries } from '../engine/analysis'
 import { teamStrength } from '../data/builders'
 import type { TimeoutChannel, TimeoutReel } from '../components/match/TimeoutScreens'
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
@@ -102,7 +107,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const discardLive = useStore((s) => s.discardLive)
   const finishLive = useStore((s) => s.finishLive)
   // `?skip` opens straight into play (handy for links and testing)
-  const [phase, setPhase] = useState<'pre' | 'toss' | 'play'>(() => (live.phase === 'play' || new URLSearchParams(location.search).has('skip') ? 'play' : live.tossed ? 'toss' : 'pre'))
+  const [bigDone, setBigDone] = useState(false) // the semi-final or final intro has played
+  const [phase, setPhase] = useState<'pre' | 'lineup' | 'toss' | 'play'>(() => (live.phase === 'play' || new URLSearchParams(location.search).has('skip') ? 'play' : live.tossed ? 'toss' : 'pre'))
   const [fx, setFx] = useState<FxEvent | null>(null)
   const [auto, setAuto] = useState<0 | 1 | 2 | 4>(0)
   // What makes auto-play stop by itself. Anything left unticked just plays on.
@@ -129,7 +135,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const motmTimer = useRef<number | undefined>(undefined)
   const [note, setNote] = useState<StageNote | null>(null)
   const [motmOpen, setMotmOpen] = useState(false)
+  const [upgradesOpen, setUpgradesOpen] = useState(false)
   const [winOpen, setWinOpen] = useState(false)
+  const upgradesSeen = useRef(false) // the rating-upgrade screen has been shown for this match
+  const lastSwing = useRef(-100) // the ball a momentum screen last played on, so they do not come one after another
   const matchOverRef = useRef(false) // the match has ended and its last screens are still to play
   const winShownRef = useRef(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
@@ -229,6 +238,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     const inn = match.current
     const sp = autoRef.current
     const quick = sp > 0 && !stopsRef.current.wickets // auto-play that never pauses: don't hold things up
+    // the start of a chase: the target, before anyone is introduced
+    if (getAnimPrefs().intro && inn.index === 1 && inn.legalBalls === 0 && inn.target !== null && !seen.current!.has('target')) {
+      seen.current!.add('target')
+      const bat = match.battingSide(inn)
+      const bowl = match.bowlingSide(inn)
+      enqueueMoment({ key: introSeq.current++, kind: 'target', player: match.player(inn.strikerId), team: bat.team, title: 'TARGET', lines: [], delay: 0, ms: Math.round(5200 * (sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1)), target: { chasing: bat.team, defending: bowl.team, target: inn.target, balls: FORMATS[match.format].overs * 6, format: match.format, rate: sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1 } })
+    }
     const ms = (sp === 4 ? 7000 : sp === 2 ? 9000 : 12000) / (quick ? 2 : 1) // long enough to read in full; a click moves on sooner
     const mk = (kind: 'batsman' | 'bowler', id: string): Moment => {
       const p = match.player(id)
@@ -269,6 +285,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       force()
       // Sound for the last delivery (or the final result). The crowd "awws" at wickets and roars at boundaries.
       const lastEv = events[events.length - 1]
+      // a tied knockout goes to a super over: the screen comes after the last ball's own screens
+      const finalMoments = () => {
+        if (!match.isOver || match.result?.winnerSide !== null || fixture?.phase !== 'knockout' || !getAnimPrefs().intro) return
+        const o = superOverOutcome(match.seed)
+        const win = match.sides[o.winnerSide]
+        enqueueMoment({ key: (lastEv?.seq ?? 0) + 0.95, kind: 'superover', player: win.xi[0], team: win.team, title: 'SUPER OVER', lines: [], delay: 800, ms: 11500, superover: { winner: win.team, loser: match.sides[1 - o.winnerSide].team, winnerRuns: o.winnerRuns, loserRuns: o.loserRuns, loserWickets: o.loserWickets, rate: 1 } })
+      }
       if (match.isOver) {
         // the celebration (or defeat) screen has its own sound
       } else if (lastEv && events.length <= 12) {
@@ -292,7 +315,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         winShownRef.current = false
         window.setTimeout(openWinWhenIdle, 0)
       }
-      if (!events.length || events.length > 12) return
+      if (!events.length || events.length > 12) { finalMoments(); window.setTimeout(openWinWhenIdle, 0); return }
       // a no-ball: the next delivery is a free hit, so say so
       // where the bowling side stood for a ball: the field of that stage of the game
       const placedAt = (ev: BallEvent) => {
@@ -370,6 +393,38 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         if (prefs.reviews && !lastEv.wicket && lastEv.legal && !lastEv.freeHit && lastEv.runsBat === 0 && !lastEv.extraType && isNotOutReview(lastEv.seq)) {
           enqueueMoment({ key: lastEv.seq + 0.45, kind: 'review', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'REVIEW', lines: [], delay, ms: Math.round(8200 * rate), review: { by: 'field', batsman: match.player(lastEv.strikerId), batTeam: batT, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, out: false, track: trackFor(lastEv.seq, false), rate } })
         }
+        // a batsman reaching the nineties
+        if (prefs.milestone && !lastEv.wicket) {
+          const bl = innE.batters.find((b) => b.id === lastEv.strikerId)
+          if (bl && bl.runs - lastEv.runsBat < 90 && bl.runs >= 90 && bl.runs < 100) {
+            const p = match.player(bl.id)
+            enqueueMoment({ key: lastEv.seq + 0.5, kind: 'tension', player: p, team: batT, title: 'NERVOUS NINETIES', lines: [], delay, ms: Math.round(4200 * rate), tension: { variant: 'ninety', player: p, team: batT, title: 'NERVOUS NINETIES', sub: `${p.name} is on ${bl.runs}: ${100 - bl.runs} to a hundred`, rate } })
+          }
+        }
+        // the end of an over: a swing in who is winning, a new phase of the game, and a small card for a big over
+        if (prefs.drama && lastEv.legal && lastEv.score.legalBalls % 6 === 0 && !innE.done) {
+          const done = lastEv.score.legalBalls / 6
+          if (innE.index === 1 && lastEv.seq - lastSwing.current > 18) {
+            const pts = winChanceSeries({ format: match.format, maxOvers: match.maxOvers, innings: match.innings }).filter((x) => x.innings === 1)
+            const [a, b] = [pts[pts.length - 3], pts[pts.length - 1]]
+            if (a && b && Math.abs(b.p - a.p) >= 0.22) {
+              lastSwing.current = lastEv.seq
+              enqueueMoment({ key: lastEv.seq + 0.52, kind: 'swing', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'MOMENTUM SHIFT', lines: [], delay, ms: Math.round(5000 * rate), swing: { chasing: batT, defending: bowlS.team, before: a.p, after: b.p, rate } })
+            }
+          }
+          const ph = FORMATS[match.format].phases
+          const variant = done === ph.powerplay[1] + 1 ? 'powerplay' : done === ph.death[0] ? 'death' : null
+          if (variant) {
+            const ctx = { format: match.format, maxOvers: FORMATS[match.format].overs, runs: lastEv.score.runs, legalBalls: lastEv.score.legalBalls, target: innE.target, freeHit: false, bowlType: null, hand: 'R' as const }
+            enqueueMoment({ key: lastEv.seq + 0.53, kind: 'phase', player: match.player(lastEv.bowlerId), team: bowlS.team, title: variant === 'powerplay' ? 'POWERPLAY OVER' : 'DEATH OVERS', lines: [], delay, ms: Math.round(4600 * rate), phase: { variant, from: fieldPlan({ ...ctx, over: done - 1 }).spots, to: fieldPlan({ ...ctx, over: done }).spots, bowlTeam: bowlS.team, batTeam: batT, overs: done, runs: lastEv.score.runs, wickets: lastEv.score.wickets, rate } })
+          }
+          const thisOver = innE.log.filter((e) => e.over === lastEv.over)
+          const overRuns = thisOver.reduce((s, e) => s + e.total, 0)
+          const overWkts = thisOver.filter((e) => e.wicket).length
+          const teamMark = Math.floor(lastEv.score.runs / 50) * 50
+          const teamBanner = teamMark >= 100 && lastEv.score.runs - lastEv.total < teamMark
+          if (!teamBanner && (overRuns >= 12 || overWkts >= 2)) showNote({ key: lastEv.seq + 0.2, tone: overWkts >= 2 ? 'wicket' : overRuns >= 18 ? 'six' : 'four', title: `Over ${done}: ${overRuns} ${overRuns === 1 ? 'run' : 'runs'}`, sub: `${match.player(lastEv.bowlerId).name}${overWkts ? ` · ${overWkts} ${overWkts === 1 ? 'wicket' : 'wickets'}` : ''}` })
+        }
       }
       // the strategic timeout: a TV screen for 30 seconds at set points in each innings (after the over is complete and nothing else is on)
       const timeoutMoment = () => {
@@ -434,7 +489,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       const notable =
         events.find((e) => e.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200' || t === 'hat-trick' || t === 'five-wickets')) ??
         events.find((e) => e.wicket) ?? events.find((e) => e.boundary === 6) ?? events.find((e) => e.boundary === 4)
-      if (!notable) { timeoutMoment(); return }
+      if (!notable) { timeoutMoment(); finalMoments(); window.setTimeout(openWinWhenIdle, 0); return }
       const team = match.sides[match.innings[notable.innings].battingSide].team
       const colors = [team.colors.primary, team.colors.secondary, '#ffffff']
       const milestone = notable.tags.find((t) => tagLabel[t] && t !== 'maiden' && t !== 'duck')
@@ -464,6 +519,15 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               lines: mLines,
               fist: { batsman: match.player(outLine.id), partner: partnerId && partnerId !== outLine.id ? match.player(partnerId) : null, team, title: tagLabel[battingMilestone], big: battingMilestone !== 'fifty', lines: mLines, rate: mRate } })
           }
+          // a season record: the highest score, or the quickest fifty
+          if (getAnimPrefs().drama && fixture && season) {
+            const best = seasonBests(season)
+            const nameOf = (id: string) => playerIndex.get(id)?.player.name ?? 'an earlier player'
+            const batterP = match.player(outLine.id)
+            const rec = (category: string, value: string, previous: string | undefined) => enqueueMoment({ key: notable.seq + 0.1, kind: 'record', player: batterP, team, title: 'RECORD!', lines: [], delay: 0, ms: Math.round(4800 * (sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1)), record: { category, value, previous, player: batterP, team, rate: sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1 } })
+            if (best.highScore && outLine.runs > best.highScore.runs && outLine.runs >= 50) rec('Highest score of the season', `${outLine.runs}${outLine.dismissal ? '' : '*'}`, `The old mark was ${best.highScore.runs} by ${nameOf(best.highScore.id)}`)
+            else if (battingMilestone === 'fifty' && best.fastestFifty && outLine.balls < best.fastestFifty.balls) rec('Fastest fifty of the season', `${outLine.balls} balls`, `The old mark was ${best.fastestFifty.balls} balls by ${nameOf(best.fastestFifty.id)}`)
+          }
         } else if (notable.wicket && outLine) {
           // one screen for the wicket: how it happened, and his innings on a card
           const w = notable.wicket
@@ -477,6 +541,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           // a run out goes to the third umpire first; some lbw outs are reviewed by the batsman first
           if (reviews && w.kind === 'run out') { const gap = runOutGap(notable.seq); show({ key: notable.seq + 0.3, kind: 'runout', player: match.player(outLine.id), team, title: 'RUN OUT?', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(7200 * rate), runout: { batsman: match.player(outLine.id), batTeam: team, fielder: fielderP, bowlTeam: bowlSideNow.team, cm: gap.cm, text: gap.text, rate } }) }
           if (reviews && w.kind === 'lbw' && lbwWasReviewed(notable.seq)) show({ key: notable.seq + 0.3, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(5000 * rate), review: { by: 'bat', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
+          const bowlIdx = (1 - match.innings[notable.innings].battingSide) as 0 | 1
+          if (reviews && w.kind === 'caught' && w.fielderId && w.fielderId === match.keeperOf(bowlIdx) && edgeWasReviewed(notable.seq)) show({ key: notable.seq + 0.32, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(5000 * rate), review: { by: 'bat', kind: 'edge', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
           if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6300 * rate),
             replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, track: w.kind === 'lbw' ? trackFor(notable.seq, true) : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
@@ -489,6 +555,23 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const ln = inn.bowlers.get(notable.bowlerId)
             show({ key: notable.seq + 0.7, kind: 'haul', player: bowlerP, team: bowlSideNow.team, title: 'FIVE-FOR!', lines: [], delay: 0, ms: Math.round(5000 * rate), haul: { bowler: bowlerP, bowlTeam: bowlSideNow.team, victims: victimsOf(5), figures: { wickets: ln?.wickets ?? 5, runs: ln?.runs ?? 0, overs: ln ? `${Math.floor(ln.legalBalls / 6)}.${ln.legalBalls % 6}` : '' }, rate } })
           }
+          // two wickets in two balls: the next ball is a hat-trick ball
+          if (wantReplay && !notable.tags.includes('hat-trick')) {
+            const last2 = inn.log.filter((e) => e.bowlerId === notable.bowlerId && e.legal).slice(-2)
+            const next = inn.batters[inn.batters.length - 1]
+            if (last2.length === 2 && last2.every((e) => e.wicket && e.wicket.kind !== 'run out') && next && !inn.done && !match.isOver) {
+              const nb = match.player(next.id)
+              show({ key: notable.seq + 0.65, kind: 'tension', player: bowlerP, team: bowlSideNow.team, title: 'HAT-TRICK BALL', lines: [], delay: 0, ms: Math.round(4200 * rate), tension: { variant: 'hattrick', player: bowlerP, team: bowlSideNow.team, other: nb, otherTeam: team, title: 'HAT-TRICK BALL!', sub: `${bowlerP.name} is on two in two. ${nb.name} faces it`, rate } })
+            }
+          }
+          // the best bowling of the season
+          if (getAnimPrefs().drama && fixture && season) {
+            const ln = inn.bowlers.get(notable.bowlerId)
+            const best = seasonBests(season).bestBowling
+            if (ln && ln.wickets >= 3 && best && (ln.wickets > best.wickets || (ln.wickets === best.wickets && ln.runs < best.runs))) {
+              enqueueMoment({ key: notable.seq + 0.8, kind: 'record', player: bowlerP, team: bowlSideNow.team, title: 'RECORD!', lines: [], delay: 0, ms: Math.round(4800 * rate), record: { category: 'Best bowling of the season', value: `${ln.wickets}/${ln.runs}`, previous: `The old mark was ${best.wickets}/${best.runs} by ${playerIndex.get(best.id)?.player.name ?? 'an earlier player'}`, player: bowlerP, team: bowlSideNow.team, rate } })
+            }
+          }
         } else if (milestone && outLine) {
           showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
         }
@@ -499,6 +582,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       else if (notable.boundary === 6) showFx({ key: notable.seq, kind: 'six', text: 'SIX!', colors })
       else showFx({ key: notable.seq, kind: 'four', text: 'FOUR!', colors })
       timeoutMoment()
+      finalMoments()
+      window.setTimeout(openWinWhenIdle, 0)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [match, showFx, showNote, enqueueMoment, clearMoments, openWinWhenIdle, fixture, season, playerIndex, teamMap],
@@ -589,7 +674,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, match, act, manual])
 
+  if (phase === 'lineup') return <LineupReveal sides={match.sides} mySide={match.mySide} onDone={() => { setPhase('play'); setLivePhase('play') }} />
   if (phase === 'pre') {
+    const bigMatch = !!fixture && fixture.phase === 'knockout' && /final/i.test(fixture.stage)
+    if (bigMatch && !bigDone && getAnimPrefs().intro && fixture) {
+      const c = season?.competitions.find((x) => x.id === fixture.competitionId)
+      return <BigMatchIntro sides={match.sides} competition={c ? competitionName(c, teamMap) : ''} stage={fixture.stage.replace(/ \d+$/, '')} onDone={() => setBigDone(true)} />
+    }
     const seasons = fixture && season ? [...(history ?? []), season] : null
     const [sa, sb] = match.sides
     const compName = fixture ? (() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : '' })() : ''
@@ -604,7 +695,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       />
     )
   }
-  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { setPhase('play'); setLivePhase('play') }} />
+  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
 
   // between the innings the screen stays on the first innings until you press Next innings
   const holding = holdNow
@@ -640,6 +731,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // the field for this stage of the game (scenery only: the engine never reads it)
   noMirrorRef.current = userBats && (manual || swipeOn)
   const pitchKind = describePitch(match.pitch).kind
+  // your players whose rating rose in this match (a career match only, once its result is saved)
+  const upgrades: UpgradeRow[] = (() => {
+    if (!match.isOver || !fixture || !season?.myTeamId) return []
+    const mine = new Set(match.sides.flatMap((x) => (x.team.id === season.myTeamId ? x.xi.map((p) => p.id) : [])))
+    return upgradesFrom(season.changes?.[fixture.id], mine, (id) => { const e = playerIndex.get(id); return e ? overall(e.player) : null })
+      .flatMap((u) => { const e = playerIndex.get(u.playerId); return e ? [{ player: e.player, team: e.team, before: u.before, after: u.after }] : [] })
+  })()
   // chasing in the last two overs: what is needed
   const chase = inn.target !== null && !match.isOver ? { need: inn.target - inn.runs, balls: FORMATS[match.format].overs * 6 - inn.legalBalls, wickets: 10 - inn.wickets } : null
   const plan = fieldPlan({
@@ -729,7 +827,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       {/* the last ball's own screens (the field is gone by then) play over a dark backdrop before the celebration */}
       <AnimatePresence>{match.isOver && moment && !winOpen && <motion.div key="finalmoment" className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="relative aspect-[16/10] w-full max-w-3xl"><AnimatePresence><MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} /></AnimatePresence></div></motion.div>}</AnimatePresence>
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
-      <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => setMotmOpen(false)} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
+      <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => { setMotmOpen(false); if (upgrades.length > 0 && !upgradesSeen.current) { upgradesSeen.current = true; window.setTimeout(() => setUpgradesOpen(true), 250) } }} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
+      <AnimatePresence>{upgradesOpen && upgrades.length > 0 && <UpgradeScreen rows={upgrades} onClose={() => setUpgradesOpen(false)} />}</AnimatePresence>
     </>
   )
 

@@ -2,6 +2,7 @@ import confetti from 'canvas-confetti'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { sfx } from '../../audio/sfx'
+import { quoteFor } from '../../data/quotes'
 import type { AwardCandidate, MatchAwards } from '../../engine/awards'
 import type { Match } from '../../engine/match'
 import { strikeRate } from './format'
@@ -91,6 +92,12 @@ export function MotmOverlay({ match, awards, onClose, onScorecard }: { match: Ma
               <span className="text-slate-400">· {entry.team.series}</span>
             </div>
             <div className="mt-4 rounded-2xl bg-black/30 p-3"><Lines c={winner} /></div>
+            {/* the post-match interview */}
+            <motion.div className="relative mx-auto mt-4 max-w-md rounded-2xl rounded-tl-sm bg-white/10 px-4 py-3 text-left ring-1 ring-white/15" initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: 0.9, type: 'spring', stiffness: 200, damping: 16 }}>
+              <div className="mb-0.5 text-[11px] font-bold uppercase tracking-widest text-sky-300">Post-match interview</div>
+              <p className="text-sm italic leading-snug text-slate-100">“{quoteFor(winner, match.seed)}”</p>
+              <div className="mt-1 text-right text-[11px] font-semibold text-slate-400">{entry.p.name}</div>
+            </motion.div>
             <div className="mt-2 text-xs text-slate-400">Impact score <b className="text-amber-300">{Math.round(winner.points)}</b>{match.result?.winnerSide === winner.side ? ' (winning side bonus included)' : ''}</div>
 
             <div className="mt-5 text-left">

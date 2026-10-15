@@ -109,6 +109,8 @@ export function trackFor(seq: number, out: boolean): Track {
 
 /** True for the few balls (about one in 30) where a side asks for a review that is not an lbw out. */
 export const isNotOutReview = (seq: number) => hash(seq, 6) < 0.034
+/** True for about two in five caught-behind outs, where the batsman asks for a review (the sound graph) first. */
+export const edgeWasReviewed = (seq: number) => hash(seq, 8) < 0.4
 /** True for roughly a third of lbw outs, where the batsman asks for a review first. */
 export const lbwWasReviewed = (seq: number) => hash(seq, 7) < 0.4
 

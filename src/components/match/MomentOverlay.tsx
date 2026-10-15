@@ -8,6 +8,7 @@ import { DuckScreen, HatTrickScreen, HaulScreen, type DuckInfo, type HatTrickInf
 import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
 import { ReviewScreen, RunOutReview, type ReviewInfo, type RunOutInfo } from './ReviewScreens'
 import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInfo } from './TimeoutScreens'
+import { PhaseScreen, RecordScreen, SuperOverScreen, SwingScreen, TargetScreen, TensionScreen, type PhaseInfo, type RecordInfo, type SuperOverInfo, type SwingInfo, type TargetInfo, type TensionInfo } from './StoryScreens'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
 import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
@@ -18,7 +19,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -33,6 +34,13 @@ export interface Moment {
   runout?: RunOutInfo
   timeout?: TimeoutInfo
   partnership?: PartnershipInfo
+  /** More story screens: a hat-trick ball or the nineties, the target, a super over, a momentum swing, a record, a new phase of the game. */
+  tension?: TensionInfo
+  target?: TargetInfo
+  superover?: SuperOverInfo
+  swing?: SwingInfo
+  record?: RecordInfo
+  phase?: PhaseInfo
   haul?: HaulInfo
   /** For a fifty or hundred: the one-screen version (the two batsmen meet and bump fists). Without it the original card is used. */
   fist?: FistInfo
@@ -85,6 +93,21 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if ((moment.kind === 'tension' && moment.tension) || (moment.kind === 'target' && moment.target) || (moment.kind === 'superover' && moment.superover) || (moment.kind === 'swing' && moment.swing) || (moment.kind === 'record' && moment.record) || (moment.kind === 'phase' && moment.phase)) {
+    return (
+      <motion.div
+        data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
+      >
+        {moment.kind === 'tension' && moment.tension && <TensionScreen info={moment.tension} />}
+        {moment.kind === 'target' && moment.target && <TargetScreen info={moment.target} />}
+        {moment.kind === 'superover' && moment.superover && <SuperOverScreen info={moment.superover} />}
+        {moment.kind === 'swing' && moment.swing && <SwingScreen info={moment.swing} />}
+        {moment.kind === 'record' && moment.record && <RecordScreen info={moment.record} />}
+        {moment.kind === 'phase' && moment.phase && <PhaseScreen info={moment.phase} />}
       </motion.div>
     )
   }

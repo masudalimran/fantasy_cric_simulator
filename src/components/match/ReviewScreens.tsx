@@ -82,6 +82,37 @@ export function BallTrackView({ track, out, rate = 1, compact = false }: { track
   )
 }
 
+// ---- The sound graph for a caught behind ----------------------------------------------------------------------------------------
+
+/** The broadcast's edge-detection picture: a sound wave along the bottom, flat, then a spike as the ball passes the bat. */
+export function SnickoView({ rate = 1 }: { rate?: number }) {
+  const r = rate
+  const pts: string[] = []
+  for (let i = 0; i <= 100; i++) {
+    const x = i * 2
+    const spike = i >= 58 && i <= 64 ? (i % 2 ? -1 : 1) * (26 - Math.abs(i - 61) * 6) : 0
+    pts.push(`${x},${50 + Math.sin(i * 12.9898) * 2 + spike}`)
+  }
+  return (
+    <div className="absolute inset-0">
+      <svg viewBox="0 0 200 100" preserveAspectRatio="none" className="absolute inset-x-[4%] top-[28%] h-[40%] w-[92%]" aria-hidden>
+        <line x1="0" x2="200" y1="50" y2="50" stroke="#ffffff22" strokeWidth="0.5" />
+        <line x1="122" x2="122" y1="0" y2="100" stroke="#fbbf24" strokeWidth="0.8" strokeDasharray="3 2" />
+        <text x="124" y="8" fontSize="7" fill="#fbbf24" fontWeight="700">BALL PASSES BAT</text>
+        <motion.polyline points={pts.join(' ')} fill="none" stroke="#34d399" strokeWidth="1.4" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 2.2 * r, ease: 'linear' }} />
+      </svg>
+      <div className="absolute inset-x-2 bottom-2 z-20 grid grid-cols-3 gap-1.5 text-center">
+        {([['Sound', 'Spike', 1.4], ['Bat', 'Ball passes', 1.4], ['Verdict', 'Edge', 2.3]] as const).map(([label, value, at]) => (
+          <motion.div key={label} className="rounded-lg bg-black/75 px-1 py-1 ring-1 ring-white/15" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: at * r }}>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
+            <div className="text-[11px] font-extrabold leading-tight" style={{ color: '#34d399' }}>{value}</div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ---- A review: the T signal, then ball tracking -------------------------------------------------------------------
 
 export interface ReviewInfo {
@@ -91,6 +122,8 @@ export interface ReviewInfo {
   /** The decision on the field stands: out or not out. */
   out: boolean
   track: Track
+  /** 'edge' is a caught behind checked with the sound graph instead of ball tracking. */
+  kind?: 'track' | 'edge'
   rate: number
 }
 
@@ -101,7 +134,7 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
   const asker = by === 'bat' ? batsman : bowler
   const askTeam = by === 'bat' ? batTeam : bowlTeam
   const verdict = out ? 'OUT' : 'NOT OUT'
-  const sub = out ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
+  const sub = info.kind === 'edge' ? 'A clear spike: the decision stands' : out ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
   return (
     <div ref={box} className="absolute inset-0" aria-label="Review">
       <TvFrame title="Decision review">
@@ -113,7 +146,7 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
         </motion.div>
         {/* ball tracking and the verdict */}
         <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.3 * r }}>
-          <BallTrackView track={track} out={out} rate={r} />
+          {info.kind === 'edge' ? <SnickoView rate={r} /> : <BallTrackView track={track} out={out} rate={r} />}
         </motion.div>
         <motion.div className="absolute inset-x-0 top-[10%] z-30 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: (2.3 + 3.3) * r, type: 'spring', stiffness: 260, damping: 15 }}>
           <div className="font-display leading-none tracking-wide" style={{ color: out ? '#f87171' : '#34d399', fontSize: Math.max(36, Math.min(w * 0.13, 84)), WebkitTextStroke: '2px #05070d', paintOrder: 'stroke fill', textShadow: `0 0 30px ${out ? '#ef4444' : '#10b981'}aa` }}>{verdict}</div>

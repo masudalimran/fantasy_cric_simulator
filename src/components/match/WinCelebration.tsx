@@ -8,7 +8,7 @@ import { accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { MoodPortrait } from './Portrait'
 
-function Trophy({ size = 120 }: { size?: number }) {
+export function Trophy({ size = 120 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 120 120" aria-hidden="true" style={{ filter: 'drop-shadow(0 6px 14px rgba(251,191,36,.55))' }}>
       <defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#fde68a" /><stop offset="0.5" stopColor="#f59e0b" /><stop offset="1" stopColor="#b45309" /></linearGradient></defs>

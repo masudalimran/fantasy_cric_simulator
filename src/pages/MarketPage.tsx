@@ -7,6 +7,8 @@ import { MarketConfirm, type Confirm } from '../components/season/MarketConfirm'
 import { SigningOverlay, type Signing } from '../components/season/SigningOverlay'
 import { FREE_AGENTS, useTeamMap } from '../components/season/shared'
 import { OverseasTag, PlayerAvatar, RatingBadge, TeamCrest } from '../components/ui'
+import { NewTalents, type TalentCard } from '../components/season/NewsScreens'
+import { markSeen, useSeen } from '../tips'
 import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { originOf } from '../data/origin'
@@ -49,6 +51,19 @@ export function MarketPage() {
 
   const market = season?.market
   const index = useMemo(() => playerIndex(base, market), [base, market])
+  // the first time you open the market in a window: the best young players waiting in the pool
+  const talentsKey = season ? `talents:${session?.id ?? ''}:${season.year}:${openWindow(season, season.today)?.id ?? ''}` : ''
+  const talentsSeen = useSeen(talentsKey)
+  const [talentsOpen, setTalentsOpen] = useState<boolean | null>(null)
+  const talents: TalentCard[] = useMemo(() => {
+    if (!season || !market || !openWindow(season, season.today)) return []
+    return market.pool
+      .map((id) => ({ id, p: index.get(id), pot: YOUTH_BY_ID.get(id)?.potential ?? 0 }))
+      .filter((x): x is { id: string; p: Player; pot: number } => !!x.p)
+      .sort((a, b) => b.pot - a.pot || overall(b.p) - overall(a.p))
+      .slice(0, 4)
+      .map((x) => ({ player: x.p, stars: stars(x.pot), price: market.asking[x.id] ?? 0 }))
+  }, [season, market, index])
   if (!season || !market || !season.myTeamId) {
     return <div className="rounded-2xl border border-dashed border-line p-12 text-center text-slate-400">The market opens for careers where you manage a team. <Link to={paths.sessions} className="text-indigo-300 hover:underline">Your careers</Link></div>
   }
@@ -173,6 +188,7 @@ export function MarketPage() {
         {win && <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer font-semibold text-slate-300">How it works</summary><p className="mt-1">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him. Computer teams are shopping too.</p></details>}
       </div>
 
+      <AnimatePresence>{(talentsOpen ?? (!talentsSeen && !!season?.myTeamId)) && talents.length > 0 && <NewTalents key="talents" cards={talents} onClose={() => { setTalentsOpen(false); markSeen(talentsKey) }} />}</AnimatePresence>
       {notice && <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-sm text-amber-100" role="status"><span>{notice}</span><button onClick={() => setNotice(null)} className="font-bold" aria-label="Dismiss">✕</button></div>}
 
       {offers.length > 0 && (

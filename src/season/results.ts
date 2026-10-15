@@ -7,6 +7,7 @@ import type { Team } from '../types'
 import { coverInjured } from './injuries'
 import { applyMatchChanges, sessionTeam } from './progression'
 import { buildReel } from './reel'
+import { fastestFiftyOf } from './stories'
 import { cpuSelections, formTable } from './selection'
 import type { Competition, Fixture, MatchSummary, RawSummary, Season, Slot, TableRow, TeamScore } from './types'
 
@@ -44,7 +45,7 @@ export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: num
   for (const inn of match.innings) for (const e of inn.log) if (e.boundary === 6 && e.distance) longest.set(e.strikerId, Math.max(longest.get(e.strikerId) ?? 0, e.distance))
   const six = [...longest]
   const motm = computeAwards(match).motm
-  return { six, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings) }
+  return { six, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
 }
 
 export function simulateFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): RawSummary {
@@ -148,6 +149,7 @@ export function recordResult(season: Season, raw: RawSummary, teams?: Map<string
     played: raw.played?.map(idx),
     six: raw.six?.map(([id, m]) => [idx(id), m] as [number, number]),
     reel: raw.reel ? { p: idx(raw.reel.p), k: raw.reel.k, e: raw.reel.e } : undefined,
+    ff: raw.ff ? [idx(raw.ff[0]), raw.ff[1]] : undefined,
   }
   const fixture = season.fixtures.find((f) => f.id === raw.fixtureId)
   const next = { ...season, roster, results: { ...season.results, [summary.fixtureId]: summary } }

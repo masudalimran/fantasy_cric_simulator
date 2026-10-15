@@ -70,10 +70,13 @@ export interface MatchSummary {
   six?: [number, number][]
   /** The best batting or bowling of the match as a replayable reel (missing in matches played before reels existed). */
   reel?: import('./reel').Reel
+  /** The quickest fifty of the match: who (roster position) and how many balls he faced to reach it. */
+  ff?: [number, number]
 }
 
 /** A summary as the engine produces it, before player ids are swapped for roster indices. */
-export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six' | 'reel'> & {
+export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six' | 'reel' | 'ff'> & {
+  ff?: [string, number] | null
   reel?: import('./reel').RawReel | null
   six?: [string, number][]
   /** Ids of everyone in either XI. */
