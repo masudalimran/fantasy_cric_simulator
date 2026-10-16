@@ -749,6 +749,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, match, act, manual])
 
+  // the studio show's guests: the best few players of every team, so the pundits are faces you know (the script keeps teams that are playing off the desk)
+  const studioPool = useMemo(() => everyTeam.flatMap((t) => [...t.players].sort((a, b) => overall(b) - overall(a)).slice(0, 4).map((player) => ({ player, team: t }))), [everyTeam])
+
   if (phase === 'lineup') return <LineupReveal sides={match.sides} mySide={match.mySide} onDone={() => { setPhase('play'); setLivePhase('play') }} />
   if (phase === 'pre') {
     // a career match opens with its tournament: the trophy, the standings, last year's winners
@@ -851,8 +854,6 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     updateSeasonNow(() => r.season)
     navigate(matchHref(r.season, mine))
   })
-  // the studio show's guests: the best few players of every team, so the pundits are faces you know (the script keeps teams that are playing off the desk)
-  const studioPool = useMemo(() => everyTeam.flatMap((t) => [...t.players].sort((a, b) => overall(b) - overall(a)).slice(0, 4).map((player) => ({ player, team: t }))), [everyTeam])
   const compNameOf = (f: NonNullable<typeof fixture>) => { const c = season?.competitions.find((x) => x.id === f.competitionId); return c ? competitionName(c, teamMap) : '' }
   const showUpgrades = () => { if (upgrades.length > 0 && !upgradesSeen.current) { upgradesSeen.current = true; window.setTimeout(() => setUpgradesOpen(true), 250) } }
   const resultCard = match.isOver && match.result ? (

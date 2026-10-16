@@ -30,7 +30,7 @@ const MOVE: Record<Mood, object> = {
 }
 
 /** Types a line out letter by letter; tapping finishes it. */
-function useTypewriter(text: string, speed = 22) {
+function useTypewriter(text: string, speed = 44) {
   const [n, setN] = useState(0)
   useEffect(() => {
     setN(0)
@@ -110,7 +110,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   const [stage, setStage] = useState<'intro' | 'show' | 'outro'>('intro')
   const [i, setI] = useState(0)
   const beat: Beat = script.beats[Math.min(i, script.beats.length - 1)]
-  const typed = useTypewriter(stage === 'show' ? beat.text : '', 20)
+  const typed = useTypewriter(stage === 'show' ? beat.text : '', 40)
   const introduced = useRef(new Set<number>())
   const [strap, setStrap] = useState<number | null>(null)
   // the clip on the wall stays until another one is asked for
@@ -132,7 +132,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   // lines move on by themselves a moment after they have been typed out
   useEffect(() => {
     if (stage !== 'show' || !typed.done) return
-    const t = window.setTimeout(next, 1100 + beat.text.length * 22)
+    const t = window.setTimeout(next, 2200 + beat.text.length * 40)
     return () => window.clearTimeout(t)
   }, [stage, typed.done, beat.text.length, next])
   useEffect(() => {
