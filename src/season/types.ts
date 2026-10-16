@@ -21,6 +21,8 @@ export interface Fixture {
   awayRef: Slot
   homeId: string | null
   awayId: string | null
+  /** A Test takes five calendar days (the date above is the first); every other match takes one. */
+  days?: number
 }
 
 export type CompetitionKind = 'league' | 'cup' | 'knockout' | 'series'
@@ -55,8 +57,12 @@ export interface MatchSummary {
   winnerId: string | null // null = tie or no result
   text: string
   /** How the match was won; null for ties and super overs. */
-  margin: 'runs' | 'wickets' | null
+  margin: 'runs' | 'wickets' | 'innings' | null
   scores: Record<string, TeamScore>
+  /** A Test that ran out of time: the points are shared. */
+  draw?: boolean
+  /** A Test: every innings in order (for the card on the result), and how many days it took. */
+  test?: { innings: { teamId: string; runs: number; wickets: number; balls: number; declared?: boolean; followOn?: boolean }[]; days: number }
   /** True if the match was tied and settled by a super over (knockouts only). */
   superOver: boolean
   playerOfMatchId: string | null
@@ -164,6 +170,8 @@ export interface Season {
   lineup?: { order: string[]; captainId: string; keeperId?: string }
   /** Who each team's physios look after, and from when. A physio on a player means he cannot be injured; the computer's teams cover their three best players. */
   physio?: Record<string, { playerId: string; from: string; to?: string }[]>
+  /** Games whose highlight a strategic timeout has shown, and how many matches had been played then, so none comes back for the next 10 matches. */
+  highlightsShown?: Record<string, number>
   /** Everybody's shifts when this season began, so "this season" changes can be told apart from earlier ones. */
   startShifts?: Record<string, PlayerShift>
   /** What each played match did to each player's ratings (only players whose ratings moved), by fixture. */

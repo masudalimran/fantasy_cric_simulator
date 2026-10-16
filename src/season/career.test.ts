@@ -58,7 +58,7 @@ describe('career mode seasons', () => {
     const before = new Date(Date.parse(first.date) - 3 * 86400000).toISOString().slice(0, 10)
     const r = simUntil(s, before, teams)
     expect(r.stoppedAt).toBeNull()
-    expect(r.season.today).toBe(before)
+    expect(r.season.today).toBe(before < s.today ? s.today : before) // (the year may start with your match, so there is no day before it to stop on)
     expect(r.season.results[first.id]).toBeUndefined()
   })
 

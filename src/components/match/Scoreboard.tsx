@@ -6,6 +6,7 @@ import { TeamLogo } from '../season/Details'
 import { parRunsPerOver } from '../../engine/model'
 import { DIFFICULTIES, type Difficulty } from '../../engine/types'
 import { oversText, runRate } from './format'
+import { TestScoreboard } from './TestScoreboard'
 
 const LEVEL_COLOR: Record<Difficulty, string> = { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' }
 
@@ -32,6 +33,7 @@ export function projectedScore(runs: number, legalBalls: number, totalBalls: num
 
 /** The broadcast-style header: batting score, progress through the innings, and the target. */
 export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 | 1 | null; difficulty?: Difficulty | null }) {
+  if (match.format === 'test') return <TestScoreboard match={match} you={you} difficulty={difficulty} />
   const inn = match.shown
   const bat = match.battingSide(inn)
   const bowl = match.bowlingSide(inn)
@@ -108,6 +110,7 @@ export function Scoreboard({ match, you, difficulty }: { match: Match; you?: 0 |
 export function MobileScoreboard({ match, you, difficulty, onBack, backLabel }: {
   match: Match; you?: 0 | 1 | null; difficulty?: Difficulty | null; onBack: () => void; backLabel: string
 }) {
+  if (match.format === 'test') return <TestScoreboard match={match} you={you} difficulty={difficulty} onBack={onBack} backLabel={backLabel} />
   const inn = match.shown
   const bat = match.battingSide(inn)
   const bowl = match.bowlingSide(inn)

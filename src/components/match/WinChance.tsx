@@ -3,9 +3,32 @@ import { winChanceSeries } from '../../engine/analysis'
 import type { Match } from '../../engine/match'
 import { distinctAccents } from '../ui'
 import { TeamLogo } from '../season/Details'
+import { scoreLineOf, testSituation, WEATHER_LABEL } from './TestScoreboard'
+
+/** A Test has no over-by-over chase model: this shows where the match stands instead, in plain numbers. */
+function TestSituation({ match }: { match: Match }) {
+  const sit = testSituation(match)
+  const clock = match.clock
+  const wx = clock ? WEATHER_LABEL[clock.plan.weather] : null
+  return (
+    <div className="rounded-xl border border-line bg-panel-2 p-3">
+      <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">Match situation</h3>
+      <p className="mt-2 text-sm text-slate-200">{scoreLineOf(match)}</p>
+      <div className="mt-2 font-display text-3xl leading-none text-white">{match.isOver ? match.result?.text : sit.text}</div>
+      {!match.isOver && clock && (
+        <ul className="mt-3 space-y-1 text-sm text-slate-300">
+          <li>Day <b className="text-white">{clock.day}</b> of 5 · {wx?.icon} {wx?.label}{clock.plan.lost > 0 ? ` (${clock.plan.lost} overs lost today)` : ''}</li>
+          <li><b className="text-white">{match.oversLeftToday}</b> overs left today, about <b className="text-white">{match.oversLeftExpected}</b> in the match</li>
+        </ul>
+      )}
+      <p className="mt-3 text-[11px] text-slate-500">A Test can be drawn if the time runs out. Win chances are not worked out for it.</p>
+    </div>
+  )
+}
 
 /** An estimate of who is winning, over the course of the match. */
 export function WinChance({ match }: { match: Match }) {
+  if (match.format === 'test') return <TestSituation match={match} />
   const series = winChanceSeries({ format: match.format, maxOvers: match.maxOvers, innings: match.innings })
   const first = match.battingSide(match.innings[0]).team
   const second = match.battingSide({ ...match.innings[0], battingSide: (1 - match.innings[0].battingSide) as 0 | 1 }).team

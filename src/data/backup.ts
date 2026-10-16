@@ -90,7 +90,7 @@ function isSession(s: unknown): s is SessionFile {
 }
 
 function isLive(m: unknown): m is LiveMatch {
-  return isObj(m) && isStr(m.id) && isStr(m.key) && isStr(m.url) && isTeam(m.teamA) && isTeam(m.teamB) && isNum(m.seed) && Array.isArray(m.actions) && (m.format === 't20' || m.format === 'odi')
+  return isObj(m) && isStr(m.id) && isStr(m.key) && isStr(m.url) && isTeam(m.teamA) && isTeam(m.teamB) && isNum(m.seed) && Array.isArray(m.actions) && (m.format === 't20' || m.format === 'odi' || m.format === 'test')
 }
 
 export type ParseResult = { ok: true; backup: BackupFile; summary: BackupSummary; skipped: string[] } | { ok: false; error: string }

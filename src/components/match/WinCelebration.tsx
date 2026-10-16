@@ -7,6 +7,7 @@ import type { Player, Team } from '../../types'
 import { accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { MoodPortrait } from './Portrait'
+import { scoreLineOf } from './TestScoreboard'
 
 export function Trophy({ size = 120 }: { size?: number }) {
   return (
@@ -84,7 +85,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
           <motion.div className="mt-5" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 0.9 }} transition={{ type: 'spring', delay: 0.2 }}><TeamLogo team={mine.team} size={120} /></motion.div>
           <h1 className="mt-3 font-display text-3xl leading-none tracking-wide text-slate-200 md:text-6xl">{mine.team.name}</h1>
           <div className="mt-2 text-lg font-semibold text-white">{r?.text}</div>
-          <div className="mt-1 text-sm text-slate-400">{match.innings.map((i) => `${match.battingSide(i).team.name} ${i.runs}/${i.wickets}`).join('  ·  ')}</div>
+          <div className="mt-1 text-sm text-slate-400">{scoreLineOf(match)}</div>
           <p className="mt-3 text-slate-300">Chin up. There's always the next match.</p>
           <div className="mt-6 flex max-w-4xl flex-wrap items-end justify-center gap-x-3 gap-y-5 pt-4">
             {mine.xi.map((p, i) => (
@@ -100,7 +101,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
     )
   }
 
-  const scores = match.innings.map((i) => `${match.battingSide(i).team.name} ${i.runs}/${i.wickets}`).join('  ·  ')
+  const scores = scoreLineOf(match)
 
   return (
     <motion.div
@@ -118,7 +119,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
       <div className="relative mx-auto flex min-h-full max-w-5xl flex-col items-center justify-center px-4 py-8 text-center">
         <motion.div initial={{ y: -40, opacity: 0, scale: 0.8 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 14, delay: 0.1 }}
           className="rounded-full bg-gradient-to-b from-amber-300 to-amber-500 px-8 py-1.5 font-display text-3xl tracking-[0.3em] text-black shadow-xl">
-          {team ? (final ? 'CHAMPIONS' : 'WINNERS') : 'WHAT A FINISH'}
+          {team ? (final ? 'CHAMPIONS' : 'WINNERS') : r?.draw ? 'HARD-FOUGHT DRAW' : 'WHAT A FINISH'}
         </motion.div>
 
         {team ? (
@@ -131,7 +132,7 @@ export function WinCelebration({ match, final, onContinue, mySide = null }: { ma
         )}
 
         <motion.h1 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="mt-3 font-display text-3xl leading-none tracking-wide md:text-7xl" style={{ color: accent, textShadow: '0 4px 24px rgba(0,0,0,.6)' }}>
-          {team ? team.name : 'THE MATCH IS TIED'}
+          {team ? team.name : r?.draw ? 'THE MATCH IS DRAWN' : 'THE MATCH IS TIED'}
         </motion.h1>
         {team && <div className="mt-1 text-base text-slate-200">{team.series}{final ? ` · ${final} champions` : ''}</div>}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-3 text-lg font-semibold text-white">{r?.text}</motion.div>

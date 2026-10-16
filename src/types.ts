@@ -82,7 +82,7 @@ export interface Team {
   isCustom?: boolean
 }
 
-export type MatchFormat = 't20' | 'odi'
+export type MatchFormat = 't20' | 'odi' | 'test'
 
 export interface TournamentDef {
   id: string

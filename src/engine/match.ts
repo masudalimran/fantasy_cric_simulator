@@ -10,7 +10,7 @@ import { sixDistance } from './shots'
 import {
   BOWL_STYLE_VALUE, DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
   type BallEvent, type BowlStyle, type DeliveryAim, type ShotAim, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
-  type MatchResult, type Pitch, type Side, type TossResult,
+  type MatchResult, type Pitch, type Side, type TestClock, type TestDay, type TossResult, type Weather,
 } from './types'
 
 export interface MatchOptions {
@@ -66,6 +66,15 @@ export class Match {
   private bonus: [number, number] = [0, 0]
   private blunder = 0
 
+  /** A Test: where the match is on the five-day clock (null in the limited-overs formats). */
+  clock: TestClock | null = null
+  /** A Test is waiting for somebody: the next day to start, or the side that leads to say whether the other side follows on. */
+  awaiting: null | 'day' | 'followon' = null
+  /** The days of a Test that were washed out completely (no ball bowled), for the screens that say so. */
+  washedOut: number[] = []
+  /** True while a whole match is being simulated: the computer then decides everything, for both sides. */
+  private auto = false
+
   private rng: Rng
   private form = new Map<string, Form>()
   private fieldingAvg: [number, number]
@@ -102,7 +111,132 @@ export class Match {
     }
     this.toss = this.doToss(opts.toss, opts.tossDecision)
     const batsFirst = this.toss.decision === 'bat' ? this.toss.winnerSide : ((1 - this.toss.winnerSide) as 0 | 1)
+    if (opts.format === 'test') this.clock = { day: 1, ballsToday: 0, plan: this.planDay(1), stumps: false }
     this.startInnings(0, batsFirst, null)
+    this.pickBowler(this.current)
+    if (this.clock) this.skipEmptyDays() // (a first day that is washed out completely)
+  }
+
+  // ---- A Test's clock ----------------------------------------------------
+
+  /** One day of a Test, planned from the match seed: 88 to 102 overs, less whatever the weather takes. */
+  private planDay(day: number): TestDay {
+    const r = new Rng((this.seed ^ Math.imul(day, 0x9e3779b1) ^ 0x7e57) >>> 0)
+    const base = 88 + r.int(15)
+    const u = r.next()
+    let weather: Weather = 'clear'
+    let lost = 0
+    if (u < 0.56) weather = 'clear'
+    else if (u < 0.74) weather = 'overcast'
+    else if (u < 0.84) { weather = 'drizzle'; lost = 4 + r.int(9) }
+    else if (u < 0.92) { weather = 'rain'; lost = 14 + r.int(21) }
+    else if (u < 0.965) { weather = 'bad light'; lost = 6 + r.int(11) }
+    else { weather = 'washout'; lost = base - r.int(13) }
+    return { day, weather, lost, scheduled: Math.max(0, base - lost) }
+  }
+
+  /** Overs still to be bowled today. */
+  get oversLeftToday(): number {
+    return this.clock ? Math.max(0, this.clock.plan.scheduled - Math.floor(this.clock.ballsToday / 6)) : 0
+  }
+
+  /** What the captains reckon is left of the match, in overs (they do not know the weather to come). */
+  get oversLeftExpected(): number {
+    if (!this.clock) return 0
+    return this.oversLeftToday + (5 - this.clock.day) * 82
+  }
+
+  /** The session of the day: 1 morning, 2 afternoon, 3 evening. */
+  get session(): 1 | 2 | 3 {
+    if (!this.clock) return 1
+    const done = Math.floor(this.clock.ballsToday / 6)
+    const per = this.clock.plan.scheduled / 3
+    return done < per ? 1 : done < per * 2 ? 2 : 3
+  }
+
+  /** True when the ball is the last of a session (a call for the screens to show lunch, tea or stumps). */
+  private sessionEnds(): boolean {
+    if (!this.clock) return false
+    const balls = this.clock.ballsToday
+    if (balls % 6 !== 0) return false
+    const per = this.clock.plan.scheduled / 3
+    const done = balls / 6
+    return done > 0 && (Math.abs(done - per) < 0.5 || Math.abs(done - per * 2) < 0.5 || done >= this.clock.plan.scheduled)
+  }
+
+  /** Moves a Test on to the next day. Days with no play at all (washed out) are skipped, and day five ends the match. */
+  startNextDay(): void {
+    if (!this.clock || this.result || this.awaiting !== 'day') return
+    this.awaiting = null
+    this.clock = { day: this.clock.day + 1, ballsToday: 0, plan: this.planDay(this.clock.day + 1), stumps: false }
+    this.skipEmptyDays()
+  }
+
+  private skipEmptyDays() {
+    while (this.clock && !this.result && this.clock.plan.scheduled === 0) {
+      this.washedOut.push(this.clock.day)
+      if (this.clock.day >= 5) { this.endByTime(); return }
+      this.clock = { day: this.clock.day + 1, ballsToday: 0, plan: this.planDay(this.clock.day + 1), stumps: false }
+    }
+  }
+
+  /** Time has run out: nobody has won, so it is a draw (or a tie if the scores are level with the chase unfinished). */
+  private endByTime() {
+    if (this.result) return
+    const inn = this.current
+    if (inn.target !== null && inn.runs === inn.target - 1 && !inn.done) {
+      this.result = { winnerSide: null, margin: null, text: 'Match tied' }
+    } else {
+      this.result = { winnerSide: null, draw: true, margin: null, text: 'Match drawn' }
+    }
+    if (!inn.done) inn.done = true
+  }
+
+  /** The total scored by a side across the innings so far. */
+  private totalOf(side: 0 | 1): number {
+    return this.innings.filter((i) => i.battingSide === side).reduce((s, i) => s + i.runs, 0)
+  }
+
+  /** Whether a person (not the computer) is the one making this side's decisions: declaring, following on. */
+  private humanSide(side: 0 | 1): boolean {
+    if (this.auto) return false
+    if (this.careerOn) return this.mySide === side
+    return true // a friendly: the people playing are in charge of both sides
+  }
+
+  /** The batting side closes its innings. Not allowed in the last innings, or when the innings is over. */
+  declare(): boolean {
+    const inn = this.current
+    if (this.format !== 'test' || this.result || inn.done || this.awaiting || inn.index >= 3) return false
+    inn.declared = true
+    inn.done = true
+    this.finishInnings(inn)
+    return true
+  }
+
+  /** The side that leads by enough says whether the other side bats again at once (a follow-on) or bats itself. */
+  decideFollowOn(enforce: boolean): boolean {
+    if (this.awaiting !== 'followon') return false
+    this.awaiting = null
+    this.beginThird(enforce)
+    if (this.clock?.stumps && !this.result) this.awaiting = 'day' // the day ended while the captain was deciding
+    return true
+  }
+
+  /** The lead, in runs, of the side that batted first once both sides have batted (negative if it trails). */
+  private firstInningsLead(): number {
+    return this.innings[0].runs - this.innings[1].runs
+  }
+
+  private beginThird(enforce: boolean) {
+    const first = this.innings[0].battingSide
+    const second = (1 - first) as 0 | 1
+    if (enforce) {
+      this.startInnings(2, second, null)
+      this.current.followOn = true
+    } else {
+      this.startInnings(2, first, null)
+    }
     this.pickBowler(this.current)
   }
 
@@ -132,7 +266,7 @@ export class Match {
     return { callerSide, call, coin, winnerSide, decision }
   }
 
-  private startInnings(index: 0 | 1, battingSide: 0 | 1, target: number | null) {
+  private startInnings(index: 0 | 1 | 2 | 3, battingSide: 0 | 1, target: number | null) {
     const xi = this.sides[battingSide].xi
     const inn: Innings = {
       index, battingSide, runs: 0, wickets: 0, legalBalls: 0,
@@ -206,7 +340,7 @@ export class Match {
   /** Required run rate while chasing, otherwise null. */
   requiredRate(inn = this.current): number | null {
     if (inn.target === null) return null
-    const left = this.maxOvers * 6 - inn.legalBalls
+    const left = this.format === 'test' ? this.oversLeftExpected * 6 : this.maxOvers * 6 - inn.legalBalls
     return left > 0 ? ((inn.target - inn.runs) / left) * 6 : null
   }
 
@@ -254,7 +388,7 @@ export class Match {
   // ---- Playing -----------------------------------------------------------
 
   playBall(): BallEvent | null {
-    if (this.result) return null
+    if (this.result || this.awaiting) return null
     const inn = this.current
     const battingSideIdx = inn.battingSide
     const bowlingSideIdx = (1 - battingSideIdx) as 0 | 1
@@ -282,12 +416,14 @@ export class Match {
 
     const bowlerOvers = bowlerLine.legalBalls / 6
     const stamina = bowler.bowling?.stamina ?? 50
-    const fatigue = Math.max(0, bowlerOvers - 1.5) * ((100 - stamina) / (format === 'odi' ? 60 : 110))
+    // (in a Test it is the length of the current spell that tires him, not the day's total)
+    const recentOvers = format === 'test' ? inn.log.filter((e) => e.bowlerId === bowlerId && e.legal && e.over > over - 18).length / 6 : 0
+    const fatigue = format === 'test' ? Math.max(0, recentOvers - 5.5) * ((100 - stamina) / 80) : Math.max(0, bowlerOvers - 1.5) * ((100 - stamina) / (format === 'odi' ? 60 : 110))
 
     const userIntent = this.intent[battingSideIdx]
     const intent =
       userIntent === null
-        ? aiIntent({ format, inn, batter: striker, ballsFaced: strikerLine.balls, xiSize: batXI.length }) +
+        ? aiIntent({ format, inn, batter: striker, ballsFaced: strikerLine.balls, xiSize: batXI.length, test: this.clock ? { oversLeft: this.oversLeftExpected, lead: this.totalOf(battingSideIdx) - this.totalOf(bowlingSideIdx), day: this.clock.day } : undefined }) +
           // the computer's batting plan, with the odd poor call depending on the difficulty
           (this.blunder > 0 && battingSideIdx === this.cpuSide ? Math.max(-1.2, Math.min(2.2, this.rng.normal() * this.blunder * 0.9)) : 0)
         : typeof userIntent === 'number' ? userIntent : INTENT_VALUE[userIntent]
@@ -300,7 +436,7 @@ export class Match {
       ballsFaced: strikerLine.balls,
       fieldingAvg: this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx],
       bat: effectiveBat(striker, { phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx] }),
-      bowl: effectiveBowl(bowler, { phase, pitch: this.pitch, inningsIndex: inn.index, fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx] }),
+      bowl: effectiveBowl(bowler, { phase, pitch: this.pitch, inningsIndex: this.clock ? (this.clock.day >= 3 ? 1 : 0) : (inn.index as 0 | 1), fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx] }),
     })
 
     // ---- Roll the delivery
@@ -368,6 +504,7 @@ export class Match {
     if (legal) {
       bowlerLine.legalBalls++
       inn.legalBalls++
+      if (this.clock) this.clock.ballsToday++
       if (total === 0 && !dismissal) bowlerLine.dots++
     }
 
@@ -424,7 +561,7 @@ export class Match {
 
     // ---- Is the innings (or match) over?
     const allOut = inn.wickets >= batXI.length - 1
-    const oversUp = inn.legalBalls >= this.maxOvers * 6
+    const oversUp = this.format !== 'test' && inn.legalBalls >= this.maxOvers * 6
     const chased = inn.target !== null && inn.runs >= inn.target
     if (allOut || oversUp || chased) {
       inn.done = true
@@ -432,7 +569,100 @@ export class Match {
     } else if (inn.bowlerId === null) {
       this.pickBowler(inn)
     }
+    if (this.clock && !this.result) {
+      // the computer's captain may call the innings off at the end of an over
+      if (overDone && !inn.done && !this.awaiting && this.aiMayDeclare(inn)) { inn.declared = true; inn.done = true; this.finishInnings(inn) }
+      // the day's overs are up
+      if (legal && this.clock.ballsToday % 6 === 0 && this.clock.ballsToday >= this.clock.plan.scheduled * 6) this.endOfDay()
+    }
     return ev
+  }
+
+  /** Stumps. Day five ends the match; any other day waits for the next one to be started. */
+  private endOfDay() {
+    if (!this.clock || this.result) return
+    this.clock.stumps = true
+    if (this.clock.day >= 5) { this.endByTime(); return }
+    if (this.awaiting === null) this.awaiting = 'day'
+  }
+
+  /** Whether the computer's captain, batting, closes the innings now. */
+  private aiMayDeclare(inn: Innings): boolean {
+    const side = inn.battingSide
+    if (!this.clock || this.humanSide(side) || inn.index >= 3 || inn.followOn) return false
+    const left = this.oversLeftExpected
+    const lead = this.totalOf(side) - this.totalOf((1 - side) as 0 | 1) // runs in front, counting this innings so far
+    if (inn.index === 0) {
+      // a captain calls the first innings off when it is big enough: the bigger it gets, the likelier it is each over (so a rare monster can run on)
+      const day = this.clock.day
+      const p = inn.runs >= 800 ? 0.35 : inn.runs >= 650 ? 0.14 : inn.runs >= 550 ? (day >= 3 ? 0.14 : 0.06) : inn.runs >= 450 && day >= 3 ? 0.08 : 0
+      return p > 0 && new Rng((this.seed ^ Math.imul(inn.legalBalls, 2654435761)) >>> 0).chance(p)
+    }
+    if (inn.index === 1) return inn.runs >= 650 || (inn.runs >= this.innings[0].runs - 30 && this.clock.day >= 4) // the reply is level or ahead late on: call it off
+    return lead >= 450 || (lead >= 380 && left <= 160) || (lead >= 250 && left <= 108)
+  }
+
+  /** The computer's side that leads by 200 or more decides whether to make the other follow on. */
+  private cpuEnforcesFollowOn(lead: number): boolean {
+    if (!this.clock) return false
+    const day = this.clock.day
+    const p = day <= 2 ? (lead >= 300 ? 0.8 : 0.5) : day === 3 ? (lead >= 300 ? 0.6 : 0.3) : 0
+    return new Rng((this.seed ^ 0xf011) >>> 0).chance(p)
+  }
+
+  /** Enough time left for a side to be bowled out twice? */
+  private timeAllowsFollowOn(): boolean {
+    return !!this.clock && this.clock.day <= 4 && this.oversLeftExpected >= 120
+  }
+
+  /** Where a Test goes when an innings ends: the next innings, the follow-on question, or the result. */
+  private finishTestInnings(inn: Innings) {
+    const idx = inn.index
+    const bat = inn.battingSide
+    const other = (1 - bat) as 0 | 1
+    const name = (s: 0 | 1) => this.sides[s].team.name
+    const win = (winner: 0 | 1, how: NonNullable<MatchResult['margin']>, text: string) => {
+      this.result = { winnerSide: winner, margin: how, text: this.forfeitSide !== null ? `${text} (${name(this.forfeitSide)} forfeited)` : text }
+    }
+    if (idx === 0) { this.startInnings(1, other, null); this.pickBowler(this.current); return }
+    if (idx === 1) {
+      const first = this.innings[0].battingSide
+      const lead = this.firstInningsLead()
+      if (lead >= 200 && this.timeAllowsFollowOn()) {
+        if (this.humanSide(first)) { this.awaiting = 'followon'; return }
+        this.beginThird(this.cpuEnforcesFollowOn(lead))
+      } else this.beginThird(false)
+      return
+    }
+    if (idx === 2) {
+      if (inn.followOn) {
+        const own = this.totalOf(bat) // the side that followed on, both innings
+        const theirs = this.totalOf(other)
+        if (own < theirs) { win(other, { type: 'innings', value: theirs - own }, `${name(other)} won by an innings and ${theirs - own} run${theirs - own === 1 ? '' : 's'}`); return }
+        this.startInnings(3, other, own - theirs + 1)
+      } else {
+        // the side that batted first has batted twice; the other side now chases
+        const total = this.totalOf(bat)
+        const chaser = other
+        const target = total - this.totalOf(chaser) + 1
+        if (target <= 0) { const by = this.totalOf(chaser) - total; win(chaser, { type: 'innings', value: by }, `${name(chaser)} won by an innings and ${by} run${by === 1 ? '' : 's'}`); return }
+        this.startInnings(3, chaser, target)
+      }
+      this.pickBowler(this.current)
+      return
+    }
+    // the fourth innings: the chase
+    const target = inn.target as number
+    const xiSize = this.sides[bat].xi.length
+    if (inn.runs >= target) {
+      const wk = xiSize - 1 - inn.wickets
+      win(bat, { type: 'wickets', value: wk }, `${name(bat)} won by ${wk} wicket${wk === 1 ? '' : 's'}`)
+    } else if (inn.runs === target - 1) {
+      this.result = { winnerSide: null, margin: null, text: 'Match tied' }
+    } else {
+      const by = target - 1 - inn.runs
+      win(other, { type: 'runs', value: by }, `${name(other)} won by ${by} run${by === 1 ? '' : 's'}`)
+    }
   }
 
   private swap(inn: Innings) {
@@ -478,6 +708,7 @@ export class Match {
   }
 
   private finishInnings(inn: Innings) {
+    if (this.format === 'test') { this.finishTestInnings(inn); return }
     if (inn.index === 0) {
       this.startInnings(1, (1 - inn.battingSide) as 0 | 1, inn.runs + 1)
       this.pickBowler(this.current)
@@ -543,8 +774,46 @@ export class Match {
   }
 
   playMatch(): MatchResult {
-    while (!this.result) this.playBall()
-    return this.result
+    const was = this.auto
+    this.auto = true // simulated whole: the computer makes every decision for both sides
+    let guard = 0
+    while (!this.result && guard++ < 200000) {
+      if (this.awaiting === 'day') this.startNextDay()
+      else if (this.awaiting === 'followon') this.decideFollowOn(this.cpuEnforcesFollowOn(this.firstInningsLead()))
+      else this.playBall()
+    }
+    this.auto = was
+    return this.result as MatchResult
+  }
+
+  /** A Test: plays to the end of the current session (lunch, tea or stumps), or sooner if an innings ends or something needs deciding. */
+  playSession(): BallEvent[] {
+    const out: BallEvent[] = []
+    if (!this.clock) return out
+    const start = this.current
+    const startSession = this.session
+    const startDay = this.clock.day
+    while (!this.result && !this.awaiting && this.current === start && !start.done && this.clock.day === startDay) {
+      const ev = this.playBall()
+      if (!ev) break
+      out.push(ev)
+      if (this.session !== startSession || this.sessionEnds()) break
+    }
+    return out
+  }
+
+  /** A Test: plays to stumps, or sooner if an innings ends or something needs deciding. */
+  playDay(): BallEvent[] {
+    const out: BallEvent[] = []
+    if (!this.clock) return out
+    const start = this.current
+    const startDay = this.clock.day
+    while (!this.result && !this.awaiting && this.current === start && !start.done && this.clock.day === startDay) {
+      const ev = this.playBall()
+      if (!ev) break
+      out.push(ev)
+    }
+    return out
   }
 
   /** Plays until the next wicket, boundary-free of overs. Useful for "sim to next wicket". */

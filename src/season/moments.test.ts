@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BallEvent } from '../engine/types'
-import { isNotOutReview, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from './moments'
+import { cooledDown, HIGHLIGHT_COOLDOWN, isNotOutReview, markShown, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from './moments'
 import type { Season } from './types'
 
 const ev = (seq: number, o: Partial<BallEvent> & { runs: number; wk?: number }): BallEvent => ({
@@ -41,5 +41,16 @@ describe('moments data', () => {
     const reviews = Array.from({ length: 600 }, (_, i) => isNotOutReview(i + 1)).filter(Boolean).length
     expect(reviews).toBeGreaterThan(5)
     expect(reviews).toBeLessThan(45)
+  })
+})
+
+describe('highlight cooldown', () => {
+  const season = (played: number) => ({ results: Object.fromEntries(Array.from({ length: played }, (_, i) => [`f${i}`, {}])) }) as unknown as Pick<Season, 'results' | 'highlightsShown'>
+  it('keeps a game that was shown off the air for the next 10 matches, then lets it back', () => {
+    const shown = markShown(season(20), 'f3')
+    expect(cooledDown(shown).has('f3')).toBe(true)
+    expect(cooledDown({ ...shown, results: season(20 + HIGHLIGHT_COOLDOWN - 1).results }).has('f3')).toBe(true)
+    expect(cooledDown({ ...shown, results: season(20 + HIGHLIGHT_COOLDOWN).results }).has('f3')).toBe(false)
+    expect(cooledDown(season(20)).size).toBe(0)
   })
 })

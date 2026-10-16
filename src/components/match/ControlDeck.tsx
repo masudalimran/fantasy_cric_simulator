@@ -81,6 +81,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
   const anim = useAnimPrefs()
   const [overs, setOvers] = useState(5)
   const [askForfeit, setAskForfeit] = useState(false)
+  const [askDeclare, setAskDeclare] = useState(false)
   const inn = match.shown
   const cfg = FORMATS[match.format]
   const batSide = inn.battingSide
@@ -120,7 +121,27 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           </button>
           <button className={solid} onClick={() => act({ t: 'over' })}>Finish over</button>
         </div>
-        <Fold title="More ways to play" hint="sim ahead, next wicket, finish">
+        {match.format === 'test' && (
+          <>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button className={solid} onClick={() => act({ t: 'session' })} title="Play on to lunch, tea or stumps">Sim session</button>
+              <button className={solid} onClick={() => act({ t: 'day' })} title="Play on to stumps">Sim day</button>
+            </div>
+            {showBat && inn.index < 3 && !inn.done && (
+              !askDeclare
+                ? <button className={`${base} w-full border border-amber-400/60 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20`} onClick={() => setAskDeclare(true)}>Declare the innings</button>
+                : (
+                  <div className="space-y-1.5 rounded-lg border border-amber-400/60 bg-amber-400/10 p-2">
+                    <p className="text-[12px] text-amber-100">Close the innings at <b>{inn.runs}/{inn.wickets}</b>? Your bowlers go out to bowl at once.</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button className={`${base} bg-amber-400 text-black hover:bg-amber-300`} onClick={() => { setAskDeclare(false); act({ t: 'declare' }) }}>Declare</button>
+                      <button className={solid} onClick={() => setAskDeclare(false)}>Keep batting</button>
+                    </div>
+                  </div>
+                )
+            )}
+          </>
+        )}        <Fold title="More ways to play" hint="sim ahead, next wicket, finish">
         <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-semibold text-slate-400">Sim</span>
             <div className="flex h-9 items-center overflow-hidden rounded-lg bg-slate-700">

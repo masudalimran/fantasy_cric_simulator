@@ -115,7 +115,7 @@ describe('matches played versus batting and bowling appearances', () => {
     for (const [id, played] of c.played) {
       const bat = c.bat.get(id), bowl = c.bowl.get(id)
       expect(played).toBeGreaterThanOrEqual(Math.max(bat?.batApps ?? 0, bowl?.bowlApps ?? 0))
-      if (bat) { expect(bat.matches).toBe(played); expect(bat.batApps).toBe(bat.innings) }
+      if (bat) { expect(bat.matches).toBe(played); expect(bat.batApps).toBeLessThanOrEqual(bat.innings) } // (a Test match gives a batsman up to two innings)
       if (bowl) expect(bowl.matches).toBe(played)
       if (!bat && !bowl) someoneDidNeither = true
     }

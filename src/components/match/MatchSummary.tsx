@@ -10,11 +10,15 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
   const firstSide = (match.innings[0]?.battingSide ?? 0) as 0 | 1
   const panel = (side: 0 | 1) => {
     const team = match.sides[side].team
-    const batInn = match.innings.find((i) => i.battingSide === side)
+    // (a Test side bats up to twice: every one of its innings counts)
+    const batInns = match.innings.filter((i) => i.battingSide === side)
+    const batInn = batInns[0]
     // the bowlers who bowled at this side are the other team's: the same innings, seen from the field
     const oppTeam = match.sides[1 - side].team
-    const bats = batInn ? [...batInn.batters].filter((b) => b.balls > 0 || b.runs > 0 || b.dismissal).sort((a, b) => b.runs - a.runs || a.balls - b.balls).slice(0, 2) : []
-    const bowls = batInn ? [...batInn.bowlers.values()].sort((a, b) => b.wickets - a.wickets || a.runs - b.runs).slice(0, 2) : []
+    const bats = batInns.flatMap((i) => i.batters).filter((b) => b.balls > 0 || b.runs > 0 || b.dismissal).sort((a, b) => b.runs - a.runs || a.balls - b.balls).slice(0, 2)
+    const bowls = batInns.flatMap((i) => [...i.bowlers.values()]).sort((a, b) => b.wickets - a.wickets || a.runs - b.runs).slice(0, 2)
+    const score = batInns.map((i) => `${i.runs}${i.wickets < 10 || i.declared ? `/${i.wickets}` : ''}${i.declared ? 'd' : ''}`).join(' & ')
+    const overs = batInns.reduce((s, i) => s + i.legalBalls, 0)
     const won = match.result?.winnerSide === side
     const accent = accentOf(team)
     return (
@@ -23,9 +27,11 @@ export function MatchSummary({ match, onClose }: { match: Match; onClose: () => 
           <TeamLogo team={team} size={48} />
           <div className="min-w-0 flex-1">
             <div className="truncate font-display text-xl leading-none tracking-wide text-white">{team.name}</div>
-            <div className="text-xs text-slate-300"><span className="font-bold text-slate-100">{side === firstSide ? '1st innings' : '2nd innings'}</span> · {batInn ? `${oversText(batInn.legalBalls)} overs` : ''}{won ? ' · Winner' : ''}</div>
+            <div className="text-xs text-slate-300"><span className="font-bold text-slate-100">{match.format === 'test' ? 'Test' : side === firstSide ? '1st innings' : '2nd innings'}</span> · {batInn ? `${oversText(overs)} overs` : ''}{won ? ' · Winner' : ''}</div>
           </div>
-          <div className="font-display text-5xl leading-none text-white">{batInn?.runs ?? '-'}<span className="text-2xl text-slate-400">/{batInn?.wickets ?? '-'}</span></div>
+          {match.format === 'test'
+            ? <div className="text-right font-display text-3xl leading-none text-white">{score || '-'}</div>
+            : <div className="font-display text-5xl leading-none text-white">{batInn?.runs ?? '-'}<span className="text-2xl text-slate-400">/{batInn?.wickets ?? '-'}</span></div>}
         </div>
         <div className="grid gap-3 p-3">
           <div>

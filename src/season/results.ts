@@ -21,7 +21,10 @@ export function fixtureSeed(season: Season, fixtureId: string): number {
 export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: number): RawSummary {
   const scores: Record<string, TeamScore> = {}
   for (const inn of match.innings) {
-    scores[match.sides[inn.battingSide].team.id] = { runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls, allOut: inn.wickets >= 10 }
+    const id = match.sides[inn.battingSide].team.id
+    const prev = scores[id]
+    // (a Test side bats twice: its score is the two innings added up, and it is never "all out" for the run rate)
+    scores[id] = match.format === 'test' && prev ? { runs: prev.runs + inn.runs, wickets: prev.wickets + inn.wickets, balls: prev.balls + inn.legalBalls, allOut: false } : { runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls, allOut: match.format !== 'test' && inn.wickets >= 10 }
   }
   const r = match.result
   if (!r) throw new Error('Match is not finished')
@@ -45,7 +48,7 @@ export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: num
   for (const inn of match.innings) for (const e of inn.log) if (e.boundary === 6 && e.distance) longest.set(e.strikerId, Math.max(longest.get(e.strikerId) ?? 0, e.distance))
   const six = [...longest]
   const motm = computeAwards(match).motm
-  return { six, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
+  return { six, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, ...(r.draw ? { draw: true } : {}), ...(match.format === 'test' ? { test: { days: match.clock?.day ?? 5, innings: match.innings.map((i) => ({ teamId: match.sides[i.battingSide].team.id, runs: i.runs, wickets: i.wickets, balls: i.legalBalls, ...(i.declared ? { declared: true } : {}), ...(i.followOn ? { followOn: true } : {}) })) } } : {}), playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
 }
 
 export function simulateFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): RawSummary {

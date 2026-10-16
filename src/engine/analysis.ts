@@ -251,8 +251,9 @@ const PAR_RPO = { t20: 8.58, odi: 5.63 } as const
  * A rough chance (0 to 1) that the team batting second wins. It's an estimate from the score,
  * the overs left and the wickets in hand, not a simulation of the rest of the match.
  */
-export function chaseWinChance(format: 't20' | 'odi', maxOvers: number, firstInnings: { runs: number; wickets: number; legalBalls: number; done: boolean }, second?: { runs: number; wickets: number; legalBalls: number; target: number }): number {
+export function chaseWinChance(format: 't20' | 'odi' | 'test', maxOvers: number, firstInnings: { runs: number; wickets: number; legalBalls: number; done: boolean }, second?: { runs: number; wickets: number; legalBalls: number; target: number }): number {
   const total = maxOvers * 6
+  if (format === 'test') return 0.5 // (a Test has no over-by-over chase model: its screens show the match situation instead)
   const par = PAR_TOTAL[format]
   if (!second) {
     // Still in the first innings: where is it heading, and how often does a chase beat that?
@@ -276,7 +277,7 @@ export function chaseWinChance(format: 't20' | 'odi', maxOvers: number, firstInn
 export interface WinPoint { x: number; p: number; innings: 0 | 1 }
 
 /** The estimate after every over, across the whole match (x counts overs from the start of the first innings). */
-export function winChanceSeries(m: { format: 't20' | 'odi'; maxOvers: number; innings: Innings[] }): WinPoint[] {
+export function winChanceSeries(m: { format: 't20' | 'odi' | 'test'; maxOvers: number; innings: Innings[] }): WinPoint[] {
   const pts: WinPoint[] = []
   const [a, b] = m.innings
   const state = (inn: Innings, upTo: number) => {

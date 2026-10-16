@@ -456,7 +456,7 @@ export function Stage({
           transition={{ duration: 1.3, times: [0, 0.6, 0.78, 1], left: { duration: 1, ease: 'easeInOut' }, top: { duration: 1, ease: 'easeInOut' } }}
         >
           <div className="rounded-full transition-transform duration-150 group-hover:scale-125" style={{ boxShadow: `0 0 0 1.5px ${accentOf(bowlingTeam)}aa` }}>
-            <PlayerAvatar player={player} team={bowlingTeam} size={Math.round((involved === player.id ? 38 : 28) * Math.max(scale, 0.75))} />
+            <PlayerAvatar player={player} team={bowlingTeam} size={involved === player.id ? Math.round(38 * Math.max(scale, 0.75)) : Math.max(18, Math.round(22 * scale))} />
           </div>
           {/* name tag on hover */}
           <div className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-2.5 py-1 text-center opacity-0 shadow-lg ring-1 ring-white/20 transition-opacity duration-100 group-hover:opacity-100">

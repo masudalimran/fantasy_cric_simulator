@@ -61,7 +61,8 @@ describe('season generator', () => {
 
   it('keeps the calendar busy without long gaps', () => {
     const s = season(1)
-    const dates = [...new Set(s.fixtures.map((f) => f.date))].sort()
+    // (a Test keeps a calendar day busy for every one of its five days)
+    const dates = [...new Set(s.fixtures.flatMap((f) => Array.from({ length: f.days ?? 1 }, (_, k) => addDays(f.date, k))))].sort()
     let longest = 0
     for (let i = 1; i < dates.length; i++) longest = Math.max(longest, daysBetween(dates[i - 1], dates[i]))
     expect(longest).toBeLessThanOrEqual(4)
@@ -83,5 +84,32 @@ describe('season generator', () => {
       expect(s.fixtures.length).toBeGreaterThan(0)
       expect(s.fixtures.every((f) => f.date <= addDays(endOfYear(2027), 0))).toBe(true)
     }
+  })
+})
+
+describe('Test series in the calendar', () => {
+  it('puts Test matches of five days among the friendly series, and keeps those teams free for all five days', () => {
+    const s = season(1)
+    const tests = s.fixtures.filter((f) => f.format === 'test')
+    expect(tests.length).toBeGreaterThan(5)
+    expect(tests.every((f) => f.days === 5 && f.phase === 'series')).toBe(true)
+    // every Test series has two or three matches
+    for (const c of s.competitions.filter((x) => x.format === 'test')) {
+      const n = s.fixtures.filter((f) => f.competitionId === c.id).length
+      expect(n === 2 || n === 3).toBe(true)
+    }
+    // no team plays another match on any day of its Test
+    for (const f of tests) {
+      for (const g of s.fixtures) {
+        if (g.id === f.id || !g.homeId || !f.homeId) continue
+        const shared = [g.homeId, g.awayId].some((id) => id === f.homeId || id === f.awayId)
+        if (!shared) continue
+        const gEnd = addDays(g.date, (g.days ?? 1) - 1)
+        const fEnd = addDays(f.date, 4)
+        expect(g.date <= fEnd && gEnd >= f.date).toBe(false)
+      }
+    }
+    // nothing runs past the end of the year
+    for (const f of tests) expect(addDays(f.date, 4) <= endOfYear(2027)).toBe(true)
   })
 })

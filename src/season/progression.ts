@@ -79,8 +79,8 @@ export function applyDelta(p: Player, a: Partial<Record<AttrKey, number>>): Play
 // Calibrated against the engine: what a batsman or bowler of a given rating usually scores in each format,
 // and how much it varies. A player who beats that by a good margin gains; one who falls well short loses.
 
-const BAT_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number }> = { t20: { a: -34.2, b: 0.706, sd: 23.6 }, odi: { a: -37, b: 0.838, sd: 30.2 } }
-const BOWL_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number; par: number }> = { t20: { a: -9.8, b: 0.474, sd: 33.6, par: 8.2 }, odi: { a: 1.6, b: 0.167, sd: 18, par: 5.3 } }
+const BAT_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number }> = { t20: { a: -34.2, b: 0.706, sd: 23.6 }, odi: { a: -37, b: 0.838, sd: 30.2 }, test: { a: -32, b: 0.85, sd: 34 } }
+const BOWL_EXPECT: Record<MatchFormat, { a: number; b: number; sd: number; par: number }> = { t20: { a: -9.8, b: 0.474, sd: 33.6, par: 8.2 }, odi: { a: 1.6, b: 0.167, sd: 18, par: 5.3 }, test: { a: 1.6, b: 0.167, sd: 18, par: 3.2 } }
 
 /** A performance is judged against what a player of his own rating usually does; how much a good one is worth depends on his rating (see headroom). */
 const grade = (z: number) => z

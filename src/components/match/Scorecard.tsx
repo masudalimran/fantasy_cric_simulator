@@ -3,6 +3,7 @@ import { accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { ClickAvatar } from './PlayerCard'
 import { useInningsPick } from './InningsPicker'
+import { inningsName } from './TestScoreboard'
 import { dismissalText, economy, oversText, runRate, strikeRate } from './format'
 
 export function Scorecard({ match }: { match: Match }) {
@@ -25,7 +26,7 @@ export function Scorecard({ match }: { match: Match }) {
           <TeamLogo team={bat.team} size={46} />
           <div className="min-w-0">
             <div className="text-[11px] font-bold uppercase tracking-widest text-slate-300">
-              {inn.index === 0 ? '1st innings' : '2nd innings'}{live && <span className="ml-2 rounded bg-red-500 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white">LIVE</span>}
+              {inningsName(inn)}{live && <span className="ml-2 rounded bg-red-500 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white">LIVE</span>}
             </div>
             <div className="truncate text-sm font-bold leading-tight text-white md:text-base">{bat.team.name}</div>
             <div className="truncate text-[11px] text-slate-400 md:text-xs">{bat.team.series}</div>
@@ -36,7 +37,7 @@ export function Scorecard({ match }: { match: Match }) {
           </div>
         </div>
         {match.innings.length > 1 && (
-          <div className="grid grid-cols-2 border-t border-line bg-black/20" role="tablist" aria-label="Innings">
+          <div className="grid border-t border-line bg-black/20" style={{ gridTemplateColumns: `repeat(, minmax(0, 1fr))` }} role="tablist" aria-label="Innings">
             {match.innings.map((i, n) => {
               const on = n === idx
               const t = match.battingSide(i).team
@@ -46,7 +47,7 @@ export function Scorecard({ match }: { match: Match }) {
                   className={`flex min-w-0 flex-col items-start px-3 py-2 text-left transition ${on ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                   style={{ boxShadow: on ? `inset 0 -3px 0 ${accentOf(t)}` : undefined }}
                 >
-                  <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">{n === 0 ? '1st innings' : '2nd innings'}</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">{inningsName(i)}</span>
                   <span className="flex w-full items-baseline justify-between gap-2 text-xs font-semibold">
                     <span className="truncate">{t.name}</span>
                     <span className="shrink-0 tabular-nums">{i.runs}/{i.wickets}</span>

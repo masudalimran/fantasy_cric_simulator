@@ -4,6 +4,7 @@ import { sfx } from '../../audio/sfx'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
+import { ManhattanScreen, ScoringScreen, WagonScreen, WormScreen, type StatsInfo } from './StatsScreens'
 
 /**
  * Small screens that only break up the game: the stands, a Mexican wave, the team huddle, the fan cam, the commentators, a blimp, the
@@ -18,6 +19,8 @@ export type AmbientInfo =
   | { variant: 'blimp'; team: Team; rate: number }
   | { variant: 'lights'; teams: [Team, Team]; rate: number }
   | { variant: 'fireworks'; team: Team; rate: number }
+  // the numbers of the match on the field: a wagon wheel, the run-rate worm, the runs of each over, how the runs came
+  | { variant: 'wagon' | 'worm' | 'manhattan' | 'scoring'; stats: StatsInfo; rate: number }
 
 function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const box = useRef<HTMLDivElement>(null)
@@ -223,6 +226,7 @@ function Fireworks({ team, w, r }: { team: Team; w: number; r: number }) {
 const TAGS: Record<AmbientInfo['variant'], [string, string]> = {
   stands: ['In the stands', '#fbbf24'], wave: ['The wave', '#7dd3fc'], huddle: ['Team huddle', '#fde68a'], fancam: ['Fan cam', '#38bdf8'],
   box: ["Commentators' corner", '#c4b5fd'], blimp: ['Up above', '#bae6fd'], lights: ['Under the lights', '#fef3c7'], fireworks: ['Fireworks', '#fde68a'],
+  wagon: ['Wagon wheel', '#38bdf8'], worm: ['The worm', '#34d399'], manhattan: ['Over by over', '#f472b6'], scoring: ['How the runs came', '#fbbf24'],
 }
 
 export function AmbientScreen({ info }: { info: AmbientInfo }) {
@@ -245,6 +249,10 @@ export function AmbientScreen({ info }: { info: AmbientInfo }) {
       {info.variant === 'blimp' && <Blimp team={info.team} w={w} r={r} />}
       {info.variant === 'lights' && <Lights teams={info.teams} w={w} r={r} />}
       {info.variant === 'fireworks' && <Fireworks team={info.team} w={w} r={r} />}
+      {info.variant === 'wagon' && <WagonScreen info={info.stats} />}
+      {info.variant === 'worm' && <WormScreen info={info.stats} />}
+      {info.variant === 'manhattan' && <ManhattanScreen info={info.stats} />}
+      {info.variant === 'scoring' && <ScoringScreen info={info.stats} />}
       <Tag text={tag} color={color} />
       <Skip />
     </div>

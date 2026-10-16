@@ -18,6 +18,12 @@ export type Action =
   | { t: 'shot'; side: 0 | 1; v: ShotAim | null } // line up a shot for the next ball
   | { t: 'delivery'; side: 0 | 1; v: DeliveryAim | null } // line up a delivery for the next ball
   | { t: 'forfeit'; side: 0 | 1 }
+  // a Test: play to the end of the session or day, close the innings, answer the follow-on question, start the next day
+  | { t: 'session' }
+  | { t: 'day' }
+  | { t: 'declare' }
+  | { t: 'followon'; enforce: boolean }
+  | { t: 'nextday' }
 
 /** Performs one action on the match and returns the deliveries it produced. */
 export function applyAction(m: Match, a: Action): BallEvent[] {
@@ -42,6 +48,11 @@ export function applyAction(m: Match, a: Action): BallEvent[] {
     case 'style': m.bowlStyle[a.side] = a.v; return []
     case 'bowler': m.setBowler(a.side, a.id); return []
     case 'forfeit': m.forfeit(a.side); return []
+    case 'session': return m.playSession()
+    case 'day': return m.playDay()
+    case 'declare': m.declare(); return []
+    case 'followon': m.decideFollowOn(a.enforce); return []
+    case 'nextday': m.startNextDay(); return []
   }
 }
 

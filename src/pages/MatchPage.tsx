@@ -21,6 +21,7 @@ import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
 import { InningsBreak } from '../components/match/InningsBreak'
+import { FollowOnPrompt, TestBreak } from '../components/match/TestBreak'
 import { MotmOverlay } from '../components/match/MotmOverlay'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
@@ -29,6 +30,8 @@ import { fieldPlan } from '../components/match/fieldSets'
 import { describePitch } from '../engine/pitchInfo'
 import { MatchPreview } from '../components/match/MatchPreview'
 import { BigMatchIntro, LineupReveal } from '../components/match/LineupScreens'
+import { TournamentIntro } from '../components/match/TournamentIntro'
+import { tournamentIntro } from '../season/tournamentIntro'
 import { UpgradeScreen, type UpgradeRow } from '../components/season/NewsScreens'
 import { upgradesFrom } from '../season/stories'
 import { formOf, headToHead } from '../season/preview'
@@ -49,8 +52,8 @@ import { matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMat
 import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
-import { formatDate } from '../season/dates'
-import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor } from '../season/moments'
+import { addDays, formatDate } from '../season/dates'
+import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor } from '../season/moments'
 import { toEvent } from '../season/reel'
 import { quipFor } from '../data/quips'
 import type { AmbientInfo } from '../components/match/AmbientScreens'
@@ -79,7 +82,7 @@ function delayAfter(ev: BallEvent | undefined, speed: 1 | 2 | 4): number {
 }
 
 /** Strategic timeouts: after this many completed overs of each innings. */
-const TIMEOUT_AFTER: Record<MatchFormat, number[]> = { t20: [7, 14], odi: [12, 30] }
+const TIMEOUT_AFTER: Record<MatchFormat, number[]> = { t20: [7, 14], odi: [12, 30], test: [] }
 
 const STOPS_KEY = 'fcs.autostops'
 const DEFAULT_STOPS: AutoStops = { wickets: true, milestones: true, boundaries: false, innings: true }
@@ -110,6 +113,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const finishLive = useStore((s) => s.finishLive)
   // `?skip` opens straight into play (handy for links and testing)
   const [bigDone, setBigDone] = useState(false) // the semi-final or final intro has played
+  const [tourneyDone, setTourneyDone] = useState(false) // the tournament's trophy screen has played
   const [phase, setPhase] = useState<'pre' | 'lineup' | 'toss' | 'play'>(() => (live.phase === 'play' || new URLSearchParams(location.search).has('skip') ? 'play' : live.tossed ? 'toss' : 'pre'))
   const [fx, setFx] = useState<FxEvent | null>(null)
   const [auto, setAuto] = useState<0 | 1 | 2 | 4>(0)
@@ -129,6 +133,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (inningsNow > seenInnings.current && !match.isOver) { setBreakOpen(true); setBreakPopup(true); setAuto(0); setControlsOpen(false) } // the next innings starts when you say so
     seenInnings.current = inningsNow
   }, [inningsNow, match])
+  // a Test waiting at stumps: show the end-of-day card
+  const awaitingNow = match.awaiting
+  useEffect(() => { if (awaitingNow === 'day') { setBreakPopup(true); setAuto(0); setControlsOpen(false) } }, [awaitingNow])
   stopsRef.current = stops
   const [tab, setTab] = useState<Tab>('scorecard')
   const [controlsOpen, setControlsOpen] = useState(false)
@@ -177,7 +184,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   useEffect(() => {
     if (!finished) return
     finishLive() // this match is over, so it no longer counts as "in progress"
-    if (fixture && !alreadyPlayed) recordMatch(summarizeMatch(match, fixture, match.seed), fixture.date)
+    if (fixture && !alreadyPlayed) recordMatch(summarizeMatch(match, fixture, match.seed), addDays(fixture.date, (fixture.days ?? 1) - 1))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished])
 
@@ -409,7 +416,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         // the end of an over: a swing in who is winning, a new phase of the game, and a small card for a big over
         if (prefs.drama && lastEv.legal && lastEv.score.legalBalls % 6 === 0 && !innE.done) {
           const done = lastEv.score.legalBalls / 6
-          if (innE.index === 1 && lastEv.seq - lastSwing.current > 18) {
+          if (match.format !== 'test' && innE.index === 1 && lastEv.seq - lastSwing.current > 18) {
             const pts = winChanceSeries({ format: match.format, maxOvers: match.maxOvers, innings: match.innings }).filter((x) => x.innings === 1)
             const [a, b] = [pts[pts.length - 3], pts[pts.length - 1]]
             if (a && b && Math.abs(b.p - a.p) >= 0.22) {
@@ -442,10 +449,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const bt = match.sides[innE.battingSide].team
         const wt = match.sides[1 - innE.battingSide]
         const btSide = match.sides[innE.battingSide]
-        const hl = fixture && season ? recentHighlight(season, fixture.id) : null
+        // a game's highlight does not come back for the next 10 matches (the same games kept turning up)
+        const cool = season ? cooledDown(season) : undefined
+        const hl = fixture && season ? recentHighlight(season, fixture.id, 8, cool) : null
         // real footage: the best balls of a recent match, played again on the field view
         let reel: TimeoutReel | undefined
-        const rl = fixture && season ? pickReel(reelCandidates(season, fixture.id), shownReels.current, match.seed + shownReels.current.size * 7919 + lastEv.seq) : null
+        const rl = fixture && season ? pickReel(reelCandidates(season, fixture.id, 24, cool), shownReels.current, match.seed + shownReels.current.size * 7919 + lastEv.seq) : null
         const focus = rl ? playerIndex.get(rl.playerId) : undefined
         if (rl && focus) {
           const oppId = [rl.homeId, rl.awayId].find((id) => id && id !== focus.team.id) ?? rl.awayId
@@ -462,12 +471,15 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const ids = { striker: striker.id, nonStriker: nonStriker?.id ?? striker.id, bowler: bowler.id }
             reel = {
               player: focus.player, team: focus.team, kind: k, headline: rl.headline,
-              versus: [teamMap.get(rl.homeId ?? '')?.name, teamMap.get(rl.awayId ?? '')?.name].filter(Boolean).join(' v ') + ` · ${formatDate(rl.date)}`,
+              versus: [teamMap.get(rl.homeId ?? '')?.name, teamMap.get(rl.awayId ?? '')?.name].filter(Boolean).join(' v ') + ` · ${formatDate(rl.date)}`, result: rl.result,
               balls: rl.balls.map((b, i) => toEvent(b, ids, i)), striker, nonStriker, bowler, battingTeam: batTeam, bowlingTeam: bowlTeam,
               fielders: placeFielders(k === 'bat' ? oppXI : ownXI, bowler.id),
             }
           }
         }
+        // remember which game's highlight goes on air, so it sits out the next 10 matches
+        const aired = reel && rl ? rl.fixtureId : hl ? hl.fixtureId : null
+        if (aired) updateSeasonNow((s) => markShown(s, aired))
         const hp = hl ? playerIndex.get(hl.playerId) : undefined
         const fixtureTeams = hl ? [hl.homeId, hl.awayId].map((id) => (id ? (teamMap.get(id)?.name ?? '') : '')).filter(Boolean).join(' v ') : ''
         const watch = [keyPlayers(btSide.xi).bat && { player: keyPlayers(btSide.xi).bat!, team: bt, label: 'Top bat' }, keyPlayers(wt.xi).bowl && { player: keyPlayers(wt.xi).bowl!, team: wt.team, label: 'Top bowler' }].filter((x): x is { player: Player; team: Team; label: string } => !!x)
@@ -483,7 +495,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const left = FORMATS[match.format].overs * 6 - innE.legalBalls
         const channels: TimeoutChannel[] = [
           ...(reel ? [] : [hl && hp
-            ? { tag: 'Highlight from an earlier match', title: hp.player.name, big: hl.headline, lines: [hl.detail, [fixtureTeams, formatDate(hl.date)].filter(Boolean).join(' · ')], players: [{ player: hp.player, team: hp.team, label: hl.kind === 'bat' ? 'With the bat' : 'With the ball' }] }
+            ? { tag: 'Highlight from an earlier match', title: hp.player.name, big: hl.headline, lines: [hl.detail, [fixtureTeams, formatDate(hl.date)].filter(Boolean).join(' · '), hl.result], players: [{ player: hp.player, team: hp.team, label: hl.kind === 'bat' ? 'With the bat' : 'With the ball' }] }
             : { tag: 'Players to watch', title: 'No highlights yet: here is who to watch', lines: ['The best bat and the best bowler on show today'], players: watch }]),
           { tag: 'The innings so far', title: bt.name, big: `${innE.runs}/${innE.wickets}`, lines: [`${Math.floor(innE.legalBalls / 6)} overs · run rate ${rr}`, `${fours} ${fours === 1 ? 'four' : 'fours'} · ${sixes} ${sixes === 1 ? 'six' : 'sixes'} · ${dots} dot balls`, `The current stand: ${pt.runs} off ${pt.balls}`] },
           { tag: 'Tactics board', title: `${pitch.icon} ${pitch.label}`, lines: [pitch.tip, need !== null && need > 0 ? `${bt.short} need ${need} off ${left} balls` : `${bt.short} are looking for a big finish`] },
@@ -520,9 +532,18 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         if (lastEv.legal && lastEv.score.legalBalls % 6 === 0 && !innE.done && lastEv.seq - lastCheer.current >= 36 && ambientOver(lastEv.seq)) {
           const over = lastEv.score.legalBalls / 6
           const chase = innE.target !== null ? { need: innE.target - innE.runs, balls: FORMATS[match.format].overs * 6 - innE.legalBalls } : null
-          const v = ['wave', 'fancam', 'box', 'blimp'][ambientPick(lastEv.seq + 1, 4)]
+          // now and then the numbers of the innings go up on screen instead: a wagon wheel, the worm, the runs of each over, how the runs came
+          const stats = innE.log.length >= 24
+          const pool = ['wave', 'fancam', 'box', 'blimp', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring'] : [])]
+          const v = pool[ambientPick(lastEv.seq + 1, pool.length)]
           const happy = lastEv.score.runs / Math.max(1, lastEv.score.legalBalls) * 6 >= 7.5
-          if (v === 'wave') put({ variant: 'wave', teams: [batT, bowlS.team], rate }, 4800, 'THE WAVE', batT)
+          const shots = innE.log.filter((e) => e.strikerId === lastEv.strikerId && e.runsBat > 0).length
+          const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined }
+          if (v === 'wagon') put({ variant: 'wagon', stats: { ...si, other: undefined, batsman: shots >= 8 ? match.player(lastEv.strikerId) : undefined }, rate }, 6200, 'WAGON WHEEL', batT)
+          else if (v === 'worm') put({ variant: 'worm', stats: si, rate }, 6000, 'THE WORM', batT)
+          else if (v === 'manhattan') put({ variant: 'manhattan', stats: si, rate }, 5600, 'OVER BY OVER', batT)
+          else if (v === 'scoring') put({ variant: 'scoring', stats: si, rate }, 5600, 'HOW THE RUNS CAME', batT)
+          else if (v === 'wave') put({ variant: 'wave', teams: [batT, bowlS.team], rate }, 4800, 'THE WAVE', batT)
           else if (v === 'fancam') put({ variant: 'fancam', team: batT, mood: happy ? 'happy' : 'shock', seed: lastEv.seq, rate }, 4400, 'FAN CAM', batT)
           else if (v === 'blimp') put({ variant: 'blimp', team: batT, rate }, 4600, 'BLIMP', batT)
           else put({ variant: 'box', lines: [`${batT.short} are ${lastEv.score.runs}/${lastEv.score.wickets} after ${over} ${over === 1 ? 'over' : 'overs'}.`, quipFor(lastEv.seq, chase)], rate }, 5200, "COMMENTATORS' CORNER", batT)
@@ -632,7 +653,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     [match, showFx, showNote, enqueueMoment, clearMoments, openWinWhenIdle, fixture, season, playerIndex, teamMap],
   )
   // between the innings the next innings' introductions wait too (this is true from the very render the innings ends)
-  const holdNow = !match.isOver && (breakOpen || match.current.index > seenInnings.current)
+  const holdNow = !match.isOver && (breakOpen || match.current.index > seenInnings.current || match.awaiting !== null) // (a Test also waits at stumps and for the follow-on call)
   const breakRef = useRef(false)
   breakRef.current = holdNow
   const announce = useCallback(
@@ -653,13 +674,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   /** Every player action goes through here: do it, save it (so the match can be resumed), then react to it. */
   const act = useCallback(
     (a: Action) => {
-      if (holdRef.current && ['ball', 'over', 'overs', 'wicket', 'innings', 'match', 'intent', 'bowler', 'style', 'shot', 'delivery'].includes(a.t)) return // nothing is played until Next innings is pressed
+      if (holdRef.current && ['ball', 'over', 'overs', 'wicket', 'innings', 'match', 'intent', 'bowler', 'style', 'shot', 'delivery', 'session', 'day', 'declare'].includes(a.t)) return // nothing is played until Next innings (or Next day) is pressed
       if (a.t === 'forfeit') sfx.sadTrombone()
       else if (a.t !== 'ball') sfx.tick()
       // Animations are never cut short: pressing Next ball while screens are still waiting moves on to the next one instead of playing the ball.
       // Only a ball (or a bigger sim) that actually plays takes over; changing the tactics, the aim or the bowler leaves what is on screen alone.
       if (a.t === 'ball' && queue.current.length > 0) { sfx.tick(); dismissMoment(); return }
-      if (['ball', 'over', 'overs', 'wicket', 'innings', 'match'].includes(a.t)) clearMoments()
+      if (['ball', 'over', 'overs', 'wicket', 'innings', 'match', 'session', 'day'].includes(a.t)) clearMoments()
       const events = applyAction(match, a)
       liveAct(a)
       announce(events)
@@ -706,7 +727,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
       if (e.metaKey || e.ctrlKey || e.altKey || ['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName) || match.isOver) return
-      if (e.code === 'Space' && holdRef.current) { e.preventDefault(); setBreakOpen(false) }
+      if (e.code === 'Space' && holdRef.current) { e.preventDefault(); setBreakOpen(false); if (match.awaiting === 'day') act({ t: 'nextday' }) }
       else if (e.code === 'Space' && manualRef.current) e.preventDefault() // manual play: choosing the aim is what plays the ball
       else if (e.code === 'Space') { e.preventDefault(); if (t.tagName === 'BUTTON') t.blur(); act({ t: 'ball' }) }
       else if (e.key === 'o' || e.key === 'O') act({ t: 'over' })
@@ -719,6 +740,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   if (phase === 'lineup') return <LineupReveal sides={match.sides} mySide={match.mySide} onDone={() => { setPhase('play'); setLivePhase('play') }} />
   if (phase === 'pre') {
+    // a career match opens with its tournament: the trophy, the standings, last year's winners
+    if (fixture && season && !tourneyDone && getAnimPrefs().intro) {
+      const data = tournamentIntro(season, history, fixture, teamMap)
+      if (data) return <TournamentIntro data={data} name={competitionName(data.competition, teamMap)} fixture={fixture} sides={match.sides} mySide={match.mySide} teams={teamMap} onDone={() => setTourneyDone(true)} />
+    }
     const bigMatch = !!fixture && fixture.phase === 'knockout' && /final/i.test(fixture.stage)
     if (bigMatch && !bigDone && getAnimPrefs().intro && fixture) {
       const c = season?.competitions.find((x) => x.id === fixture.competitionId)
@@ -745,7 +771,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   holdRef.current = holding
   // the innings break panel waits until the last wicket or ball of the innings has had its screens
   const showBreak = holding && !moment
-  match.hold = holding ? 0 : null
+  // (a Test shows the innings that has just finished while it waits, or the live one at stumps)
+  const holdText = match.awaiting === 'day' ? 'Next day' : 'Next innings'
+  /** Press the hold button: start the next day, or the next innings (the follow-on call has a prompt of its own). */
+  const resume = () => {
+    if (match.awaiting === 'day') { act({ t: 'nextday' }); setBreakOpen(false); setBreakPopup(false) }
+    else if (match.awaiting === null) setBreakOpen(false)
+  }
+  match.hold = holding ? (match.format === 'test' ? (match.awaiting ? match.current.index : Math.max(0, match.current.index - 1)) : 0) : null
   const inn = match.shown
   const batSide = match.battingSide(inn)
   // lining up a shot or a delivery: only for the side(s) a person is running, never for the computer's
@@ -782,12 +815,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       .flatMap((u) => { const e = playerIndex.get(u.playerId); return e ? [{ player: e.player, team: e.team, before: u.before, after: u.after }] : [] })
   })()
   // chasing in the last two overs: what is needed
-  const chase = inn.target !== null && !match.isOver ? { need: inn.target - inn.runs, balls: FORMATS[match.format].overs * 6 - inn.legalBalls, wickets: 10 - inn.wickets } : null
+  const chase = inn.target !== null && !match.isOver && match.format !== 'test' ? { need: inn.target - inn.runs, balls: FORMATS[match.format].overs * 6 - inn.legalBalls, wickets: 10 - inn.wickets } : null
   const plan = fieldPlan({
     format: match.format, over: displayOver, maxOvers: FORMATS[match.format].overs, runs: inn.runs, legalBalls: inn.legalBalls, target: inn.target,
     freeHit: freeHitState !== null, bowlType: bowler.bowling?.type ?? null, hand: striker.hand, noMirror: noMirrorRef.current,
   })
-  const inningsBreak = inn.index === 1 && inn.legalBalls === 0 && !match.isOver
+  const inningsBreak = match.format !== 'test' && inn.index === 1 && inn.legalBalls === 0 && !match.isOver
   const cfg = FORMATS[match.format]
   const pom = awards?.motm ?? null
   const finalName = fixture?.stage === 'Final' ? (() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : undefined })() : undefined
@@ -865,8 +898,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>{showBreak && breakPopup && <InningsBreak match={match} onClose={() => setBreakPopup(false)} />}</AnimatePresence>
-      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? 'Next innings' : undefined} onHold={() => setBreakOpen(false)} manual={manual} setManual={setManualPlay} />
+      <AnimatePresence>{showBreak && breakPopup && match.awaiting !== 'followon' && (match.format === 'test' ? <TestBreak match={match} stumps={match.awaiting === 'day'} onClose={() => setBreakPopup(false)} onNextDay={resume} /> : <InningsBreak match={match} onClose={() => setBreakPopup(false)} />)}</AnimatePresence>
+      <AnimatePresence>{match.awaiting === 'followon' && !moment && <FollowOnPrompt match={match} onChoose={(enforce) => act({ t: 'followon', enforce })} />}</AnimatePresence>
+      <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? holdText : undefined} onHold={resume} manual={manual} setManual={setManualPlay} />
       {/* the last ball's own screens (the field is gone by then) play over a dark backdrop before the celebration */}
       <AnimatePresence>{match.isOver && moment && !winOpen && <motion.div key="finalmoment" className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="relative aspect-[16/10] w-full max-w-3xl"><AnimatePresence><MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} /></AnimatePresence></div></motion.div>}</AnimatePresence>
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
@@ -883,7 +917,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         <div className="fixed inset-0 z-30 flex bg-ink" data-scroll-lock style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
           <div className="flex min-w-0 flex-[1.3] flex-col">
             <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : showBreak ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">Innings break</b>Look the innings over, then press Next innings.</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
+            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : showBreak ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">{match.awaiting === 'day' ? 'Stumps' : 'Innings break'}</b>{match.awaiting === 'day' ? 'Play is over for the day. Press Next day to go on.' : 'Look the innings over, then press Next innings.'}</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
@@ -899,7 +933,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               {!match.isOver && resultCard}
               <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
             </div>
-            {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+            {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? holdText.toUpperCase() : undefined} onBall={() => (holding ? resume() : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
           </div>
         </div>
       </PlayerCardProvider>
@@ -926,7 +960,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             {resultCard}
             <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
           </div>
-          {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? 'NEXT INNINGS' : undefined} onBall={() => (holding ? setBreakOpen(false) : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
+          {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? holdText.toUpperCase() : undefined} onBall={() => (holding ? resume() : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
         </div>
       </PlayerCardProvider>
     )
@@ -1032,7 +1066,7 @@ export function MatchPage() {
   }, [a0, b0, fxId, season?.results, season?.myTeamId])
   const { a, b } = picked
   const teamMapOf = (id: string | null) => (id ? teams.find((t) => t.id === id)?.name : undefined)
-  const valid = (format === 't20' || format === 'odi') && !!a && !!b && a.id !== b.id
+  const valid = (format === 't20' || format === 'odi' || format === 'test') && !!a && !!b && a.id !== b.id
   const key = matchKey(format, aId, bId, Number(seed) || 1)
   const ready = live?.key === key
   const blocked = !ready && !!live && !live.finished // another match is still being played

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Match } from '../../engine/match'
 import { accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
+import { inningsName } from './TestScoreboard'
 
 /** Which innings an analysis tab is showing. Follows the live innings until you pick one yourself. */
 export function useInningsPick(match: Match): [number, (n: number) => void] {
@@ -14,7 +15,7 @@ export function useInningsPick(match: Match): [number, (n: number) => void] {
 export function InningsPicker({ match, idx, setIdx }: { match: Match; idx: number; setIdx: (n: number) => void }) {
   if (match.innings.length < 2) return null
   return (
-    <div className="mb-3 grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-black/20" role="tablist" aria-label="Innings">
+    <div className="mb-3 grid overflow-hidden rounded-xl border border-line bg-black/20" style={{ gridTemplateColumns: `repeat(, minmax(0, 1fr))` }} role="tablist" aria-label="Innings">
       {match.innings.map((inn, n) => {
         const team = match.battingSide(inn).team
         const on = n === idx
@@ -26,7 +27,7 @@ export function InningsPicker({ match, idx, setIdx }: { match: Match; idx: numbe
           >
             <TeamLogo team={team} size={24} />
             <span className="min-w-0">
-              <span className="block text-[11px] font-bold uppercase tracking-wider opacity-70">{n === 0 ? '1st innings' : '2nd innings'}</span>
+              <span className="block text-[11px] font-bold uppercase tracking-wider opacity-70">{inningsName(inn)}</span>
               <span className="block truncate text-xs font-semibold">{team.name}</span>
             </span>
           </button>

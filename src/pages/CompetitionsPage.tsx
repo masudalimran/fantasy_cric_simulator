@@ -6,6 +6,7 @@ import { TitlesButton } from '../components/season/TitlesButton'
 import { Link, useNavigate, useParams } from 'react-router'
 import { FixtureRow, PlayerCell, competitionColor, competitionName, usePlayerIndex, useTeamMap } from '../components/season/shared'
 import { TeamCrest } from '../components/ui'
+import { TrophyArt, trophyOf } from '../components/match/TrophyArt'
 import { paths } from '../routes'
 import { formatDate } from '../season/dates'
 import { competitionStatus, tableFor } from '../season/results'
@@ -105,7 +106,7 @@ function Tournament({ season, comp, teams }: { season: Season; comp: Competition
       <div className="rounded-3xl border border-line bg-panel p-5 md:p-6" style={{ borderTop: `4px solid ${color}` }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {origin && <TeamCrest team={origin} size={72} />}
+            <TrophyArt kind={trophyOf(comp)} size={76} accent={color} />
             <div>
               <h2 className="font-display text-4xl leading-none tracking-wide text-white">{competitionName(comp, teams)}</h2>
               <div className="mt-1.5 text-sm text-slate-300">{origin ? <>Founded by <Link to={paths.careerTeam(origin.id)} className="text-indigo-300 hover:underline">{origin.name}</Link> <span className="text-slate-400">({origin.series})</span></> : 'Friendly series'} · {comp.format.toUpperCase()} · {comp.kind}</div>

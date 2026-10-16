@@ -28,6 +28,9 @@ const LIMIT_STEPS: Limits[] = [
 
 const team = (teamId: string): Slot => ({ kind: 'team', teamId })
 
+/** A Test is played over this many calendar days. */
+export const TEST_DAYS = 5
+
 class Calendar {
   private busy = new Map<string, Set<string>>()
   private perDay = new Map<string, number>()
@@ -59,22 +62,30 @@ class Calendar {
     return addDays(best.start, Math.max(1, Math.floor(best.len / 2)))
   }
 
-  firstFit(from: string, teams: string[], compId: string): string | null {
-    for (let d = from; d <= this.last; d = addDays(d, 1)) {
-      if ((this.perDay.get(d) ?? 0) >= this.limits.globalPerDay) continue
-      if ((this.compDay.get(`${compId}|${d}`) ?? 0) >= this.limits.compPerDay) continue
-      if (!this.free(d, teams)) continue
-      return d
+  /** The first date from `from` on when these teams are free for `days` days running (a Test takes five). */
+  firstFit(from: string, teams: string[], compId: string, days = 1): string | null {
+    for (let d = from; addDays(d, days - 1) <= this.last; d = addDays(d, 1)) {
+      let ok = true
+      for (let k = 0; k < days && ok; k++) {
+        const day = addDays(d, k)
+        if ((this.perDay.get(day) ?? 0) >= this.limits.globalPerDay) ok = false
+        else if ((this.compDay.get(`${compId}|${day}`) ?? 0) >= this.limits.compPerDay) ok = false
+        else if (!this.free(day, teams)) ok = false
+      }
+      if (ok) return d
     }
     return null
   }
 
-  book(date: string, teams: string[], compId: string) {
-    const set = this.busy.get(date) ?? new Set<string>()
-    teams.forEach((t) => set.add(t))
-    this.busy.set(date, set)
-    this.perDay.set(date, (this.perDay.get(date) ?? 0) + 1)
-    this.compDay.set(`${compId}|${date}`, (this.compDay.get(`${compId}|${date}`) ?? 0) + 1)
+  book(date: string, teams: string[], compId: string, days = 1) {
+    for (let k = 0; k < days; k++) {
+      const day = addDays(date, k)
+      const set = this.busy.get(day) ?? new Set<string>()
+      teams.forEach((t) => set.add(t))
+      this.busy.set(day, set)
+      this.perDay.set(day, (this.perDay.get(day) ?? 0) + 1)
+      this.compDay.set(`${compId}|${day}`, (this.compDay.get(`${compId}|${day}`) ?? 0) + 1)
+    }
   }
 }
 
@@ -115,6 +126,7 @@ const fx = (comp: { id: string; format: MatchFormat }, n: number, stage: string,
   awayRef: away,
   homeId: home.kind === 'team' ? home.teamId : null,
   awayId: away.kind === 'team' ? away.teamId : null,
+  ...(comp.format === 'test' ? { days: TEST_DAYS } : {}),
 })
 
 function buildTournament(def: TournamentDef, participants: string[], strength: Map<string, number>, desiredStart: string, rng: Rng): Plan {
@@ -190,11 +202,13 @@ function schedule(plans: Plan[], calendar: Calendar): boolean {
       for (const f of stage) {
         // A fixture whose teams aren't known yet reserves the date for everyone who could be in it.
         const involved = f.homeId && f.awayId ? [f.homeId, f.awayId] : plan.comp.teamIds
-        const date = calendar.firstFit(floor, involved, plan.comp.id)
+        const span = f.days ?? 1
+        const date = calendar.firstFit(floor, involved, plan.comp.id, span)
         if (!date) return false
-        calendar.book(date, involved, plan.comp.id)
+        calendar.book(date, involved, plan.comp.id, span)
         f.date = date
-        if (date > latest) latest = date
+        const end = addDays(date, span - 1)
+        if (end > latest) latest = end
       }
       floor = addDays(latest, 1)
     }
@@ -277,7 +291,8 @@ export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, m
   const unmet: [Team, Team][] = []
   for (let i = 0; i < teams.length; i++) for (let j = i + 1; j < teams.length; j++) if (!met.has(key(teams[i].id, teams[j].id))) unmet.push([teams[i], teams[j]])
   rng.shuffle(unmet)
-  const seriesPlans = unmet.map(([a, b], i) => buildSeries(a, b, i % 2 ? 'odi' : 't20', startOfYear(year), 2))
+  // friendly series: mostly one-day matches, but about one series in four is a Test series of two or three matches
+  const seriesPlans = unmet.map(([a, b], i) => (i % 4 === 3 ? buildSeries(a, b, 'test', startOfYear(year), 2 + (i % 8 === 7 ? 1 : 0)) : buildSeries(a, b, i % 2 ? 'odi' : 't20', startOfYear(year), 2)))
 
   const seriesWindowEnd = addDays(lastDay, -SPARE_DAYS_AT_END)
   for (const limits of LIMIT_STEPS) {

@@ -88,6 +88,8 @@ const LOCKDOWN_RUNS = 12
 
 export function fieldStage(c: FieldCtx): FieldStage {
   if (c.freeHit) return 'freehit'
+  // a Test: slips and a close ring while the ball is new, a spread field after that (never the slog-over field)
+  if (c.format === 'test') return c.over < 20 ? 'powerplay' : 'middle'
   if (c.target !== null) {
     const ballsLeft = c.maxOvers * 6 - c.legalBalls
     const need = c.target - c.runs

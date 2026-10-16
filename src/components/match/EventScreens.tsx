@@ -40,77 +40,96 @@ export interface FourInfo {
   rate: number
 }
 
-const W = 160, H = 100, CX = 80, CY = 50, RX = 66, RY = 40
-const HIT = { x: 80, y: 62 }
-/** The point on the rope in a direction, from the middle of the pitch. */
-function rope(angle: number) {
-  let t = 0
-  for (let k = 0; k < 90; k++) {
-    const x = HIT.x + Math.cos(angle) * (t + 1)
-    const y = HIT.y + Math.sin(angle) * (t + 1)
-    if (((x - CX) / RX) ** 2 + ((y - CY) / RY) ** 2 > 1) break
-    t += 1
-  }
-  return { x: HIT.x + Math.cos(angle) * t, y: HIT.y + Math.sin(angle) * t }
-}
-const pc = (v: number, total: number) => `${(v / total) * 100}%`
-
+/**
+ * FOUR, seen from the rope: the camera sits low behind the boundary boards looking out over the field. The ball comes racing
+ * towards the lens from the middle, one to three fielders run across and slide for it, and it beats them all, crosses the rope in
+ * slow motion and cracks into the advertising boards, which light up.
+ */
 export function FourScreen({ info }: { info: FourInfo }) {
   const { batsman, batTeam, bowlTeam, angle, chasers, rate } = info
   const { box, w } = useWidth()
   const r = rate
-  const end = rope(angle)
-  const mid = { x: HIT.x + (end.x - HIT.x) * 0.55, y: HIT.y + (end.y - HIT.y) * 0.55 }
-  const size = Math.max(26, Math.min(w * 0.075, 46))
-  const run = 1.0 * r
-  // the two chasers run down either side of the ball's path, well apart, and finish short of the rope
-  const side = { x: -Math.sin(angle), y: Math.cos(angle) }
-  const along = { x: Math.cos(angle), y: Math.sin(angle) }
-  // one to three chasers: they fan out across the ball's path (one runs straight at it, two split either side, three do both)
+  const accent = accentOf(batTeam)
+  const size = Math.max(30, Math.min(w * 0.11, 52))
+  // the ball drifts to the side the shot went: -1 (left of the camera) to 1 (right)
+  const side = Math.max(-1, Math.min(1, Math.cos(angle)))
+  const endX = 50 + side * 30
+  const startX = 50 + side * 6
   const lanes = chasers.length === 1 ? [0] : chasers.length === 2 ? [-1, 1] : [-1, 0, 1]
-  const spot = (base: { x: number; y: number }, i: number, off: number, back: number) => ({ x: base.x + side.x * lanes[i] * off - along.x * back, y: base.y + side.y * lanes[i] * off - along.y * back })
+  const FLY = 1.15 * r // from the bat to the rope
+  const SLOW = 0.9 * r // across the rope, in slow motion
+  const hit = (0.25 + 1.15 + 0.9) * r // when the ball reaches the boards
+  const bg = 'linear-gradient(180deg, #060a18 0%, #101a3c 24%, #0e3a24 25%, #1b7a43 70%, #176a3a 100%)'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Four">
-      <div className="absolute inset-0 bg-[#070b14]" />
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="#1b7a43" />
-        {Array.from({ length: 18 }, (_, i) => <rect key={i} x={14 + i * 7} y={0} width="3.5" height={H} fill="#fff" opacity="0.045" />)}
-        <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="none" stroke="#fff" strokeWidth="1" opacity="0.9" />
-        <motion.ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="none" stroke="#38bdf8" strokeWidth="1.8" initial={{ opacity: 0 }} animate={{ opacity: [0, 0, 1, 0.3, 1, 0] }} transition={{ delay: 0.2 * r, duration: 1.6 * r, times: [0, 0.45, 0.5, 0.6, 0.7, 1] }} />
-        <rect x="77.2" y="30" width="5.6" height="40" rx="0.8" fill="#cdb078" opacity="0.9" />
-        {/* the ball's path along the ground and its trail */}
-        <motion.line x1={HIT.x} y1={HIT.y} x2={end.x} y2={end.y} stroke="#e0f2fe" strokeWidth="0.8" strokeLinecap="round" strokeDasharray="1.6 1.2" initial={{ pathLength: 0, opacity: 0.9 }} animate={{ pathLength: 1 }} transition={{ delay: 0.15 * r, duration: run, ease: 'easeOut' }} />
-      </svg>
-      <motion.span
-        className="absolute z-20 block h-3.5 w-3.5 rounded-full border-2 border-red-200 bg-red-500 shadow-[0_0_12px_#ef4444]"
-        style={{ left: pc(HIT.x, W), top: pc(HIT.y, H), translateX: '-50%', translateY: '-50%' }}
-        animate={{ left: [pc(HIT.x, W), pc(end.x, W)], top: [pc(HIT.y, H), pc(end.y, H)] }} transition={{ delay: 0.15 * r, duration: run, ease: 'easeOut' }}
-      />
-      {/* the one to three fielders who chase it and come up short */}
-      {chasers.map((c, i) => (
-        <motion.div
-          key={c.player.id} className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center"
-          style={{ left: pc(c.x, W), top: pc(c.y, H) }}
-          animate={{ left: [pc(c.x, W), pc(spot(mid, i, 9, 0).x, W), pc(spot(end, i, 11, 5).x, W)], top: [pc(c.y, H), pc(spot(mid, i, 9, 0).y, H), pc(spot(end, i, 11, 5).y, H)], rotate: [0, 0, lanes[i] * 14 || -8] }}
-          transition={{ delay: 0.25 * r, duration: 1.15 * r, ease: 'easeIn', times: [0, 0.6, 1] }}
-        >
-          <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={c.player} team={bowlTeam} size={size} /></span>
-          <span className="mt-0.5 block whitespace-nowrap rounded bg-black/70 px-1 text-[11px] font-semibold text-white">{firstName(c.player.name)}</span>
-        </motion.div>
-      ))}
-      <motion.div className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: pc(HIT.x, W), top: pc(HIT.y + 8, H) }} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}>
-        <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(batTeam)}, 0 0 16px ${accentOf(batTeam)}99` }}><PlayerAvatar player={batsman} team={batTeam} size={size + 6} /></span>
+      <div className="absolute inset-0" style={{ background: bg }} />
+      {/* the far stands, full of people, and floodlight glow */}
+      <div className="absolute inset-x-0 top-0 h-[24%] overflow-hidden">
+        {Array.from({ length: 70 }, (_, i) => <span key={i} className="absolute rounded-full" style={{ left: `${(i * 37) % 100}%`, top: `${8 + ((i * 17) % 80)}%`, width: 3 + (i % 3), height: 3 + (i % 3), background: i % 4 === 0 ? accent : i % 4 === 1 ? '#fbbf24' : '#e2e8f0', opacity: 0.5 + (i % 5) * 0.1 }} />)}
+      </div>
+      <div className="absolute inset-x-0 top-[22%] h-[3%] bg-white/10" />
+      {/* the grass: stripes that fan out towards the camera */}
+      <div className="absolute inset-x-0 top-[25%] bottom-0 opacity-30" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 9%, #ffffff22 9% 18%)', transform: 'perspective(260px) rotateX(58deg)', transformOrigin: '50% 0%' }} />
+      <div className="absolute left-1/2 top-[26%] h-[30%] w-[7%] -translate-x-1/2 bg-[#cdb078]/60" style={{ clipPath: 'polygon(40% 0, 60% 0, 100% 100%, 0 100%)' }} />
+
+      {/* the rope along the bottom, and the boards behind it */}
+      <div className="absolute inset-x-0 top-[78%] h-[2.5%] bg-white/90 shadow-[0_0_10px_#ffffffaa]" />
+      <motion.div
+        className="absolute inset-x-0 bottom-0 top-[80.5%] overflow-hidden"
+        style={{ background: 'repeating-linear-gradient(90deg, #0b1b3f 0 22%, #14307a 22% 44%)' }}
+        animate={{ filter: ['brightness(1)', 'brightness(1.9)', 'brightness(1)', 'brightness(1.6)', 'brightness(1)'] }} transition={{ delay: hit, duration: 0.9 }}
+      >
+        <div className="absolute inset-x-0 top-[22%] text-center font-display text-[min(7vw,34px)] leading-none tracking-[0.3em] text-white/80">FANTASY CRIC SIM · FANTASY CRIC SIM</div>
+        <div className="absolute inset-x-0 bottom-[14%] h-[2px] bg-white/30" />
       </motion.div>
+
+      {/* the fielders run across and slide, and come up short */}
+      {chasers.map((c, i) => {
+        const lane = lanes[i]
+        const fromX = 50 + lane * 24 + (lane === 0 ? 14 : 0) * (side >= 0 ? -1 : 1)
+        const sx = (startX + endX) / 2 + lane * 10
+        return (
+          <motion.div
+            key={c.player.id} className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center"
+            style={{ left: `${fromX}%`, top: '42%' }}
+            initial={{ opacity: 0, scale: 0.55 }}
+            animate={{ left: [`${fromX}%`, `${sx}%`, `${sx + (endX - sx) * 0.55}%`], top: ['42%', '58%', '70%'], scale: [0.55, 1, 1.15], opacity: [0, 1, 1], rotate: [0, 0, side >= 0 ? 78 : -78] }}
+            transition={{ delay: (0.25 + i * 0.08) * r, duration: (FLY + 0.35) * r, ease: 'easeIn', times: [0, 0.62, 1] }}
+          >
+            <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}, 0 0 14px ${accentOf(bowlTeam)}88` }}><PlayerAvatar player={c.player} team={bowlTeam} size={size} /></span>
+            <span className="mt-0.5 block whitespace-nowrap rounded bg-black/70 px-1 text-[10px] font-semibold text-white">{firstName(c.player.name)}</span>
+            {/* the dust from the slide */}
+            <motion.span className="pointer-events-none absolute -bottom-1 left-1/2 block h-3 w-10 -translate-x-1/2 rounded-full bg-amber-100/60 blur-sm" initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1.8, 2.4] }} transition={{ delay: (0.25 + FLY * 0.6 + i * 0.08) * r, duration: 0.7 * r }} />
+          </motion.div>
+        )
+      })}
+
+      {/* the ball: small in the middle, racing at the lens, slowing as it crosses the rope, then into the boards */}
+      <motion.span
+        className="absolute z-30 block rounded-full border-2 border-red-200 bg-red-500 shadow-[0_0_14px_#ef4444]"
+        style={{ left: `${startX}%`, top: '34%', width: 18, height: 18, translateX: '-50%', translateY: '-50%' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 1, 1], left: [`${startX}%`, `${startX + (endX - startX) * 0.7}%`, `${endX}%`, `${endX}%`], top: ['34%', '70%', '79%', '86%'], scale: [0.35, 1.4, 1.9, 1.9] }}
+        transition={{ delay: 0.25 * r, duration: FLY + SLOW, times: [0, FLY / (FLY + SLOW) * 0.8, FLY / (FLY + SLOW), 1], ease: ['easeIn', 'linear', 'easeOut'] }}
+      />
+      {/* the rope lights up as it is crossed, and a flash as the boards are hit */}
+      <motion.div className="pointer-events-none absolute inset-x-0 top-[77%] z-20 h-[4%] bg-sky-300" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.9, 0] }} transition={{ delay: (0.25 + FLY) * r, duration: 0.6 * r }} />
+      <motion.div className="pointer-events-none absolute inset-0 z-[35] bg-white" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.35, 0] }} transition={{ delay: hit, duration: 0.3 }} />
+
+      {/* the batsman, small, watching it go */}
+      <motion.div className="absolute left-2 top-[28%] z-20 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+        <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accent}, 0 0 12px ${accent}99` }}><PlayerAvatar player={batsman} team={batTeam} size={Math.round(size * 0.9)} /></span>
+      </motion.div>
+
       <Tag text="Boundary" color="#38bdf8" />
       <SkipTag />
-      <motion.div className="absolute inset-x-0 bottom-[6%] z-40 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2 * r, type: 'spring', stiffness: 260, damping: 15 }}>
-        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(42, Math.min(w * 0.15, 100)), WebkitTextStroke: '2px #0c4a6e', paintOrder: 'stroke fill', textShadow: '0 0 30px #38bdf8aa' }}>FOUR!</div>
-        <div className="text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{batsman.name} beats {joinNames(chasers.map((c) => firstName(c.player.name))) || 'the field'} to the rope</div>
+      <motion.div className="absolute inset-x-0 top-[40%] z-40 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: hit + 0.1, type: 'spring', stiffness: 260, damping: 15 }}>
+        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(48, Math.min(w * 0.17, 110)), WebkitTextStroke: '2px #0c4a6e', paintOrder: 'stroke fill', textShadow: '0 0 30px #38bdf8aa' }}>FOUR!</div>
+        <div className="mx-auto mt-1 inline-block max-w-[94%] rounded-lg bg-black/65 px-2 py-0.5 text-sm font-semibold text-slate-100">{batsman.name} beats {joinNames(chasers.map((c) => firstName(c.player.name))) || 'the field'} to the rope</div>
       </motion.div>
     </div>
   )
 }
-
 // ---- EXTRAS: wide, bye, leg bye -------------------------------------------------------------------------------
 
 export interface ExtraInfo {

@@ -324,7 +324,7 @@ export function CalendarPage() {
           {allTeams.filter((t) => season.teamIds.includes(t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <div className="flex overflow-hidden rounded-full border border-line text-sm">
-          {[['', 'All'], ['t20', 'T20'], ['odi', 'ODI']].map(([v, l]) => (
+          {[['', 'All'], ['t20', 'T20'], ['odi', 'ODI'], ['test', 'Test']].map(([v, l]) => (
             <button key={v} onClick={() => setParam('format', v)} className={`px-4 py-1.5 transition ${formatFilter === v ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>{l}</button>
           ))}
         </div>

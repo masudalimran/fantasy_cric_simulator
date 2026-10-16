@@ -36,6 +36,8 @@ export interface FormatConfig {
 export const FORMATS: Record<MatchFormat, FormatConfig> = {
   t20: { overs: 20, maxBowlerOvers: 4, partTimerMaxOvers: 2, phases: { powerplay: [0, 5], middle: [6, 14], death: [15, 19] } },
   odi: { overs: 50, maxBowlerOvers: 10, partTimerMaxOvers: 5, phases: { powerplay: [0, 9], middle: [10, 39], death: [40, 49] } },
+  // a Test has no overs limit of its own: five days of about 90 overs, with the time kept by the match (see TEST_DAYS). overs is the most that can be bowled in all.
+  test: { overs: 510, maxBowlerOvers: 45, partTimerMaxOvers: 14, phases: { powerplay: [0, 19], middle: [20, 79], death: [80, 999] } },
 }
 
 export const phaseOf = (format: MatchFormat, over: number): Phase => {
@@ -61,7 +63,7 @@ export type ExtraType = 'wide' | 'noball' | 'bye' | 'legbye'
 
 export interface BallEvent {
   seq: number
-  innings: 0 | 1
+  innings: 0 | 1 | 2 | 3
   over: number // 0-based
   ballInOver: number // legal balls bowled in the over before this delivery
   legal: boolean
@@ -107,8 +109,17 @@ export interface BowlerLine {
   noballs: number
 }
 
+/** What the sky does on a day of a Test, and how many overs it costs. */
+export type Weather = 'clear' | 'overcast' | 'drizzle' | 'rain' | 'bad light' | 'washout'
+
+/** One day of a Test as it was planned: how long the day is meant to be (88 to 102 overs) and how much the weather takes from it. */
+export interface TestDay { day: number; weather: Weather; lost: number; scheduled: number }
+
+/** Where a Test is on the clock. */
+export interface TestClock { day: number; ballsToday: number; plan: TestDay; stumps: boolean }
+
 export interface Innings {
-  index: 0 | 1
+  index: 0 | 1 | 2 | 3
   battingSide: 0 | 1
   runs: number
   wickets: number
@@ -126,6 +137,10 @@ export interface Innings {
   target: number | null
   freeHit: boolean
   done: boolean
+  /** Test: the captain closed the innings. */
+  declared?: boolean
+  /** Test: this is the second innings of a side that was made to follow on. */
+  followOn?: boolean
   log: BallEvent[]
 }
 
@@ -135,8 +150,10 @@ export interface Side {
 }
 
 export interface MatchResult {
-  winnerSide: 0 | 1 | null // null = tie
-  margin: { type: 'runs' | 'wickets'; value: number; ballsLeft?: number } | null
+  winnerSide: 0 | 1 | null // null = tie or draw
+  /** A Test that ran out of time with nobody winning. */
+  draw?: boolean
+  margin: { type: 'runs' | 'wickets' | 'innings'; value: number; ballsLeft?: number } | null
   text: string
 }
 

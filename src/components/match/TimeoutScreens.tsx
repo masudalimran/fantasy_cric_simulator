@@ -87,6 +87,8 @@ export interface TimeoutReel {
   player: Player; team: Team; kind: 'bat' | 'bowl'
   /** "112 (58)" or "5/23", and "Soul Reapers v Hidden Leaf · 3 Jan 2026". */
   headline: string; versus: string
+  /** How that match ended: "Soul Reapers won by 5 wickets (11 balls left)". */
+  result?: string
   balls: BallEvent[]
   striker: Player; nonStriker: Player | null; bowler: Player
   battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
@@ -154,6 +156,11 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
               />
             </div>
             <div className="pointer-events-none absolute left-1.5 top-1.5 z-30 rounded bg-sky-500 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] text-white">Highlights · {clip + 1}/{reel.balls.length}</div>
+            {/* which match this is from, and how it ended */}
+            <div className="pointer-events-none absolute right-1.5 top-1.5 z-30 max-w-[58%] rounded bg-black/75 px-1.5 py-0.5 text-right leading-tight">
+              <div className="truncate text-[10px] font-bold text-white">{reel.versus}</div>
+              {reel.result && <div className="truncate text-[9px] font-semibold text-amber-300">{reel.result}</div>}
+            </div>
             <motion.div key={`cap${clip}`} className="pointer-events-none absolute bottom-1.5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-0.5 font-display text-lg leading-none tracking-wide text-amber-300 ring-1 ring-amber-300/60" initial={{ opacity: 0, scale: 1.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}>{captionOf(reel.balls[clip])}</motion.div>
             <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-30 max-w-[42%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{reel.player.name} <span className="text-amber-300">{reel.headline}</span></div>
           </div>

@@ -132,11 +132,11 @@ export function PlayPage() {
           {slot(tb, 'b')}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-1 rounded-2xl bg-panel p-1" role="radiogroup" aria-label="Format">
-          {(['t20', 'odi'] as const).map((f) => (
+        <div className="mt-4 grid grid-cols-3 gap-1 rounded-2xl bg-panel p-1" role="radiogroup" aria-label="Format">
+          {(['t20', 'odi', 'test'] as const).map((f) => (
             <button key={f} role="radio" aria-checked={format === f} onClick={() => setFormat(f)} className={`rounded-xl py-3 text-center transition ${format === f ? 'bg-indigo-500 text-white' : 'text-slate-400'}`}>
               <div className="font-display text-2xl leading-none tracking-wide">{f.toUpperCase()}</div>
-              <div className="text-[11px] opacity-80">{f === 't20' ? '20 overs a side' : '50 overs a side'}</div>
+              <div className="text-[11px] opacity-80">{f === 't20' ? '20 overs a side' : f === 'odi' ? '50 overs a side' : '5 days · 2 innings'}</div>
             </button>
           ))}
         </div>
@@ -195,7 +195,7 @@ export function PlayPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex overflow-hidden rounded-full border border-line">
-            {(['t20', 'odi'] as const).map((f) => (
+            {(['t20', 'odi', 'test'] as const).map((f) => (
               <button key={f} onClick={() => setFormat(f)} className={`px-5 py-2 text-sm font-semibold uppercase transition ${format === f ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>{f}</button>
             ))}
           </div>

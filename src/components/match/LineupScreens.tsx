@@ -10,15 +10,15 @@ import { Trophy } from './WinCelebration'
 export function LineupReveal({ sides, mySide, onDone }: { sides: [Side, Side]; mySide: 0 | 1 | null; onDone: () => void }) {
   const [shown, setShown] = useState<0 | 1>(0)
   const [ready, setReady] = useState(false)
-  const per = 0.2
+  const per = 0.3 // the cards flip in one after another (1.5x slower than before, so each face can be seen)
   useEffect(() => {
     setReady(false)
-    const t = window.setTimeout(() => setReady(true), (11 * per + 0.9) * 1000)
+    const t = window.setTimeout(() => setReady(true), (11 * per + 1.35) * 1000)
     return () => window.clearTimeout(t)
   }, [shown])
   useEffect(() => {
     if (!ready) return
-    const t = window.setTimeout(() => (shown === 0 ? setShown(1) : onDone()), 1600)
+    const t = window.setTimeout(() => (shown === 0 ? setShown(1) : onDone()), 2400)
     return () => window.clearTimeout(t)
   }, [ready, shown, onDone])
   const side = sides[shown]
@@ -44,7 +44,7 @@ export function LineupReveal({ sides, mySide, onDone }: { sides: [Side, Side]; m
           {side.xi.map((p, i) => (
             <motion.div
               key={p.id} className="relative rounded-xl border bg-panel p-2 text-center" style={{ borderColor: `${accent}66`, transformPerspective: 600 }}
-              initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ delay: i * per, duration: 0.45, ease: 'easeOut' }}
+              initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ delay: i * per, duration: 0.65, ease: 'easeOut' }}
             >
               <span className="absolute left-1.5 top-1 text-[11px] font-extrabold text-slate-400">{i + 1}</span>
               {team.captainId === p.id && <span className="absolute right-1.5 top-1 rounded bg-amber-400/25 px-1 text-[11px] font-extrabold text-amber-300">C</span>}

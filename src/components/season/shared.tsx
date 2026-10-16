@@ -140,7 +140,7 @@ export function FixtureRow({ season, fixture, teams, showDate = false, showCompe
         <span>
           {mine && <span className="mr-2 rounded bg-amber-400 px-1.5 py-0.5 font-extrabold text-black">YOUR MATCH</span>}
           {showCompetition && comp && <span className="mr-2 text-slate-300">{competitionName(comp, teams)}</span>}
-          {fixture.stage} · {fixture.format.toUpperCase()}
+          {fixture.stage} · {fixture.format === 'test' ? `TEST · ${fixture.days ?? 5} DAYS` : fixture.format.toUpperCase()}
         </span>
         {showDate && <span>{formatDate(fixture.date)}</span>}
       </div>

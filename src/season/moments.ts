@@ -5,6 +5,9 @@ import type { Season } from './types'
 // ---- A highlight from an earlier match, for the strategic timeout ------------------------------------------------
 
 export interface Highlight {
+  fixtureId: string
+  /** How the match ended, as it was reported: "X won by 5 wickets". */
+  result: string
   playerId: string
   kind: 'bat' | 'bowl'
   /** "112 (58)" or "5/23". */
@@ -17,17 +20,17 @@ export interface Highlight {
 }
 
 /** The best single performance in the last few matches played in this season (not counting `excludeFixtureId`), or null if none yet. */
-export function recentHighlight(season: Season, excludeFixtureId?: string, look = 8): Highlight | null {
+export function recentHighlight(season: Season, excludeFixtureId?: string, look = 8, skip?: Set<string>): Highlight | null {
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   const recent = Object.values(season.results)
-    .filter((r) => r.fixtureId !== excludeFixtureId && byId.has(r.fixtureId))
+    .filter((r) => r.fixtureId !== excludeFixtureId && !skip?.has(r.fixtureId) && byId.has(r.fixtureId))
     .sort((a, b) => (byId.get(b.fixtureId)!.date.localeCompare(byId.get(a.fixtureId)!.date)))
     .slice(0, look)
   const roster = season.roster ?? []
   let best: { score: number; h: Highlight } | null = null
   for (const r of recent) {
     const f = byId.get(r.fixtureId)!
-    const base = { homeId: f.homeId, awayId: f.awayId, date: f.date }
+    const base = { fixtureId: r.fixtureId, result: r.text, homeId: f.homeId, awayId: f.awayId, date: f.date }
     for (const [p, runs, balls, fours, sixes] of r.bat) {
       const id = roster[p]
       const score = runs + sixes * 2 + (runs >= 100 ? 25 : runs >= 50 ? 10 : 0)
@@ -42,6 +45,18 @@ export function recentHighlight(season: Season, excludeFixtureId?: string, look 
   return best?.h ?? null
 }
 
+
+/** How many matches must be played before a game's highlight can be shown at a timeout again. */
+export const HIGHLIGHT_COOLDOWN = 10
+
+/** The games whose highlight was shown at a timeout during the last HIGHLIGHT_COOLDOWN matches: they sit out for now. */
+export function cooledDown(season: Pick<Season, 'highlightsShown' | 'results'>, matches = HIGHLIGHT_COOLDOWN): Set<string> {
+  const played = Object.keys(season.results).length
+  return new Set(Object.entries(season.highlightsShown ?? {}).filter(([, at]) => played - at < matches).map(([id]) => id))
+}
+
+/** Remembers that a game's highlight has just been shown. */
+export const markShown = <S extends Pick<Season, 'highlightsShown' | 'results'>>(season: S, fixtureId: string): S => ({ ...season, highlightsShown: { ...season.highlightsShown, [fixtureId]: Object.keys(season.results).length } })
 // ---- Partnerships -----------------------------------------------------------------------------------------------
 
 export interface Partnership { runs: number; balls: number; a: { id: string; runs: number; balls: number }; b: { id: string; runs: number; balls: number } }
@@ -126,6 +141,8 @@ export const lbwWasReviewed = (seq: number) => hash(seq, 7) < 0.4
 
 export interface ReelHighlight {
   fixtureId: string
+  /** How the match ended, as it was reported. */
+  result: string
   playerId: string
   kind: 'bat' | 'bowl'
   headline: string
@@ -137,11 +154,11 @@ export interface ReelHighlight {
 }
 
 /** Every saved reel among the last few matches (not the one being played): the best play of each. Matches played before reels existed have none. */
-export function reelCandidates(season: Season, excludeFixtureId?: string, look = 24): ReelHighlight[] {
+export function reelCandidates(season: Season, excludeFixtureId?: string, look = 24, skip?: Set<string>): ReelHighlight[] {
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   const roster = season.roster ?? []
   const recent = Object.values(season.results)
-    .filter((r) => r.reel && r.fixtureId !== excludeFixtureId && byId.has(r.fixtureId))
+    .filter((r) => r.reel && r.fixtureId !== excludeFixtureId && !skip?.has(r.fixtureId) && byId.has(r.fixtureId))
     .sort((a, b) => byId.get(b.fixtureId)!.date.localeCompare(byId.get(a.fixtureId)!.date))
     .slice(0, look)
   const out: ReelHighlight[] = []
@@ -150,7 +167,7 @@ export function reelCandidates(season: Season, excludeFixtureId?: string, look =
     const id = roster[reel.p]
     const f = byId.get(r.fixtureId)!
     if (!id || reel.e.length === 0) continue
-    const base = { fixtureId: r.fixtureId, playerId: id, kind: reel.k, homeId: f.homeId, awayId: f.awayId, date: f.date, balls: reel.e.map(decodeBall) }
+    const base = { fixtureId: r.fixtureId, result: r.text, playerId: id, kind: reel.k, homeId: f.homeId, awayId: f.awayId, date: f.date, balls: reel.e.map(decodeBall) }
     if (reel.k === 'bat') {
       const line = r.bat.find((l) => l[0] === reel.p)
       if (!line) continue

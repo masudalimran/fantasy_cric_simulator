@@ -26,6 +26,7 @@ export const KNOBS = { form: 0.6, pitch: 0.6, wicketSens: 0.35, settle: 0.3, wic
 export const TUNE: Record<MatchFormat, { wicket: number; four: number; six: number; dot: number; wide: number; deathDot: number }> = {
   t20: { wicket: 0.97, four: 1.12, six: 1.1, dot: 0.78, wide: 1.1, deathDot: 0.86 },
   odi: { wicket: 1.02, four: 1.03, six: 1.0, dot: 0.9, wide: 1.1, deathDot: 0.8 },
+  test: { wicket: 1.0, four: 1.12, six: 1.1, dot: 0.95, wide: 1.0, deathDot: 1.0 },
 }
 
 type PhaseBase = {

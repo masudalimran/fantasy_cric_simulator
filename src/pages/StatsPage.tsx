@@ -271,7 +271,7 @@ export function StatsPage() {
           {tournaments.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <div className="flex overflow-hidden rounded-full border border-line text-sm">
-          {[['', 'All'], ['t20', 'T20'], ['odi', 'ODI']].map(([v, l]) => <button key={v} onClick={() => set('format', v)} className={`px-4 py-1.5 transition ${format === v ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>{l}</button>)}
+          {[['', 'All'], ['t20', 'T20'], ['odi', 'ODI'], ['test', 'Test']].map(([v, l]) => <button key={v} onClick={() => set('format', v)} className={`px-4 py-1.5 transition ${format === v ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>{l}</button>)}
         </div>
       </div>
 

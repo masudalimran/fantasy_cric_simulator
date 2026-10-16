@@ -197,5 +197,79 @@
       "hit wicket": 0.0009072352007257881,
       "timed out": 0.00022680880018144704
     }
+  },
+  "test": {
+    "matches": 0,
+    "overall": {
+      "balls": 30000,
+      "runsPerOver": 3.15,
+      "dot": 0.658,
+      "one": 0.202,
+      "two": 0.046,
+      "three": 0.006,
+      "four": 0.045,
+      "six": 0.0035,
+      "wicket": 0.0178,
+      "wide": 0.0033,
+      "noball": 0.0045,
+      "bye": 0.005,
+      "legbye": 0.0078
+    },
+    "phases": {
+      "powerplay": {
+        "balls": 10000,
+        "runsPerOver": 3.0,
+        "dot": 0.675,
+        "one": 0.19,
+        "two": 0.04,
+        "three": 0.006,
+        "four": 0.04,
+        "six": 0.003,
+        "wicket": 0.021,
+        "wide": 0.004,
+        "noball": 0.006,
+        "bye": 0.006,
+        "legbye": 0.008
+      },
+      "middle": {
+        "balls": 10000,
+        "runsPerOver": 3.2,
+        "dot": 0.655,
+        "one": 0.21,
+        "two": 0.048,
+        "three": 0.006,
+        "four": 0.045,
+        "six": 0.003,
+        "wicket": 0.0165,
+        "wide": 0.003,
+        "noball": 0.004,
+        "bye": 0.005,
+        "legbye": 0.008
+      },
+      "death": {
+        "balls": 10000,
+        "runsPerOver": 3.4,
+        "dot": 0.645,
+        "one": 0.205,
+        "two": 0.05,
+        "three": 0.006,
+        "four": 0.05,
+        "six": 0.005,
+        "wicket": 0.02,
+        "wide": 0.003,
+        "noball": 0.004,
+        "bye": 0.004,
+        "legbye": 0.007
+      }
+    },
+    "wicketKinds": {
+      "bowled": 0.2,
+      "caught": 0.55,
+      "caught and bowled": 0.03,
+      "lbw": 0.17,
+      "run out": 0.03,
+      "stumped": 0.02,
+      "hit wicket": 0.001
+    }
   }
 }
