@@ -137,6 +137,18 @@ export interface MarketState {
   log: Transfer[]
   /** Offers computer teams have made for your players (undefined in older saves). */
   offers?: Offer[]
+  /** The first year of the career, from which every starter's playing days are counted. */
+  originYear?: number
+  /** Yearly fee of each signed player. */
+  fees?: Record<string, number>
+  /** The year a player joined a team after the start (his career clock starts then). */
+  entry?: Record<string, number>
+  /** A retirement put off to this year (by paying a raise). */
+  retireAt?: Record<string, number>
+  /** Veterans of your team who are retiring and can be kept for one more year at a higher fee. */
+  pending?: { playerId: string; fee: number; years: number }[]
+  /** What the last turn of the year did to your purse. */
+  report?: { year: number; income: number; bill: number; before: number; after: number; retired: string[]; released: string[]; signed: string[] }
 }
 
 /** What your coach is working on. Once set it stays at least a month. */

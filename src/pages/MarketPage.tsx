@@ -15,6 +15,7 @@ import { originOf } from '../data/origin'
 import { daysBetween, formatDate } from '../season/dates'
 import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
+import { billOf, feeOf, retireYearOf } from '../season/careers'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 import type { Season } from '../season/types'
@@ -123,6 +124,7 @@ export function MarketPage() {
             {sp.bowling && <span>BOWL {Math.round((sp.bowling.accuracy + sp.bowling.variation) / 2)}</span>}
             <span>FLD {sp.fielding}</span>
             {pot ? <Stars n={stars(pot)} /> : null}
+            {squadIds.includes(p.id) && <span className="text-sky-300" title="Yearly fee · seasons left in his career">{feeOf(market, p, season.shifts?.[p.id])}/yr · {Math.max(0, retireYearOf(market, p.id, season.year) - season.year)}y left</span>}
           </div>
         </div>
         <RatingBadge value={o} size="sm" />
@@ -181,11 +183,12 @@ export function MarketPage() {
             </p>
           </div>
           <div className="flex items-center gap-4 text-center">
-            <div><div className="font-display text-4xl leading-none text-amber-300">{purse}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">coins</div></div>
+            <div><div className={`font-display text-4xl leading-none ${purse < 0 ? 'text-red-300' : 'text-amber-300'}`}>{purse}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">coins</div></div>
+            <div title="What your squad costs every year, paid out of the income your team earns"><div className="font-display text-4xl leading-none text-sky-200">{billOf(market, season.myTeamId, index, season.shifts)}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">a year</div></div>
             <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[11px] uppercase tracking-wider text-slate-400">squad</div></div>
           </div>
         </div>
-        {win && <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer font-semibold text-slate-300">How it works</summary><p className="mt-1">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him. Computer teams are shopping too.</p></details>}
+        {win && <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer font-semibold text-slate-300">How it works</summary><p className="mt-1">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him. Computer teams are shopping too.</p><p className="mt-1">Every player also costs a yearly fee (half of what he is worth, more or less as he improves or fades). At the end of the year your team earns its income and pays the bill; if the purse goes below zero you choose who to let go. Careers last 7 to 10 years: then a veteran retires, unless you pay a higher fee to keep him, and a young graduate takes his place.</p></details>}
       </div>
 
       <AnimatePresence>{(talentsOpen ?? (!talentsSeen && !!season?.myTeamId)) && talents.length > 0 && <NewTalents key="talents" cards={talents} onClose={() => { setTalentsOpen(false); markSeen(talentsKey) }} />}</AnimatePresence>

@@ -292,10 +292,12 @@ export function generateSeason({ year, teams, seed, tournaments = TOURNAMENTS, m
   for (let i = 0; i < teams.length; i++) for (let j = i + 1; j < teams.length; j++) if (!met.has(key(teams[i].id, teams[j].id))) unmet.push([teams[i], teams[j]])
   rng.shuffle(unmet)
   // friendly series: mostly one-day matches, but about one series in four is a Test series of two or three matches
-  const seriesPlans = unmet.map(([a, b], i) => (i % 4 === 3 ? buildSeries(a, b, 'test', startOfYear(year), 2 + (i % 8 === 7 ? 1 : 0)) : buildSeries(a, b, i % 2 ? 'odi' : 't20', startOfYear(year), 2)))
+  const seriesFor = (tests: boolean) => unmet.map(([a, b], i) => (tests && i % 4 === 3 ? buildSeries(a, b, 'test', startOfYear(year), 2 + (i % 8 === 7 ? 1 : 0)) : buildSeries(a, b, i % 2 ? 'odi' : 't20', startOfYear(year), 2)))
 
   const seriesWindowEnd = addDays(lastDay, -SPARE_DAYS_AT_END)
-  for (const limits of LIMIT_STEPS) {
+  // if the Tests make the year too crowded, the season is built again with one-day series only
+  for (const tests of [true, false]) for (const limits of LIMIT_STEPS) {
+    const seriesPlans = seriesFor(tests)
     // Fresh copies each attempt, since scheduling writes dates into the fixtures.
     const copy = (p: Plan): Plan => ({ ...p, stages: p.stages.map((st) => st.map((f) => ({ ...f }))) })
     const calendar = new Calendar(limits, lastDay)

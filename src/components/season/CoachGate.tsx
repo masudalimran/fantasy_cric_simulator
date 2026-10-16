@@ -6,6 +6,7 @@ import { coachOf, needsFocus } from '../../season/coaching'
 import { selectSeason, useStore } from '../../store/useStore'
 import { Sheet } from '../Sheet'
 import { CoachSheet } from './CoachSheet'
+import { ContractsGate } from './ContractsGate'
 
 type Gate = (proceed: () => void) => void
 const Ctx = createContext<Gate>((proceed) => proceed())
@@ -58,6 +59,7 @@ export function CoachGateProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={gate}>
       {children}
+      <ContractsGate />
       <AnimatePresence>
         {pending && <CoachPrompt onClose={() => setPending(null)} onLater={() => { const go = pending; setPending(null); go() }} />}
       </AnimatePresence>

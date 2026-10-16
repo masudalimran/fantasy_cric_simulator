@@ -16,7 +16,8 @@ import { paths } from '../routes'
 import { generateSeason } from '../season/generate'
 import { buildReview, winRate } from '../season/review'
 import { competitionStatus, seasonComplete } from '../season/results'
-import { catchUpIncome, developYouth, playerIndex, rolloverMarket } from '../season/market'
+import { yearEnd } from '../season/careers'
+import { catchUpIncome, playerIndex } from '../season/market'
 import type { PlayerChange, PlayerReview, SeasonReview } from '../season/types'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 
@@ -117,9 +118,10 @@ export function ReviewPage() {
     if (market) {
       const titles: Record<string, number> = {}
       for (const c of season.competitions) { if (c.kind === 'series') continue; const w = competitionStatus(season, c).champion; if (w) titles[w] = (titles[w] ?? 0) + 1 }
-      shifts = developYouth(market, shifts ?? {}, playerIndex(baseTeams, market), seed)
-      const extra = season.myTeamId ? { [season.myTeamId]: catchUpIncome({ ...season, market, shifts }, playerIndex(baseTeams, market)) } : {}
-      market = rolloverMarket(market, titles, seed, extra)
+      const index = playerIndex(baseTeams, market)
+      const out = yearEnd({ season, base: index, titles, seed, catchUp: catchUpIncome(season, index) })
+      shifts = out.shifts
+      market = out.market
     }
     const next = generateSeason({ year: season.year + 1, teams: participants, seed, myTeamId: season.myTeamId, difficulty: season.difficulty, shifts, lineup: season.lineup, market, previousCoaches: season.coaches ?? {}, coachReport: season.coachReport, physio: season.physio })
     startNext(review, next)

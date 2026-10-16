@@ -58,7 +58,9 @@ export function playerIndex(base: Team[], market: MarketState | undefined): Map<
 }
 
 /** How high a player could get: his hidden potential if he is youth, otherwise where he is now. */
-export const potentialOf = (p: Player): number => YOUTH_BY_ID.get(p.id)?.potential ?? overall(p)
+export const potentialOf = (p: Player): number => YOUTH_BY_ID.get(p.id)?.potential ?? (p as { potential?: number }).potential ?? overall(p)
+/** A player's yearly fee is this share of what he cost (or is worth). */
+export const FEE_SHARE = 0.5
 
 // ---- Value and price -------------------------------------------------------------------------------------------
 
@@ -222,8 +224,10 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
   if (owner) { squads[owner] = remove(squads[owner], playerId); budgets[owner] = (budgets[owner] ?? 0) + price }
   if (unsigned) { pool = remove(pool, playerId); delete asking[playerId] }
   squads[teamId] = [...mine, playerId]
+  const fees = { ...m.fees, [playerId]: Math.max(1, Math.round(price * FEE_SHARE)) }
+  const entry = unsigned && (YOUTH_BY_ID.has(playerId) || playerId.startsWith('gy-')) && m.entry?.[playerId] === undefined ? { ...m.entry, [playerId]: Number(date.slice(0, 4)) } : m.entry
   log.push({ id: nid(season, date), date, playerId, name: player.name, from: owner, to: teamId, fee: price, kind: unsigned ? 'sign' : 'buy' })
-  return { season: { ...season, market: { ...m, squads, budgets, players, pool, asking, log } } }
+  return { season: { ...season, market: { ...m, squads, budgets, players, pool, asking, log, fees, entry } } }
 }
 
 /** `teamId` lets `playerId` go; he joins the unsigned pool and the team gets 70% of what another team would charge for him. */
