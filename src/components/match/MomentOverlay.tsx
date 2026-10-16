@@ -13,6 +13,7 @@ import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInf
 import { PhaseScreen, RecordScreen, SuperOverScreen, SwingScreen, TargetScreen, TensionScreen, type PhaseInfo, type RecordInfo, type SuperOverInfo, type SwingInfo, type TargetInfo, type TensionInfo } from './StoryScreens'
 import { SixReplay, type SixInfo } from './SixReplay'
 import { WicketReplay, type ReplayInfo } from './WicketReplay'
+import { WicketFxScreen, type WicketFxInfo } from './WicketScreens'
 import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
 
 /**
@@ -21,7 +22,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -54,6 +55,8 @@ export interface Moment {
   six?: SixInfo
   /** For a replay: how the wicket happened. */
   replay?: ReplayInfo
+  /** A special wicket screen: the stump cam, a catch cam, the stumping check, a Nelson, a pair, a stand broken. */
+  wfx?: WicketFxInfo
   player: Player
   team: Team
   title: string
@@ -165,6 +168,16 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         {moment.kind === 'hattrick' && moment.hattrick && <HatTrickScreen info={moment.hattrick} />}
         {moment.kind === 'haul' && moment.haul && <HaulScreen info={moment.haul} />}
         {moment.kind === 'duck' && moment.duck && <DuckScreen info={moment.duck} />}
+      </motion.div>
+    )
+  }
+  if (moment.kind === 'wicketfx' && moment.wfx) {
+    return (
+      <motion.div
+        data-moment="wicketfx" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
+      >
+        <WicketFxScreen info={moment.wfx} />
       </motion.div>
     )
   }

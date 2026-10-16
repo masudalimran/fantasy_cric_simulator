@@ -201,3 +201,24 @@ export function recentReel(season: Season, excludeFixtureId?: string, look = 10)
   }
   return reelCandidates(season, excludeFixtureId, look).sort((a, b) => score(b) - score(a))[0] ?? null
 }
+
+// ---- Numbers for the special wicket screens ----------------------------------------------------------------------
+
+/** How a deep catch looked: the ball's greatest height in metres, its hang time in seconds, and how far inside the rope the fielder's boot was. */
+export function catchFor(seq: number): { height: number; hang: number; cm: number } {
+  const height = Math.round(18 + hash(seq, 21) * 27)
+  return { height, hang: Math.round((1.9 + height * 0.1 + hash(seq, 22) * 0.5) * 10) / 10, cm: Math.round(3 + hash(seq, 23) * 57) }
+}
+/** A catch closer in: how quickly the fielder reacted (milliseconds) and whether he had to dive. */
+export function handsFor(seq: number): { reaction: number; dive: boolean } {
+  return { reaction: Math.round(140 + hash(seq, 24) * 280), dive: hash(seq, 25) < 0.3 }
+}
+/** How far out of the crease a stumped batsman was, in centimetres (a believable 4 to 38). */
+export const stumpGap = (seq: number): number => Math.round(4 + hash(seq, 26) * 34)
+/** A bowled ball's speed for the stump cam, by the bowler's kind (km/h), and how it beat the bat. */
+export function bowledFor(seq: number, type: string | null | undefined): { kmh: number; how: string; side: number } {
+  const t = type ?? 'fast'
+  const [lo, hi] = t === 'fast' ? [128, 150] : t === 'medium' ? [112, 130] : [68, 96]
+  const hows = ['Through the gate', 'Cleans him up', 'Yorker at the base', 'Off stump knocked back', 'Beaten all ends up', 'Straight through the defences']
+  return { kmh: Math.round(lo + hash(seq, 27) * (hi - lo)), how: hows[Math.floor(hash(seq, 28) * hows.length) % hows.length], side: Math.round((hash(seq, 29) - 0.5) * 30) }
+}

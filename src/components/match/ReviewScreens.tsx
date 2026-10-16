@@ -5,7 +5,7 @@ import type { Track } from '../../season/moments'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar } from '../ui'
 
-function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+export function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const box = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(640)
   useEffect(() => {
@@ -19,7 +19,7 @@ function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
 }
 
 /** The look of a stadium's big screen: dark bezel, a broadcast tag and a LIVE bug. */
-function TvFrame({ title, children, skip = 'Tap to skip' }: { title: string; children: React.ReactNode; skip?: string }) {
+export function TvFrame({ title, children, skip = 'Tap to skip' }: { title: string; children: React.ReactNode; skip?: string }) {
   return (
     <div className="absolute inset-0 overflow-hidden rounded-2xl" style={{ background: 'linear-gradient(160deg,#0b1020,#05070d)' }}>
       <div className="absolute inset-1.5 overflow-hidden rounded-xl border border-sky-400/30" style={{ background: 'radial-gradient(ellipse at 50% 40%, #0f2a45, #060b14 80%)', boxShadow: 'inset 0 0 40px #000' }}>

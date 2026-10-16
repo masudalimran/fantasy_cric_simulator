@@ -33,6 +33,7 @@ import { fieldPlan } from '../components/match/fieldSets'
 import { describePitch } from '../engine/pitchInfo'
 import { MatchPreview } from '../components/match/MatchPreview'
 import { BigMatchIntro, LineupReveal } from '../components/match/LineupScreens'
+import { WICKET_FX_SECONDS, type WicketFxInfo } from '../components/match/WicketScreens'
 import { TournamentIntro } from '../components/match/TournamentIntro'
 import { tournamentIntro } from '../season/tournamentIntro'
 import { UpgradeScreen, type UpgradeRow } from '../components/season/NewsScreens'
@@ -56,7 +57,7 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { addDays, formatDate } from '../season/dates'
-import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor } from '../season/moments'
+import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor, bowledFor, catchFor, handsFor, stumpGap } from '../season/moments'
 import { toEvent } from '../season/reel'
 import type { AmbientInfo } from '../components/match/AmbientScreens'
 import { keyPlayers } from '../season/preview'
@@ -617,12 +618,40 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           if (reviews && w.kind === 'lbw') show({ key: notable.seq + 0.3, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((lbwWasReviewed(notable.seq) ? 7600 : 6200) * rate), review: { plain: !lbwWasReviewed(notable.seq), by: 'bat', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
           const bowlIdx = (1 - match.innings[notable.innings].battingSide) as 0 | 1
           if (reviews && w.kind === 'caught' && w.fielderId && w.fielderId === match.keeperOf(bowlIdx)) show({ key: notable.seq + 0.32, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((edgeWasReviewed(notable.seq) ? 12200 : 10000) * rate), review: { plain: !edgeWasReviewed(notable.seq), by: 'bat', kind: 'edge', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
+          // the special wicket screens: how it happened, seen the way a broadcast would show it (they have their own switch)
+          const prefsNow = getAnimPrefs()
+          const fx = (type: WicketFxInfo['type'], extra: Record<string, unknown>, key: number) => show({ key: notable.seq + key, kind: 'wicketfx', player: match.player(outLine.id), team, title: 'WICKET', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(WICKET_FX_SECONDS[type] * 1000 * rate), wfx: { type, batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, rate, ...extra } as WicketFxInfo })
+          if (prefsNow.wicketcam) {
+            if (w.kind === 'bowled') fx('bowled', bowledFor(notable.seq, bowlerP.bowling?.type), 0.33)
+            else if (w.kind === 'stumped') fx('stumping', { keeper: fielderP, cm: stumpGap(notable.seq) }, 0.34)
+            else if (w.kind === 'hit wicket') fx('hitwicket', {}, 0.35)
+            else if ((w.kind === 'caught' || w.kind === 'caught and bowled') && (w.kind === 'caught and bowled' ? bowlerP : fielderP) && w.fielderId !== match.keeperOf(bowlIdx)) {
+              const spotNow = placedAt(notable).find((f) => f.player.id === w.fielderId)
+              const out = spotNow ? Math.hypot((spotNow.x - 80) / 66, (spotNow.y - 50) / 40) : 0.5
+              const catcher = (w.kind === 'caught and bowled' ? bowlerP : fielderP) as NonNullable<typeof fielderP>
+              if (w.kind === 'caught' && out > 0.68) fx('rope', { fielder: catcher, ...catchFor(notable.seq) }, 0.36)
+              else fx('hands', { fielder: catcher, caughtAndBowled: w.kind === 'caught and bowled', ...handsFor(notable.seq) }, 0.37)
+            }
+          }
           if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6300 * rate),
             replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, track: w.kind === 'lbw' && !reviews ? trackFor(notable.seq, true) : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
           })
           // the bowler's big moments follow the replay: three in three balls, and five wickets
           const victimsOf = (n: number) => inn.log.filter((e) => e.wicket && e.wicket.kind !== 'run out' && e.bowlerId === notable.bowlerId).slice(-n).map((e) => ({ player: match.player(e.wicket!.playerId), team }))
+          if (getAnimPrefs().drama) {
+            // out on 99, 111, 222...; a pair in a Test; the end of a big stand
+            if ([99, 111, 199, 222, 299, 333, 444].includes(outLine.runs)) fx('nelson', { runs: outLine.runs, balls: outLine.balls }, 0.52)
+            if (match.format === 'test' && outLine.runs === 0) {
+              const earlier = match.innings.filter((x) => x.battingSide === inn.battingSide && x.index < inn.index).map((x) => x.batters.find((b) => b.id === outLine.id)).find((b) => b?.dismissal && b.runs === 0)
+              if (earlier) fx('pair', { king: earlier.balls <= 1 && outLine.balls <= 1 }, 0.53)
+            }
+            const stand = partnershipAt(inn.log.filter((e) => e.seq <= notable.seq), notable)
+            if (stand.runs >= (match.format === 't20' ? 60 : 100)) {
+              const partnerId = [stand.a.id, stand.b.id].find((id) => id !== outLine.id) ?? stand.b.id
+              fx('stand', { partner: match.player(partnerId), runs: stand.runs, balls: stand.balls }, 0.51)
+            }
+          }
           if (wantReplay && outLine.runs === 0) show({ key: notable.seq + 0.55, kind: 'duck', player: match.player(outLine.id), team, title: 'DUCK!', lines: [], delay: 0, ms: Math.round(3200 * rate), duck: { batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, golden: outLine.balls <= 1, balls: outLine.balls, rate } })
           if (wantReplay && notable.tags.includes('hat-trick')) show({ key: notable.seq + 0.6, kind: 'hattrick', player: bowlerP, team: bowlSideNow.team, title: 'HAT-TRICK!', lines: [], delay: 0, ms: Math.round(5200 * rate), hattrick: { bowler: bowlerP, bowlTeam: bowlSideNow.team, victims: victimsOf(3), rate } })
           if (wantReplay && notable.tags.includes('five-wickets')) {
