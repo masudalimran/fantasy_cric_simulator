@@ -34,6 +34,11 @@ describe('story screens', () => {
     const rv = renderToString(<ReviewScreen info={{ by: 'bat', kind: 'edge', batsman: p, batTeam: A, bowler: q, bowlTeam: B, out: true, track: trackFor(3, true), rate: 1 }} />)
     expect(rv).toContain('Spike')
     expect(renderToString(<SnickoView />)).toContain('BALL PASSES BAT')
+    expect(renderToString(<SnickoView />)).toContain('Slow motion replay')
+    const plain = renderToString(<ReviewScreen info={{ plain: true, by: 'bat', kind: 'edge', batsman: p, batTeam: A, bowler: q, bowlTeam: B, out: true, track: trackFor(3, true), rate: 1 }} />)
+    expect(plain).toContain('Snicko')
+    expect(plain).not.toContain('asks for a review')
+    expect(renderToString(<ReviewScreen info={{ plain: true, by: 'bat', batsman: p, batTeam: A, bowler: q, bowlTeam: B, out: true, track: trackFor(3, true), rate: 1 }} />)).toContain('Ball tracking')
   })
 
   it('the cheerleaders render in the team colours', () => {
