@@ -15,7 +15,6 @@ interface Who { batsman: Player; batTeam: Team; bowler: Player; bowlTeam: Team; 
 
 export type WicketFxInfo =
   | (Who & { type: 'rope'; fielder: Player; height: number; hang: number; cm: number })
-  | (Who & { type: 'hands'; fielder: Player; reaction: number; dive: boolean; caughtAndBowled: boolean })
   | (Who & { type: 'stumping'; keeper: Player | null; cm: number })
   | (Who & { type: 'bowled'; kmh: number; how: string; side: number })
   | (Who & { type: 'hitwicket' })
@@ -24,7 +23,7 @@ export type WicketFxInfo =
   | (Who & { type: 'stand'; partner: Player; runs: number; balls: number })
 
 /** How long each one runs (seconds at full speed), so the moment lasts as long as its picture. */
-export const WICKET_FX_SECONDS: Record<WicketFxInfo['type'], number> = { rope: 8.4, hands: 5.6, stumping: 7.2, bowled: 6.2, hitwicket: 6, nelson: 5.2, pair: 5, stand: 5.4 }
+export const WICKET_FX_SECONDS: Record<WicketFxInfo['type'], number> = { rope: 8.4, stumping: 7.2, bowled: 6.2, hitwicket: 6, nelson: 5.2, pair: 5, stand: 5.4 }
 
 const Banner = ({ text, color, delay, w, sub }: { text: string; color: string; delay: number; w: number; sub?: string }) => (
   <motion.div className="absolute inset-x-0 top-[12%] z-30 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 15 }}>
@@ -38,7 +37,7 @@ const Chip = ({ children, delay, color = '#e2e8f0' }: { children: React.ReactNod
 )
 
 /** A catch in the deep: how high the ball went and how long it hung, then the third umpire's close-up of the boot and the rope. */
-function RopeCatch({ info, w }: { info: Extract<WicketFxInfo, { type: 'rope' }>; w: number }) {
+export function RopeCatch({ info, w, compact = false }: { info: Extract<WicketFxInfo, { type: 'rope' }>; w: number; /** Part of the wicket replay: no OUT! banner (the strip underneath says it). */ compact?: boolean }) {
   const { fielder, bowlTeam, height, hang, cm, rate: r } = info
   const gap = Math.min(26, 5 + cm * 0.34)
   // the arc: from the bat, up to the greatest height, down to the fielder's hands
@@ -71,7 +70,7 @@ function RopeCatch({ info, w }: { info: Extract<WicketFxInfo, { type: 'rope' }>;
           <rect x="70" y="0" width="30" height="34" fill="#0b1b3f" />
           <line x1="70" x2="70" y1="0" y2="34" stroke="#fff" strokeWidth="1.6" />
           <text x="72" y="6" fontSize="3.4" fill="#fff" opacity="0.85">ROPE</text>
-          {/* the boot comes down short of the rope */}
+          {/* the boot comes down short of the rope (the man who caught it is above it) */}
           <motion.g initial={{ y: -22, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 3.8 * r, duration: 1.0 * r, ease: 'easeIn' }}>
             <rect x={70 - gap - 16} y="16" width="16" height="6.5" rx="3" fill="#e2e8f0" stroke="#475569" strokeWidth="0.6" />
             <rect x={70 - gap - 16} y="21" width="16" height="2.2" rx="1" fill="#0f172a" />
@@ -83,36 +82,14 @@ function RopeCatch({ info, w }: { info: Extract<WicketFxInfo, { type: 'rope' }>;
             <text x={70 - gap / 2} y="33" fontSize="3.4" fontWeight="800" textAnchor="middle" fill="#6ee7b7">{cm} cm inside</text>
           </motion.g>
         </svg>
+        <motion.div className="absolute z-20 -translate-x-1/2" style={{ left: `${70 - gap - 8}%`, top: '8%' }} initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 3.8 * r, duration: 1.0 * r, ease: 'easeIn' }}>
+          <span className="block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={fielder} team={bowlTeam} size={Math.max(30, Math.min(w * 0.085, 52))} /></span>
+        </motion.div>
         <motion.div className="mt-1 flex justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 5.0 * r }}>
           <div className="inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-xs font-bold text-slate-100"><PlayerAvatar player={fielder} team={bowlTeam} size={22} />{fielder.name}<span className="text-emerald-300">boot inside the rope</span></div>
         </motion.div>
       </motion.div>
-      <Banner text="OUT!" color="#f87171" delay={6.4 * r} w={w} sub="A clean catch" />
-    </>
-  )
-}
-
-/** The hands: the ball arrives, the fingers close, and the fielder's reaction time. */
-function Hands({ info, w }: { info: Extract<WicketFxInfo, { type: 'hands' }>; w: number }) {
-  const { fielder, bowlTeam, reaction, dive, caughtAndBowled, rate: r } = info
-  const label = caughtAndBowled ? 'Reflex catch off his own bowling' : dive ? 'Diving catch' : 'Safe hands'
-  return (
-    <>
-      <div className="absolute inset-x-0 top-[13%] text-center font-display text-2xl leading-none tracking-wide text-amber-300" style={{ textShadow: '0 0 18px #f59e0b99' }}>{label.toUpperCase()}</div>
-      <svg viewBox="14 6 72 44" preserveAspectRatio="xMidYMid meet" className="absolute inset-x-[8%] top-[24%] h-[52%] w-[84%]" aria-hidden>
-        {/* two cupped hands, opening towards the ball, then closing */}
-        <motion.g style={{ transformOrigin: '50px 40px' }} initial={{ rotate: dive ? -20 : 0, x: dive ? -16 : 0 }} animate={{ rotate: 0, x: 0 }} transition={{ delay: 0.2 * r, duration: 1.0 * r }}>
-          <motion.path d="M34 42 C30 26 36 18 44 20 L47 38 Z" fill="#e8b48a" stroke="#8d5a3b" strokeWidth="0.8" initial={{ rotate: -26 }} animate={{ rotate: [-26, -26, 0] }} transition={{ duration: 2.2 * r, times: [0, 0.65, 0.8] }} style={{ transformOrigin: '47px 40px' }} />
-          <motion.path d="M66 42 C70 26 64 18 56 20 L53 38 Z" fill="#f1c9a5" stroke="#8d5a3b" strokeWidth="0.8" initial={{ rotate: 26 }} animate={{ rotate: [26, 26, 0] }} transition={{ duration: 2.2 * r, times: [0, 0.65, 0.8] }} style={{ transformOrigin: '53px 40px' }} />
-        </motion.g>
-        <motion.circle r="5" fill="#ef4444" stroke="#fecaca" strokeWidth="0.8" initial={{ cx: 8, cy: 4, scale: 0.3 }} animate={{ cx: [8, 30, 50], cy: [4, 14, 30], scale: [0.3, 0.8, 1] }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn' }} />
-        <motion.circle cx="50" cy="30" r="14" fill="none" stroke="#fbbf24" strokeWidth="1" initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: [0, 1, 0], scale: [0.4, 1.4, 1.8] }} transition={{ delay: 1.8 * r, duration: 0.7 * r }} style={{ transformOrigin: '50px 30px' }} />
-      </svg>
-      <div className="absolute inset-x-2 bottom-2 z-20 flex items-center justify-center gap-2">
-        <Chip delay={1.9 * r}><span className="flex items-center gap-1.5"><PlayerAvatar player={fielder} team={bowlTeam} size={22} />{fielder.name}</span></Chip>
-        <Chip delay={2.2 * r} color="#7dd3fc"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Reaction</span>{reaction} ms</Chip>
-      </div>
-      <Banner text="OUT!" color="#f87171" delay={3.4 * r} w={w} />
+      {!compact && <Banner text="OUT!" color="#f87171" delay={6.4 * r} w={w} sub="A clean catch" />}
     </>
   )
 }
@@ -278,7 +255,7 @@ function StandBroken({ info, w }: { info: Extract<WicketFxInfo, { type: 'stand' 
   )
 }
 
-const TITLES: Record<WicketFxInfo['type'], string> = { rope: 'Catch in the deep', hands: 'Catch cam', stumping: 'Third umpire', bowled: 'Stump cam', hitwicket: 'Hit wicket', nelson: 'Nelson', pair: 'Pair', stand: 'Partnership' }
+const TITLES: Record<WicketFxInfo['type'], string> = { rope: 'Catch in the deep', stumping: 'Third umpire', bowled: 'Stump cam', hitwicket: 'Hit wicket', nelson: 'Nelson', pair: 'Pair', stand: 'Partnership' }
 
 export function WicketFxScreen({ info }: { info: WicketFxInfo }) {
   const [box, w] = useWidth()
@@ -288,7 +265,6 @@ export function WicketFxScreen({ info }: { info: WicketFxInfo }) {
     if (info.type === 'rope') ts.push(window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 3600 * r), window.setTimeout(() => sfx.decisionOut(), 6400 * r))
     else if (info.type === 'stumping') ts.push(window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 1500 * r), window.setTimeout(() => sfx.decisionOut(), 5200 * r))
     else if (info.type === 'bowled' || info.type === 'hitwicket') ts.push(window.setTimeout(() => sfx.wicket(), (info.type === 'bowled' ? 1700 : 2400) * r))
-    else if (info.type === 'hands') ts.push(window.setTimeout(() => sfx.howzat(), 1800 * r))
     else if (info.type === 'nelson' || info.type === 'pair') ts.push(window.setTimeout(() => sfx.aww(), 900 * r))
     return () => ts.forEach(clearTimeout)
   }, [info, r])
@@ -296,7 +272,6 @@ export function WicketFxScreen({ info }: { info: WicketFxInfo }) {
     <div ref={box} className="absolute inset-0" aria-label={TITLES[info.type]}>
       <TvFrame title={TITLES[info.type]}>
         {info.type === 'rope' && <RopeCatch info={info} w={w} />}
-        {info.type === 'hands' && <Hands info={info} w={w} />}
         {info.type === 'stumping' && <StumpingCheck info={info} w={w} />}
         {info.type === 'bowled' && <BowledCam info={info} w={w} />}
         {info.type === 'hitwicket' && <HitWicketCam info={info} w={w} />}

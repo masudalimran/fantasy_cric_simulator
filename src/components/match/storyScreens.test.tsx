@@ -10,6 +10,7 @@ import { BigMatchIntro, LineupReveal } from './LineupScreens'
 import { AmbientScreen, type AmbientInfo } from './AmbientScreens'
 import { CheerScreen } from './CheerScreen'
 import { quipFor } from '../../data/quips'
+import { socialPosts } from '../../data/social'
 import { PhaseScreen, RecordScreen, SuperOverScreen, SwingScreen, TargetScreen, TensionScreen } from './StoryScreens'
 import { SnickoView, ReviewScreen } from './ReviewScreens'
 import { trackFor } from '../../season/moments'
@@ -52,12 +53,10 @@ describe('story screens', () => {
   it('every break-the-monotony screen renders its words', () => {
     const xi = A.players.slice(0, 8)
     const cases: [AmbientInfo, string][] = [
-      [{ variant: 'stands', team: A, rate: 1 }, 'ARMY!'],
-      [{ variant: 'wave', teams: [A, B], rate: 1 }, 'THE WAVE!'],
+      [{ variant: 'stands', team: A, sign: '6', name: 'Son Goku', seed: 4, rate: 1 }, 'SON GOKU'],
+      [{ variant: 'social', team: A, hashtag: 'SORvU7W', posts: socialPosts({ bat: { name: A.name, short: A.short }, bowl: { name: B.name, short: B.short }, runs: 90, wickets: 2, overs: '10.0', striker: 'Ichigo', bowler: 'Goku' }, 3), rate: 1 }, 'Fan chat'],
       [{ variant: 'huddle', team: A, players: xi, rate: 1 }, 'HUDDLE!'],
-      [{ variant: 'fancam', team: A, mood: 'happy', seed: 3, rate: 1 }, 'fan'],
       [{ variant: 'box', teams: [A, B], lines: ['one', 'two'], rate: 1 }, 'Commentary box'],
-      [{ variant: 'blimp', team: A, rate: 1 }, 'GO '],
       [{ variant: 'lights', teams: [A, B], rate: 1 }, 'FLOODLIGHTS ON!'],
       [{ variant: 'fireworks', team: A, rate: 1 }, 'FIREWORKS!'],
     ]

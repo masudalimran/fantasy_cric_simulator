@@ -6,8 +6,8 @@ import type { BallEvent, DismissalKind } from '../engine/types'
  * the real field view. Each ball is one small whole number: seq * 100 + runsBat * 10 + (dismissal kind + 1, or 0). The ball's shot
  * direction comes from its seq, so the footage looks just like it did on the day.
  */
-export interface Reel { /** The player (a roster position in a saved summary, an id before). */ p: number; k: 'bat' | 'bowl'; e: number[] }
-export interface RawReel { p: string; k: 'bat' | 'bowl'; e: number[] }
+export interface Reel { /** The player (a roster position in a saved summary, an id before). */ p: number; k: 'bat' | 'bowl'; e: number[]; /** The team's score as each ball was bowled (runs * 100000 + wickets * 1000 + balls), for the scoreboard on the TV. Missing in older reels. */ s?: number[] }
+export interface RawReel { p: string; k: 'bat' | 'bowl'; e: number[]; s?: number[] }
 
 /** The most balls a reel keeps. */
 export const REEL_MAX = 14
@@ -44,8 +44,11 @@ export function buildReel(innings: { log: BallEvent[] }[]): RawReel | null {
   const balls = log.filter((e) => e.strikerId === best!.id && e.runsBat >= 2 && !e.wicket)
   // sixes first, then fours, then the rest, then back in the order they were hit
   const ranked = [...balls].sort((a, b) => b.runsBat - a.runsBat).slice(0, REEL_MAX).sort((a, b) => a.seq - b.seq)
-  return ranked.length ? { p: best.id, k: 'bat', e: ranked.map(encodeBall) } : null
+  return ranked.length ? { p: best.id, k: 'bat', e: ranked.map(encodeBall), s: ranked.map((e) => e.score.runs * 100000 + e.score.wickets * 1000 + e.score.legalBalls) } : null
 }
+
+export interface Snapshot { runs: number; wickets: number; balls: number }
+export const decodeScore = (n: number): Snapshot => ({ runs: Math.floor(n / 100000), wickets: Math.floor(n / 1000) % 100, balls: n % 1000 })
 
 const frac = (n: number) => n - Math.floor(n)
 

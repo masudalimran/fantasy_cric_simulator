@@ -31,6 +31,7 @@ import type { Moment } from '../components/match/MomentOverlay'
 import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
 import { fieldPlan } from '../components/match/fieldSets'
 import { describePitch } from '../engine/pitchInfo'
+import { socialPosts } from '../data/social'
 import { MatchPreview } from '../components/match/MatchPreview'
 import { BigMatchIntro, LineupReveal } from '../components/match/LineupScreens'
 import { WICKET_FX_SECONDS, type WicketFxInfo } from '../components/match/WicketScreens'
@@ -59,7 +60,7 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { addDays, formatDate } from '../season/dates'
-import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor, bowledFor, catchFor, handsFor, stumpGap } from '../season/moments'
+import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, overstepCm, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor, bowledFor, catchFor, handsFor, stumpGap } from '../season/moments'
 import { toEvent } from '../season/reel'
 import type { AmbientInfo } from '../components/match/AmbientScreens'
 import { keyPlayers } from '../season/preview'
@@ -351,6 +352,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         })
         return placeFielders(match.sides[1 - innE.battingSide].xi, ev.bowlerId, plan.spots)
       }
+      // the no-ball itself: the front foot over the line, before the free hit
+      if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && !match.isOver) {
+        const spd = autoRef.current
+        const innNb = match.innings[lastEv.innings]
+        const bowlNb = match.sides[1 - innNb.battingSide].team
+        const rateNb = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
+        enqueueMoment({ key: lastEv.seq + 0.7, kind: 'noball', player: match.player(lastEv.bowlerId), team: bowlNb, title: 'NO BALL', lines: [], delay: spd === 4 ? 150 : spd === 2 ? 250 : 450, ms: Math.round(4200 * rateNb), noball: { bowler: match.player(lastEv.bowlerId), bowlTeam: bowlNb, cm: overstepCm(lastEv.seq), rate: rateNb } })
+      }
       // (not when that ball ended the innings: the free hit would be shown against the next innings' batsman)
       if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && !match.isOver && match.current.index === lastEv.innings) {
         const cur = match.current
@@ -485,7 +494,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const ids = { striker: striker.id, nonStriker: nonStriker?.id ?? striker.id, bowler: bowler.id }
             reel = {
               player: focus.player, team: focus.team, kind: k, headline: rl.headline,
-              versus: [teamMap.get(rl.homeId ?? '')?.name, teamMap.get(rl.awayId ?? '')?.name].filter(Boolean).join(' v ') + ` · ${formatDate(rl.date)}`, result: rl.result,
+              versus: [teamMap.get(rl.homeId ?? '')?.name, teamMap.get(rl.awayId ?? '')?.name].filter(Boolean).join(' v ') + ` · ${formatDate(rl.date)}`, result: rl.result, scores: rl.scores, teamShort: focus.team.short,
               balls: rl.balls.map((b, i) => toEvent(b, ids, i)), striker, nonStriker, bowler, battingTeam: batTeam, bowlingTeam: bowlTeam,
               fielders: placeFielders(k === 'bat' ? oppXI : ownXI, bowler.id),
             }
@@ -542,7 +551,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, why: lastEv.wicket ? 'wicket' : 'boundary', rate }, caption: cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }) }) }
           else if (v === 'huddle') put({ variant: 'huddle', team, players: bowlS.xi.slice(0, 8), rate }, 3800, 'HUDDLE', team, cap('huddle', { team: team.name }))
           else if (v === 'fireworks') put({ variant: 'fireworks', team, rate }, 4200, 'FIREWORKS', team, cap('fireworks', { team: team.name, extra: 'big hit' }))
-          else put({ variant: 'stands', team, rate }, 3800, 'THE STANDS', team, cap(lastEv.wicket ? 'stands-bowling' : 'stands-batting', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
+          else put({ variant: 'stands', team, sign: lastEv.boundary === 6 ? '6' : lastEv.boundary === 4 ? '4' : null, name: lastEv.wicket ? match.player(lastEv.bowlerId).name : match.player(lastEv.strikerId).name, seed: lastEv.seq, rate }, 4400, 'THE STANDS', team, cap(lastEv.wicket ? 'stands-bowling' : 'stands-batting', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
           return
         }
         // a quiet moment at the end of an over
@@ -551,20 +560,22 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const chase = innE.target !== null ? { need: innE.target - innE.runs, balls: FORMATS[match.format].overs * 6 - innE.legalBalls } : null
           // now and then the numbers of the innings go up on screen instead: a wagon wheel, the worm, the runs of each over, how the runs came
           const stats = innE.log.length >= 24
-          const pool = ['wave', 'fancam', 'box', 'blimp', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring'] : [])]
+          const pool = ['stands', 'social', 'box', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring'] : [])]
           const v = pool[ambientPick(lastEv.seq + 1, pool.length)]
-          const happy = lastEv.score.runs / Math.max(1, lastEv.score.legalBalls) * 6 >= 7.5
           const shots = innE.log.filter((e) => e.strikerId === lastEv.strikerId && e.runsBat > 0).length
           const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined }
           if (v === 'wagon') put({ variant: 'wagon', stats: { ...si, other: undefined, batsman: shots >= 8 ? match.player(lastEv.strikerId) : undefined }, rate }, 6200, 'WAGON WHEEL', batT, cap('wagon', { team: batT.name, player: scorer }))
           else if (v === 'worm') put({ variant: 'worm', stats: si, rate }, 6000, 'THE WORM', batT, cap('worm', { team: batT.name }))
           else if (v === 'manhattan') put({ variant: 'manhattan', stats: si, rate }, 5600, 'OVER BY OVER', batT, cap('manhattan', { team: batT.name }))
           else if (v === 'scoring') put({ variant: 'scoring', stats: si, rate }, 5600, 'HOW THE RUNS CAME', batT, cap('scoring', { team: batT.name }))
-          else if (v === 'wave') put({ variant: 'wave', teams: [batT, bowlS.team], rate }, 4800, 'THE WAVE', batT, cap('wave', { team: batT.name, other: bowlS.team.name }))
-          else if (v === 'fancam') put({ variant: 'fancam', team: batT, mood: happy ? 'happy' : 'shock', seed: lastEv.seq, rate }, 4400, 'FAN CAM', batT, cap(happy ? 'fancam-happy' : 'fancam-shock', { team: batT.name }))
-          else if (v === 'blimp') put({ variant: 'blimp', team: batT, rate }, 4600, 'BLIMP', batT, cap('blimp', { team: batT.name }))
+          else if (v === 'stands') put({ variant: 'stands', team: batT, sign: null, name: innE.batters.slice().sort((x, y) => y.runs - x.runs)[0] ? match.player(innE.batters.slice().sort((x, y) => y.runs - x.runs)[0].id).name : null, seed: lastEv.seq, rate }, 4400, 'THE STANDS', batT, cap('stands-batting', { team: batT.name, player: scorer }))
+          else if (v === 'social') {
+            const best = [...innE.bowlers.entries()].sort((x, y) => y[1].wickets - x[1].wickets)[0]
+            const top = [...innE.batters].sort((x, y) => y.runs - x.runs)[0]
+            const posts = socialPosts({ bat: batT, bowl: bowlS.team, runs: lastEv.score.runs, wickets: lastEv.score.wickets, overs: `${over}.0`, striker: scorer, bowler: first(match.player(lastEv.bowlerId).name), top: top ? { name: first(match.player(top.id).name), runs: top.runs } : null, best: best ? { name: first(match.player(best[0]).name), wickets: best[1].wickets } : null, chase }, lastEv.seq)
+            put({ variant: 'social', team: batT, posts, hashtag: `${batT.short}v${bowlS.team.short}`, rate }, 8600, 'FAN CHAT', batT, cap('social', { team: batT.name }))
+          }
           else put({ variant: 'box', lines: boxChat(match, lastEv.seq), teams: [batT, bowlS.team], rate }, 10400, 'COMMENTARY BOX', batT)
-          void over; void chase
         }
       }
       const notable =
@@ -635,13 +646,18 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               const spotNow = placedAt(notable).find((f) => f.player.id === w.fielderId)
               const out = spotNow ? Math.hypot((spotNow.x - 80) / 66, (spotNow.y - 50) / 40) : 0.5
               const catcher = (w.kind === 'caught and bowled' ? bowlerP : fielderP) as NonNullable<typeof fielderP>
-              if (w.kind === 'caught' && out > 0.68) fx('rope', { fielder: catcher, ...catchFor(notable.seq) }, 0.36)
-              else fx('hands', { fielder: catcher, caughtAndBowled: w.kind === 'caught and bowled', ...handsFor(notable.seq) }, 0.37)
+              void catcher; void out // (a catch in the deep is the replay itself, and the reaction time is shown on it)
             }
           }
+          // a catch in the deep (not the keeper's): the replay is the third umpire's rope check; any other catch shows the fielder's reaction time
+          const catchBy = w.kind === 'caught and bowled' ? bowlerP : fielderP
+          const spotNow2 = placedAt(notable).find((f) => f.player.id === w.fielderId)
+          const outward = spotNow2 ? Math.hypot((spotNow2.x - 80) / 66, (spotNow2.y - 50) / 40) : 0.5
+          const normalCatch = (w.kind === 'caught' || w.kind === 'caught and bowled') && !!catchBy && w.fielderId !== match.keeperOf(bowlIdx)
+          const ropeCatch = normalCatch && w.kind === 'caught' && outward > 0.68 && prefsNow.wicketcam
           if (wantReplay) show({
-            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6300 * rate),
-            replay: { kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, track: w.kind === 'lbw' && !reviews ? trackFor(notable.seq, true) : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
+            key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((ropeCatch ? 9200 : 6300) * rate),
+            replay: { rope: ropeCatch ? catchFor(notable.seq) : undefined, reaction: normalCatch && !ropeCatch ? handsFor(notable.seq) : undefined, kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, track: w.kind === 'lbw' && !reviews ? trackFor(notable.seq, true) : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
           })
           // the bowler's big moments follow the replay: three in three balls, and five wickets
           const victimsOf = (n: number) => inn.log.filter((e) => e.wicket && e.wicket.kind !== 'run out' && e.bowlerId === notable.bowlerId).slice(-n).map((e) => ({ player: match.player(e.wicket!.playerId), team }))

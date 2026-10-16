@@ -341,8 +341,8 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     const text = shape < 4 && withLead ? `${lead} ${facts} ${close}` : shape < 7 ? `${facts} ${close}` : withLead ? `${lead} ${facts}` : facts
     say(who, text, shape >= 7 && withLead ? (tone === 'knock' ? 'serious' : tone === 'wow' ? 'excited' : 'thoughtful') : mood, clip)
   }
-  /** The two experts nearly always agree; once in a while one of them takes the other on. */
-  const agrees = () => !rng.chance(0.07)
+  /** The two experts are on the same side: they back each other up and add to the point. Only very rarely (about one show in thirty) does one of them take the other on. */
+  const agrees = () => !rng.chance(0.012)
   const react = (who: 1 | 2, agrees: boolean, target: 1 | 2) => {
     const v = voice(who)
     const line = pick(agrees ? v.agree : v.disagree)

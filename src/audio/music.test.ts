@@ -18,7 +18,7 @@ describe('timeout music', () => {
 })
 
 describe('timeout highlight variety', () => {
-  const mk = (id: string): ReelHighlight => ({ result: '', fixtureId: id, playerId: 'p' + id, kind: 'bat', headline: '50 (30)', detail: '', homeId: null, awayId: null, date: '2026-01-01', balls: [] })
+  const mk = (id: string): ReelHighlight => ({ result: '', fixtureId: id, playerId: 'p' + id, kind: 'bat', headline: '50 (30)', detail: '', homeId: null, awayId: null, date: '2026-01-01', balls: [], scores: [] })
   it('uses every reel once before repeating one', () => {
     const cands = ['a', 'b', 'c', 'd'].map(mk)
     const used = new Set<string>()

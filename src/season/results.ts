@@ -151,7 +151,7 @@ export function recordResult(season: Season, raw: RawSummary, teams?: Map<string
     bowl: raw.bowl.map(([id, ...rest]) => [idx(id), ...rest] as MatchSummary['bowl'][number]),
     played: raw.played?.map(idx),
     six: raw.six?.map(([id, m]) => [idx(id), m] as [number, number]),
-    reel: raw.reel ? { p: idx(raw.reel.p), k: raw.reel.k, e: raw.reel.e } : undefined,
+    reel: raw.reel ? { p: idx(raw.reel.p), k: raw.reel.k, e: raw.reel.e, ...(raw.reel.s ? { s: raw.reel.s } : {}) } : undefined,
     ff: raw.ff ? [idx(raw.ff[0]), raw.ff[1]] : undefined,
   }
   const fixture = season.fixtures.find((f) => f.id === raw.fixtureId)

@@ -10,7 +10,6 @@ const base = { batsman: A.players[0], batTeam: A, bowler: B.players[0], bowlTeam
 describe('the special wicket screens', () => {
   const infos: WicketFxInfo[] = [
     { ...base, type: 'rope', fielder: B.players[2], ...catchFor(7) },
-    { ...base, type: 'hands', fielder: B.players[3], caughtAndBowled: false, ...handsFor(8) },
     { ...base, type: 'stumping', keeper: B.players[6], cm: stumpGap(9) },
     { ...base, type: 'bowled', ...bowledFor(10, 'fast') },
     { ...base, type: 'hitwicket' },

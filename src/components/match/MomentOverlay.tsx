@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
-import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
+import { ExtraScreen, FourScreen, MaidenScreen, NoBallScreen, type ExtraInfo, type FourInfo, type MaidenInfo, type NoBallInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { AmbientScreen, type AmbientInfo } from './AmbientScreens'
 import { CheerScreen, type CheerInfo } from './CheerScreen'
@@ -22,7 +22,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -46,6 +46,8 @@ export interface Moment {
   phase?: PhaseInfo
   cheer?: CheerInfo
   ambient?: AmbientInfo
+  /** The bowler's front foot over the line, shown before the free hit. */
+  noball?: NoBallInfo
   /** What the commentary box says about the screen, on a bar along the bottom (the crowd, the cheerleaders, the stats desk...). */
   caption?: string
   haul?: HaulInfo
@@ -112,6 +114,13 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Wicket replay"
       >
         <WicketReplay info={moment.replay} />
+      </motion.div>
+    )
+  }
+  if (moment.kind === 'noball' && moment.noball) {
+    return (
+      <motion.div data-moment="noball" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl" initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.2, delay: 0 } }} transition={{ duration: 0.2, delay: moment.delay / 1000 }}>
+        <NoBallScreen info={moment.noball} />
       </motion.div>
     )
   }

@@ -4,6 +4,7 @@ import { sfx } from '../../audio/sfx'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
+import { crowdSigns, type SocialPost } from '../../data/social'
 import { CommentaryBox } from './CommentaryBox'
 import { ManhattanScreen, ScoringScreen, WagonScreen, WormScreen, type StatsInfo } from './StatsScreens'
 
@@ -12,12 +13,10 @@ import { ManhattanScreen, ScoringScreen, WagonScreen, WormScreen, type StatsInfo
  * floodlights and fireworks. They change nothing in the match. Click any of them to skip.
  */
 export type AmbientInfo =
-  | { variant: 'stands'; team: Team; rate: number }
-  | { variant: 'wave'; teams: [Team, Team]; rate: number }
+  | { variant: 'stands'; team: Team; sign: '4' | '6' | null; name: string | null; seed: number; rate: number }
+  | { variant: 'social'; team: Team; posts: SocialPost[]; hashtag: string; rate: number }
   | { variant: 'huddle'; team: Team; players: Player[]; rate: number }
-  | { variant: 'fancam'; team: Team; mood: 'happy' | 'shock'; seed: number; rate: number }
   | { variant: 'box'; lines: string[]; teams: [Team, Team]; rate: number }
-  | { variant: 'blimp'; team: Team; rate: number }
   | { variant: 'lights'; teams: [Team, Team]; rate: number }
   | { variant: 'fireworks'; team: Team; rate: number }
   // the numbers of the match on the field: a wagon wheel, the run-rate worm, the runs of each over, how the runs came
@@ -55,50 +54,75 @@ function Fan({ shirt, trim, i, size, jump = true, up = false, scarf = false }: {
   )
 }
 
-function Stands({ team, w, r }: { team: Team; w: number; r: number }) {
-  const size = Math.max(22, Math.min(w * 0.075, 40))
-  const cols = w < 520 ? 7 : 10
+function Stands({ team, sign, name, seed, w, r }: { team: Team; sign: '4' | '6' | null; name: string | null; seed: number; w: number; r: number }) {
+  // a whole stand of supporters: rows of fans getting bigger towards the front, jumping at their own pace, with banners held up
+  const rows = [{ y: 30, size: 0.055, n: 16 }, { y: 44, size: 0.066, n: 14 }, { y: 59, size: 0.08, n: 12 }, { y: 75, size: 0.095, n: 10 }]
+  const signs = crowdSigns({ sign, team, name }, seed)
+  const boards: { x: number; y: number; rot: number; delay: number; node: React.ReactNode }[] = [
+    { x: 17, y: 13, rot: -4, delay: 0.3, node: <div className="flex items-center gap-1.5 rounded-sm px-2 py-1" style={{ background: `linear-gradient(135deg, ${team.colors.primary}, ${team.colors.secondary})` }}><TeamLogo team={team} size={Math.max(22, w * 0.07)} /><span className="font-display text-sm leading-none text-white">{team.short}</span></div> },
+    { x: 50, y: 6, rot: 3, delay: 0.5, node: <div className="grid place-items-center rounded-md border-4 border-white bg-red-600 px-4 py-0.5 font-display leading-none text-white" style={{ fontSize: Math.max(34, w * 0.12), minWidth: Math.max(54, w * 0.15) }}>{signs[0]}</div> },
+    { x: 82, y: 13, rot: -3, delay: 0.7, node: <div className="rounded-sm bg-white px-2 py-1 text-center font-display leading-tight text-slate-900" style={{ fontSize: Math.max(13, w * 0.04), maxWidth: w * 0.3 }}>{signs[2]}</div> },
+    { x: 68, y: 27, rot: 5, delay: 0.9, node: <div className="rounded-sm px-2 py-0.5 text-center font-display leading-none text-white" style={{ background: team.colors.primary, fontSize: Math.max(12, w * 0.034) }}>{signs[1]}</div> },
+  ]
   return (
     <>
-      <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, #05070d, ${team.colors.primary}55 70%, #05070d)` }} />
-      <div className="absolute inset-x-0 top-[40%] z-10 flex flex-col items-center gap-1 px-2">
-        {[0, 1, 2].map((row) => (
-          <div key={row} className="flex justify-center" style={{ gap: size * 0.12 }}>
-            {Array.from({ length: cols - (row % 2) }, (_, k) => <Fan key={k} i={k + row * 3} size={size * (0.85 + row * 0.1)} shirt={k % 2 ? team.colors.primary : team.colors.secondary} trim={k % 2 ? team.colors.secondary : '#fff'} scarf={k % 3 === 0} />)}
-          </div>
-        ))}
-      </div>
-      <motion.div className="absolute inset-x-0 top-[15%] z-20 flex items-center justify-center gap-3" initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 * r }}>
-        <TeamLogo team={team} size={Math.max(30, w * 0.08)} />
-        <Title w={w} delay={0.3 * r}>THE {team.short.toUpperCase()} ARMY!</Title>
-      </motion.div>
-      <div className="absolute inset-x-0 bottom-[3%] z-20 text-center text-[11px] font-semibold text-slate-200">The {team.name} stand is on its feet</div>
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #020309, #0b1224 45%, #111a30)' }} />
+      {/* floodlight glow behind the stand */}
+      <div className="absolute inset-x-0 top-0 h-[40%]" style={{ background: `radial-gradient(ellipse at 50% 0%, ${team.colors.primary}55, transparent 70%)` }} />
+      {rows.map((row, ri) => (
+        <div key={ri} className="absolute inset-x-0 flex justify-center" style={{ top: `${row.y}%`, gap: w * 0.004 }}>
+          {Array.from({ length: row.n }, (_, k) => {
+            const sz = Math.max(16, w * row.size)
+            const t = (k + ri) % 3
+            const j = (Math.sin((k + 1) * 12.9898 + ri * 78.233 + seed) * 43758.5453) % 1
+            return (
+              <motion.div key={k} animate={{ y: [0, -sz * (0.25 + Math.abs(j) * 0.5), 0] }} transition={{ duration: 0.45 + Math.abs(j) * 0.4, repeat: Infinity, delay: Math.abs(j) * 1.5 * r }}>
+                <Fan i={k * 3 + ri} size={sz} jump={false} shirt={t === 0 ? team.colors.primary : t === 1 ? team.colors.secondary : '#e5e7eb'} trim={t === 0 ? team.colors.secondary : team.colors.primary} />
+              </motion.div>
+            )
+          })}
+        </div>
+      ))}
+      {boards.map((b, i) => (
+        <motion.div key={i} className="absolute z-20 -translate-x-1/2 text-center" style={{ left: `${b.x}%`, top: `${b.y}%` }} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: [0, -5, 0], rotate: [b.rot, -b.rot, b.rot] }} transition={{ opacity: { delay: b.delay * r }, y: { delay: b.delay * r, duration: 0.7, repeat: Infinity }, rotate: { delay: b.delay * r, duration: 1.4, repeat: Infinity } }}>
+          <div className="shadow-xl">{b.node}</div>
+          <div className="mx-auto h-5 w-[3px] bg-slate-400" />
+        </motion.div>
+      ))}
+      <div className="absolute inset-x-0 bottom-[3%] z-20 text-center text-[11px] font-semibold text-slate-200" style={{ textShadow: '0 1px 3px #000' }}>The {team.name} stand is on its feet</div>
     </>
   )
 }
 
-function Wave({ teams, w, r }: { teams: [Team, Team]; w: number; r: number }) {
-  const cols = w < 520 ? 12 : 18
-  const size = Math.max(16, Math.min(w / (cols + 1), 34))
+/** A feed of the fans' posts scrolling up like a phone screen, with the likes and shares counting up. */
+function Social({ posts, team, hashtag, w, r }: { posts: SocialPost[]; team: Team; hashtag: string; w: number; r: number }) {
+  const small = w < 520
+  const icon = (d: string, c = 'currentColor') => <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
   return (
     <>
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,#0a0e18,#10182a)' }} />
-      <div className="absolute inset-x-1 top-[44%] z-10 space-y-0.5">
-        {[0, 1, 2].map((row) => (
-          <div key={row} className="flex justify-center" style={{ gap: size * 0.1 }}>
-            {Array.from({ length: cols }, (_, k) => {
-              const t = teams[(k + row) % 2]
-              return (
-                <motion.div key={k} animate={{ y: [0, -size * 0.9, 0], scaleY: [1, 1.18, 1] }} transition={{ delay: (k * 0.11 + row * 0.05) * r, duration: 0.55 * r, repeat: 1, repeatDelay: cols * 0.11 * r }}>
-                  <Fan i={k + row} size={size} jump={false} shirt={t.colors.primary} trim={t.colors.secondary} />
-                </motion.div>
-              )
-            })}
-          </div>
-        ))}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg,#0b1020,#05070d)' }} />
+      <div className="absolute inset-x-[6%] bottom-2 top-11 overflow-hidden rounded-2xl border border-white/10 bg-[#0f1420]">
+        <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5 text-[11px] font-bold text-slate-200"><span>Fan chat</span><span style={{ color: team.colors.secondary }}>#{hashtag}</span></div>
+        <div className="relative h-[calc(100%-29px)] overflow-hidden">
+        <motion.div className="px-2.5" initial={{ y: 0 }} animate={{ y: -(posts.length - 1) * (small ? 64 : 76) }} transition={{ delay: 0.9 * r, duration: Math.max(3, posts.length * 1.15) * r, ease: 'linear' }}>
+          {posts.map((p, i) => (
+            <motion.div key={i} className="flex gap-2 border-b border-white/5 py-2" style={{ minHeight: small ? 64 : 76 }} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i, 2) * 0.25 }}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-display text-sm text-white" style={{ background: p.side === 0 ? team.colors.primary : '#475569' }}>{p.name[0]}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-1.5"><span className="truncate text-[12px] font-extrabold text-white">{p.name}</span><span className="truncate text-[10px] text-slate-500">{p.handle} · {p.age}</span></div>
+                <div className="text-[12px] leading-snug text-slate-200">{p.text}</div>
+                <div className="mt-1 flex gap-4 text-[10px] font-semibold text-slate-400">
+                  <span className="flex items-center gap-1">{icon('M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 21l2-5.6A8.5 8.5 0 1 1 21 11.5z')}{p.replies}</span>
+                  <span className="flex items-center gap-1">{icon('M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3')}{p.shares}</span>
+                  <span className="flex items-center gap-1 text-rose-400">{icon('M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z', '#fb7185')}{p.likes}</span>
+                  <span className="flex items-center gap-1">{icon('M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13')}Share</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+        </div>
       </div>
-      <div className="absolute inset-x-0 top-[15%] z-20 text-center"><Title w={w} delay={0.2 * r} color="#7dd3fc">THE WAVE!</Title></div>
-      <div className="absolute inset-x-0 bottom-[4%] z-20 text-center text-[11px] font-semibold text-slate-300">Both ends of the ground join in</div>
     </>
   )
 }
@@ -126,48 +150,6 @@ function Huddle({ team, players, w, r }: { team: Team; players: Player[]; w: num
         <motion.span className="absolute left-1/2 top-[68%] -translate-x-1/2 -translate-y-1/2 text-3xl" aria-hidden animate={{ scale: [1, 1.3, 1], rotate: [0, 12, -12, 0] }} transition={{ duration: 0.8, repeat: Infinity }}>🔥</motion.span>
       </div>
       <div className="absolute inset-x-0 bottom-[3%] z-20 text-center text-[11px] font-semibold text-slate-200">{team.name} celebrate together</div>
-    </>
-  )
-}
-
-const HAPPY = ['🤩', '😍', '🥳', '😆', '🙌']
-const SHOCK = ['😱', '😭', '😬', '🤯', '🥲']
-const CAPS = { happy: ['Biggest fan', 'Lucky charm', 'Face painter', 'Snack champion'], shock: ["Can't watch", 'Heart in mouth', 'Lost for words', 'Nail biter'] }
-function FanCam({ team, mood, seed, w, r }: { team: Team; mood: 'happy' | 'shock'; seed: number; w: number; r: number }) {
-  const [n, setN] = useState(0)
-  useEffect(() => { const id = window.setInterval(() => setN((x) => x + 1), 1100 * r); return () => window.clearInterval(id) }, [r])
-  const faces = mood === 'happy' ? HAPPY : SHOCK
-  const f = faces[(seed + n) % faces.length]
-  const cap = CAPS[mood][(seed + n) % CAPS[mood].length]
-  return (
-    <>
-      <div className="absolute inset-0 bg-black" />
-      <div className="absolute inset-2 overflow-hidden rounded-xl border border-sky-400/30" style={{ background: `radial-gradient(ellipse at 50% 45%, ${team.colors.primary}88, #05080e 80%)` }}>
-        <motion.div key={n} className="absolute inset-0 flex flex-col items-center justify-center" initial={{ scale: 1.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3 }}>
-          <motion.span className="select-none" style={{ fontSize: Math.max(60, w * 0.22) }} animate={{ rotate: mood === 'shock' ? [-4, 4, -4] : [0, 6, -6, 0], scale: [1, 1.08, 1] }} transition={{ duration: 0.6, repeat: Infinity }} aria-hidden>{f}</motion.span>
-          <span className="mt-1 rounded bg-black/70 px-2 py-0.5 text-xs font-bold text-white">{cap} · {team.short} fan</span>
-        </motion.div>
-        <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ background: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)' }} />
-        <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 rounded bg-red-600 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white"><span className="h-1.5 w-1.5 rounded-full bg-white" />LIVE</div>
-      </div>
-    </>
-  )
-}
-
-function Blimp({ team, w, r }: { team: Team; w: number; r: number }) {
-  return (
-    <>
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,#60a5fa,#bfdbfe 70%,#86efac)' }} />
-      {[12, 30, 52].map((t, i) => <motion.span key={i} className="absolute select-none text-3xl opacity-80" style={{ top: `${t}%` }} initial={{ left: '-10%' }} animate={{ left: '110%' }} transition={{ duration: (6 + i * 2) * r, ease: 'linear' }} aria-hidden>☁️</motion.span>)}
-      <motion.div className="absolute top-[26%] z-20 flex items-center" initial={{ left: '-45%' }} animate={{ left: '105%' }} transition={{ duration: 4.2 * r, ease: 'linear' }}>
-        <div className="relative rounded-[999px] px-8 py-3 shadow-xl" style={{ background: `linear-gradient(180deg, ${team.colors.primary}, ${team.colors.secondary})` }}>
-          <span className="font-display text-xl tracking-wider text-white" style={{ fontSize: Math.max(16, w * 0.045) }}>GO {team.short.toUpperCase()}!</span>
-          <span className="absolute -bottom-3 left-1/2 h-3 w-8 -translate-x-1/2 rounded-b-lg bg-slate-700" />
-          <span className="absolute -right-3 top-0 h-full w-4 rounded-r-full" style={{ background: team.colors.secondary }} />
-        </div>
-      </motion.div>
-      <div className="absolute inset-x-0 bottom-0 z-10 h-[22%] bg-gradient-to-t from-emerald-700 to-emerald-500" />
-      <div className="absolute inset-x-0 bottom-[6%] z-20 text-center"><span className="rounded bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">A blimp floats over the ground</span></div>
     </>
   )
 }
@@ -207,8 +189,8 @@ function Fireworks({ team, w, r }: { team: Team; w: number; r: number }) {
 }
 
 const TAGS: Record<AmbientInfo['variant'], [string, string]> = {
-  stands: ['In the stands', '#fbbf24'], wave: ['The wave', '#7dd3fc'], huddle: ['Team huddle', '#fde68a'], fancam: ['Fan cam', '#38bdf8'],
-  box: ["Commentators' corner", '#c4b5fd'], blimp: ['Up above', '#bae6fd'], lights: ['Under the lights', '#fef3c7'], fireworks: ['Fireworks', '#fde68a'],
+  stands: ['In the stands', '#fbbf24'], social: ['Fan chat', '#7dd3fc'], huddle: ['Team huddle', '#fde68a'],
+  box: ["Commentators' corner", '#c4b5fd'], lights: ['Under the lights', '#fef3c7'], fireworks: ['Fireworks', '#fde68a'],
   wagon: ['Wagon wheel', '#38bdf8'], worm: ['The worm', '#34d399'], manhattan: ['Over by over', '#f472b6'], scoring: ['How the runs came', '#fbbf24'],
 }
 
@@ -217,19 +199,16 @@ export function AmbientScreen({ info }: { info: AmbientInfo }) {
   const r = info.rate
   useEffect(() => {
     if (info.variant === 'stands' || info.variant === 'huddle') sfx.cheer(0.5)
-    if (info.variant === 'wave') sfx.applause(2.4)
     if (info.variant === 'fireworks') sfx.pops(7)
     if (info.variant === 'lights') sfx.cheer(0.6)
   }, [info.variant])
   const [tag, color] = TAGS[info.variant]
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label={tag}>
-      {info.variant === 'stands' && <Stands team={info.team} w={w} r={r} />}
-      {info.variant === 'wave' && <Wave teams={info.teams} w={w} r={r} />}
+      {info.variant === 'stands' && <Stands team={info.team} sign={info.sign} name={info.name} seed={info.seed} w={w} r={r} />}
+      {info.variant === 'social' && <Social posts={info.posts} team={info.team} hashtag={info.hashtag} w={w} r={r} />}
       {info.variant === 'huddle' && <Huddle team={info.team} players={info.players} w={w} r={r} />}
-      {info.variant === 'fancam' && <FanCam team={info.team} mood={info.mood} seed={info.seed} w={w} r={r} />}
       {info.variant === 'box' && <CommentaryBox lines={info.lines} teams={info.teams} rate={r} />}
-      {info.variant === 'blimp' && <Blimp team={info.team} w={w} r={r} />}
       {info.variant === 'lights' && <Lights teams={info.teams} w={w} r={r} />}
       {info.variant === 'fireworks' && <Fireworks team={info.team} w={w} r={r} />}
       {info.variant === 'wagon' && <WagonScreen info={info.stats} />}

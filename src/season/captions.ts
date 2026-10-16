@@ -4,7 +4,7 @@
  */
 export type CaptionKind =
   | 'cheer-boundary' | 'cheer-wicket' | 'stands-batting' | 'stands-bowling' | 'huddle' | 'wave' | 'fancam-happy' | 'fancam-shock'
-  | 'blimp' | 'fireworks' | 'lights' | 'wagon' | 'worm' | 'manhattan' | 'scoring'
+  | 'blimp' | 'social' | 'fireworks' | 'lights' | 'wagon' | 'worm' | 'manhattan' | 'scoring'
 
 export interface CaptionCtx { team: string; other?: string; player?: string; extra?: string }
 
@@ -43,6 +43,12 @@ const BANK: Record<CaptionKind, string[]> = {
     'A quiet team talk from {team}: they know this is the moment.',
     '{team} take a breath and regroup in a tight circle.',
     'Heads together in the {team} huddle. Plans are being made.',
+  ],
+  social: [
+    'The fans are all over social media tonight!',
+    'Have a look at what the supporters are saying online.',
+    'The timelines are on fire for {team} right now.',
+    'Social media is buzzing: here is what the fans are posting.',
   ],
   wave: [
     'The wave is rolling right around the stadium!',

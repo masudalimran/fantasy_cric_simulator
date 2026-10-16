@@ -90,6 +90,9 @@ export interface TimeoutReel {
   /** How that match ended: "Soul Reapers won by 5 wickets (11 balls left)". */
   result?: string
   balls: BallEvent[]
+  /** The batting team's score as each ball was bowled in that match (for the little scoreboard), and its short name. */
+  scores?: { runs: number; wickets: number; balls: number }[]
+  teamShort?: string
   striker: Player; nonStriker: Player | null; bowler: Player
   battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
 }
@@ -155,10 +158,16 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
                 battingTeam={reel.battingTeam} bowlingTeam={reel.bowlingTeam} fielders={reel.fielders}
               />
             </div>
-            <div className="pointer-events-none absolute left-1.5 top-1.5 z-30 rounded bg-sky-500 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.15em] text-white">Highlights · {clip + 1}/{reel.balls.length}</div>
+            {/* the score as it was at this moment of that game, on an old TV scoreboard */}
+            {reel.scores?.[clip] && (
+              <div key={`sc${clip}`} className="pointer-events-none absolute left-1.5 top-1.5 z-30 rounded border border-amber-300/50 bg-black/80 px-1.5 py-0.5 font-mono leading-tight text-amber-300" style={{ textShadow: '0 0 6px #fbbf2488' }}>
+                <div className="text-[11px] font-extrabold tracking-wider">{reel.teamShort ?? reel.battingTeam.short} {reel.scores[clip].runs}/{reel.scores[clip].wickets}</div>
+                <div className="text-[10px] font-bold text-amber-200/90">Over {Math.floor(reel.scores[clip].balls / 6)}.{reel.scores[clip].balls % 6}</div>
+              </div>
+            )}
             {/* which match this is from, and how it ended */}
             <div className="pointer-events-none absolute right-1.5 top-1.5 z-30 max-w-[58%] rounded bg-black/75 px-1.5 py-0.5 text-right leading-tight">
-              <div className="truncate text-[10px] font-bold text-white">{reel.versus}</div>
+              <div className="truncate text-[10px] font-bold text-white">Highlight from {reel.versus.split(' · ')[0]}</div>
               {reel.result && <div className="truncate text-[9px] font-semibold text-amber-300">{reel.result}</div>}
             </div>
             <motion.div key={`cap${clip}`} className="pointer-events-none absolute bottom-1.5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-0.5 font-display text-lg leading-none tracking-wide text-amber-300 ring-1 ring-amber-300/60" initial={{ opacity: 0, scale: 1.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}>{captionOf(reel.balls[clip])}</motion.div>
@@ -184,7 +193,6 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
           {ch.players?.length === 1 && !small && <div className="text-[11px]"><OriginTag playerId={ch.players[0].player.id} /></div>}
         </motion.div>
         <div className="pointer-events-none absolute inset-0 opacity-[0.09]" style={{ background: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)' }} />
-        <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded bg-red-600 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-white"><span className="h-1.5 w-1.5 rounded-full bg-white" />LIVE</div>
       </div>
       {/* the progress of the 30 seconds, and the teams */}
       <div className="absolute inset-x-[5%] bottom-[9%] z-20 h-1.5 overflow-hidden rounded-full bg-white/15">

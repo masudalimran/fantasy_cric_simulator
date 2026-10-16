@@ -1,5 +1,5 @@
 import type { BallEvent } from '../engine/types'
-import { decodeBall, synthesizeBat, type ReelBall } from './reel'
+import { decodeBall, decodeScore, synthesizeBat, type ReelBall, type Snapshot } from './reel'
 import type { Season } from './types'
 
 // ---- A highlight from an earlier match, for the strategic timeout ------------------------------------------------
@@ -126,6 +126,8 @@ export function trackFor(seq: number, out: boolean): Track {
 export const isNotOutReview = (seq: number) => hash(seq, 6) < 0.034
 /** True for about two in five caught-behind outs, where the batsman asks for a review (the sound graph) first. */
 export const edgeWasReviewed = (seq: number) => hash(seq, 8) < 0.4
+/** How far over the popping crease a no-ball's front foot landed, in centimetres (a believable 2 to 24). */
+export const overstepCm = (seq: number): number => Math.round(2 + hash(seq, 15) * 22)
 /** True for about one boundary or wicket in three, where the cheerleaders come out. */
 export const cheersAfter = (seq: number) => hash(seq, 9) < 0.62
 /** A stable pick of 0 to n-1 for a ball, to choose between the break-the-monotony screens. */
@@ -151,6 +153,8 @@ export interface ReelHighlight {
   awayId: string | null
   date: string
   balls: ReelBall[]
+  /** The team's score as each ball was bowled (saved with the reel, or estimated for a match without one). */
+  scores: Snapshot[]
 }
 
 /**
@@ -173,7 +177,18 @@ export function reelCandidates(season: Season, excludeFixtureId?: string, look =
     const saved = r.reel && r.reel.k === 'bat' && r.reel.p === p && r.reel.e.length > 0 ? r.reel.e.map(decodeBall) : null
     const ballsOf = saved ?? synthesizeBat(r.fixtureId, runs, fours, sixes)
     if (ballsOf.length === 0) continue
-    out.push({ fixtureId: r.fixtureId, result: r.text, playerId: roster[p], kind: 'bat', homeId: f.homeId, awayId: f.awayId, date: f.date, balls: ballsOf, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` })
+    // the score at each ball: saved with the reel, else worked out from how far through the innings each ball falls
+    const team = Object.values(r.scores ?? {}).find((t) => t.runs >= runs) ?? Object.values(r.scores ?? {})[0]
+    let prev = 0
+    const scores: Snapshot[] = saved && r.reel?.s && r.reel.s.length === ballsOf.length
+      ? r.reel.s.map(decodeScore)
+      : ballsOf.map((b) => {
+          const frac = Math.max(0.06, Math.min(1, (b.seq - 20) / 380))
+          const rn = Math.max(prev + b.runsBat, Math.round((team?.runs ?? runs) * frac))
+          prev = rn
+          return { runs: rn, wickets: Math.min(team?.wickets ?? 0, Math.round((team?.wickets ?? 0) * frac * 0.9)), balls: Math.max(6, Math.round((team?.balls ?? 120) * frac)) }
+        })
+    out.push({ fixtureId: r.fixtureId, result: r.text, playerId: roster[p], kind: 'bat', homeId: f.homeId, awayId: f.awayId, date: f.date, balls: ballsOf, scores, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` })
   }
   return out
 }

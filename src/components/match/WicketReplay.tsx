@@ -6,6 +6,7 @@ import type { Track } from '../../season/moments'
 import { sfx } from '../../audio/sfx'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BallTrackView } from './ReviewScreens'
+import { RopeCatch } from './WicketScreens'
 
 /** Everything a replay needs to tell the story of one dismissal. */
 export interface ReplayInfo {
@@ -26,6 +27,10 @@ export interface ReplayInfo {
   details?: { lines: string[]; duck: boolean }
   /** For an lbw: what ball tracking found. When set the replay is the tracking picture instead of the view from above. */
   track?: Track
+  /** A catch in the deep: the replay is the third umpire's rope check (the ball's height and hang time, the catcher and his boot against the rope). */
+  rope?: { height: number; hang: number; cm: number }
+  /** How quickly the catcher reacted (milliseconds) and whether he dived, shown by his name. */
+  reaction?: { reaction: number; dive: boolean }
   /** The batsman's card in the top-left corner: his innings and how he got out (lines[0] is how, lines[1] the score line). */
   card?: { lines: string[]; duck: boolean }
 }
@@ -140,6 +145,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
   const size = Math.max(28, Math.min(w * 0.07, 50))
   const r = rate
   const tracked = kind === 'lbw' && !!info.track
+  const ropeMode = kind === 'caught' && !!info.rope && !!fielder
   // an appeal for lbw, a stumping or a catch behind starts with the fielders' shout
   useEffect(() => {
     if (kind !== 'lbw' && kind !== 'stumped') return
@@ -150,7 +156,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
   const keeper = { x: 50, y: 80 }
   const stumpsFly = kind === 'bowled' || kind === 'stumped' || kind === 'run out' || kind === 'hit wicket'
   // when things happen (seconds at rate 1)
-  const T = { run: 0.9, hit: 1.6, big: kind === 'caught' ? 2.5 : kind === 'run out' ? 2.4 : kind === 'caught and bowled' ? 2.1 : kind === 'stumped' ? 2.0 : kind === 'lbw' && info.track ? 3.4 : 1.7 }
+  const T = { run: 0.9, hit: 1.6, big: kind === 'caught' ? (info.rope ? 7.4 : 2.5) : kind === 'run out' ? 2.4 : kind === 'caught and bowled' ? 2.1 : kind === 'stumped' ? 2.0 : kind === 'lbw' && info.track ? 3.4 : 1.7 }
 
   // the ball's journey as positions over time
   const ball: { x: number[]; y: number[]; s: number[]; times: number[]; dur: number } =
@@ -176,6 +182,8 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: '68%' }}>
       {tracked ? (
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #0f2a45, #060b14 80%)' }}><BallTrackView track={info.track as Track} out rate={r} compact /></div>
+      ) : ropeMode && info.rope && fielder ? (
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #0f2a45, #060b14 80%)' }}><RopeCatch compact w={w} info={{ type: 'rope', batsman, batTeam, bowler, bowlTeam, rate: r, fielder, ...info.rope }} /></div>
       ) : (
         <>
       {/* the ground from above, with the pitch down the middle */}
@@ -187,7 +195,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
         </>
       )}
 
-      {!tracked && (
+      {!tracked && !ropeMode && (
         <>
       {/* the ball */}
       <motion.span
@@ -214,7 +222,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
       {/* the fielder or keeper who made it happen */}
       {fielder && (kind === 'caught' || kind === 'run out' || kind === 'stumped') && (
         <Actor
-          player={fielder} team={bowlTeam} size={size} tag={kind === 'stumped' ? 'Keeper' : 'Fielder'}
+          player={fielder} team={bowlTeam} size={size} tag={kind === 'stumped' ? 'Keeper' : 'Fielder'} note={info.reaction ? `${info.reaction.reaction} ms${info.reaction.dive ? ' · dive' : ''}` : undefined}
           from={kind === 'stumped' ? keeper : { x: F.x < 50 ? F.x - 6 : F.x + 6, y: F.y + 8 }}
           path={kind === 'stumped' ? undefined : [{ x: F.x < 50 ? F.x - 6 : F.x + 6, y: F.y + 8 }, { x: F.x, y: F.y }]} times={kind === 'stumped' ? undefined : [0, 1]} dur={kind === 'stumped' ? 0.1 : (kind === 'caught' ? 1.9 : 1.1) * r}
           jump={(kind === 'caught' ? 2.4 : kind === 'run out' ? 2.3 : 2.0) * r}

@@ -128,10 +128,50 @@ const EXTRA_STYLE = {
   legbye: { title: 'LEG BYE!', color: '#a5b4fc', stroke: '#312e81', sub: 'Off the pad and away. They run.', tag: 'Extra: leg bye' },
 } as const
 
+/** The wide, seen from above: the popping crease, the wide lines either side of the stumps, and the ball going past the outside of one. */
+function WideView({ info }: { info: ExtraInfo }) {
+  const { runs, bowler, bowlTeam, rate: r } = info
+  const { box, w } = useWidth()
+  const off = Math.random() < 0 ? -1 : 1 // (the side is fixed per ball by the path below)
+  void off
+  const side = bowler.name.length % 2 ? 1 : -1 // a stable side for the same bowler
+  const x = (v: number) => 50 + side * v
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Wide">
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #0b2a19, #14532d 60%, #0b2a19)' }} />
+      <svg viewBox="0 0 100 62" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>
+        {/* the strip */}
+        <rect x="38" y="0" width="24" height="62" fill="#c9a864" opacity="0.5" />
+        {/* the popping crease across the pitch, and the bowling crease behind the bowler */}
+        <line x1="2" x2="98" y1="40" y2="40" stroke="#fff" strokeWidth="0.9" />
+        <text x="3" y="38" fontSize="3" fill="#fff" opacity="0.8" fontWeight="700">POPPING CREASE</text>
+        {/* the stumps */}
+        {[46, 50, 54].map((sx) => <line key={sx} x1={sx} x2={sx} y1="42.5" y2="47" stroke="#fef3c7" strokeWidth="1.2" strokeLinecap="round" />)}
+        {/* the wide lines, either side of the stumps */}
+        {[-1, 1].map((d) => <line key={d} x1={50 + d * 15} x2={50 + d * 15} y1="8" y2="56" stroke="#ef4444" strokeWidth="0.7" strokeDasharray="2 1.4" />)}
+        <text x={50 + side * 15 + 1} y="10" fontSize="3" fill="#fca5a5" fontWeight="700">WIDE LINE</text>
+        {/* the ball: from the bowler's end, past the outside of the wide line */}
+        <motion.path d={`M50 6 Q${x(8)} 22 ${x(24)} 40 T${x(30)} 56`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" strokeDasharray="2 1.2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn' }} />
+        <motion.circle r="1.7" fill="#ef4444" stroke="#fecaca" strokeWidth="0.4" initial={{ cx: 50, cy: 6 }} animate={{ cx: [50, x(8), x(24), x(30)], cy: [6, 22, 40, 56] }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn', times: [0, 0.4, 0.75, 1] }} />
+        <motion.g initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.1 * r, type: 'spring' }} style={{ transformOrigin: `${x(24)}px 40px` }}>
+          <circle cx={x(24)} cy="40" r="3" fill="none" stroke="#fbbf24" strokeWidth="0.8" />
+        </motion.g>
+      </svg>
+      <Tag text="Extra: wide" color="#fbbf24" />
+      <SkipTag />
+      <motion.div className="absolute inset-x-0 bottom-[5%] z-40 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.3 * r, type: 'spring', stiffness: 260, damping: 15 }}>
+        <div className="font-display leading-none tracking-wide" style={{ color: '#fbbf24', fontSize: Math.max(40, Math.min(w * 0.13, 88)), WebkitTextStroke: '2px #78350f', paintOrder: 'stroke fill', textShadow: '0 0 30px #fbbf24aa' }}>WIDE!</div>
+        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>Outside the wide line · +{runs} {runs === 1 ? 'run' : 'runs'} <span className="text-slate-300">({bowlTeam.short}, {bowler.name.split(' ')[0]})</span></div>
+      </motion.div>
+    </div>
+  )
+}
+
 export function ExtraScreen({ info }: { info: ExtraInfo }) {
   const { kind, runs, bowler, bowlTeam, batsman, batTeam, keeper, rate } = info
   const { box, w } = useWidth()
   const r = rate
+  if ((kind as ExtraInfo['kind']) === 'wide') return <WideView info={info} />
   const st = EXTRA_STYLE[kind]
   const size = Math.max(30, Math.min(w * 0.08, 52))
   // where the ball goes: wide of the stumps, past the keeper, or off the pad down the leg side
@@ -218,6 +258,54 @@ export function MaidenScreen({ info }: { info: MaidenInfo }) {
         <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(40, Math.min(w * 0.13, 88)), WebkitTextStroke: '2px #064e3b', paintOrder: 'stroke fill', textShadow: '0 0 30px #34d399aa' }} initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.45 * r, type: 'spring', stiffness: 260, damping: 15 }}>{word}</motion.div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.7 * r }} className="text-sm font-semibold text-slate-100"><b className="text-emerald-300">{bowler.name}</b> gives away nothing: six dot balls. {overs}{streak >= 2 && <span className="ml-1 font-extrabold text-red-300">The pressure is building.</span>}</motion.div>
       </div>
+    </div>
+  )
+}
+
+
+// ---- NO BALL: the front foot over the line ---------------------------------------------------------------------------
+
+export interface NoBallInfo { bowler: Player; bowlTeam: Team; /** How far over the popping crease the front foot landed, in centimetres. */ cm: number; rate: number }
+
+/** The bowler's front foot comes down beyond the popping crease: the line, the boot over it, how far, and NO BALL! Click to skip. */
+export function NoBallScreen({ info }: { info: NoBallInfo }) {
+  const { bowler, bowlTeam, cm, rate: r } = info
+  const { box, w } = useWidth()
+  const over = Math.min(22, 4 + cm * 0.7)
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="No ball">
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #1c0a0a, #3b0d0d 55%, #14532d 56%, #0b2a19)' }} />
+      <motion.div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 60%, transparent 40%, #ef444455)' }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ delay: 1.4 * r, duration: 0.7, repeat: Infinity }} />
+      <svg viewBox="0 0 100 62" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>
+        <g transform="translate(0 -7)">
+        {/* the ground close up, with the popping crease painted across it */}
+        <rect x="0" y="34" width="100" height="28" fill="#1b7a43" />
+        <rect x="56" y="34" width="2.4" height="28" fill="#fff" />
+        <text x="59" y="46" fontSize="3" fill="#fff" opacity="0.85" fontWeight="700">POPPING CREASE</text>
+        {/* the bowling boot lands: heel behind the line, toe well over it */}
+        <motion.g initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 * r, duration: 0.7 * r, ease: 'easeIn' }}>
+          <rect x={57.2 + over - 20} y="26" width="20" height="8.5" rx="4" fill="#f1f5f9" stroke="#475569" strokeWidth="0.7" />
+          <rect x={57.2 + over - 20} y="32" width="20" height="2.6" rx="1.2" fill="#0f172a" />
+          <rect x={57.2 + over - 12} y="21" width="6" height="8" rx="2" fill="#e8b48a" />
+        </motion.g>
+        {/* the measurement from the line to the toe */}
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 * r }}>
+          <line x1="58.4" x2={57.2 + over} y1="40" y2="40" stroke="#fca5a5" strokeWidth="1" />
+          <line x1="58.4" x2="58.4" y1="38" y2="42" stroke="#fca5a5" strokeWidth="0.9" /><line x1={57.2 + over} x2={57.2 + over} y1="38" y2="42" stroke="#fca5a5" strokeWidth="0.9" />
+          <text x={58.4 + (over - 1.2) / 2} y="52" fontSize="3.6" fontWeight="800" textAnchor="middle" fill="#fecaca">{cm} cm over</text>
+        </motion.g>
+        </g>
+      </svg>
+      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />Overstepped</div>
+      <SkipTag />
+      <motion.div className="absolute left-[8%] top-[18%] z-20 text-center" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 * r }}>
+        <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={bowler} team={bowlTeam} size={Math.max(36, Math.min(w * 0.1, 60))} /></span>
+        <div className="mx-auto mt-1 max-w-[110px] truncate rounded bg-black/70 px-1.5 text-[11px] font-semibold text-white">{bowler.name}</div>
+      </motion.div>
+      <motion.div className="absolute inset-x-0 bottom-[4%] z-40 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r, type: 'spring', stiffness: 260, damping: 15 }}>
+        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(34, Math.min(w * 0.11, 76)), WebkitTextStroke: '2px #7f1d1d', paintOrder: 'stroke fill', textShadow: '0 0 30px #ef4444aa' }}>NO BALL!</div>
+        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>Front foot over the line · +1 run and a free hit next</div>
+      </motion.div>
     </div>
   )
 }
