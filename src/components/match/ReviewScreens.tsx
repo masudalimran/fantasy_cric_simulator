@@ -43,7 +43,7 @@ const sx = (x: number, y: number) => 50 + x * halfWidth(y) * 1.5
  * The broadcast ball-tracking picture: the pitch from behind the bowler, the ball's path to where it pitched, where it hit the pad,
  * and where it was going to hit the stumps. Three chips say what it found. `out`: the stumps are shown hit (red) or missed.
  */
-export function BallTrackView({ track, out, rate = 1, compact = false }: { track: Track; out: boolean; rate?: number; /** Smaller, with the three findings in a column at the side (for the wicket replay, which has a card on top and a word underneath). */ compact?: boolean }) {
+export function BallTrackView({ track, out, rate = 1, compact = false, after = 0 }: { track: Track; out: boolean; rate?: number; /** Seconds to wait before it starts (while something else is on the screen). */ after?: number; /** Smaller, with the three findings in a column at the side (for the wicket replay, which has a card on top and a word underneath). */ compact?: boolean }) {
   const r = rate
   const P = { x: sx(track.pitchX, 58), y: 58 }
   const I = { x: sx(track.impactX, 32), y: 32 }
@@ -61,17 +61,17 @@ export function BallTrackView({ track, out, rate = 1, compact = false }: { track
         <rect x={sx(-0.18, 14)} y={8} width={sx(0.18, 14) - sx(-0.18, 14)} height={9} fill={hit ? '#ef444455' : '#ffffff18'} stroke={hit ? '#ef4444' : '#fff'} strokeWidth="0.3" />
         {[-0.12, 0, 0.12].map((x) => <line key={x} x1={sx(x, 14)} x2={sx(x, 14)} y1={8} y2={16} stroke="#fef3c7" strokeWidth="0.7" strokeLinecap="round" />)}
         {/* the path: release to pitching, pitching to impact (a different colour: after the bounce), impact to the stumps (projected) */}
-        <motion.polyline points={`${release.x},${release.y} ${P.x},${P.y}`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9 * r }} />
-        <motion.polyline points={`${P.x},${P.y} ${I.x},${I.y}`} fill="none" stroke="#fb923c" strokeWidth="1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.9 * r, duration: 0.7 * r }} />
-        <motion.polyline points={`${I.x},${I.y} ${S.x},${S.y}`} fill="none" stroke={hit ? '#ef4444' : '#94a3b8'} strokeWidth="0.9" strokeDasharray="1.4 1.1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 1.8 * r, duration: 0.7 * r }} />
-        <motion.circle cx={P.x} cy={P.y} r="2" fill={col(track.pitching)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.9 * r, type: 'spring' }} style={{ transformOrigin: `${P.x}px ${P.y}px` }} />
-        <motion.circle cx={I.x} cy={I.y} r="2" fill={col(track.impact)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.6 * r, type: 'spring' }} style={{ transformOrigin: `${I.x}px ${I.y}px` }} />
-        <motion.circle cx={S.x} cy={S.y} r="1.6" fill={col(track.wickets)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 2.5 * r, type: 'spring' }} style={{ transformOrigin: `${S.x}px ${S.y}px` }} />
+        <motion.polyline points={`${release.x},${release.y} ${P.x},${P.y}`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: after * r, duration: 0.9 * r }} />
+        <motion.polyline points={`${P.x},${P.y} ${I.x},${I.y}`} fill="none" stroke="#fb923c" strokeWidth="1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 0.9) * r, duration: 0.7 * r }} />
+        <motion.polyline points={`${I.x},${I.y} ${S.x},${S.y}`} fill="none" stroke={hit ? '#ef4444' : '#94a3b8'} strokeWidth="0.9" strokeDasharray="1.4 1.1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 1.8) * r, duration: 0.7 * r }} />
+        <motion.circle cx={P.x} cy={P.y} r="2" fill={col(track.pitching)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 0.9) * r, type: 'spring' }} style={{ transformOrigin: `${P.x}px ${P.y}px` }} />
+        <motion.circle cx={I.x} cy={I.y} r="2" fill={col(track.impact)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 1.6) * r, type: 'spring' }} style={{ transformOrigin: `${I.x}px ${I.y}px` }} />
+        <motion.circle cx={S.x} cy={S.y} r="1.6" fill={col(track.wickets)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 2.5) * r, type: 'spring' }} style={{ transformOrigin: `${S.x}px ${S.y}px` }} />
       </svg>
       {(
         <div className={compact ? 'absolute left-2 top-[24%] z-20 flex w-[26%] flex-col gap-1 text-center' : 'absolute inset-x-2 bottom-2 z-20 grid grid-cols-3 gap-1.5 text-center'}>
           {([['Pitching', track.pitching, 0.9], ['Impact', track.impact, 1.6], ['Wickets', track.wickets, 2.5]] as const).map(([label, value, at]) => (
-            <motion.div key={label} className="rounded-lg bg-black/75 px-1 py-1 ring-1 ring-white/15" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: at * r }}>
+            <motion.div key={label} className="rounded-lg bg-black/75 px-1 py-1 ring-1 ring-white/15" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (after + at) * r }}>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
               <div className="text-[11px] font-extrabold leading-tight" style={{ color: col(value) }}>{value}</div>
             </motion.div>
@@ -85,26 +85,59 @@ export function BallTrackView({ track, out, rate = 1, compact = false }: { track
 
 // ---- The sound graph for a caught behind ----------------------------------------------------------------------------------------
 
-/** The broadcast's edge-detection picture: a sound wave along the bottom, flat, then a spike as the ball passes the bat. */
-export function SnickoView({ rate = 1 }: { rate?: number }) {
-  const r = rate
+const SPIKE_AT = 122 // where along the graph the ball passes the bat
+const wave = (): string => {
   const pts: string[] = []
   for (let i = 0; i <= 100; i++) {
     const x = i * 2
     const spike = i >= 58 && i <= 64 ? (i % 2 ? -1 : 1) * (26 - Math.abs(i - 61) * 6) : 0
     pts.push(`${x},${50 + Math.sin(i * 12.9898) * 2 + spike}`)
   }
+  return pts.join(' ')
+}
+/** Seconds the sound-graph picture runs for: the line sweeps across at full speed, then the same moment again in slow motion, zoomed in on the bat. */
+export const SNICKO_SECONDS = 7.4
+const PASS_ONE = 2.2
+const PASS_TWO_AT = 3.1
+const PASS_TWO = 3.6
+
+/**
+ * The broadcast's edge-detection picture: a sound wave along the bottom, and a straight vertical line that sweeps across it. Where the line crosses
+ * the ball passing the bat the wave spikes. Then the same moment plays again in slow motion, zoomed in, so the spike can be seen to line up with the bat.
+ */
+export function SnickoView({ rate = 1, after = 0 }: { rate?: number; after?: number }) {
+  const r = rate
+  const pts = wave()
+  const slowFrom = 100, slowTo = 146 // the part of the graph the slow-motion replay looks at
+  const hitFrac1 = SPIKE_AT / 200
+  const hitFrac2 = (SPIKE_AT - slowFrom) / (slowTo - slowFrom)
   return (
     <div className="absolute inset-0">
-      <svg viewBox="0 0 200 100" preserveAspectRatio="none" className="absolute inset-x-[4%] top-[28%] h-[40%] w-[92%]" aria-hidden>
+      {/* first look, at full speed */}
+      <svg viewBox="0 0 200 100" preserveAspectRatio="none" className="absolute inset-x-[4%] top-[17%] h-[27%] w-[92%]" aria-hidden>
+        <defs><clipPath id="snicko-reveal"><motion.rect x="0" y="0" height="100" initial={{ width: 0 }} animate={{ width: 200 }} transition={{ delay: after * r, duration: PASS_ONE * r, ease: 'linear' }} /></clipPath></defs>
         <line x1="0" x2="200" y1="50" y2="50" stroke="#ffffff22" strokeWidth="0.5" />
-        <line x1="122" x2="122" y1="0" y2="100" stroke="#fbbf24" strokeWidth="0.8" strokeDasharray="3 2" />
-        <text x="124" y="8" fontSize="7" fill="#fbbf24" fontWeight="700">BALL PASSES BAT</text>
-        <motion.polyline points={pts.join(' ')} fill="none" stroke="#34d399" strokeWidth="1.4" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 2.2 * r, ease: 'linear' }} />
+        <polyline points={pts} fill="none" stroke="#34d399" strokeWidth="1.4" strokeLinejoin="round" clipPath="url(#snicko-reveal)" />
+        <motion.line x1="0" x2="0" y1="0" y2="100" stroke="#fbbf24" strokeWidth="1" initial={{ x: 0, opacity: 0 }} animate={{ x: 200, opacity: [0, 1, 1, 0] }} transition={{ delay: after * r, duration: PASS_ONE * r, ease: 'linear', opacity: { delay: after * r, duration: PASS_ONE * r, times: [0, 0.03, 0.97, 1] } }} />
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: (after + PASS_ONE * hitFrac1) * r }}>
+          <line x1={SPIKE_AT} x2={SPIKE_AT} y1="0" y2="100" stroke="#fbbf24" strokeWidth="0.8" strokeDasharray="3 2" />
+          <text x={SPIKE_AT + 2} y="8" fontSize="7" fill="#fbbf24" fontWeight="700">BALL PASSES BAT</text>
+        </motion.g>
       </svg>
+      {/* the same moment again, slowly, up close */}
+      <motion.div className="absolute inset-x-[4%] top-[47%] z-10 h-[27%] w-[92%] overflow-hidden rounded-lg border border-amber-300/40 bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: (after + PASS_TWO_AT - 0.2) * r }}>
+        <div className="absolute left-2 top-1 z-10 text-[10px] font-extrabold uppercase tracking-widest text-amber-300">Slow motion replay</div>
+        <svg viewBox={`${slowFrom} 0 ${slowTo - slowFrom} 100`} preserveAspectRatio="none" className="h-full w-full" aria-hidden>
+          <defs><clipPath id="snicko-reveal-slow"><motion.rect x={slowFrom} y="0" height="100" initial={{ width: 0 }} animate={{ width: slowTo - slowFrom }} transition={{ delay: (after + PASS_TWO_AT) * r, duration: PASS_TWO * r, ease: 'linear' }} /></clipPath></defs>
+          <line x1={slowFrom} x2={slowTo} y1="50" y2="50" stroke="#ffffff22" strokeWidth="0.4" />
+          <polyline points={pts} fill="none" stroke="#34d399" strokeWidth="1.1" strokeLinejoin="round" clipPath="url(#snicko-reveal-slow)" />
+          <motion.line x1={slowFrom} x2={slowFrom} y1="0" y2="100" stroke="#fbbf24" strokeWidth="0.8" initial={{ x: 0, opacity: 0 }} animate={{ x: slowTo - slowFrom, opacity: [0, 1, 1, 0.5] }} transition={{ delay: (after + PASS_TWO_AT) * r, duration: PASS_TWO * r, ease: 'linear', opacity: { delay: (after + PASS_TWO_AT) * r, duration: PASS_TWO * r, times: [0, 0.03, 0.97, 1] } }} />
+          <motion.line x1={SPIKE_AT} x2={SPIKE_AT} y1="0" y2="100" stroke="#fbbf24" strokeWidth="0.5" strokeDasharray="2 1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: (after + PASS_TWO_AT + PASS_TWO * hitFrac2) * r }} />
+        </svg>
+      </motion.div>
       <div className="absolute inset-x-2 bottom-2 z-20 grid grid-cols-3 gap-1.5 text-center">
-        {([['Sound', 'Spike', 1.4], ['Bat', 'Ball passes', 1.4], ['Verdict', 'Edge', 2.3]] as const).map(([label, value, at]) => (
-          <motion.div key={label} className="rounded-lg bg-black/75 px-1 py-1 ring-1 ring-white/15" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: at * r }}>
+        {([['Sound', 'Spike', PASS_ONE * hitFrac1 + 0.2], ['Bat', 'Ball passes', PASS_ONE * hitFrac1 + 0.2], ['Verdict', 'Edge', PASS_TWO_AT + PASS_TWO]] as const).map(([label, value, at]) => (
+          <motion.div key={label} className="rounded-lg bg-black/75 px-1 py-1 ring-1 ring-white/15" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (after + at) * r }}>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
             <div className="text-[11px] font-extrabold leading-tight" style={{ color: '#34d399' }}>{value}</div>
           </motion.div>
@@ -113,7 +146,6 @@ export function SnickoView({ rate = 1 }: { rate?: number }) {
     </div>
   )
 }
-
 // ---- A review: the T signal, then ball tracking -------------------------------------------------------------------
 
 export interface ReviewInfo {
@@ -125,6 +157,8 @@ export interface ReviewInfo {
   track: Track
   /** 'edge' is a caught behind checked with the sound graph instead of ball tracking. */
   kind?: 'track' | 'edge'
+  /** Nobody asked for a review: the picture is shown on its own, as the broadcast does for every lbw and every catch behind. */
+  plain?: boolean
   rate: number
 }
 
@@ -135,26 +169,29 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
   const asker = by === 'bat' ? batsman : bowler
   const askTeam = by === 'bat' ? batTeam : bowlTeam
   const verdict = out ? 'OUT' : 'NOT OUT'
+  const plain = !!info.plain
+  const t0 = plain ? 0.3 : 2.3 // when the picture starts
+  const len = info.kind === 'edge' ? SNICKO_SECONDS : 3.3 // how long it runs before the verdict
   // the appeal, the beeps while the picture is checked, then the decision
   useEffect(() => {
-    const ts = [window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 2300 * r), window.setTimeout(() => (out ? sfx.decisionOut() : sfx.decisionNotOut()), 5600 * r)]
+    const ts = [window.setTimeout(() => sfx.howzat(), 100), ...(plain ? [] : [window.setTimeout(() => sfx.thinking(), 2300 * r)]), window.setTimeout(() => (out ? sfx.decisionOut() : sfx.decisionNotOut()), (t0 + len) * r)]
     return () => ts.forEach(clearTimeout)
-  }, [out, r])
-  const sub = info.kind === 'edge' ? 'A clear spike: the decision stands' : out ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
+  }, [out, r, plain, t0, len])
+  const sub = plain ? (info.kind === 'edge' ? 'Snicko shows the spike: caught behind' : out ? 'Ball tracking: hitting the stumps' : 'Ball tracking') : info.kind === 'edge' ? 'A clear spike: the decision stands' : out ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
   return (
     <div ref={box} className="absolute inset-0" aria-label="Review">
-      <TvFrame title="Decision review">
+      <TvFrame title={plain ? (info.kind === 'edge' ? 'Snicko' : 'Ball tracking') : 'Decision review'}>
         {/* the T signal */}
-        <motion.div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2" initial={{ opacity: 1 }} animate={{ opacity: [1, 1, 0] }} transition={{ duration: 2.4 * r, times: [0, 0.8, 1] }}>
+        {!plain && <motion.div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2" initial={{ opacity: 1 }} animate={{ opacity: [1, 1, 0] }} transition={{ duration: 2.4 * r, times: [0, 0.8, 1] }}>
           <motion.div className="grid place-items-center rounded-full border-4 border-amber-300 bg-black/50 font-display text-amber-300" style={{ width: Math.max(70, w * 0.2), height: Math.max(70, w * 0.2), fontSize: Math.max(48, w * 0.14) }} initial={{ scale: 0 }} animate={{ scale: [0, 1.2, 1] }} transition={{ type: 'spring', stiffness: 220, damping: 12 }}>T</motion.div>
           <div className="font-display text-4xl leading-none tracking-wide text-white">REVIEW!</div>
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-100"><PlayerAvatar player={asker} team={askTeam} size={28} />{asker.name} asks for a review</div>
-        </motion.div>
+        </motion.div>}
         {/* ball tracking and the verdict */}
-        <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.3 * r }}>
-          {info.kind === 'edge' ? <SnickoView rate={r} /> : <BallTrackView track={track} out={out} rate={r} />}
+        <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t0 * r }}>
+          {info.kind === 'edge' ? <SnickoView rate={r} after={t0} /> : <BallTrackView track={track} out={out} rate={r} after={t0} />}
         </motion.div>
-        <motion.div className="absolute inset-x-0 top-[10%] z-30 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: (2.3 + 3.3) * r, type: 'spring', stiffness: 260, damping: 15 }}>
+        <motion.div className="absolute inset-x-0 top-[10%] z-30 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: (t0 + len) * r, type: 'spring', stiffness: 260, damping: 15 }}>
           <div className="font-display leading-none tracking-wide" style={{ color: out ? '#f87171' : '#34d399', fontSize: Math.max(36, Math.min(w * 0.13, 84)), WebkitTextStroke: '2px #05070d', paintOrder: 'stroke fill', textShadow: `0 0 30px ${out ? '#ef4444' : '#10b981'}aa` }}>{verdict}</div>
           <div className="text-xs font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{sub}</div>
         </motion.div>
