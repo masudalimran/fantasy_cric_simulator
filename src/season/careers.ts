@@ -67,8 +67,28 @@ export function seasonScore(season: Season, teamId: string): number {
   return played ? won / played : 0.5
 }
 
-/** A team's income for the year: a share of what its squad cost, more for winning, and a bonus for each title. */
-export const incomeOf = (bill: number, score: number, titles: number): number => Math.round(0.6 * bill + 70 * score + 10 * titles)
+/**
+ * How many times its wage bill a team earns in a year, from how it played: a mostly losing team earns 1.5x, a middling one about 2x, one that wins
+ * most of its games 3x to 4x, and an unbeaten one 5x. Each title adds a little more (never past 5x). The wages come out of this, and what is left buys players.
+ */
+const MULT_CURVE: [number, number][] = [[0, 1.5], [0.35, 1.5], [0.5, 2], [0.65, 3], [0.85, 4], [1, 5]]
+export function incomeMultiple(score: number, titles = 0): number {
+  const s = Math.max(0, Math.min(1, score))
+  let m = 5
+  for (let i = 1; i < MULT_CURVE.length; i++) {
+    const [x0, y0] = MULT_CURVE[i - 1], [x1, y1] = MULT_CURVE[i]
+    if (s <= x1) { m = y0 + ((s - x0) / (x1 - x0)) * (y1 - y0); break }
+  }
+  return Math.min(5, m + 0.3 * titles)
+}
+/** A team's income for the year: its wage bill times how well it played. */
+export const incomeOf = (bill: number, score: number, titles: number): number => Math.round(bill * incomeMultiple(score, titles))
+
+/** A fee for the coming year: it follows how many rating points the player gained or lost (d), and never strays far from what he is worth. */
+export function nextFee(was: number, worth: number, d: number): number {
+  const raised = Math.round(was * (1 + Math.max(-0.2, Math.min(0.3, d * 0.04))))
+  return Math.max(1, Math.min(Math.round(worth * 1.5), Math.max(Math.round(worth * 0.7), raised)))
+}
 
 // ---- Youth ----------------------------------------------------------------------------------------------------------
 
@@ -185,8 +205,7 @@ export function yearEnd({ season, base, titles, seed, catchUp }: YearEndInput): 
       const worth = Math.max(1, Math.round(marketValue(p, 0, shifts[id]) * FEE_SHARE))
       const was = market.fees?.[id] ?? worth
       // a good year puts the fee up, a bad one brings it down, and it never strays far from what he is worth
-      const raised = Math.round(was * (1 + Math.max(-0.2, Math.min(0.3, d * 0.04))))
-      market.fees![id] = Math.max(1, Math.min(Math.round(worth * 1.5), Math.max(Math.round(worth * 0.7), raised)))
+      market.fees![id] = nextFee(was, worth, d)
     }
   }
   shifts = fade(market, shifts, base, next)
@@ -221,9 +240,9 @@ export function yearEnd({ season, base, titles, seed, catchUp }: YearEndInput): 
   for (const teamId of Object.keys(market.squads)) {
     const squad = market.squads[teamId]
     const bill = squad.filter((id) => !pending.some((p) => p.playerId === id)).reduce((s, id) => { const p = base.get(id); return p ? s + feeOf(market, p, shifts[id]) : s }, 0)
-    const income = incomeOf(billOf(m0, teamId, base, season.shifts), seasonScore(season, teamId), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
+    const income = incomeOf(bill, seasonScore(season, teamId), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
     const purse = market.budgets[teamId] ?? 0
-    market.budgets[teamId] = Math.min(250, purse + income - bill)
+    market.budgets[teamId] = Math.min(Math.max(200, bill * 8), purse + income - bill)
     reports.set(teamId, { year: next, income, bill, before: purse, after: market.budgets[teamId], retired: retiredByTeam.get(teamId)?.filter((id) => allRetired.includes(id)) ?? [], released: [], signed: [] })
   }
 
@@ -385,4 +404,39 @@ export function boardBailout(season: Season): Season {
   const me = season.myTeamId
   if (!m || !me || (m.budgets[me] ?? 0) >= 0) return season
   return { ...season, market: { ...m, budgets: { ...m.budgets, [me]: 0 } } }
+}
+
+/**
+ * What the squad will cost next year if nobody leaves: every fee after the raise or cut he is expected to get (young players are on the way up,
+ * veterans in their last two seasons fade), and a veteran whose career ends next year at the higher fee it would take to keep him.
+ * Works from what is saved, so careers that started before fees existed show it too.
+ */
+export function projectedBill(season: Season, base: Map<string, Player>): { total: number; rows: { id: string; now: number; next: number; retiring: boolean }[] } {
+  const m = season.market
+  const me = season.myTeamId
+  if (!m || !me) return { total: 0, rows: [] }
+  const next = season.year + 1
+  const rows = (m.squads[me] ?? []).map((id) => {
+    const p = base.get(id)
+    if (!p) return { id, now: 0, next: 0, retiring: false }
+    const shift = season.shifts?.[id]
+    const now = feeOf(m, p, shift)
+    const o = overall(applyShift(p, shift))
+    const room = isYouth(m, id) ? Math.max(0, ceilingOf(m, p) - o) : 0
+    const left = retireYearOf(m, id, season.year) - next
+    const d = room * 0.5 - (left <= 1 ? 2 : left <= 2 ? 1 : 0)
+    const worth = Math.max(1, Math.round(marketValue(p, 0, shift) * FEE_SHARE * Math.exp(d / 15)))
+    const fee = nextFee(now, worth, d)
+    const retiring = left <= 0
+    return { id, now, next: retiring ? Math.round(fee * EXTEND_RAISE) : fee, retiring }
+  })
+  return { total: rows.reduce((s, r) => s + r.next, 0), rows }
+}
+
+/** How a team has played so far this season and what that would earn at the turn of the year (before any titles). */
+export function projectedIncome(season: Season, bill: number): { score: number; multiple: number; income: number } {
+  const me = season.myTeamId
+  const score = me ? seasonScore(season, me) : 0.5
+  const multiple = incomeMultiple(score)
+  return { score, multiple, income: Math.round(bill * multiple) }
 }

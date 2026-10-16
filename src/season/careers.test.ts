@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { overall } from '../data/builders'
 import { BUILT_IN_TEAMS } from '../data/teams'
-import { boardBailout, contractsPending, extendVeteran, generateYouth, letGo, retireVeteran, retireYearOf, yearEnd } from './careers'
+import { boardBailout, contractsPending, extendVeteran, generateYouth, incomeMultiple, letGo, projectedBill, projectedIncome, retireVeteran, retireYearOf, yearEnd } from './careers'
 import { generateSeason } from './generate'
 import { playerIndex, SQUAD_FLOOR } from './market'
 import { applyShift } from './progression'
@@ -86,5 +86,25 @@ describe('careers, fees and the yearly budget', () => {
     const cut = letGo(s, base, id)
     expect(cut.season.market!.squads.bleach).not.toContain(id)
     expect(cut.season.market!.budgets.bleach).toBeGreaterThan(500)
+  })
+
+  it('income is a multiple of the wage bill that grows with winning: 1.5x losing, 2x middling, 3-5x winning', () => {
+    expect(incomeMultiple(0.2)).toBe(1.5)
+    expect(incomeMultiple(0.5)).toBe(2)
+    expect(incomeMultiple(0.65)).toBe(3)
+    expect(incomeMultiple(0.85)).toBe(4)
+    expect(incomeMultiple(1)).toBe(5)
+    expect(incomeMultiple(0.5, 2)).toBeCloseTo(2.6)
+    expect(incomeMultiple(1, 3)).toBe(5)
+  })
+
+  it('shows the wages for next year for a career that has no fees saved yet (an older save)', () => {
+    const s = start()
+    const base = playerIndex(teams, s.market)
+    expect(s.market!.fees).toBeUndefined()
+    const out = projectedBill(s, base)
+    expect(out.rows).toHaveLength(s.market!.squads.bleach.length)
+    expect(out.total).toBeGreaterThan(30)
+    expect(projectedIncome(s, out.total).income).toBe(Math.round(out.total * 2)) // nothing played yet: middling
   })
 })

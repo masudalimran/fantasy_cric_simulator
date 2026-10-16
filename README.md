@@ -118,7 +118,7 @@ that links to the market) and on the Home page.
   is full they release their weakest player.
 - **Yearly fees, retirement and the academy** (`season/careers.ts`): one purse only. Every player costs a yearly fee (half
   of what he is worth; it moves with how he improved or faded). When you start the next year (`yearEnd`), each team earns
-  income (60% of its bill + win rate + titles, plus your catch-up) and pays its bill. Computer teams over budget release
+  income (its wage bill times a multiple from its win rate: 1.5x mostly losing, 2x middling, 3x at 65% wins, 4x at 85%, 5x unbeaten, +0.3x per title, never past 5x; plus your catch-up) and pays its bill. The Market header shows **Budget** and **Wages next yr** (every current player's fee with the raise he is expected to get, a retiring veteran at the extension fee; projectedBill, derived from saved data so older careers show it too), and *How the money works* says what this year's win rate would earn. Computer teams over budget release
   players, then fill their squads from the pool (best prospects first, swapping out their weakest). If your purse ends below
   zero, the **Contracts** sheet (`ContractsGate`, cannot be dismissed) asks who to let go; fees come back. Every starter has
   a career of 7 to 10 seasons (9 to 12 for players who joined later) and fades in the last two. Computer teams' veterans

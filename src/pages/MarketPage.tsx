@@ -15,7 +15,7 @@ import { originOf } from '../data/origin'
 import { daysBetween, formatDate } from '../season/dates'
 import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
-import { billOf, feeOf, retireYearOf } from '../season/careers'
+import { feeOf, projectedBill, projectedIncome, retireYearOf } from '../season/careers'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 import type { Season } from '../season/types'
@@ -74,6 +74,8 @@ export function MarketPage() {
   const next = nextWindow(season, today)
   const purse = market.budgets[season.myTeamId] ?? 0
   const squadIds = market.squads[season.myTeamId] ?? []
+  const outlook = projectedBill(season, index)
+  const income = projectedIncome(season, outlook.total)
   const shown = (p: Player) => applyShift(p, season.shifts?.[p.id])
   const worth = (p: Player) => marketValue(p, recentForm(season, p.id), season.shifts?.[p.id])
 
@@ -183,12 +185,17 @@ export function MarketPage() {
             </p>
           </div>
           <div className="flex items-center gap-4 text-center">
-            <div><div className={`font-display text-4xl leading-none ${purse < 0 ? 'text-red-300' : 'text-amber-300'}`}>{purse}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">coins</div></div>
-            <div title="What your squad costs every year, paid out of the income your team earns"><div className="font-display text-4xl leading-none text-sky-200">{billOf(market, season.myTeamId, index, season.shifts)}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">a year</div></div>
+            <div title="What you can spend on players right now"><div className={`font-display text-4xl leading-none ${purse < 0 ? 'text-red-300' : 'text-amber-300'}`}>{purse}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">budget</div></div>
+            <div title="What the squad you have now will cost in wages next year, with each player's raise, if nobody leaves"><div className="font-display text-4xl leading-none text-sky-200">{outlook.total}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">wages next yr</div></div>
             <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[11px] uppercase tracking-wider text-slate-400">squad</div></div>
           </div>
         </div>
-        {win && <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer font-semibold text-slate-300">How it works</summary><p className="mt-1">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him. Computer teams are shopping too.</p><p className="mt-1">Every player also costs a yearly fee (half of what he is worth, more or less as he improves or fades). At the end of the year your team earns its income and pays the bill; if the purse goes below zero you choose who to let go. Careers last 7 to 10 years: then a veteran retires, unless you pay a higher fee to keep him, and a young graduate takes his place.</p></details>}
+        <details className="mt-2 text-xs text-slate-400">
+          <summary className="cursor-pointer font-semibold text-slate-300">How the money works</summary>
+          <p className="mt-1"><b className="text-amber-300">Budget</b> ({purse}) is what you have to spend on players today. <b className="text-sky-200">Wages next year</b> ({outlook.total}) is what your current players will cost for the whole of next year, with the raise each is expected to get (young players are rising, a veteran about to retire costs more to keep). It assumes nobody leaves.</p>
+          <p className="mt-1">At the end of the year your team earns money and the wages are paid out of it. How much depends on how you played: a team that mostly loses earns about 1.5 times its wages, a middling one about 2 times, and one that wins most of its games 3 to 5 times, with a little more for every title. What is left is yours to spend. This year you have won <b className="text-white">{Math.round(income.score * 100)}%</b>, which would earn about <b className="text-emerald-300">{income.income}</b> ({income.multiple.toFixed(1)} times the wages), so about <b className={income.income - outlook.total < 0 ? 'text-red-300' : 'text-emerald-300'}>{income.income - outlook.total >= 0 ? '+' : ''}{income.income - outlook.total}</b> after paying them. Budget left over carries on to next year.</p>
+        </details>
+        {win && <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer font-semibold text-slate-300">How it works</summary><p className="mt-1">A full squad ({SQUAD_CAP}) has to release someone to sign someone. Releasing pays 70% of what another team would charge for him. Computer teams are shopping too.</p><p className="mt-1">Careers last 7 to 10 years: then a veteran retires, unless you pay a higher fee to keep him, and a young graduate takes his place.</p></details>}
       </div>
 
       <AnimatePresence>{(talentsOpen ?? (!talentsSeen && !!season?.myTeamId)) && talents.length > 0 && <NewTalents key="talents" cards={talents} onClose={() => { setTalentsOpen(false); markSeen(talentsKey) }} />}</AnimatePresence>
