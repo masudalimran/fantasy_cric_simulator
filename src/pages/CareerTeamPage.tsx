@@ -138,7 +138,7 @@ export function CareerTeamPage() {
           <div className="mb-3 rounded-xl border border-line bg-panel-2 p-3">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-300">Selection changes from the usual XI</div>
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-200">
-              {data.news.map((n) => <li key={`${n.playerId}-${n.kind}`}><span className={n.kind === 'in' ? 'font-bold text-emerald-300' : 'font-bold text-rose-300'}>{n.kind === 'in' ? '▲ In' : '▼ Out'}</span> {nameOf(n.playerId)} <span className="text-slate-400">({n.why})</span></li>)}
+              {data.news.map((n) => <li key={`${n.playerId}-${n.kind}`}><span className={n.kind === 'in' ? 'font-bold text-emerald-300' : n.kind === 'moved' ? 'font-bold text-amber-300' : 'font-bold text-rose-300'}>{n.kind === 'in' ? '▲ In' : n.kind === 'moved' ? '↕ Order' : '▼ Out'}</span> {nameOf(n.playerId)} <span className="text-slate-400">({n.why})</span></li>)}
             </ul>
           </div>
         )}

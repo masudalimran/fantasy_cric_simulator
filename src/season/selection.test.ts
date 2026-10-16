@@ -119,4 +119,58 @@ describe('computer squad selection', () => {
     expect(names(none.team).length).toBe(11)
     expect(news.some((n) => n.kind === 'in' && n.playerId === bench.id)).toBe(true)
   })
+
+  it('replaces someone in a long slump with a fresh face, but not a player who is only a little off', () => {
+    const t = BUILT_IN_TEAMS[5]
+    const xi = t.players.slice(0, 11)
+    const slumper = xi.find((p) => p.role === 'BAT' && p !== xi[0])!
+    const recent = new Map<string, number>()
+    const games = new Map<string, number>()
+    const form = { recent, games, norm: { bat: { mean: 30, sd: 10 }, bowl: { mean: 20, sd: 10 } }, breakout: new Map<string, number>() }
+    for (const p of t.players) { recent.set(p.id, p.role === 'BOWL' ? 20 : 30); games.set(p.id, 5) }
+    recent.set(slumper.id, 5) // far below usual over five matches
+    const out = pickCpuXI(t, season, { date: '2027-05-05' }, form)
+    expect(out.team.players.slice(0, 11).map((p) => p.id)).not.toContain(slumper.id)
+    expect(out.news.some((n) => n.kind === 'out' && n.playerId === slumper.id && /poor form/.test(n.why))).toBe(true)
+    expect(out.news.some((n) => n.kind === 'in' && /new face|good form|called up/.test(n.why))).toBe(true)
+    expect(validateSquad(out.team.players, out.team.captainId, out.team.keeperId).errors).toEqual([])
+    // only two matches behind him: no verdict yet
+    games.set(slumper.id, 2)
+    expect(pickCpuXI(t, season, { date: '2027-05-05' }, form).team.players.slice(0, 11).map((p) => p.id)).toContain(slumper.id)
+  })
+
+  it('does not rest anyone against a stronger or equal opponent, and brings the regulars back', () => {
+    const form = formTable(season, teams)
+    const weak = BUILT_IN_TEAMS.reduce((a, b) => (strengthTop(a) <= strengthTop(b) ? a : b))
+    const strong = BUILT_IN_TEAMS.reduce((a, b) => (strengthTop(a) >= strengthTop(b) ? a : b))
+    let restedVsStrong = 0
+    for (let d = 1; d <= 28; d++) restedVsStrong += pickCpuXI(weak, season, { date: `2027-04-${String(d).padStart(2, '0')}`, phase: 'series', competitionId: 'x', opponent: strong }, form).news.filter((x) => x.why === 'rested').length
+    expect(restedVsStrong).toBe(0)
+  })
+
+  it('moves a batsman in great form up the order', () => {
+    const t = BUILT_IN_TEAMS[5]
+    const recent = new Map<string, number>()
+    const games = new Map<string, number>()
+    const form = { recent, games, norm: { bat: { mean: 30, sd: 10 }, bowl: { mean: 20, sd: 10 } }, breakout: new Map<string, number>() }
+    for (const p of t.players) { recent.set(p.id, p.role === 'BOWL' ? 20 : 30); games.set(p.id, 4) }
+    const flat = pickCpuXI(t, season, { date: '2027-05-05' }, form).team.players.slice(0, 11)
+    const lowIn = [...flat].reverse().find((p) => p.role === 'BAT' || p.role === 'AR')!
+    const before = flat.findIndex((p) => p.id === lowIn.id)
+    recent.set(lowIn.id, 90) // runs galore
+    const hot = pickCpuXI(t, season, { date: '2027-05-05' }, form).team.players.slice(0, 11)
+    expect(hot.findIndex((p) => p.id === lowIn.id)).toBeLessThan(before)
+  })
+
+  it('gives bowlers who are going well a lean in the bowling plan', () => {
+    const t = BUILT_IN_TEAMS[5]
+    const bowler = t.players.slice(0, 11).find((p) => p.role === 'BOWL')!
+    const recent = new Map<string, number>()
+    const games = new Map<string, number>()
+    const form = { recent, games, norm: { bat: { mean: 30, sd: 10 }, bowl: { mean: 20, sd: 10 } }, breakout: new Map<string, number>() }
+    for (const p of t.players) { recent.set(p.id, p.role === 'BOWL' ? 20 : 30); games.set(p.id, 4) }
+    recent.set(bowler.id, 60)
+    const out = pickCpuXI(t, season, { date: '2027-05-05' }, form)
+    expect(out.team.bowlPref?.[bowler.id]).toBeGreaterThan(0)
+  })
 })

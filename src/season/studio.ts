@@ -1,4 +1,6 @@
+import { battingScore } from '../data/builders'
 import { computeAwards } from '../engine/awards'
+import { describePitch } from '../engine/pitchInfo'
 import type { Match } from '../engine/match'
 import { parRunsPerOver } from '../engine/model'
 import { FORMATS, type BallEvent, type Innings } from '../engine/types'
@@ -61,6 +63,13 @@ export interface Facts {
   powerplay: { runs: number; wickets: number; overs: number } | null
   death: { runs: number; wickets: number; overs: number } | null
   extras: number
+  /** How the wickets fell: catches, run outs and stumpings, and to pace or to spin. */
+  caught: number
+  runOuts: number
+  paceWk: number
+  spinWk: number
+  /** A batsman who finished a few runs short of (or stranded on the edge of) a fifty or hundred. */
+  nearMiss: { id: string; runs: number; out: boolean; target: number } | null
   fours: number
   sixes: number
   dots: number
@@ -121,6 +130,17 @@ function factsOf(match: Match, idx: number): Facts {
     powerplay: limited ? phase(cfg.phases.powerplay[0], cfg.phases.powerplay[1]) : null,
     death: limited && inn.legalBalls > (cfg.phases.death[0]) * 6 ? phase(cfg.phases.death[0], cfg.phases.death[1]) : null,
     extras: inn.extras.wides + inn.extras.noballs + inn.extras.byes + inn.extras.legByes,
+    caught: wk.filter((e) => e.wicket && (e.wicket.kind === 'caught' || e.wicket.kind === 'caught and bowled')).length,
+    runOuts: wk.filter((e) => e.wicket?.kind === 'run out').length,
+    paceWk: wk.filter((e) => e.wicket && e.wicket.kind !== 'run out' && /^(fast|medium)/.test(match.player(e.bowlerId).bowling?.type ?? '')).length,
+    spinWk: wk.filter((e) => e.wicket && e.wicket.kind !== 'run out' && /spin/.test(match.player(e.bowlerId).bowling?.type ?? '')).length,
+    nearMiss: (() => {
+      for (const b of [...inn.batters].sort((x, y) => y.runs - x.runs)) {
+        const t = b.runs >= 90 && b.runs <= 99 ? 100 : b.runs >= 44 && b.runs <= 49 ? 50 : 0
+        if (t) return { id: b.id, runs: b.runs, out: !!b.dismissal, target: t }
+      }
+      return null
+    })(),
     fours: inn.log.filter((e) => e.boundary === 4).length, sixes: inn.log.filter((e) => e.boundary === 6).length,
     dots: inn.log.filter((e) => e.legal && e.total === 0).length, legal,
     rr: legal ? (inn.runs / legal) * 6 : 0,
@@ -145,64 +165,64 @@ interface Voice {
 
 const VOICES: Record<Exclude<Persona, 'host'>, Voice> = {
   analyst: {
-    lead: ['Let me give you the numbers.', 'Strip it back and look at the data.', 'The figures tell it best.', 'Look at the underlying numbers.', 'It is all in the stats.', 'Break it down ball by ball.'],
+    lead: ['Let me give you the numbers.', 'Strip it back and look at the data.', 'The figures tell it best.', 'Look at the underlying numbers.', 'It is all in the stats.', 'Break it down ball by ball.', 'The spreadsheet has a view on this.', 'Numbers do not lie, so here they are.'],
     close: {
       praise: [['Those are elite numbers.', 'proud'], ['That is efficiency of the highest order.', 'proud'], ['You cannot argue with that.', 'serious']],
       knock: [['The numbers simply do not add up for them.', 'serious'], ['That is a lot of pressure built by dot balls.', 'worried'], ['The data says they left runs out there.', 'thoughtful']],
       neutral: [['Make of that what you will.', 'thoughtful'], ['It is a fairly balanced picture.', 'thoughtful'], ['The margins are thin.', 'serious']],
       wow: [['I had to check the scorer twice.', 'shocked'], ['That is well off the chart.', 'excited'], ['Statistically that is a rare one.', 'shocked']],
     },
-    agree: ['The numbers back that up.', 'Fair point, and the data agrees.', 'Yes, and it shows in the figures.'],
-    disagree: ['The data tells a slightly different story.', 'I would push back on that.', 'Respectfully, the numbers disagree.'],
-    think: ['Good question.', 'Right, so here is the thing.', 'Let me think about that for a second.'],
+    agree: ['The numbers back that up.', 'Fair point, and the data agrees.', 'Yes, and it shows in the figures.', 'That lines up with what I have here.', 'The sample size backs it.'],
+    disagree: ['The data tells a slightly different story.', 'I would push back on that.', 'Respectfully, the numbers disagree.', 'I am seeing something different in the figures.', 'The trend line does not support that.'],
+    think: ['Good question.', 'Right, so here is the thing.', 'Let me think about that for a second.', 'Let me pull up the numbers.', 'Let me crunch that.'],
   },
   firebrand: {
-    lead: ['Honestly?', 'I will say it plainly.', 'Listen to me.', 'Unbelievable stuff.', 'Oh, I loved it.', 'Come on, let us be honest here.', 'I am going to be blunt.'],
+    lead: ['Honestly?', 'I will say it plainly.', 'Listen to me.', 'Unbelievable stuff.', 'Oh, I loved it.', 'Come on, let us be honest here.', 'I am going to be blunt.', 'Right, listen up.', 'I have got strong feelings about this one.'],
     close: {
       praise: [['Absolutely magnificent!', 'excited'], ['That is a class act, no question!', 'excited'], ['Take a bow, son!', 'proud']],
       knock: [['That is just not good enough!', 'serious'], ['It was careless, plain and simple.', 'sarcastic'], ['Somebody should be ashamed of that.', 'serious']],
       neutral: [['I am not convinced either way.', 'thoughtful'], ['It could go either way, frankly.', 'thoughtful'], ['Still plenty to play for.', 'serious']],
       wow: [['Are you kidding me?!', 'shocked'], ['I nearly fell off my chair!', 'shocked'], ['Pure carnage!', 'excited']],
     },
-    agree: ['Exactly! That is exactly it!', 'Spot on, and I will say it louder!', 'Finally, someone talking sense.'],
-    disagree: ['Oh, come on! You cannot be serious!', 'No, no, no. I completely disagree!', 'That is nonsense and you know it!'],
-    think: ['Oh, where do I begin?', 'Right, buckle up.', 'I have been waiting for this question.'],
+    agree: ['Exactly! That is exactly it!', 'Spot on, and I will say it louder!', 'Finally, someone talking sense.', 'Hear, hear!', 'That is the truth, and nobody wants to say it!'],
+    disagree: ['Oh, come on! You cannot be serious!', 'No, no, no. I completely disagree!', 'That is nonsense and you know it!', 'You must be watching a different match!', 'I could not disagree more if I tried!'],
+    think: ['Oh, where do I begin?', 'Right, buckle up.', 'I have been waiting for this question.', 'Oh, you are going to get an earful.', 'Strap in!'],
   },
   veteran: {
-    lead: ['I have seen this film before.', 'In my day we would have called that proper cricket.', 'I have stood out there in conditions like this.', 'Experience tells you one thing.', 'You learn this young.', 'Years in the game teach you plenty.'],
+    lead: ['I have seen this film before.', 'In my day we would have called that proper cricket.', 'I have stood out there in conditions like this.', 'Experience tells you one thing.', 'You learn this young.', 'Years in the game teach you plenty.', 'Back in the day, we would say this.', 'There is an old saying that fits here.'],
     close: {
       praise: [['That is how it is done.', 'proud'], ['You cannot teach that kind of calm.', 'proud'], ['Beautifully judged, from start to finish.', 'proud']],
       knock: [['A seasoned head would not have played that shot.', 'serious'], ['They will want that one back, I promise you.', 'worried'], ['That is the price of losing your patience.', 'serious']],
       neutral: [['It is a long game yet.', 'thoughtful'], ['Do not read too much into it just yet.', 'thoughtful'], ['It will come down to who holds their nerve.', 'serious']],
       wow: [['Forty years in the game and I still get goosebumps.', 'shocked'], ['I will remember that for a long time.', 'proud'], ['They do not make them like that very often.', 'shocked']],
     },
-    agree: ['Quite right.', 'I could not have put it better.', 'He is right, you know.'],
-    disagree: ['I see it differently, young man.', 'Hold on, let us not get carried away.', 'I am afraid I have to disagree.'],
-    think: ['Ah, now that is a good one.', 'Let me tell you something.', 'Well now, where to start.'],
+    agree: ['Quite right.', 'I could not have put it better.', 'He is right, you know.', 'He has the right of it.', 'That is exactly how I remember it.'],
+    disagree: ['I see it differently, young man.', 'Hold on, let us not get carried away.', 'I am afraid I have to disagree.', 'I would gently push back on that.', 'It was not quite like that, was it?'],
+    think: ['Ah, now that is a good one.', 'Let me tell you something.', 'Well now, where to start.', 'Now, let me remember how it goes.', 'A fair question, and an old one.'],
   },
   jester: {
-    lead: ['Ha, where do I start?', 'Oh, this is good.', 'Plot twist!', 'Fun fact for you.', 'Not to be dramatic, but listen.', 'Brace yourselves.'],
+    lead: ['Ha, where do I start?', 'Oh, this is good.', 'Plot twist!', 'Fun fact for you.', 'Not to be dramatic, but listen.', 'Brace yourselves.', 'Okay, hot take incoming.', 'You are going to love this.'],
     close: {
       praise: [['Somebody check the bat for a motor!', 'laugh'], ['I would pay good money to watch that again, and I have.', 'laugh'], ['Absolute chef kiss.', 'excited']],
       knock: [['That was less a shot, more a cry for help.', 'laugh'], ['I have seen better planning at a surprise party.', 'sarcastic'], ['Bold strategy. Let us see if it pays off.', 'sarcastic']],
       neutral: [['I have no idea what happens next and I love it.', 'laugh'], ['It is cricket. Anything can happen. Mostly rain, in fairness.', 'laugh'], ['Keep the popcorn handy.', 'laugh']],
       wow: [['My jaw is on the floor. Somebody find it.', 'shocked'], ['That ball is still travelling.', 'laugh'], ['I need a lie down.', 'shocked']],
     },
-    agree: ['Ha! Finally we agree on something.', 'Correct, and I have never said that before.', 'Yes! Put that on a poster.'],
-    disagree: ['Absolutely not, and I will fight you on it.', 'You have lost me completely.', 'Bold take. Wrong, but bold.'],
-    think: ['Ooh, a hard one.', 'Let me put my serious face on.', 'I will try to be sensible.'],
+    agree: ['Ha! Finally we agree on something.', 'Correct, and I have never said that before.', 'Yes! Put that on a poster.', 'Wow, same brain cell today.', 'We agree! Mark the calendar!'],
+    disagree: ['Absolutely not, and I will fight you on it.', 'You have lost me completely.', 'Bold take. Wrong, but bold.', 'Nope. Not even a little. Next!', 'I admire the confidence. Wrong, but confident.'],
+    think: ['Ooh, a hard one.', 'Let me put my serious face on.', 'I will try to be sensible.', 'Dramatic pause. Okay, go.', 'Give me a second, I am being clever.'],
   },
   tactician: {
-    lead: ['The key was the plan.', 'Look at it tactically.', 'Think about the match-ups here.', 'What the captain did there was clever.', 'Look at the field settings.', 'It was all about the lengths they hit.'],
+    lead: ['The key was the plan.', 'Look at it tactically.', 'Think about the match-ups here.', 'What the captain did there was clever.', 'Look at the field settings.', 'It was all about the lengths they hit.', 'Read the situation first.', 'Think about the angles.'],
     close: {
       praise: [['Beautifully executed.', 'proud'], ['That is a plan coming off.', 'proud'], ['Textbook captaincy.', 'proud']],
       knock: [['The plan was not there, and it showed.', 'serious'], ['Where was the Plan B?', 'worried'], ['They were a step behind all innings.', 'serious']],
       neutral: [['It all depends on the first few overs of the next innings.', 'thoughtful'], ['The match-ups will decide it.', 'thoughtful'], ['Whoever adapts first wins this.', 'serious']],
       wow: [['That changes the whole game plan.', 'shocked'], ['Nobody planned for that.', 'shocked'], ['The captain will be tearing up the script.', 'excited']],
     },
-    agree: ['Agreed, and the field placement shows it.', 'Right, that is the tactical read as well.', 'Yes. Same conclusion from the plan.'],
-    disagree: ['The plan says otherwise.', 'I would have gone a different way entirely.', 'That is not how I read the match-up.'],
-    think: ['It is a tactical question really.', 'Right, take the plan first.', 'Good, let me set it out.'],
+    agree: ['Agreed, and the field placement shows it.', 'Right, that is the tactical read as well.', 'Yes. Same conclusion from the plan.', 'The match-ups say the same.', 'That fits the game plan I saw.'],
+    disagree: ['The plan says otherwise.', 'I would have gone a different way entirely.', 'That is not how I read the match-up.', 'The field placings say otherwise.', 'That is not how the plan was set up.'],
+    think: ['It is a tactical question really.', 'Right, take the plan first.', 'Good, let me set it out.', 'Right, tactically speaking.', 'Let me lay out the plan.'],
   },
 }
 
@@ -213,6 +233,9 @@ const HOST_OPEN: Record<ShowKind, string[]> = {
     'Hello again, everyone. The players are off, but the debate is only just beginning.',
     'Good to have you with us at the break. {bat}, {score}. Let us get into it.',
     'It is break time, which means it is our time. {bat} finish on {score}.',
+    'The covers are off, the tea is brewing, and {bat} have {score}. Let us talk.',
+    'Break time! {bat} posted {score}, and I have a feeling there is a lot to unpack.',
+    'That is the first half done: {score} for {bat}. Our panel has opinions.',
   ],
   stumps: [
     'Stumps on the day, and what a day. {bat} are {score}. Let us dig in.',
@@ -224,9 +247,11 @@ const HOST_OPEN: Record<ShowKind, string[]> = {
     'Full time, everybody. {result}. Time to go through what just happened.',
     'What a match. {result}. Let us break it all down.',
     'The dust has settled: {result}. Our experts are with me.',
+    'It is all over: {result}. Let us go through the key moments.',
+    '{result}! And now the part where we argue about it.',
   ],
 }
-const HOST_PANEL = ['Joining me tonight: {a} and {b}.', 'With me, as always, {a} and {b}. Welcome, both of you.', 'Let me bring in the panel: {a} and {b}.', 'And of course, my experts, {a} and {b}.']
+const HOST_PANEL = ['Joining me tonight: {a} and {b}.', 'With me, as always, {a} and {b}. Welcome, both of you.', 'Let me bring in the panel: {a} and {b}.', 'And of course, my experts, {a} and {b}.', 'Two familiar faces beside me: {a} and {b}.', 'The panel is ready: {a} and {b}. Let us get going.', 'Let me welcome {a} and {b} to the desk.']
 const HOST_ASK: Record<string, string[]> = {
   bat: ['{a}, {bat} made {runs} off {balls}. What did you make of that?', '{a}, let us start with {bat}. {runs} from {balls}. Your thoughts?', 'First things first: {bat}. {a}, how good was that?', '{a}, the batting hero must be {bat}, surely?'],
   bowl: ['{a}, turn to the bowlers. {bowl} finished with {fig}. Was that the difference?', 'Now the other side of the coin: {bowl}, {fig}. {a}?', '{a}, what did you make of {bowl}\'s work with the ball?'],
@@ -241,12 +266,21 @@ const HOST_ASK: Record<string, string[]> = {
   outlookTest: ['{a}, where does that leave the match? {sit}.', 'So {a}, with the match standing as it does, who is on top?', '{a}, take us through the situation: {sit}.'],
   verdict: ['{a}, so what decided it?', '{a}, the big question: where was this match won?', 'Let us end on the main one, {a}: what was the difference?'],
   mom: ['And the man of the match: {mom}. {a}, does he deserve it?', '{mom} takes the award. {a}, right call?', 'The award goes to {mom}. {a}, any complaints?'],
+  pitch: ['{a}, the pitch has been talked about all day: {pitch}. Did it shape this innings?', 'Let us talk about the surface, {a}. It looked {pitch}. Fair?', '{a}, how much did the {pitch} pitch decide this?', '{a}, the groundsman will be watching this: a {pitch} pitch. Your verdict?'],
+  extras: ['{a}, {extras} extras in that innings. Is that sloppy?', 'Let us be honest about the discipline, {a}: {extras} extras given away. Costly?', '{a}, {extras} extras. Is that where the bowling side lost control?'],
+  mix: ['{a}, {fours} fours and {sixes} sixes, but also {dots} dots. What did the scoring pattern tell you?', 'Look at the scoring mix, {a}: {dots} dot balls and {fours} fours. Who was dictating?', '{a}, {dots} dot balls in the innings. Did that pressure matter?'],
+  fielding: ['{a}, we cannot ignore the fielding: {caught} catches taken. How big was that?', 'Let us hear it for the fielders, {a}: {caught} catches. Did they win it?', '{a}, the catching was sharp today, {caught} of them. Was that the edge?'],
+  spin: ['{a}, {pace} wickets to pace and {spin} to spin. Which mattered more?', 'Pace or spin, {a}? The split was {pace} to {spin}.', '{a}, who ruled today: the quicks with {pace} or the spinners with {spin}?'],
+  near: ['{a}, {nm} finished on {runs}. So close to {t}. Heartbreak?', 'We have to feel for {nm}: {runs}, and the {t} just out of reach. {a}?', '{a}, {nm} on {runs}. Does a miss like that sting?'],
+  dressing: ['{a}, if you are in the {opp} dressing room right now, what is the talk?', 'Meanwhile at the other end, {a}: what is {opp} thinking about {target}?', '{a}, the {opp} openers are padding up. What do they need to do?'],
+  danger: ['{a}, who is the danger man in the {opp} batting line-up?', 'Which {opp} batsman keeps {bat} awake tonight, {a}?', '{a}, name the one {opp} player who can win this chase.'],
+  fun: ['{a}, a lighter question: if this innings were an episode, what is the title?', '{a}, quick fire: what would you call that innings in three words?', '{a}, if that was a battle in an anime, who is the final boss?'],
   loser: ['{a}, what went wrong for {loser}?', 'And for {loser}, {a}: where did it slip away?', '{a}, if you are the {loser} captain tonight, what keeps you up?'],
 }
 const HOST_WRAP: Record<ShowKind, string[]> = {
-  innings: ['That is all from the break. Back to the action!', 'Thank you both. Do not go anywhere, the second half is about to begin!', 'Time to head back to the middle. See you at the next break!'],
+  innings: ['That is all from the break. Back to the action!', 'The players are walking out. Stay with us for the chase!', 'Time is up at the desk. Enjoy the second innings!', 'Thank you both. Do not go anywhere, the second half is about to begin!', 'Time to head back to the middle. See you at the next break!'],
   stumps: ['That is stumps in the studio too. We will see you tomorrow!', 'Thank you, panel. Get some rest, because tomorrow is huge.', 'That is the day done. Back tomorrow with more!'],
-  end: ['That is a wrap. Thanks for watching, and goodnight!', 'Gentlemen, thank you. And to everyone at home, until next time!', 'That is the show. Great match, great chat. Goodnight!'],
+  end: ['That is a wrap. Thanks for watching, and goodnight!', 'And that is our show. A fine match, and we will see you next time!', 'Panel, thank you. Everyone at home: goodnight!', 'Gentlemen, thank you. And to everyone at home, until next time!', 'That is the show. Great match, great chat. Goodnight!'],
 }
 
 // ---- Writing --------------------------------------------------------------------------------------------------------
@@ -452,6 +486,100 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     take(x, answerPrefix(x) + `${d.runs} runs for ${d.wickets} in the last ${d.overs} overs ${d.runs >= par * 1.05 ? 'is a strong finish' : 'is a bit short of what they wanted'}.`, d.runs >= par * 1.05 ? 'praise' : 'knock', undefined, !answerPrefix(x))
     counter(y, agrees(), x, `The death bowling decides so many games, and tonight it was ${d.runs >= par * 1.05 ? 'the batters on top' : 'the bowlers on top'}.`, 'neutral')
   } })
+  // ---- more topics, so the show is not always the same four things
+  const parMid = parRunsPerOver(match.format, 'middle')
+  const pitchInfo = describePitch(match.pitch)
+  segs.push({ weight: 7, order: 2, run: () => {
+    const [x, y] = alt()
+    vars.a = asked(x)
+    ask('pitch', { pitch: pitchInfo.label.toLowerCase() }, { kind: 'card', title: pitchInfo.label.toUpperCase(), lines: [pitchInfo.tip] })
+    take(x, answerPrefix(x) + `${pitchInfo.tip} ${f.rr > parMid * 1.05 ? 'And the scoring rate showed it.' : f.rr < parMid * 0.9 ? 'And runs were hard to come by, just as you would expect.' : 'The scoring rate sat about where you would expect.'}`, 'neutral', undefined, !answerPrefix(x))
+    counter(y, agrees(), x, `${f.bat.short} scored at ${f.rr.toFixed(2)} an over, and a surface like this makes you earn every one of them.`, 'neutral')
+  } })
+  if (f.extras >= 7) segs.push({ weight: 5, order: 6, run: () => {
+    const [x, y] = alt()
+    vars.a = asked(x)
+    ask('extras', { extras: f.extras }, { kind: 'card', title: 'EXTRAS', lines: [`${f.extras} extras`, `${f.inn.extras.wides} wides · ${f.inn.extras.noballs} no-balls`] })
+    take(x, answerPrefix(x) + `${f.extras} extras is a gift. ${f.inn.extras.wides} wides and ${f.inn.extras.noballs} no-balls: that is free runs and lost rhythm.`, 'knock', undefined, !answerPrefix(x))
+    counter(y, agrees(), x, `Discipline wins limited-overs games, and ${f.bowl.name} let it slip more than once.`, 'knock')
+  } })
+  if (f.legal >= 30) segs.push({ weight: 5, order: 5, run: () => {
+    const [x, y] = alt()
+    vars.a = asked(x)
+    const dotPct = Math.round((f.dots / Math.max(1, f.legal)) * 100)
+    ask('mix', { fours: f.fours, sixes: f.sixes, dots: f.dots }, { kind: 'scoring', innings: f.idx })
+    take(x, answerPrefix(x) + (dotPct >= 42 ? `${dotPct}% of the balls were dots. That is a lot of pressure for ${f.bat.short} to carry.` : dotPct <= 30 ? `Only ${dotPct}% dots: ${f.bat.short} kept the scoreboard ticking at nearly every ball.` : `${dotPct}% dots and ${f.fours + f.sixes} boundaries: a healthy mix of patience and punch.`), dotPct >= 42 ? 'knock' : 'praise', undefined, !answerPrefix(x))
+    counter(y, agrees(), x, `${f.sixes >= 5 ? `${f.sixes} sixes tell you who was in charge of the big moments.` : `The boundary count was modest, so the singles and twos did the work.`}`, 'neutral')
+  } })
+  if (f.caught >= 3 || f.runOuts >= 1) segs.push({ weight: 4, order: 7, run: () => {
+    const [x, y] = alt()
+    vars.a = asked(x)
+    ask('fielding', { caught: f.caught }, { kind: 'card', title: 'FIELDING', lines: [`${f.caught} catches`, f.runOuts ? `${f.runOuts} run ${f.runOuts === 1 ? 'out' : 'outs'}` : ''] })
+    take(x, answerPrefix(x) + `${f.caught} catches taken${f.runOuts ? ` and ${f.runOuts === 1 ? 'a run out' : f.runOuts + ' run outs'}` : ''}. ${f.bowl.name} held on to what came their way, and that is worth runs.`, 'praise', undefined, !answerPrefix(x))
+    counter(y, agrees(), x, `Catches win matches, and the pressure the bowlers built made the batters take the risk.`, 'neutral')
+  } })
+  if (f.paceWk + f.spinWk >= 2 && (f.paceWk === 0 || f.spinWk === 0 ? f.paceWk + f.spinWk >= 3 : true)) segs.push({ weight: 4, order: 4, run: () => {
+    const [x, y] = alt()
+    vars.a = asked(x)
+    ask('spin', { pace: f.paceWk, spin: f.spinWk })
+    const spinWins = f.spinWk > f.paceWk
+    take(x, answerPrefix(x) + (spinWins ? `Spin had the better of it, ${f.spinWk} to ${f.paceWk}. The ball was gripping and the batters had to be patient.` : f.paceWk > f.spinWk ? `The quicks took ${f.paceWk} of them against ${f.spinWk} for the spinners. Pace and bounce made the difference.` : `It was even, ${f.paceWk} for pace and ${f.spinWk} for spin. A varied attack did the job.`), 'neutral', undefined, !answerPrefix(x))
+    counter(y, agrees(), x, `${pitchInfo.kind === 'dry' ? 'The dry surface did a lot of that work.' : pitchInfo.kind === 'green' ? 'There was seam on offer all innings.' : 'The captain rotated the bowlers smartly, and it paid off.'}`, 'neutral')
+  } })
+  if (f.nearMiss) segs.push({ weight: 6, order: 2, run: () => {
+    const m = f.nearMiss as NonNullable<Facts['nearMiss']>
+    const [x, y] = alt()
+    vars.a = asked(x)
+    ask('near', { nm: pn(m.id), runs: m.runs, t: m.target })
+    take(x, answerPrefix(x) + (m.out ? `${m.runs}, out, with ${m.target} just there. That is the kind of dismissal that stays with you for a week.` : `${m.runs} not out and the innings ran out. Nobody wants to be stranded that close to ${m.target}.`), 'knock', undefined, !answerPrefix(x))
+    counter(y, agrees(), x, `He did everything right except finish it, and that is cricket for you.`, 'neutral')
+  } })
+  if (kind !== 'end' && match.format !== 'test') {
+    const chasers = match.sides[1 - f.inn.battingSide].xi
+    const openers = chasers.slice(0, 2)
+    const danger = [...chasers].sort((p, q) => battingScore(q.batting) - battingScore(p.batting))[0]
+    segs.push({ weight: 8, order: 8, run: () => {
+      const [x, y] = alt()
+      vars.a = asked(x)
+      ask('dressing', {}, { kind: 'card', title: 'THE CHASE', lines: [`${f.bowl.short} need ${f.inn.runs + 1}`, `Openers: ${openers.map((o) => first(o.name)).join(' and ')}`] })
+      take(x, answerPrefix(x) + `${openers.map((o) => first(o.name)).join(' and ')} walk out knowing the first six overs decide the tone. A fast start and ${f.bat.short} start to worry.`, 'neutral', undefined, !answerPrefix(x))
+      counter(y, agrees(), x, `Stay calm, rotate the strike and let the target come to you. Panic is the real enemy in a chase.`, 'neutral')
+    } })
+    segs.push({ weight: 6, order: 8, run: () => {
+      const [x, y] = alt()
+      vars.a = asked(x)
+      ask('danger', {})
+      take(x, answerPrefix(x) + `${first(danger.name)} is the one for me. If he gets in, ${f.bat.short} are in trouble.`, 'praise', undefined, !answerPrefix(x))
+      counter(y, agrees(), x, `${f.bat.short} will have a plan for him, but plans have a way of bending when a good player is set.`, 'neutral')
+    } })
+  }
+  const FUN = [
+    ['Episode title: "The Innings That Would Not End".', 'Final boss is clearly the groundsman.'],
+    ['Three words: chaos, then calm.', 'I would have gone with "popcorn, please".'],
+    ['I would call it "Training Arc, Part Two".', 'Does that make the next innings the tournament arc?'],
+    ['Title: "Nobody Expected That Over".', 'And the opening theme starts around the sixth over.'],
+  ]
+  segs.push({ weight: 3, order: 3, run: () => {
+    const [x, y] = alt()
+    vars.a = asked(x)
+    ask('fun', {})
+    const [l1, l2] = pick(FUN, (t) => t[0])
+    say(x, l1, 'laugh')
+    say(y, l2, 'laugh')
+  } })
+  if (kind === 'end' && match.result?.margin) {
+    const mg = match.result.margin
+    const close = mg.type === 'runs' ? mg.value <= 6 : mg.value <= 2
+    const big = mg.type === 'runs' ? mg.value >= 40 : mg.value >= 7
+    if (close || big) segs.push({ weight: 9, order: 2, run: () => {
+      const [x, y] = alt()
+      vars.a = asked(x)
+      ask('verdict', {}, { kind: 'card', title: close ? 'A THRILLER' : 'A ROMP', lines: [match.result?.text ?? ''] })
+      take(x, answerPrefix(x) + (close ? `Decided by ${mg.value} ${mg.type === 'runs' ? (mg.value === 1 ? 'run' : 'runs') : (mg.value === 1 ? 'wicket' : 'wickets')}. That is as close as it gets, and my heart rate is still up.` : `${mg.value} ${mg.type === 'runs' ? 'runs' : 'wickets'}: that was never close. One side turned up and the other did not.`), close ? 'wow' : 'knock', undefined, !answerPrefix(x))
+      counter(y, agrees(), x, close ? `A match like that makes the whole season worth it.` : `Credit to the winners, who made it look easy.`, 'neutral')
+    } })
+  }
+
   // what happens next (innings and stumps), or what decided it (end)
   const cfg = FORMATS[match.format]
   const parTotal = parRunsPerOver(match.format, 'middle') * cfg.overs
@@ -510,7 +638,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
 
   // order: the openers first (best batsman or bowler), the turning point in the middle, the outlook last; keep 3-4 segments
   const chosen: Seg[] = []
-  const rest = [...segs].sort((a, b) => b.weight - a.weight + (rng.next() - 0.5) * 6)
+  const rest = [...segs].sort((a, b) => b.weight - a.weight + (rng.next() - 0.5) * 12)
   const last = kind === 'end' ? undefined : segs.find((s) => s.weight >= 20)
   for (const s of rest) if (chosen.length < (kind === 'end' ? 4 : 4) && s !== last) chosen.push(s)
   chosen.sort((a, b) => a.weight - b.weight)

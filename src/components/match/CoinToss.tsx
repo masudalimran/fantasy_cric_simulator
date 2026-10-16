@@ -47,6 +47,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
   const isIn = (id: string) => changes.some((n) => n.playerId === id && n.kind === 'in')
   const ins = side.xi.filter((p) => isIn(p.id))
   const outs = changes.filter((n) => n.kind === 'out' && !side.xi.some((p) => p.id === n.playerId)) // someone brought back is no longer out
+  const moved = changes.filter((n) => n.kind === 'moved' && side.xi.some((p) => p.id === n.playerId))
   return (
     <section className="flex min-h-0 flex-col rounded-2xl border bg-panel p-3" style={{ borderColor: mine ? '#fbbf24' : '#252a3a' }}>
       <div className="flex shrink-0 items-center gap-3">
@@ -106,6 +107,14 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
           </div>
         </div>
       </div>
+      {moved.length > 0 && (
+        <div className="mt-1 flex shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[11px]" aria-label="Batting order changes">
+          <span className="w-12 shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-amber-300">↕ Order</span>
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {moved.map((n) => { const p = side.xi.find((x) => x.id === n.playerId)!; return <span key={n.playerId} className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-100" title={`${p.name}: ${n.why}`}>{p.name.split(' ')[0]} <span className="text-amber-300/80">{n.why}</span></span> })}
+          </div>
+        </div>
+      )}
       {bench.length > 0 && <div className="shrink-0 truncate text-[11px] text-slate-500" title={bench.map((p) => p.name).join(', ')}><b className="text-slate-400">Bench:</b> {bench.map((p) => p.name).join(', ')}</div>}
     </section>
   )

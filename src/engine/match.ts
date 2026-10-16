@@ -349,7 +349,7 @@ export class Match {
   /** Chooses who bowls the next over, so it can be shown (and changed) before the first ball. */
   private pickBowler(inn: Innings) {
     const bowlSide = (1 - inn.battingSide) as 0 | 1
-    inn.bowlerId = chooseBowler({ format: this.format, inn, xi: this.sides[bowlSide].xi, keeperId: this.keeper[bowlSide], rng: this.rng })
+    inn.bowlerId = chooseBowler({ format: this.format, inn, xi: this.sides[bowlSide].xi, keeperId: this.keeper[bowlSide], rng: this.rng, pref: this.sides[bowlSide].team.bowlPref })
     // ...and sometimes the computer's captain just picks someone else
     if (this.cpuSide === bowlSide && this.blunder > 0 && this.rng.chance(this.blunder * 0.5)) {
       const options = this.bowlerOptions(bowlSide)

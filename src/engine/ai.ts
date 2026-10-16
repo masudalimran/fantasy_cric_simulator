@@ -138,7 +138,7 @@ function formOf(inn: Innings, bowlerId: string, par: number, format: MatchFormat
  * going well (until his overs are up), takes off a bowler who has been hit and rests him for as long as the damage
  * deserves, and is happier to bring him back when the batsman who hurt him has gone.
  */
-export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[]; keeperId: string | null; rng: Rng }): string {
+export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[]; keeperId: string | null; rng: Rng; /** The captain's leaning from how each bowler has been going this season. */ pref?: Record<string, number> }): string {
   const { format, inn, xi, rng } = a
   const cfg = FORMATS[format]
   const over = Math.floor(inn.legalBalls / 6)
@@ -168,7 +168,7 @@ export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[
   let best = pool[0]
   let bestScore = -Infinity
   for (const p of pool) {
-    let s = bowlScore(p)
+    let s = bowlScore(p) + (a.pref?.[p.id] ?? 0) * 0.5
     const f = p.bowling ? formOf(inn, p.id, par, format) : null
     if (f) {
       // going well: keep him on until his overs run out. Going badly: someone else

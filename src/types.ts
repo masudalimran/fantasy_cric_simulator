@@ -79,6 +79,8 @@ export interface Team {
   keeperId?: string
   /** First 11 are the default XI in batting order; the rest are the bench. */
   players: Player[]
+  /** How much the computer favours each bowler for the coming match from his recent form (set when it picks the XI; never saved with a team). */
+  bowlPref?: Record<string, number>
   isCustom?: boolean
 }
 

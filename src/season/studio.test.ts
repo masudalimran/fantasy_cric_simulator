@@ -46,4 +46,12 @@ describe('the studio show script', () => {
     const t = play(5, 'test')
     for (const kind of ['innings', 'stumps', 'end'] as const) expect(buildScript(t, kind, 5, pool).beats.length).toBeGreaterThanOrEqual(8)
   })
+
+  it('covers many topics: across shows the host asks about the pitch, extras, fielding, the chase and more', () => {
+    const asks: string[] = []
+    for (let seed = 1; seed <= 150; seed++) for (const b of buildScript(play(seed), seed % 2 ? 'innings' : 'end', seed, pool).beats) if (b.who === 0) asks.push(b.text)
+    const joined = asks.join(' | ').toLowerCase()
+    for (const word of ['pitch', 'dressing room', 'danger man', 'episode']) expect(joined, word).toContain(word.split(' ')[0])
+    expect(new Set(asks).size).toBeGreaterThan(120)
+  })
 })

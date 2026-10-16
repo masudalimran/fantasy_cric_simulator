@@ -20,6 +20,8 @@ export interface Form {
   norm: { bowl: { mean: number; sd: number }; bat: { mean: number; sd: number } }
   /** How far above or below the usual a player's latest match was (in standard deviations), for those who played in the last few weeks. A big one is a reserve's chance to stay in the side. */
   breakout: Map<string, number>
+  /** How many of his last few matches each player has behind him (a slump needs at least three). */
+  games?: Map<string, number>
 }
 
 /** A match this recent still counts as a player's "moment". */
@@ -42,12 +44,14 @@ export function formTable(season: Season, teams: Map<string, Team>): Form {
     for (const [id, v] of per) { const l = history.get(id) ?? []; l.push(v); history.set(id, l); lastOn.set(id, date.get(res.fixtureId) ?? '') }
   }
   const recent = new Map<string, number>()
+  const games = new Map<string, number>()
   const bowlers: number[] = []
   const others: number[] = []
   const roleOf = new Map<string, Player['role']>()
   for (const t of teams.values()) for (const p of t.players) roleOf.set(p.id, p.role)
   for (const [id, list] of history) {
     const last = list.slice(-WINDOW)
+    games.set(id, last.length)
     if (last.length < 2) continue
     const avg = last.reduce((s, x) => s + x, 0) / last.length
     recent.set(id, avg)
@@ -69,7 +73,7 @@ export function formTable(season: Season, teams: Map<string, Team>): Form {
     const n = roleOf.get(id) === 'BOWL' ? sn.bowl : sn.bat
     breakout.set(id, (list[list.length - 1] - n.mean) / n.sd)
   }
-  return { recent, norm: { bowl: stats(bowlers), bat: stats(others) }, breakout }
+  return { recent, norm: { bowl: stats(bowlers), bat: stats(others) }, breakout, games }
 }
 
 /** What a standout recent match is worth in selection rating: nothing for an ordinary one, up to BREAKOUT_MAX for a great one. */
@@ -101,8 +105,8 @@ function recentApps(season: Season, team: Team, before: string): Map<string, num
 export interface NewsItem {
   playerId: string
   teamId: string
-  /** Out (dropped or injured) or in (called up). */
-  kind: 'out' | 'in'
+  /** Out (dropped or injured), in (called up), or moved (a different place in the batting order). */
+  kind: 'out' | 'in' | 'moved'
   /** Why, in a few words: "injured", "dropped after poor form", "in good form"… */
   why: string
 }
@@ -153,20 +157,24 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
     return Math.max(-6, Math.min(6, ((r - n.mean) / n.sd) * 3))
   }
   // a reserve who had a standout game a few days ago is in the frame, and a player who keeps doing well keeps his place
-  const rate = (p: Player) => overall(p) + adj(p) + breakoutBonus(form.breakout.get(p.id)) + (usualIds.has(p.id) ? 1 : 0)
+  // against an opponent who is about as good or better, the side that played last time is not sticky: the best players come back
+  const gap = fixture.opponent ? strengthOf(team) - strengthOf(fixture.opponent) : 0
+  const tough = !!fixture.opponent && gap <= 1
+  const rate = (p: Player) => overall(p) + adj(p) + breakoutBonus(form.breakout.get(p.id)) + (usualIds.has(p.id) && !tough ? 1 : 0)
   const batRate = (p: Player) => battingScore(p.batting) + adj(p) * 0.6 - (p.role === 'BOWL' ? 12 : 0)
   const ordered = autoPickXI(pool, rate, batRate)
   let xi = ordered.slice(0, XI_SIZE)
   // A match that hardly matters is a chance to rest a few regulars and let the reserves play
   const rested: { out: Player; in: Player }[] = []
   const matters = importance(fixture)
-  // Against a clearly weaker side a strong team can afford to give the reserves a game (never in a knockout): 0 at a gap of 4 points, 1 at 14 or more
-  const easy = fixture.opponent && fixture.phase !== 'knockout' ? Math.max(0, Math.min(1, (strengthOf(team) - strengthOf(fixture.opponent) - 4) / 10)) : 0
-  if ((matters < 1 || easy > 0) && ordered.length > XI_SIZE) {
+  // Against a clearly weaker side a strong team gives the reserves and the young players a game (never in a knockout): 0 at a gap of 3 points, 1 at 11 or more
+  const easy = fixture.opponent && fixture.phase !== 'knockout' ? Math.max(0, Math.min(1, (gap - 3) / 8)) : 0
+  // ...and against a strong opponent nobody is rested: whoever was given a chance last time is swapped for the best player
+  if (!tough && (matters < 1 || easy > 0) && ordered.length > XI_SIZE) {
     const rng = new Rng((season.seed ^ hash(`${team.id}|${fixture.date}|${fixture.competitionId ?? ''}`)) >>> 0)
-    const chance = Math.max(matters >= 1 ? 0 : matters <= 0.35 ? 0.75 : 0.35, easy * 0.8)
+    const chance = Math.max(matters >= 1 ? 0 : matters <= 0.35 ? 0.75 : 0.35, easy * 0.92)
     if (rng.chance(chance)) {
-      const wanted = Math.max(matters >= 1 ? 0 : matters <= 0.35 ? 1 + rng.int(3) : 1, easy > 0 ? 1 + Math.round(easy * 2) : 0)
+      const wanted = Math.max(matters >= 1 ? 0 : matters <= 0.35 ? 1 + rng.int(3) : 1, easy > 0 ? 1 + Math.round(easy * 3) : 0)
       const apps = recentApps(season, team, fixture.date)
       const bench0 = ordered.slice(XI_SIZE).filter((p) => !injured.has(p.id))
       const keeperNow = keeperIn(xi, team.keeperId)?.id
@@ -188,17 +196,56 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
       if (rested.length) xi = ordered.filter((p) => !rested.some((r) => r.out.id === p.id)).slice(0, XI_SIZE - rested.length).concat(rested.map((r) => r.in))
     }
   }
+  // Someone who has been playing badly for a few matches is replaced by a fresh face (a reserve who has hardly played, if there is a fair one)
+  const zOf = (p: Player) => {
+    const r = form.recent.get(p.id)
+    if (r === undefined || (form.games?.get(p.id) ?? 0) < 3) return 0
+    const n = p.role === 'BOWL' ? form.norm.bowl : form.norm.bat
+    return (r - n.mean) / n.sd
+  }
+  const slumped: { out: Player; in: Player }[] = []
+  {
+    const knockout = fixture.phase === 'knockout'
+    const limit = knockout ? 1 : 2
+    const threshold = knockout ? -1.6 : -0.9
+    const apps = recentApps(season, team, fixture.date)
+    const needsBowl = (p: Player) => p.role === 'BOWL' || p.role === 'AR'
+    const keeperNow = keeperIn(xi, team.keeperId)?.id
+    let cur = xi
+    const spare = ordered.filter((p) => !xi.some((x) => x.id === p.id) && !injured.has(p.id))
+    const weak = xi.filter((p) => zOf(p) <= threshold && p.id !== keeperNow && !rested.some((r) => r.in.id === p.id)).sort((a, b) => zOf(a) - zOf(b))
+    for (const out of weak) {
+      if (slumped.length >= limit) break
+      const sub = spare
+        .filter((c) => !slumped.some((s) => s.in.id === c.id) && !rested.some((r) => r.in.id === c.id) && c.role !== 'WK' && (!needsBowl(out) || needsBowl(c)) && overall(c) >= overall(out) - (tough ? 6 : 14) && zOf(c) > -0.5)
+        .sort((a, b) => (apps.get(a.id) ?? 0) - (apps.get(b.id) ?? 0) || rate(b) - rate(a))[0]
+      if (!sub) continue
+      const trial = cur.map((p) => (p.id === out.id ? sub : p))
+      if (trial.filter(needsBowl).length < 5) continue
+      cur = trial
+      slumped.push({ out, in: sub })
+    }
+    xi = cur
+  }
+  // The batting order follows form: a batsman in the runs moves up, one in a slump moves down
+  const batOrder = (p: Player) => battingScore(p.batting) + adj(p) * 1.6 + breakoutBonus(form.breakout.get(p.id)) * 0.8 - (p.role === 'BOWL' ? 12 : 0)
+  xi = [...xi].sort((a, b) => batOrder(b) - batOrder(a))
+  // ...and the captain leans on the bowlers who are going well
+  const bowlPref: Record<string, number> = {}
+  for (const p of xi) if (p.bowling) { const v = adj(p) * 1.2 + breakoutBonus(form.breakout.get(p.id)) * 0.5; if (v) bowlPref[p.id] = Math.max(-8, Math.min(8, v)) }
   const bench = [...ordered.filter((p) => !xi.some((x) => x.id === p.id)), ...team.players.filter((p) => injured.has(p.id) && !ordered.includes(p))]
 
   const news: NewsItem[] = []
   for (const p of usual) {
     if (xi.some((x) => x.id === p.id)) continue
-    news.push({ playerId: p.id, teamId: team.id, kind: 'out', why: injured.has(p.id) ? 'injured' : rested.some((r) => r.out.id === p.id) ? 'rested' : adj(p) <= -2 ? 'dropped after poor form' : 'left out' })
+    news.push({ playerId: p.id, teamId: team.id, kind: 'out', why: injured.has(p.id) ? 'injured' : rested.some((r) => r.out.id === p.id) ? 'rested' : slumped.some((s) => s.out.id === p.id) ? 'dropped after a run of poor form' : adj(p) <= -2 ? 'dropped after poor form' : tough ? 'left out against a strong side' : 'left out' })
   }
-  for (const p of xi) if (!usualIds.has(p.id)) news.push({ playerId: p.id, teamId: team.id, kind: 'in', why: rested.some((r) => r.in.id === p.id) ? 'given a chance' : adj(p) >= 2 ? 'called up, in good form' : 'called up' })
+  for (const p of xi) if (!usualIds.has(p.id)) news.push({ playerId: p.id, teamId: team.id, kind: 'in', why: rested.some((r) => r.in.id === p.id) ? 'given a chance' : slumped.some((s) => s.in.id === p.id) ? 'a new face gets a go' : adj(p) >= 2 ? 'called up, in good form' : tough ? 'back for a tough opponent' : 'called up' })
+  // batting-order changes since last time (three places or more)
+  if (last) xi.forEach((p, i) => { const j = last.indexOf(p.id); if (j >= 0 && Math.abs(j - i) >= 3) news.push({ playerId: p.id, teamId: team.id, kind: 'moved', why: j > i ? `up the order, ${j + 1} to ${i + 1}` : `down the order, ${j + 1} to ${i + 1}` }) })
   // if the keeper is out, the best fielder in the XI puts on the gloves
   const keeper = keeperIn(xi, team.keeperId) ?? [...xi].sort((a, b) => b.fielding - a.fielding)[0]
-  return { team: { ...team, players: [...xi, ...bench], keeperId: keeper?.id }, news }
+  return { team: { ...team, players: [...xi, ...bench], keeperId: keeper?.id, ...(Object.keys(bowlPref).length ? { bowlPref } : {}) }, news }
 }
 
 /** Applies the computer's selection to every team in a fixture that isn't yours. */

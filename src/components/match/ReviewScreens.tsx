@@ -39,16 +39,50 @@ export function TvFrame({ title, children, skip = 'Tap to skip' }: { title: stri
 const halfWidth = (y: number) => 14 + ((y - 14) / 78) * 24
 const sx = (x: number, y: number) => 50 + x * halfWidth(y) * 1.5
 
+// ---- A smooth ball path --------------------------------------------------------------------------------------------------------
+
+/** A smooth curve through the knots (a cubic Hermite spline with finite-difference tangents), at a position t in 0 to (knots-1). */
+function spline(v: number[], t: number): number {
+  const n = v.length - 1
+  const i = Math.max(0, Math.min(n - 1, Math.floor(t)))
+  const u = t - i
+  const m = (k: number) => (k <= 0 ? v[1] - v[0] : k >= n ? v[n] - v[n - 1] : (v[k + 1] - v[k - 1]) / 2)
+  const [p0, p1, m0, m1] = [v[i], v[i + 1], m(i), m(i + 1)]
+  return (2 * u ** 3 - 3 * u ** 2 + 1) * p0 + (u ** 3 - 2 * u ** 2 + u) * m0 + (-2 * u ** 3 + 3 * u ** 2) * p1 + (u ** 3 - u ** 2) * m1
+}
+/** Seconds the ball takes from the hand to the pad. */
+const FLIGHT = 1.6
+const scaleAt = (y: number) => 4 + ((y - 14) / 78) * 6.5 // how many picture units a metre of height is, nearer the camera is bigger
+/** The ball's height above the ground (metres) at a place down the pitch: dropping to the bounce, climbing off it to the pad, then on to the stumps. */
+function heightAt(y: number): number {
+  if (y >= 58) { const s = (94 - y) / 36; return 1.9 * (1 - s * s) }
+  if (y >= 32) { const s = (58 - y) / 26; return 1.1 * s - 0.6 * s * s }
+  const u = (32 - y) / 16
+  return 0.5 + 0.3 * u - 0.25 * u * u
+}
+/** The ball as drawn at a place down the pitch: swinging across, and lifted off the ground by its height. */
+function ballAt(lat: number[], y: number) {
+  const t = ((94 - y) / 36) * (y >= 58 ? 1 : 0) + (y < 58 && y >= 32 ? 1 + (58 - y) / 26 : 0) + (y < 32 ? 2 + (32 - y) / 16 : 0)
+  return { x: sx(spline(lat, Math.min(3, t)), y), y: y - heightAt(y) * scaleAt(y) }
+}
+const sample = (lat: number[], from: number, to: number, n: number) => Array.from({ length: n + 1 }, (_, i) => ballAt(lat, from + ((to - from) * i) / n))
+const pathOf = (pts: { x: number; y: number }[]) => pts.map((q, i) => `${i ? 'L' : 'M'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`).join(' ')
+
 /**
  * The broadcast ball-tracking picture: the pitch from behind the bowler, the ball's path to where it pitched, where it hit the pad,
  * and where it was going to hit the stumps. Three chips say what it found. `out`: the stumps are shown hit (red) or missed.
  */
 export function BallTrackView({ track, out, rate = 1, compact = false, after = 0 }: { track: Track; out: boolean; rate?: number; /** Seconds to wait before it starts (while something else is on the screen). */ after?: number; /** Smaller, with the three findings in a column at the side (for the wicket replay, which has a card on top and a word underneath). */ compact?: boolean }) {
   const r = rate
+  // where the ball swings to across the pitch at the hand, the bounce, the pad and the stumps; the curve between them is smooth
+  const lat = [Math.max(-0.9, Math.min(0.9, track.pitchX * 0.45 + (track.pitchX >= 0 ? 0.14 : -0.14))), track.pitchX, track.impactX, track.stumpsX]
+  const flightA = sample(lat, 94, 58, 22)
+  const flightB = sample(lat, 58, 32, 18)
+  const flight = [...flightA, ...flightB.slice(1)]
+  const projected = sample(lat, 32, 16, 14)
   const P = { x: sx(track.pitchX, 58), y: 58 }
-  const I = { x: sx(track.impactX, 32), y: 32 }
-  const S = { x: sx(track.stumpsX, 16), y: 16 }
-  const release = { x: 50 + (track.pitchX > 0 ? 6 : -6), y: 94 }
+  const I = flightB[flightB.length - 1]
+  const S = projected[projected.length - 1]
   const hit = track.wickets.startsWith('Hitting')
   const col = (v: string) => (v === 'In line' || v === 'Hitting' ? '#34d399' : v.includes("umpire's call") ? '#fb923c' : '#f87171')
   return (
@@ -60,12 +94,16 @@ export function BallTrackView({ track, out, rate = 1, compact = false, after = 0
         {/* the stumps and the zone around them */}
         <rect x={sx(-0.18, 14)} y={8} width={sx(0.18, 14) - sx(-0.18, 14)} height={9} fill={hit ? '#ef444455' : '#ffffff18'} stroke={hit ? '#ef4444' : '#fff'} strokeWidth="0.3" />
         {[-0.12, 0, 0.12].map((x) => <line key={x} x1={sx(x, 14)} x2={sx(x, 14)} y1={8} y2={16} stroke="#fef3c7" strokeWidth="0.7" strokeLinecap="round" />)}
-        {/* the path: release to pitching, pitching to impact (a different colour: after the bounce), impact to the stumps (projected) */}
-        <motion.polyline points={`${release.x},${release.y} ${P.x},${P.y}`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: after * r, duration: 0.9 * r }} />
-        <motion.polyline points={`${P.x},${P.y} ${I.x},${I.y}`} fill="none" stroke="#fb923c" strokeWidth="1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 0.9) * r, duration: 0.7 * r }} />
-        <motion.polyline points={`${I.x},${I.y} ${S.x},${S.y}`} fill="none" stroke={hit ? '#ef4444' : '#94a3b8'} strokeWidth="0.9" strokeDasharray="1.4 1.1" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 1.8) * r, duration: 0.7 * r }} />
-        <motion.circle cx={P.x} cy={P.y} r="2" fill={col(track.pitching)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 0.9) * r, type: 'spring' }} style={{ transformOrigin: `${P.x}px ${P.y}px` }} />
-        <motion.circle cx={I.x} cy={I.y} r="2" fill={col(track.impact)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 1.6) * r, type: 'spring' }} style={{ transformOrigin: `${I.x}px ${I.y}px` }} />
+        {/* the ball's path: a smooth curve from the hand, down to the bounce, off the pitch to the pad (a warmer colour after the bounce), then the projection on to the stumps */}
+        <motion.path d={pathOf(flightA)} fill="none" stroke="#fbbf24" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: after * r, duration: 0.55 * FLIGHT * r, ease: 'linear' }} />
+        <motion.path d={pathOf(flightB)} fill="none" stroke="#fb923c" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 0.55 * FLIGHT) * r, duration: 0.45 * FLIGHT * r, ease: 'linear' }} />
+        <motion.path d={pathOf(projected)} fill="none" stroke={hit ? '#ef4444' : '#94a3b8'} strokeWidth="1" strokeDasharray="1.6 1.2" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 1.8) * r, duration: 0.7 * r, ease: 'easeOut' }} />
+        {/* the ball itself, with a soft glow, following the curve; then a ghost of it carries on to the stumps */}
+        <motion.circle r="3" fill="#fde68a" opacity="0.3" initial={{ cx: flight[0].x, cy: flight[0].y }} animate={{ cx: flight.map((q) => q.x), cy: flight.map((q) => q.y) }} transition={{ delay: after * r, duration: FLIGHT * r, ease: 'linear' }} />
+        <motion.circle r="1.3" fill="#fff" stroke="#fb7185" strokeWidth="0.5" initial={{ cx: flight[0].x, cy: flight[0].y }} animate={{ cx: flight.map((q) => q.x), cy: flight.map((q) => q.y) }} transition={{ delay: after * r, duration: FLIGHT * r, ease: 'linear' }} />
+        <motion.circle r="1" fill={hit ? '#ef4444' : '#94a3b8'} initial={{ opacity: 0, cx: projected[0].x, cy: projected[0].y }} animate={{ opacity: [0, 1, 1, 0], cx: projected.map((q) => q.x), cy: projected.map((q) => q.y) }} transition={{ delay: (after + 1.8) * r, duration: 0.7 * r, ease: 'easeOut' }} />
+        <motion.circle cx={P.x} cy={P.y} r="2" fill={col(track.pitching)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 0.55 * FLIGHT) * r, type: 'spring' }} style={{ transformOrigin: `${P.x}px ${P.y}px` }} />
+        <motion.circle cx={I.x} cy={I.y} r="2" fill={col(track.impact)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + FLIGHT) * r, type: 'spring' }} style={{ transformOrigin: `${I.x}px ${I.y}px` }} />
         <motion.circle cx={S.x} cy={S.y} r="1.6" fill={col(track.wickets)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 2.5) * r, type: 'spring' }} style={{ transformOrigin: `${S.x}px ${S.y}px` }} />
       </svg>
       {(
