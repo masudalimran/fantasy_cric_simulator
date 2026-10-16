@@ -13,7 +13,7 @@ import { usePlayerForm, useTeamMap } from './season/shared'
 import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
 import { Sheet } from './Sheet'
-import { accentOf, Delta, FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
+import { accentOf, Delta, FormBar, FormBarVertical, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
@@ -80,6 +80,7 @@ function SquadCard({
         </button>
       )}
       {showForm && <span className="max-md:hidden"><FormBar z={form} /></span>}
+      {showForm && <FormBarVertical z={form} className="md:hidden" />}
       {change !== undefined && change !== 0 && <span title="Change to his overall rating since the career began" className="text-xs"><Delta n={change} /></span>}
       <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
     </motion.div>

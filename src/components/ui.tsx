@@ -158,6 +158,20 @@ export function FormBar({ z, className = '' }: { z: number | null | undefined; c
     </div>
   )
 }
+/** The phone version of the form bar: a thin vertical bar beside the rating, filled from the bottom (fuller and greener is better, shorter and redder is worse). */
+export function FormBarVertical({ z, className = '' }: { z: number | null | undefined; className?: string }) {
+  if (z === null || z === undefined) {
+    return <div className={`h-9 w-1.5 shrink-0 rounded-full bg-white/10 ${className}`} title="No form yet: he needs a couple of matches this season" aria-label="No form yet" />
+  }
+  const c = Math.max(-2, Math.min(2, z))
+  const pct = Math.round(((c + 2) / 4) * 100)
+  const [label, color] = c >= 1 ? ['On fire', '#34d399'] : c >= 0.35 ? ['Good', '#a3e635'] : c > -0.35 ? ['Steady', '#fbbf24'] : c > -1 ? ['Poor', '#fb923c'] : ['Cold', '#f87171']
+  return (
+    <div className={`relative h-9 w-1.5 shrink-0 overflow-hidden rounded-full bg-white/10 ${className}`} title={`Form: ${label.toLowerCase()}`} aria-label={`Form: ${label}`}>
+      <div className="absolute inset-x-0 bottom-0 rounded-full transition-all" style={{ height: `${Math.max(pct, 8)}%`, background: color }} />
+    </div>
+  )
+}
 /** A rating bar. With `base`, it shows where the rating started and what it has become: 78 → 81 +3. */
 export function StatBar({ label, value, color, base }: { label: string; value: number; color: string; base?: number }) {
   const changed = base !== undefined && base !== value

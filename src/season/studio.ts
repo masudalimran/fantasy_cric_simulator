@@ -307,6 +307,8 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     const text = shape < 4 && withLead ? `${lead} ${facts} ${close}` : shape < 7 ? `${facts} ${close}` : withLead ? `${lead} ${facts}` : facts
     say(who, text, shape >= 7 && withLead ? (tone === 'knock' ? 'serious' : tone === 'wow' ? 'excited' : 'thoughtful') : mood, clip)
   }
+  /** The two experts nearly always agree; once in a while one of them takes the other on. */
+  const agrees = () => !rng.chance(0.07)
   const react = (who: 1 | 2, agrees: boolean, target: 1 | 2) => {
     const v = voice(who)
     const line = pick(agrees ? v.agree : v.disagree)
@@ -355,7 +357,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
         steady: [`${pn(t.id)} made ${t.runs} from ${t.balls}, ${t.fours} fours and ${t.sixes} sixes, a strike rate of ${t.sr}.`, `${t.runs} off ${t.balls} balls: no fireworks, just a solid, sensible innings.`, `That is ${pn(t.id)} for ${t.runs}${t.out ? '' : ', still there at the end'}, and the innings hung on him.`],
       }[style])
       take(x, answerPrefix(x) + fact, t.runs >= 50 || style === 'fast' ? 'praise' : style === 'slow' ? 'knock' : 'neutral', undefined, !answerPrefix(x))
-      react(y, rng.chance(0.55), x)
+      react(y, agrees(), x)
       const other = f.nextBat && f.nextBat.runs >= 15 ? f.nextBat : null
       take(y, other ? `For me, do not forget ${pn(other.id)} either: ${other.runs} off ${other.balls}. It was not a one-man show.` : `And for me the real story was how he handled the pressure at the other end.`, other ? 'neutral' : 'praise', other ? { kind: 'scoring', innings: f.idx } : undefined)
     } })
@@ -376,7 +378,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
           ? [`${pn(t.id)} finished with ${fig}, and he made them work for every run.`, `${t.wk} wicket${t.wk === 1 ? '' : 's'} for ${t.runs}, and he kept control all the way.`, `A tidy ${fig}: not spectacular, but it did the job.`]
           : [`${pn(t.id)} went wicketless but only conceded ${t.runs} from ${oversOf(t.balls)}. That is pressure.`, `Figures of ${fig}: no reward, and he deserved better.`, `He kept the runs down, ${t.econ.toFixed(1)} an over, even without a wicket.`])
       take(x, answerPrefix(x) + fact, t.wk >= 3 ? 'wow' : good ? 'praise' : 'neutral', undefined, !answerPrefix(x))
-      react(y, rng.chance(0.5), x)
+      react(y, agrees(), x)
       const bat = f.topBat
       take(y, bat ? `But for me it is ${pn(bat.id)} who set the tone, and the bowlers were reacting to him all innings.` : `I would also tip my cap to the fielding behind him.`, 'neutral')
     } })
@@ -390,7 +392,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       const wk = f.inn.log.filter((e) => e.wicket && e.score.runs >= c.at)[0]
       ask('collapse', { n: c.wickets, balls: c.balls }, wk ? { kind: 'wicket', seq: wk.seq } : { kind: 'worm', innings: f.idx })
       take(x, answerPrefix(x) + `${c.wickets} wickets in ${c.balls} balls from ${c.at} is the kind of slide you cannot afford. Pressure just built and built.`, 'knock', { kind: 'worm', innings: f.idx }, !answerPrefix(x))
-      counter(y, rng.chance(0.5), x, `Credit to ${f.bowl.name} though. They found the right length at the right time and the batters had no answer.`, 'praise')
+      counter(y, agrees(), x, `Credit to ${f.bowl.name} though. They found the right length at the right time and the batters had no answer.`, 'praise')
     } }
     if (f.turning) return { weight: 11, order: 4, run: () => {
       const t = f.turning as NonNullable<Facts['turning']>
@@ -398,7 +400,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       vars.a = asked(x)
       ask('turning', { bat: pn(t.ev.strikerId), bowl: pn(t.ev.bowlerId) }, { kind: 'wicket', seq: t.ev.seq })
       take(x, answerPrefix(x) + `${pn(t.ev.strikerId)} was set on ${t.runs} from ${t.balls}, and the moment he went, the whole mood of the innings changed.`, 'wow', undefined, !answerPrefix(x))
-      counter(y, rng.chance(0.4), x, `${pn(t.ev.bowlerId)} deserves the credit. He bided his time, and the breakthrough came exactly when it was needed.`, 'praise')
+      counter(y, agrees(), x, `${pn(t.ev.bowlerId)} deserves the credit. He bided his time, and the breakthrough came exactly when it was needed.`, 'praise')
     } }
     if (f.bigOver && f.bigOver.runs >= (match.format === 't20' ? 16 : match.format === 'odi' ? 14 : 12)) return { weight: 8, order: 4, run: () => {
       const o = f.bigOver as NonNullable<Facts['bigOver']>
@@ -406,7 +408,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       vars.a = asked(x)
       ask('bigOver', { over: o.over, runs: o.runs }, { kind: 'manhattan', innings: f.idx })
       take(x, answerPrefix(x) + `${o.runs} off over ${o.over}. That is the over where the momentum swung, no question.`, 'wow', undefined, !answerPrefix(x))
-      counter(y, rng.chance(0.5), x, `The bowler just lost his length for six balls, and a good batting side punishes that every single time.`, 'knock')
+      counter(y, agrees(), x, `The bowler just lost his length for six balls, and a good batting side punishes that every single time.`, 'knock')
     } }
     if (f.longestSix && (f.longestSix.distance ?? 0) >= 85) return { weight: 4 + 3, order: 4, run: () => {
       const s = f.longestSix as BallEvent
@@ -428,7 +430,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     vars.a = asked(x)
     ask('stand', { p1: pn(s.a), p2: pn(s.b), runs: s.runs, balls: s.balls }, { kind: 'manhattan', innings: f.idx })
     take(x, answerPrefix(x) + `${s.runs} off ${s.balls} balls together. That stand took the game away from them.`, 'praise', undefined, !answerPrefix(x))
-    counter(y, rng.chance(0.6), x, `Neither man took a backward step, and the running between the wickets was superb.`, 'praise')
+    counter(y, agrees(), x, `Neither man took a backward step, and the running between the wickets was superb.`, 'praise')
   } })
   // phases (limited-overs): the start and the finish
   if (f.powerplay && match.format !== 'test') segs.push({ weight: 5, order: 1, run: () => {
@@ -439,7 +441,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     const par = parRunsPerOver(match.format, 'powerplay') * p.overs
     const good = p.runs >= par * 1.1 && p.wickets <= 1
     take(x, answerPrefix(x) + `${p.runs} for ${p.wickets} in the first ${p.overs} overs, ${good ? 'above' : p.runs < par * 0.9 ? 'well below' : 'around'} what you would expect on this surface.`, good ? 'praise' : p.runs < par * 0.9 ? 'knock' : 'neutral', undefined, !answerPrefix(x))
-    counter(y, rng.chance(0.5), x, p.wickets >= 2 ? `Losing ${p.wickets} early meant they were always rebuilding.` : `A good platform, and the batters did not have to take risks to build it.`, p.wickets >= 2 ? 'knock' : 'praise')
+    counter(y, agrees(), x, p.wickets >= 2 ? `Losing ${p.wickets} early meant they were always rebuilding.` : `A good platform, and the batters did not have to take risks to build it.`, p.wickets >= 2 ? 'knock' : 'praise')
   } })
   if (f.death && match.format !== 'test') segs.push({ weight: 5, order: 6, run: () => {
     const d = f.death as NonNullable<Facts['death']>
@@ -448,7 +450,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     ask('death', { dr: d.runs, dw: d.wickets, dov: `${d.overs} overs` }, { kind: 'manhattan', innings: f.idx })
     const par = parRunsPerOver(match.format, 'death') * d.overs
     take(x, answerPrefix(x) + `${d.runs} runs for ${d.wickets} in the last ${d.overs} overs ${d.runs >= par * 1.05 ? 'is a strong finish' : 'is a bit short of what they wanted'}.`, d.runs >= par * 1.05 ? 'praise' : 'knock', undefined, !answerPrefix(x))
-    counter(y, rng.chance(0.5), x, `The death bowling decides so many games, and tonight it was ${d.runs >= par * 1.05 ? 'the batters on top' : 'the bowlers on top'}.`, 'neutral')
+    counter(y, agrees(), x, `The death bowling decides so many games, and tonight it was ${d.runs >= par * 1.05 ? 'the batters on top' : 'the bowlers on top'}.`, 'neutral')
   } })
   // what happens next (innings and stumps), or what decided it (end)
   const cfg = FORMATS[match.format]
@@ -461,13 +463,13 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       const sit = match.innings.length === 1 ? `${f.bat.short} ${innScore}` : lead >= 0 ? `${f.bat.short} lead by ${lead}` : `${f.bat.short} trail by ${-lead}`
       ask('outlookTest', { sit }, { kind: 'worm', innings: f.idx })
       take(x, answerPrefix(x) + (lead >= 150 ? `A lead like that puts the pressure straight back on ${f.bowl.name}. The question is how fast they can score.` : lead < -50 ? `${f.bowl.name} are the ones with the upper hand right now, and ${f.bat.short} have work to do.` : `It is nicely poised, and the next session will decide who gets ahead.`), lead >= 150 ? 'praise' : lead < -50 ? 'knock' : 'neutral', undefined, !answerPrefix(x))
-      counter(y, rng.chance(0.5), x, `${match.oversLeftExpected > 0 ? `With around ${match.oversLeftExpected} overs left in the match` : 'With the clock running'}, a draw is not out of the question either.`, 'neutral')
+      counter(y, agrees(), x, `${match.oversLeftExpected > 0 ? `With around ${match.oversLeftExpected} overs left in the match` : 'With the clock running'}, a draw is not out of the question either.`, 'neutral')
       return
     }
     const above = f.inn.runs >= parTotal * 1.05, below = f.inn.runs < parTotal * 0.93
     ask('outlook', { target: f.inn.runs + 1 }, { kind: 'worm', innings: f.idx })
     take(x, answerPrefix(x) + (above ? `${f.inn.runs} is above par here. ${f.bowl.name} will need something special to get close.` : below ? `${f.inn.runs} feels light. ${f.bowl.name} will fancy their chances with the bat.` : `It is a competitive total, a few either side of par. It is a proper contest.`), above ? 'praise' : below ? 'knock' : 'neutral', undefined, !answerPrefix(x))
-    counter(y, rng.chance(0.4), x, `${f.bowl.name} need to be at ${((f.inn.runs + 1) / cfg.overs).toFixed(2)} an over, and early wickets will decide whether they can keep that up.`, 'neutral', { kind: 'card', title: 'THE TARGET', lines: [`${f.bowl.short} need ${f.inn.runs + 1}`, `${((f.inn.runs + 1) / cfg.overs).toFixed(2)} runs an over`] })
+    counter(y, agrees(), x, `${f.bowl.name} need to be at ${((f.inn.runs + 1) / cfg.overs).toFixed(2)} an over, and early wickets will decide whether they can keep that up.`, 'neutral', { kind: 'card', title: 'THE TARGET', lines: [`${f.bowl.short} need ${f.inn.runs + 1}`, `${((f.inn.runs + 1) / cfg.overs).toFixed(2)} runs an over`] })
   } })
   if (kind === 'end') {
     const winner = match.result?.winnerSide ?? null
@@ -479,7 +481,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       ask('verdict', {}, { kind: 'worm', innings: Math.min(1, match.innings.length - 1) })
       const why = wTeam ? (f.collapse ? `${f.bat.short} collapsed, ${f.collapse.wickets} wickets in ${f.collapse.balls} balls, and ${wTeam.name} took full advantage.` : match.result?.margin?.type === 'wickets' ? `${wTeam.name} controlled the chase from the start and never looked in trouble.` : `${wTeam.name} simply handled the big moments better.`) : match.result?.draw ? `Neither side could force it, and the clock ran out. Respect to both for the effort.` : `It came right down to the wire, and nobody blinked.`
       take(x, answerPrefix(x) + why, wTeam ? 'praise' : 'neutral', undefined, !answerPrefix(x))
-      counter(y, rng.chance(0.5), x, wTeam ? `For me it was the discipline with the ball and the nerve at the end. That is what wins you matches.` : `A match like that is why we love this game.`, 'neutral')
+      counter(y, agrees(), x, wTeam ? `For me it was the discipline with the ball and the nerve at the end. That is what wins you matches.` : `A match like that is why we love this game.`, 'neutral')
     } })
     const awards = computeAwards(match)
     const mom = awards.motm
@@ -492,7 +494,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       const clip: Clip = batLine && batLine.runs >= 50 ? { kind: 'milestone', innings: match.innings.findIndex((i) => i.batters.some((b) => b === batLine)), playerId: mom.id } : { kind: 'card', title: 'MAN OF THE MATCH', lines: [p.name, mom.line] }
       ask('mom', { mom: first(p.name) }, clip)
       take(x, answerPrefix(x) + (mom.line ? `${first(p.name)}: ${mom.line}. Every time the match needed something, he delivered.` : `${first(p.name)} was in the middle of everything.`), 'praise', { kind: 'card', title: 'MAN OF THE MATCH', lines: [p.name, mom.line] }, !answerPrefix(x))
-      react(y, rng.chance(0.65), x)
+      react(y, agrees(), x)
       void bowlLine
       take(y, `And that is the fun of it: a performance like that gets the whole team believing.`, 'praise')
     } })
@@ -502,7 +504,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
       const last = match.innings.filter((i) => i.battingSide !== winner).pop() ?? f.inn
       ask('loser', { loser: lTeam.name }, { kind: 'manhattan', innings: last.index })
       take(x, answerPrefix(x) + `${lTeam.name} had their chances. They just could not string enough good overs together when it counted.`, 'knock', undefined, !answerPrefix(x))
-      counter(y, rng.chance(0.5), x, `There is plenty to take away, though. They will be back, and they will be dangerous.`, 'neutral')
+      counter(y, agrees(), x, `There is plenty to take away, though. They will be back, and they will be dangerous.`, 'neutral')
     } })
   }
 
