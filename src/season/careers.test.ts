@@ -29,7 +29,9 @@ describe('careers, fees and the yearly budget', () => {
   it('academy youth are raw but have a ceiling, and are different each year', () => {
     const a = generateYouth(2031, 30, 5)
     expect(a).toHaveLength(30)
-    expect(Math.max(...a.map((p) => overall(p)))).toBeLessThan(70)
+    const arrive = a.map((p) => overall(p)).sort((x, y) => x - y)
+    expect(arrive[15]).toBeLessThan(65)
+    expect(arrive[29]).toBeGreaterThan(68)
     expect(a.every((p) => p.potential > overall(p))).toBe(true)
     expect(generateYouth(2032, 30, 5)[0].id).not.toBe(a[0].id)
   })

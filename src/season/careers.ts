@@ -86,8 +86,10 @@ export function generateYouth(year: number, count: number, seed: number): (Playe
   for (let i = 0; i < count; i++) {
     const role = (['BAT', 'BAT', 'BOWL', 'BOWL', 'AR', 'AR', 'WK'] as const)[rng.int(7)]
     const name = `${SYL_A[rng.int(SYL_A.length)]}${SYL_B[rng.int(SYL_B.length)]}${rng.chance(0.5) ? SYL_C[rng.int(SYL_C.length)] : ''} ${SYL_A[rng.int(SYL_A.length)]}${SYL_C[rng.int(SYL_C.length)]}${SYL_B[rng.int(SYL_B.length)]}`
-    const potential = Math.max(66, Math.min(97, Math.round(80 + rng.normal() * 7 + (rng.chance(0.05) ? 10 : 0))))
-    const base = Math.max(40, Math.min(66, Math.round(potential - 26 + rng.normal() * 4)))
+    // most graduates are raw with a middling ceiling; a few are prodigies who arrive nearly ready and can go on to the high 90s
+    const q = rng.next()
+    const potential = Math.max(66, Math.min(97, Math.round(64 + 36 * q ** 1.25 + rng.normal() * 2)))
+    const base = Math.max(36, Math.min(90, Math.round(potential - (29 - 19 * q ** 3) + rng.normal() * 3)))
     const j = () => Math.max(20, Math.min(80, Math.round(base + rng.normal() * 5)))
     const bats = role !== 'BOWL'
     const bowls = role !== 'BAT' && role !== 'WK' || rng.chance(0.2)
@@ -119,7 +121,7 @@ function grow(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<str
     if (!p) continue
     const gap = ceilingOf(m, p) - overall(applyShift(p, out[id]))
     if (gap <= 1) continue
-    const talent = 0.62 + (hash(id) % 100) / 100 * 0.33 // each player grows at his own pace: some are ready in a season, some take three
+    const talent = 0.3 + (hash(id) % 100) / 100 * 0.2 // each player grows at his own pace: some are ready in a season, some take three
     const gain = Math.max(2, Math.round(gap * (talent + rng.next() * 0.1)))
     const keys: AttrKey[] = (p.bowling ? ['accuracy', 'variation', 'stamina'] : []).concat(p.role === 'BOWL' ? [] : ['technique', 'power', 'temperament', 'running']) as AttrKey[]
     const cur = out[id] ?? { bat: 0, bowl: 0 }
