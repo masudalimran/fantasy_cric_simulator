@@ -13,6 +13,7 @@ import { quipFor } from '../../data/quips'
 import { PhaseScreen, RecordScreen, SuperOverScreen, SwingScreen, TargetScreen, TensionScreen } from './StoryScreens'
 import { SnickoView, ReviewScreen } from './ReviewScreens'
 import { trackFor } from '../../season/moments'
+import { TournamentVictory, VARIANTS, variantOf } from '../season/TournamentVictory'
 import { AwardsNight, DeadlineDay, InjuryNews, NewCoachScreen, NewTalents, PlayoffNews, UpgradeScreen } from '../season/NewsScreens'
 
 const [A, B] = [BUILT_IN_TEAMS[0], BUILT_IN_TEAMS[1]]
@@ -63,6 +64,15 @@ describe('story screens', () => {
     for (const [info, text] of cases) expect(renderToString(<AmbientScreen info={info} />)).toContain(text)
     expect(quipFor(5, null)).toBe(quipFor(5, null))
     expect(quipFor(5, { need: 40, balls: 12 }).length).toBeGreaterThan(10)
+  })
+
+  it('a tournament victory renders for every one of its variants, and a tournament always gets the same one', () => {
+    expect(VARIANTS).toBeGreaterThanOrEqual(6)
+    const info = (variant: number) => ({ team: A, runnerUp: B, tournament: 'Hokage Cup', resultText: 'Soul Reapers won by 20 runs', played: 8, won: 7, players: A.players.slice(0, 11), variant })
+    for (let v = 0; v < VARIANTS; v++) expect(renderToString(<TournamentVictory info={info(v)} onDone={() => undefined} />)).toContain('Hokage Cup')
+    expect(variantOf('abc')).toBe(variantOf('abc'))
+    const seen = new Set(Array.from({ length: 40 }, (_, i) => variantOf(`competition-${i}`)))
+    expect(seen.size).toBeGreaterThanOrEqual(6) // different tournaments get different ones
   })
 
   it('pre-match intros render', () => {

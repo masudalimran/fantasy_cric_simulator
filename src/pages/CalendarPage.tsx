@@ -1,6 +1,8 @@
 import { BeforeYoursSheet, matchesBefore } from '../components/season/BeforeYours'
 import { TodayCard } from '../components/season/TodayCard'
 import { DeadlineDay, InjuryNews, NewCoachScreen, PlayoffNews, type InjuryRow } from '../components/season/NewsScreens'
+import { TournamentVictory, variantOf } from '../components/season/TournamentVictory'
+import { campaignOf } from '../season/stories'
 import { COACHES } from '../data/coaches'
 import { injuriesOf } from '../season/injuries'
 import { openWindow, SQUAD_CAP } from '../season/market'
@@ -20,7 +22,7 @@ import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { useIsMobile } from '../hooks'
 import { paths } from '../routes'
 import { addDays, daysBetween, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
-import { isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
+import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
 import type { Fixture, Season } from '../season/types'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 
@@ -112,6 +114,12 @@ export function CalendarPage() {
     if (!season || !season.myTeamId || !sid) return null
     const mineTeam = teams.get(season.myTeamId)
     if (!mineTeam) return null
+    // a tournament your team has won (you simmed the final, or it has not been shown yet): the long celebration comes first
+    for (const comp of season.competitions) {
+      const st = competitionStatus(season, comp)
+      const ckey = `champ:${sid}:${season.year}:${comp.id}`
+      if (comp.kind !== 'series' && st.champion === season.myTeamId && !seenSet.has(ckey)) return { kind: 'champion' as const, comp, team: mineTeam, keys: [ckey] }
+    }
     const hurt: InjuryRow[] = []
     const keys: string[] = []
     for (const [id, injury] of injuriesOf(season, mineTeam, season.today)) {
@@ -260,6 +268,7 @@ export function CalendarPage() {
 
 
       <AnimatePresence>
+        {news?.kind === 'champion' && season && (() => { const c = campaignOf(season, news.comp, news.team.id); return <TournamentVictory key={`champ${news.keys[0]}`} info={{ team: news.team, runnerUp: c.runnerUpId ? teams.get(c.runnerUpId) ?? null : null, tournament: competitionName(news.comp, teams), resultText: c.resultText, played: c.played, won: c.won, players: [...news.team.players.slice(0, 11)].sort((a, b) => (b.id === news.team.captainId ? 1 : 0) - (a.id === news.team.captainId ? 1 : 0)), variant: variantOf(news.comp.id) }} onDone={() => news.keys.forEach(markSeen)} /> })()}
         {news?.kind === 'injury' && <InjuryNews key="inj" rows={news.rows} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'playoff' && <PlayoffNews key={`po${news.keys[0]}`} status={news.status} team={news.team} competition={news.comp} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'coach' && <NewCoachScreen key="coach" coach={news.coach} team={news.team} onClose={() => news.keys.forEach(markSeen)} />}

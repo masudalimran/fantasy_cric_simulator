@@ -54,6 +54,23 @@ export function superOverOutcome(matchSeed: number): { winnerSide: 0 | 1; winner
   return { winnerSide, winnerRuns: loserRuns + 1 + r.int(5), loserRuns, loserWickets: r.int(3) }
 }
 
+// ---- A tournament won ----------------------------------------------------------------------------------------------------------
+
+export interface Campaign { played: number; won: number; resultText: string; runnerUpId: string | null }
+
+/** How a team got through a tournament: its matches and wins in it, the final's result and who it beat. */
+export function campaignOf(season: Season, comp: Competition, teamId: string): Campaign {
+  const fs = season.fixtures.filter((f) => f.competitionId === comp.id && (f.homeId === teamId || f.awayId === teamId) && season.results[f.id])
+  const final = season.fixtures.find((f) => f.competitionId === comp.id && f.stage === 'Final')
+  const res = final ? season.results[final.id] : undefined
+  return {
+    played: fs.length,
+    won: fs.filter((f) => season.results[f.id].winnerId === teamId).length,
+    resultText: res?.text ?? '',
+    runnerUpId: final ? (final.homeId === teamId ? final.awayId : final.homeId) : null,
+  }
+}
+
 // ---- The playoff race -----------------------------------------------------------------------------------------------------------
 
 export type PlayoffStatus = 'qualified' | 'eliminated' | null

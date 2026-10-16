@@ -37,7 +37,9 @@ import { WICKET_FX_SECONDS, type WicketFxInfo } from '../components/match/Wicket
 import { TournamentIntro } from '../components/match/TournamentIntro'
 import { tournamentIntro } from '../season/tournamentIntro'
 import { UpgradeScreen, type UpgradeRow } from '../components/season/NewsScreens'
-import { upgradesFrom } from '../season/stories'
+import { campaignOf, upgradesFrom } from '../season/stories'
+import { TournamentVictory, variantOf } from '../components/season/TournamentVictory'
+import { markSeen } from '../tips'
 import { formOf, headToHead } from '../season/preview'
 import { dismissalText, strikeRate } from '../components/match/format'
 import { sfx } from '../audio/sfx'
@@ -173,6 +175,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // A calendar fixture: save the result when the match ends (unless it was already played).
   const season = useStore(selectSeason)
   const history = useStore((s) => selectSession(s)?.history)
+  const sessionId = useStore((s) => selectSession(s)?.id ?? '')
+  const [victoryOpen, setVictoryOpen] = useState(false) // the tournament-winning celebration (a final won by your team)
   const [beforeOpen, setBeforeOpen] = useState(false)
   const updateSeasonNow = useStore((s) => s.updateSeason)
   const allBaseTeams = useBaseTeamMap()
@@ -866,6 +870,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const inningsBreak = match.format !== 'test' && inn.index === 1 && inn.legalBalls === 0 && !match.isOver
   const cfg = FORMATS[match.format]
   const pom = awards?.motm ?? null
+  // a final your team has won: the long tournament celebration plays after the winners' screen
+  const champComp = fixture && fixture.stage === 'Final' && match.isOver && match.mySide !== null && match.result?.winnerSide === match.mySide ? season?.competitions.find((c) => c.id === fixture.competitionId && c.kind !== 'series') : undefined
   const finalName = fixture?.stage === 'Final' ? (() => { const c = season?.competitions.find((x) => x.id === fixture.competitionId); return c ? competitionName(c, teamMap) : undefined })() : undefined
   const btn = 'inline-flex min-h-10 items-center justify-center rounded-xl border border-line bg-panel-2 px-4 text-sm font-bold text-white transition hover:border-indigo-400'
 
@@ -948,7 +954,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? holdText : undefined} onHold={resume} manual={manual} setManual={setManualPlay} />
       {/* the last ball's own screens (the field is gone by then) play over a dark backdrop before the celebration */}
       <AnimatePresence>{match.isOver && moment && !winOpen && <motion.div key="finalmoment" className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="relative aspect-[16/10] w-full max-w-3xl"><AnimatePresence><MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} /></AnimatePresence></div></motion.div>}</AnimatePresence>
-      <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
+      <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (champComp) { setVictoryOpen(true); return } if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
+      <AnimatePresence>{victoryOpen && champComp && season && (() => { const c = campaignOf(season, champComp, season.myTeamId as string); const mine = match.sides.find((x) => x.team.id === season.myTeamId); const team = mine?.team; if (!team) return null; return <TournamentVictory key="victory" info={{ team, runnerUp: c.runnerUpId ? teamMap.get(c.runnerUpId) ?? null : null, tournament: competitionName(champComp, teamMap), resultText: c.resultText || (match.result?.text ?? ''), played: c.played, won: c.won, players: [...(mine?.xi ?? [])].sort((a, b) => (b.id === team.captainId ? 1 : 0) - (a.id === team.captainId ? 1 : 0)), variant: variantOf(champComp.id) }} onDone={() => { setVictoryOpen(false); markSeen(`champ:${sessionId}:${season.year}:${champComp.id}`); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} /> })()}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => { setMotmOpen(false); if (getAnimPrefs().studio && !studioEnded.current) { studioEnded.current = true; setStudio('end') } else showUpgrades() }} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
       <AnimatePresence>
         {studio && !moment && (
