@@ -69,7 +69,7 @@ export function ControlsSheet({ match, act, auto, setAuto, open, setOpen, mySide
   return (
     <>
       {/* floating dock: round icon buttons in a row, each explained by a tooltip */}
-      {!hideDock && (!manual || !!holdLabel) && <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl backdrop-blur">
+      {!hideDock && (!manual || !!holdLabel) && <div className="fixed bottom-20 right-5 z-40 flex flex-row items-center gap-2 rounded-full border border-line bg-panel/95 p-1.5 shadow-2xl">
         {holdLabel && <button onClick={onHold} aria-label={holdLabel} className="cta-pulse mx-1 h-12 rounded-full bg-emerald-500 px-5 font-display text-lg tracking-wide text-black hover:bg-emerald-400">{holdLabel}</button>}
         {!holdLabel && !manual && <Tip label="Next ball" hint="Space">
           <button onClick={() => act({ t: 'ball' })} aria-label="Next ball" className={`${auto ? '' : 'cta-pulse '}grid h-12 w-12 place-items-center rounded-full bg-emerald-500 text-black transition hover:bg-emerald-400`}>

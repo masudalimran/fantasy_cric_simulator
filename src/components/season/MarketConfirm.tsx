@@ -110,7 +110,7 @@ export function MarketConfirm({ confirm, season, seasons, teams, me, purse, onCo
           <CareerPath season={season} playerId={player.id} teams={teams} />
         </div>
 
-        <div className="sticky bottom-0 grid grid-cols-[1fr_1.4fr] gap-2 border-t border-line bg-ink/95 p-3 backdrop-blur">
+        <div className="sticky bottom-0 grid grid-cols-[1fr_1.4fr] gap-2 border-t border-line bg-ink/95 p-3">
           <button onClick={onClose} className="rounded-full border border-line py-3 text-sm font-bold text-slate-200 hover:border-slate-400">Not now</button>
           <button
             onClick={onConfirm} disabled={!money.ok}

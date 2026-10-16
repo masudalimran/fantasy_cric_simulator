@@ -16,7 +16,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 /** Ball-by-ball commentary (newest first, with an over summary after each over) or the full scorecard. */
 export function Commentary({ match, tab, setTab, controls }: { match: Match; tab: Tab; setTab: (t: Tab) => void; /** When set (manual play), a Controls tab comes first and shows this. */ controls?: React.ReactNode }) {
-  const feed = [...match.events].reverse().slice(0, 90)
+  const feed = match.events.slice(-90).reverse() // only the latest 90 are drawn, so a long Test does not copy its whole history every ball
   return (
     <div className="rounded-2xl border border-line bg-panel p-4">
       <div className="mb-3 flex flex-wrap gap-1.5" role="tablist">

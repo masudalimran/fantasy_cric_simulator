@@ -13,7 +13,7 @@ export function TipBanner({ id, title, children, lift = 84, left = false }: { id
         <motion.div
           role="status"
           initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ delay: 0.6, duration: 0.3 }}
-          className={`fixed inset-x-3 z-[55] mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-amber-300/60 bg-ink/95 p-3.5 shadow-2xl backdrop-blur bottom-[calc(var(--sab)+var(--lift))] md:inset-x-auto md:bottom-6 ${left ? 'md:left-6 md:mx-0' : 'md:right-6'}`}
+          className={`fixed inset-x-3 z-[55] mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-amber-300/60 bg-ink/95 p-3.5 shadow-2xl bottom-[calc(var(--sab)+var(--lift))] md:inset-x-auto md:bottom-6 ${left ? 'md:left-6 md:mx-0' : 'md:right-6'}`}
           style={{ '--lift': `${lift}px` } as React.CSSProperties}
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-400 font-display text-xl leading-none text-black">!</span>

@@ -146,7 +146,7 @@ export function NewSessionPage() {
       </div>
       </details>
 
-      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4">
         <div className="text-sm">
           {!me ? (
             <span className="font-semibold text-amber-300">Tap a team above to choose it.</span>

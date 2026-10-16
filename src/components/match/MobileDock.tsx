@@ -9,7 +9,7 @@ type Auto = 0 | 1 | 2 | 4
 export function MobileDock({ onBall, auto, setAuto, onControls, over, holdLabel }: { onBall: () => void; auto: Auto; setAuto: (v: Auto) => void; onControls: () => void; over: boolean; /** Between innings the big button says this instead of NEXT BALL. */ holdLabel?: string }) {
   const circle = 'relative grid h-12 w-12 shrink-0 place-items-center rounded-full transition active:scale-95'
   return (
-    <div className="shrink-0 border-t border-line bg-ink/95 px-3 pt-2 backdrop-blur" style={{ paddingBottom: 'calc(var(--sab) + 10px)' }}>
+    <div className="shrink-0 border-t border-line bg-ink/95 px-3 pt-2" style={{ paddingBottom: 'calc(var(--sab) + 10px)' }}>
       <div className="mx-auto flex max-w-md items-center gap-3">
         {!holdLabel && <button onClick={onControls} aria-label="Open match controls" className={`${circle} bg-slate-700 text-white`}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>

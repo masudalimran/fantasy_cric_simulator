@@ -20,7 +20,7 @@ const Icon = {
 /** The slim bar at the top of a phone screen: who we are, and a way back to a live match. */
 export function MobileHeader({ resuming, playTo }: { resuming: boolean; playTo: string }) {
   return (
-    <header className="sticky top-0 z-40 -mx-4 flex items-center justify-between border-b border-line/60 bg-ink/90 px-4 pb-2 backdrop-blur-xl" style={{ paddingTop: 'calc(var(--sat) + 8px)' }}>
+    <header className="sticky top-0 z-40 -mx-4 flex items-center justify-between border-b border-line/60 bg-ink/97 px-4 pb-2" style={{ paddingTop: 'calc(var(--sat) + 8px)' }}>
       <Link to={paths.home} className="flex items-baseline gap-1.5" aria-label="Fantasy Cric Sim home">
         <span className="font-display text-2xl tracking-wider text-white">FANTASY CRIC</span>
         <span className="font-display text-2xl tracking-wider text-indigo-400">SIM</span>
@@ -40,7 +40,7 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
   const item = (active: boolean) => `flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 text-[11px] font-bold tracking-wide transition ${active ? 'text-white' : 'text-slate-500'}`
   const playActive = pathname.startsWith('/play')
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-[60] border-t border-line/70 bg-ink/92 backdrop-blur-xl" style={{ paddingBottom: 'var(--sab)', paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-[60] border-t border-line/70 bg-ink/97" style={{ paddingBottom: 'var(--sab)', paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
       <div className="mx-auto flex h-[58px] max-w-md items-stretch">
         <NavLink to={paths.home} end className={() => item(pathname === '/')}>
           <span className={pathname === '/' ? 'text-indigo-300' : ''}>{Icon.home}</span>Home

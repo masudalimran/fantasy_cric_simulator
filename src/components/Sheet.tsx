@@ -8,7 +8,7 @@ const WIDTH = { sm: 'md:max-w-md', md: 'md:max-w-2xl', lg: 'md:max-w-3xl', xl: '
  * A popup. On a computer it is a centred card; on a phone it is a bottom sheet that slides up, has a grab handle,
  * and can be dragged down to dismiss, like a native app. Escape also closes it.
  */
-export function Sheet({ label, onClose, z = 70, size = 'md', children, className = '', scrim = 'bg-black/70', labelledBy, scroll = true }: {
+export function Sheet({ label, onClose, z = 70, size = 'md', children, className = '', scrim = 'bg-black/75', labelledBy, scroll = true }: {
   label: string
   onClose: () => void
   z?: number
@@ -30,7 +30,7 @@ export function Sheet({ label, onClose, z = 70, size = 'md', children, className
 
   return (
     <motion.div
-      className={`fixed inset-0 flex items-end justify-center backdrop-blur-sm md:items-center md:overflow-y-auto md:p-4 ${scrim}`}
+      className={`fixed inset-0 flex items-end justify-center md:items-center md:overflow-y-auto md:p-4 ${scrim}`}
       style={{ zIndex: z }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
     >

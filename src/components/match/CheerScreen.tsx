@@ -75,7 +75,7 @@ export function CheerScreen({ info }: { info: CheerInfo }) {
         <motion.div key={d} className="pointer-events-none absolute -top-[10%] h-[120%] w-[34%] origin-top opacity-30" style={{ left: d < 0 ? '4%' : '62%', background: `linear-gradient(180deg, ${b}, transparent 85%)`, clipPath: 'polygon(40% 0, 60% 0, 100% 100%, 0 100%)' }} animate={{ rotate: [d * 14, d * -14, d * 14] }} transition={{ duration: 2.2 * r, repeat: Infinity, ease: 'easeInOut' }} />
       ))}
       {/* sparkles */}
-      {Array.from({ length: 12 }, (_, i) => (
+      {Array.from({ length: w < 520 ? 6 : 12 }, (_, i) => (
         <motion.span key={i} className="pointer-events-none absolute select-none text-sm" style={{ left: `${(i * 37 + 8) % 92}%`, top: `${(i * 23 + 6) % 50}%`, color: i % 2 ? a : b }} animate={{ opacity: [0, 1, 0], scale: [0.5, 1.3, 0.5] }} transition={{ duration: 1.2 * r, repeat: Infinity, delay: (i % 6) * 0.2 }} aria-hidden>✦</motion.span>
       ))}
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-pink-300"><span className="h-2 w-2 animate-pulse rounded-full bg-pink-400" />Cheerleaders</div>
@@ -85,7 +85,7 @@ export function CheerScreen({ info }: { info: CheerInfo }) {
         <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(30, Math.min(w * 0.12, 80)), WebkitTextStroke: '2px #0a0c14', paintOrder: 'stroke fill', textShadow: `0 0 28px ${b}` }}>GO {team.short.toUpperCase()}!</div>
       </motion.div>
       <div className="absolute inset-x-0 bottom-[9%] z-10 flex items-end justify-center gap-[2%]">
-        {Array.from({ length: w < 520 ? 4 : 5 }, (_, i) => <Dancer key={i} team={team} i={i} size={size} delay={(i % 2) * 0.12} />)}
+        {Array.from({ length: w < 520 ? 3 : 5 }, (_, i) => <Dancer key={i} team={team} i={i} size={size} delay={(i % 2) * 0.12} />)}
       </div>
       <div className="absolute inset-x-0 bottom-0 z-0 h-[16%]" style={{ background: `linear-gradient(180deg, transparent, ${a}55)` }} />
       <div className="absolute inset-x-0 bottom-[1%] z-20 text-center text-[11px] font-semibold text-slate-200" style={{ textShadow: '0 1px 3px #000' }}>{why === 'boundary' ? 'The crowd goes wild for a boundary' : 'The crowd erupts for the wicket'}</div>

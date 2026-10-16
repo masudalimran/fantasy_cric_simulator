@@ -196,7 +196,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
           {stage === 'show' && (
             <motion.div
               key={i} onClick={() => (typed.done ? next() : typed.finish())}
-              className="relative w-full cursor-pointer rounded-2xl border-2 bg-black/70 p-3 shadow-xl backdrop-blur"
+              className="relative w-full cursor-pointer rounded-2xl border-2 bg-black/80 p-3 shadow-xl"
               style={{ borderColor: MOOD_COLOR[beat.mood], boxShadow: `0 0 24px ${MOOD_COLOR[beat.mood]}44` }}
               initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8 }} transition={{ type: 'spring', stiffness: 320, damping: 26 }}
             >
@@ -232,7 +232,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
       <AnimatePresence>
         {stage !== 'show' && (
           <motion.div key={stage} className="absolute inset-0 z-[70] grid place-items-center bg-[#04060d]" initial={{ opacity: stage === 'intro' ? 1 : 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.4 } }}>
-            <motion.div className="pointer-events-none absolute left-1/2 top-1/2 h-[120vmax] w-[120vmax] -translate-x-1/2 -translate-y-1/2 opacity-25" style={{ background: 'repeating-conic-gradient(from 0deg, #fbbf2400 0deg 10deg, #fbbf24aa 10deg 20deg)' }} animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }} />
+            <motion.div className="pointer-events-none absolute left-1/2 top-1/2 h-[120vmax] w-[120vmax] -translate-x-1/2 -translate-y-1/2 opacity-25" style={{ background: 'repeating-conic-gradient(from 0deg, #fbbf2400 0deg 10deg, #fbbf24aa 10deg 20deg)', willChange: 'transform' }} animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }} />
             <div className="relative text-center">
               <motion.div initial={{ scale: 0.4, rotate: -8, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 160, damping: 12 }} className="mx-auto inline-block rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 font-display text-6xl leading-none tracking-widest text-black shadow-2xl">FCS</motion.div>
               <motion.div className="mt-3 font-display text-4xl leading-none tracking-wide text-white" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.35 }}>{stage === 'intro' ? script.title : 'Thanks for watching'}</motion.div>

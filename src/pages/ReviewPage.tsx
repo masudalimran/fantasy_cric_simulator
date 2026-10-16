@@ -277,7 +277,7 @@ export function ReviewPage() {
         )}
       </div>
 
-      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4">
         <p className="text-sm text-slate-300">{complete ? `That's ${review.year} done. The ${review.year + 1} season keeps your team, your difficulty and your history.` : 'Play or sim the rest of this season to finish the year.'}</p>
         <button disabled={!complete} onClick={startNextSeason} className="rounded-full bg-emerald-500 px-7 py-2 font-display text-2xl tracking-wide text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40">Start the {review.year + 1} season</button>
       </div>

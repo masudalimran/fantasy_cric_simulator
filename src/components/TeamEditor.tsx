@@ -310,7 +310,7 @@ export function TeamEditor({ id }: { id?: string }) {
         ))}
       </div>
 
-      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4">
         <ul className="space-y-0.5 text-sm">
           {errors.map((e) => <li key={e} className="text-red-300">• {e}</li>)}
           {warnings.map((e) => <li key={e} className="text-amber-300">• {e} <span className="text-slate-400">(fix on the </span><Link to={paths.squad(team.id)} className="text-indigo-300 hover:underline">squad page</Link><span className="text-slate-400"> after saving)</span></li>)}

@@ -479,7 +479,7 @@ export function Stage({
         <motion.div
           className="pointer-events-none absolute bottom-2 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-1 text-center text-[11px] font-extrabold uppercase tracking-wider text-white ring-2"
           style={{ ['--tw-ring-color' as string]: chase.balls <= 6 ? '#ef4444' : '#fbbf2499' }}
-          animate={chase.balls <= 6 ? { scale: [1, 1.07, 1], boxShadow: ['0 0 0 #ef444400', '0 0 18px #ef4444cc', '0 0 0 #ef444400'] } : { scale: 1 }} transition={{ duration: 1, repeat: Infinity }}
+          animate={chase.balls <= 6 ? { scale: [1, 1.07, 1] } : { scale: 1 }} transition={{ duration: 1, repeat: Infinity }}
         >
           Need <b className="text-amber-300">{chase.need}</b> off <b className="text-amber-300">{chase.balls}</b> {chase.balls === 1 ? 'ball' : 'balls'} <span className="text-slate-400">· {chase.wickets} {chase.wickets === 1 ? 'wicket' : 'wickets'} left</span>
         </motion.div>

@@ -88,7 +88,7 @@ export function CareerLayout() {
           </div>
         )}
         {/* the career's pages as a tab strip that stays in view while you scroll, like a native app */}
-        <div className="sticky z-30 -mx-4 mb-3 flex items-center gap-1 border-b border-line/70 bg-ink/95 px-1.5 py-1.5 backdrop-blur-xl" style={{ top: 'calc(var(--sat) + 49px)' }}>
+        <div className="sticky z-30 -mx-4 mb-3 flex items-center gap-1 border-b border-line/70 bg-ink/95 px-1.5 py-1.5" style={{ top: 'calc(var(--sat) + 49px)' }}>
           <button onClick={() => nudge(-1)} disabled={!more.left} aria-label="Previous tabs" className="grid h-9 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-bold text-white transition active:bg-white/15 disabled:opacity-25">‹</button>
           <nav ref={tabStrip} onScroll={measure} className="flex min-w-0 flex-1 gap-1 overflow-x-hidden" aria-label="Career pages">
             {tabs.map(([to, label]) => (

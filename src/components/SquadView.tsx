@@ -322,7 +322,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
 
       {session && season && <RatingChanges team={team} base={teams.find((t) => t.id === id)} season={season} />}
 
-      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4 backdrop-blur">
+      <div className="sticky bottom-0 max-md:bottom-[calc(var(--sab)+66px)] mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel/95 p-4">
         <ul className="space-y-0.5 text-sm">
           {check.errors.map((e) => <li key={e} className="text-red-300">• {e}</li>)}
           {check.warnings.map((e) => <li key={e} className="text-amber-300">• {e}</li>)}

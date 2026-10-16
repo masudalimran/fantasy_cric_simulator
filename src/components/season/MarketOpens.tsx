@@ -45,7 +45,7 @@ export function MarketOpens({ season, sessionId }: { season: Season; sessionId: 
       {show && win && (
         <motion.div
           data-scroll-lock role="dialog" aria-modal="true" aria-label={`${win.name} is open`}
-          className="fixed inset-0 z-[88] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[88] grid place-items-center bg-black/80 p-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={close}
         >
           <Coins />

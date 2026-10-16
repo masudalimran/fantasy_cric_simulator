@@ -28,7 +28,7 @@ function CardLines({ match }: { match: Match }) {
 
 function Shell({ label, accent, children }: { label: string; accent: string; children: React.ReactNode }) {
   return (
-    <motion.div data-scroll-lock className="fixed inset-0 z-[55] grid place-items-center bg-black/65 p-3 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div data-scroll-lock className="fixed inset-0 z-[55] grid place-items-center bg-black/65 p-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
         role="dialog" aria-label={label}
         initial={{ y: -30, scale: 0.95, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }} exit={{ y: -20, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}
