@@ -87,7 +87,7 @@ export function BallTrackView({ track, out, rate = 1, compact = false, after = 0
   const col = (v: string) => (v === 'In line' || v === 'Hitting' ? '#34d399' : v.includes("umpire's call") ? '#fb923c' : '#f87171')
   return (
     <div className="absolute inset-0">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className={compact ? 'absolute bottom-[24%] left-[30%] right-[4%] top-[22%] h-[54%] w-[66%]' : 'absolute inset-0 h-full w-full'}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className={compact ? 'absolute bottom-[4%] left-[30%] right-[4%] top-[12%] h-[84%] w-[66%]' : 'absolute inset-0 h-full w-full'}>
         <polygon points={`${50 - halfWidth(92)},92 ${50 + halfWidth(92)},92 ${50 + halfWidth(14)},14 ${50 - halfWidth(14)},14`} fill="#7c5f35" opacity="0.75" />
         <polygon points={`${50 - halfWidth(92) * 1.5},92 ${50 + halfWidth(92) * 1.5},92 ${50 + halfWidth(14) * 1.5},14 ${50 - halfWidth(14) * 1.5},14`} fill="none" stroke="#fff" strokeWidth="0.3" opacity="0.25" />
         {[26, 62].map((y) => <line key={y} x1={50 - halfWidth(y)} x2={50 + halfWidth(y)} y1={y} y2={y} stroke="#fff" strokeWidth="0.35" opacity="0.7" />)}

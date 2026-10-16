@@ -1,5 +1,5 @@
 import type { BallEvent } from '../engine/types'
-import { decodeBall, type ReelBall } from './reel'
+import { decodeBall, synthesizeBat, type ReelBall } from './reel'
 import type { Season } from './types'
 
 // ---- A highlight from an earlier match, for the strategic timeout ------------------------------------------------
@@ -153,32 +153,27 @@ export interface ReelHighlight {
   balls: ReelBall[]
 }
 
-/** Every saved reel among the last few matches (not the one being played): the best play of each. Matches played before reels existed have none. */
+/**
+ * Batting highlights from the last few matches (not the one being played): each match's best innings (25 or more), as real footage when
+ * the match saved a reel and as footage rebuilt from his fours and sixes when it did not, so there is always something to show.
+ */
 export function reelCandidates(season: Season, excludeFixtureId?: string, look = 24, skip?: Set<string>): ReelHighlight[] {
   const byId = new Map(season.fixtures.map((f) => [f.id, f]))
   const roster = season.roster ?? []
   const recent = Object.values(season.results)
-    .filter((r) => r.reel && r.fixtureId !== excludeFixtureId && !skip?.has(r.fixtureId) && byId.has(r.fixtureId))
+    .filter((r) => r.fixtureId !== excludeFixtureId && !skip?.has(r.fixtureId) && byId.has(r.fixtureId))
     .sort((a, b) => byId.get(b.fixtureId)!.date.localeCompare(byId.get(a.fixtureId)!.date))
     .slice(0, look)
   const out: ReelHighlight[] = []
   for (const r of recent) {
-    const reel = r.reel!
-    const id = roster[reel.p]
     const f = byId.get(r.fixtureId)!
-    if (!id || reel.e.length === 0) continue
-    const base = { fixtureId: r.fixtureId, result: r.text, playerId: id, kind: reel.k, homeId: f.homeId, awayId: f.awayId, date: f.date, balls: reel.e.map(decodeBall) }
-    if (reel.k === 'bat') {
-      const line = r.bat.find((l) => l[0] === reel.p)
-      if (!line) continue
-      const [, runs, balls, fours, sixes] = line
-      out.push({ ...base, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` })
-    } else {
-      const line = r.bowl.find((l) => l[0] === reel.p)
-      if (!line) continue
-      const [, balls, runs, wickets] = line
-      out.push({ ...base, headline: `${wickets}/${runs}`, detail: `in ${Math.floor(balls / 6)}.${balls % 6} overs` })
-    }
+    const best = [...r.bat].filter((l) => l[1] >= 25 && roster[l[0]]).sort((a, b) => b[1] + b[4] * 2 - (a[1] + a[4] * 2))[0]
+    if (!best) continue
+    const [p, runs, balls, fours, sixes] = best
+    const saved = r.reel && r.reel.k === 'bat' && r.reel.p === p && r.reel.e.length > 0 ? r.reel.e.map(decodeBall) : null
+    const ballsOf = saved ?? synthesizeBat(r.fixtureId, runs, fours, sixes)
+    if (ballsOf.length === 0) continue
+    out.push({ fixtureId: r.fixtureId, result: r.text, playerId: roster[p], kind: 'bat', homeId: f.homeId, awayId: f.awayId, date: f.date, balls: ballsOf, headline: `${runs} (${balls})`, detail: `${fours} ${fours === 1 ? 'four' : 'fours'} and ${sixes} ${sixes === 1 ? 'six' : 'sixes'}` })
   }
   return out
 }

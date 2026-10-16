@@ -83,7 +83,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
       {/* two lines of fixed height, always there, so both sheets stay the same size whether or not anyone is in or out */}
       <div className="mt-1.5 shrink-0 space-y-1 text-[11px]" aria-label="Changes to the XI">
         <div className="flex h-[22px] items-center gap-2 overflow-hidden whitespace-nowrap">
-          <span className="w-12 shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-emerald-300">▲ In</span>
+          <span className="shrink-0 px-2 rounded bg-emerald-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-emerald-300">▲ In</span>
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ins.length === 0 ? <span className="text-slate-600">no changes</span> : ins.map((p) => (
             <span key={p.id} className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 py-0.5 pl-0.5 pr-2" title={`${p.name} comes in`}>
@@ -93,7 +93,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
           </div>
         </div>
         <div className="flex h-[22px] items-center gap-2 overflow-hidden whitespace-nowrap">
-          <span className="w-12 shrink-0 rounded bg-rose-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-rose-300">▼ Out</span>
+          <span className="shrink-0 px-2 rounded bg-rose-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-rose-300">▼ Out</span>
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {outs.length === 0 ? <span className="text-slate-600">no changes</span> : outs.map((n) => {
             const p = team.players.find((x) => x.id === n.playerId)
@@ -109,7 +109,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
       </div>
       {moved.length > 0 && (
         <div className="mt-1 flex shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[11px]" aria-label="Batting order changes">
-          <span className="w-12 shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-amber-300">↕ Order</span>
+          <span className="shrink-0 px-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-center text-[11px] font-extrabold uppercase tracking-wider text-amber-300">↕ Order</span>
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {moved.map((n) => { const p = side.xi.find((x) => x.id === n.playerId)!; return <span key={n.playerId} className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-100" title={`${p.name}: ${n.why}`}>{p.name.split(' ')[0]} <span className="text-amber-300/80">{n.why}</span></span> })}
           </div>

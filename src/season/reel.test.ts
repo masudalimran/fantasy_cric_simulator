@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { Match } from '../engine/match'
-import { buildReel, decodeBall, encodeBall, REEL_MAX, toEvent } from './reel'
+import { buildReel, decodeBall, encodeBall, REEL_MAX, synthesizeBat, toEvent } from './reel'
 import { recentReel } from './moments'
 import type { Season } from './types'
 
@@ -30,8 +30,8 @@ describe('highlight reels', () => {
       expect(reel.e.length).toBeLessThanOrEqual(REEL_MAX)
       const balls = reel.e.map(decodeBall)
       expect([...balls].sort((a, b) => a.seq - b.seq)).toEqual(balls) // in the order they happened
-      if (reel.k === 'bat') expect(balls.every((b) => b.runsBat >= 2)).toBe(true)
-      else expect(balls.every((b) => b.wicket || b.runsBat === 0)).toBe(true)
+      expect(reel.k).toBe('bat') // only batting makes a highlight
+      expect(balls.every((b) => b.runsBat >= 2)).toBe(true)
     }
     expect(found).toBeGreaterThan(15) // most matches have someone who stood out
   })
@@ -52,6 +52,11 @@ describe('highlight reels', () => {
     expect(found.playerId).toBe(reel.p)
     expect(found.balls).toHaveLength(reel.e.length)
     expect(recentReel(season, 'f1')).toBeNull()
-    expect(recentReel({ ...season, results: { f1: { ...season.results.f1, reel: undefined } } } as unknown as Season)).toBeNull()
+    // a match without a saved reel still gives a batting highlight, rebuilt from the fours and sixes on his line
+    const rebuilt = recentReel({ ...season, results: { f1: { ...season.results.f1, reel: undefined } } } as unknown as Season)!
+    expect(rebuilt.kind).toBe('bat')
+    expect(rebuilt.balls.filter((b) => b.runsBat === 4)).toHaveLength(7)
+    expect(rebuilt.balls.filter((b) => b.runsBat === 6)).toHaveLength(3)
+    expect(synthesizeBat('f1', 80, 7, 3)).toEqual(synthesizeBat('f1', 80, 7, 3))
   })
 })

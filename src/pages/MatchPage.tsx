@@ -466,7 +466,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const hl = fixture && season ? recentHighlight(season, fixture.id, 8, cool) : null
         // real footage: the best balls of a recent match, played again on the field view
         let reel: TimeoutReel | undefined
-        const rl = fixture && season ? pickReel(reelCandidates(season, fixture.id, 24, cool), shownReels.current, match.seed + shownReels.current.size * 7919 + lastEv.seq) : null
+        // (if the cool-down leaves nothing, any recent innings will do: there is always a highlight)
+        const cands = fixture && season ? (() => { const fresh = reelCandidates(season, fixture.id, 24, cool); return fresh.length ? fresh : reelCandidates(season, fixture.id, 24) })() : []
+        const rl = pickReel(cands, shownReels.current, match.seed + shownReels.current.size * 7919 + lastEv.seq)
         const focus = rl ? playerIndex.get(rl.playerId) : undefined
         if (rl && focus) {
           const oppId = [rl.homeId, rl.awayId].find((id) => id && id !== focus.team.id) ?? rl.awayId

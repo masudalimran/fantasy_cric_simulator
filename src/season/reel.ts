@@ -21,8 +21,6 @@ export function decodeBall(n: number): ReelBall {
   return { seq: Math.floor(n / 100), runsBat: runs, boundary: runs === 6 ? 6 : runs === 4 ? 4 : 0, wicket: wk > 0 ? (DISMISSAL_KINDS[wk - 1] as DismissalKind) : null }
 }
 
-/** Evenly spaced picks from a list, keeping the first and last. */
-const spread = <T,>(xs: T[], n: number): T[] => (xs.length <= n ? xs : Array.from({ length: n }, (_, i) => xs[Math.round((i * (xs.length - 1)) / Math.max(1, n - 1))]))
 
 /**
  * The reel for one finished match: the best performance of either kind (a big innings or a bowling spell), or null if nobody stood out.
@@ -31,38 +29,43 @@ const spread = <T,>(xs: T[], n: number): T[] => (xs.length <= n ? xs : Array.fro
 export function buildReel(innings: { log: BallEvent[] }[]): RawReel | null {
   const log = innings.flatMap((i) => i.log)
   const bat = new Map<string, { runs: number; sixes: number }>()
-  const bowl = new Map<string, { runs: number; wickets: number; maidens: number }>()
   for (const e of log) {
     const b = bat.get(e.strikerId) ?? { runs: 0, sixes: 0 }
     b.runs += e.runsBat; if (e.boundary === 6) b.sixes++
     bat.set(e.strikerId, b)
-    const w = bowl.get(e.bowlerId) ?? { runs: 0, wickets: 0, maidens: 0 }
-    w.runs += e.runsBat + e.extraRuns
-    if (e.wicket && e.wicket.kind !== 'run out') w.wickets++
-    if (e.tags.includes('maiden')) w.maidens++
-    bowl.set(e.bowlerId, w)
   }
-  let best: { score: number; id: string; k: 'bat' | 'bowl' } | null = null
+  // only batting makes a good highlight: the best innings of the match (25 or more)
+  let best: { score: number; id: string } | null = null
   for (const [id, b] of bat) {
     const score = b.runs + b.sixes * 2 + (b.runs >= 100 ? 25 : b.runs >= 50 ? 10 : 0)
-    if (b.runs >= 25 && (!best || score > best.score)) best = { score, id, k: 'bat' }
-  }
-  for (const [id, w] of bowl) {
-    const score = w.wickets * 22 - w.runs * 0.3 + w.maidens * 3 + (w.wickets >= 5 ? 20 : w.wickets >= 3 ? 8 : 0)
-    if (w.wickets >= 2 && (!best || score > best.score)) best = { score, id, k: 'bowl' }
+    if (b.runs >= 25 && (!best || score > best.score)) best = { score, id }
   }
   if (!best) return null
-  if (best.k === 'bat') {
-    const balls = log.filter((e) => e.strikerId === best!.id && e.runsBat >= 2 && !e.wicket)
-    // sixes first, then fours, then the rest, then back in the order they were hit
-    const ranked = [...balls].sort((a, b) => b.runsBat - a.runsBat).slice(0, REEL_MAX).sort((a, b) => a.seq - b.seq)
-    return ranked.length ? { p: best.id, k: 'bat', e: ranked.map(encodeBall) } : null
-  }
-  const mine = log.filter((e) => e.bowlerId === best!.id)
-  const wickets = mine.filter((e) => e.wicket && e.wicket.kind !== 'run out')
-  const dots = spread(mine.filter((e) => e.legal && !e.wicket && e.runsBat === 0 && !e.extraRuns), Math.max(0, REEL_MAX - wickets.length))
-  const picked = [...wickets, ...dots].sort((a, b) => a.seq - b.seq)
-  return picked.length ? { p: best.id, k: 'bowl', e: picked.map(encodeBall) } : null
+  const balls = log.filter((e) => e.strikerId === best!.id && e.runsBat >= 2 && !e.wicket)
+  // sixes first, then fours, then the rest, then back in the order they were hit
+  const ranked = [...balls].sort((a, b) => b.runsBat - a.runsBat).slice(0, REEL_MAX).sort((a, b) => a.seq - b.seq)
+  return ranked.length ? { p: best.id, k: 'bat', e: ranked.map(encodeBall) } : null
+}
+
+const frac = (n: number) => n - Math.floor(n)
+
+/**
+ * Footage for an innings whose balls were not saved (a match played before reels existed, or one without a reel): the fours and sixes his
+ * line says he hit, and a few 2s and 3s, in a stable order and with shots going where the ball number says. Always the same for the same match.
+ */
+export function synthesizeBat(fixtureId: string, runs: number, fours: number, sixes: number): ReelBall[] {
+  let seed = 0
+  for (let i = 0; i < fixtureId.length; i++) seed = (seed * 31 + fixtureId.charCodeAt(i)) % 100003
+  const rest = Math.max(0, runs - fours * 4 - sixes * 6)
+  const picks: number[] = [...Array(sixes).fill(6), ...Array(fours).fill(4), ...Array(Math.min(4, Math.floor(rest / 3))).fill(2)].slice(0, REEL_MAX)
+  const used = new Set<number>()
+  const balls = picks.map((r, i) => {
+    let seq = 20 + Math.floor(frac(Math.sin(seed + i * 7.31) * 43758.5453) * 380)
+    while (used.has(seq)) seq++
+    used.add(seq)
+    return { seq, runsBat: r, boundary: (r === 6 ? 6 : r === 4 ? 4 : 0) as 0 | 4 | 6, wicket: null } as ReelBall
+  })
+  return balls.sort((a, b) => a.seq - b.seq)
 }
 
 /** A saved ball as a full ball event, so the real field view can play it. The fielder is not kept; a catch is drawn going out to the rope. */

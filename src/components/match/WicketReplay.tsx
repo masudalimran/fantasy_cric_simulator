@@ -137,7 +137,7 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const size = Math.max(34, Math.min(w * 0.09, 64))
+  const size = Math.max(28, Math.min(w * 0.07, 50))
   const r = rate
   const tracked = kind === 'lbw' && !!info.track
   // an appeal for lbw, a stumping or a catch behind starts with the fielders' shout
@@ -172,6 +172,8 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
 
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label={`How the wicket happened: ${TITLE[kind]}`}>
+      {/* the replay itself, in the top part of the screen so the bottom can carry the out batsman's details across the full width */}
+      <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: '68%' }}>
       {tracked ? (
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #0f2a45, #060b14 80%)' }}><BallTrackView track={info.track as Track} out rate={r} compact /></div>
       ) : (
@@ -185,24 +187,6 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
         </>
       )}
 
-      {/* the replay tag */}
-      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />Wicket replay</div>
-      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">{info.details ? 'Tap to continue' : 'Tap to skip'}</div>
-
-      {/* who is out: his picture and full name, his innings, and how he got out */}
-      {card && (
-        <motion.div
-          className="absolute left-1/2 top-2 z-30 flex max-w-[60%] items-center gap-2.5 rounded-xl bg-black/75 p-2 pr-3 ring-1 ring-red-400/40"
-          style={{ x: '-50%' }} initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.35 }}
-        >
-          <span className="shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(batTeam)}` }}><PlayerAvatar player={batsman} team={batTeam} size={Math.max(38, Math.min(w * 0.08, 56))} /></span>
-          <span className="min-w-0">
-            <span className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold leading-tight text-white">{batsman.name}{card.duck && <span className="-rotate-6 rounded border-2 border-red-400 px-1.5 font-display text-xs tracking-widest text-red-300">DUCK</span>}</span>
-            <span className="block text-xs font-bold leading-tight text-red-300">{card.lines[1]}</span>
-            <span className="block text-[11px] leading-tight text-slate-300">{card.lines[0]}</span>
-          </span>
-        </motion.div>
-      )}
       {!tracked && (
         <>
       {/* the ball */}
@@ -273,15 +257,39 @@ export function WicketReplay({ info }: { info: ReplayInfo }) {
         )
       })()}
 
+      </div>
+
+      {/* the replay tag */}
+      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />Wicket replay</div>
+      <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">{info.details ? 'Tap to continue' : 'Tap to skip'}</div>
+
+      {/* the bottom strip: who is out, his innings and how, and the word */}
+      <div className="absolute inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-red-400/30 bg-black/80 px-3" style={{ height: '32%' }}>
+      {/* who is out: his picture and full name, his innings, and how he got out */}
+      {card && (
+        <motion.div
+          className="flex min-w-0 flex-1 items-center gap-2.5"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.35 }}
+        >
+          <span className="shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(batTeam)}` }}><PlayerAvatar player={batsman} team={batTeam} size={Math.max(34, Math.min(w * 0.085, 54))} /></span>
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold leading-tight text-white">{batsman.name}{card.duck && <span className="-rotate-6 rounded border-2 border-red-400 px-1.5 font-display text-xs tracking-widest text-red-300">DUCK</span>}</span>
+            <span className="block text-xs font-bold leading-tight text-red-300">{card.lines[1]}</span>
+            <span className="block text-[11px] leading-tight text-slate-300">{card.lines[0]}</span>
+          </span>
+        </motion.div>
+      )}
+
       {/* the word, slamming in as it happens */}
       <motion.div
-        className="absolute inset-x-0 bottom-[2%] z-40 text-center"
+        className="max-w-[46%] shrink-0 text-center"
         initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: T.big * r, type: 'spring', stiffness: 260, damping: 15 }}
       >
-        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(30, Math.min(w * 0.095, 70)), WebkitTextStroke: '2px #7f1d1d', paintOrder: 'stroke fill', textShadow: '0 0 30px #ef4444aa' }}>{TITLE[kind]}</div>
-        <div className="mt-1 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{sub}</div>
+        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(22, Math.min(w * 0.075, 54)), WebkitTextStroke: '2px #7f1d1d', paintOrder: 'stroke fill', textShadow: '0 0 30px #ef4444aa' }}>{TITLE[kind]}</div>
+        <div className="mt-0.5 text-[11px] font-semibold leading-tight text-slate-100 sm:text-sm" style={{ textShadow: '0 1px 4px #000' }}>{sub}</div>
 
       </motion.div>
+      </div>
     </div>
   )
 }
