@@ -140,26 +140,8 @@ export function Delta({ n, className = '' }: { n: number; className?: string }) 
 }
 
 
-/**
- * A player's recent form as a small bar: how far his last few matches were above or below what is usual for a player like him
- * (`z`, in standard deviations; null when he has not played enough to say). Fuller and greener is better.
- */
+/** A player's recent form as a slim vertical bar, no words: filled from the bottom, fuller and greener when his last few matches beat what is usual for a player like him (z, in standard deviations), shorter and redder when they fell short, empty and grey until he has played a couple of matches. */
 export function FormBar({ z, className = '' }: { z: number | null | undefined; className?: string }) {
-  if (z === null || z === undefined) {
-    return <div className={`flex w-14 shrink-0 flex-col gap-0.5 ${className}`} title="No form yet: he needs a couple of matches this season"><div className="h-1.5 rounded-full bg-white/10" /><span className="text-center text-[10px] font-semibold uppercase leading-none tracking-wide text-slate-600">no form</span></div>
-  }
-  const c = Math.max(-2, Math.min(2, z))
-  const pct = Math.round(((c + 2) / 4) * 100)
-  const [label, color] = c >= 1 ? ['On fire', '#34d399'] : c >= 0.35 ? ['Good', '#a3e635'] : c > -0.35 ? ['Steady', '#fbbf24'] : c > -1 ? ['Poor', '#fb923c'] : ['Cold', '#f87171']
-  return (
-    <div className={`flex w-14 shrink-0 flex-col gap-0.5 ${className}`} title={`Form: ${label.toLowerCase()} over his last matches (${z >= 0 ? '+' : ''}${z.toFixed(1)} against what is usual for him)`}>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(pct, 6)}%`, background: color }} /></div>
-      <span className="text-center text-[10px] font-bold uppercase leading-none tracking-wide" style={{ color }}>{label}</span>
-    </div>
-  )
-}
-/** The phone version of the form bar: a thin vertical bar beside the rating, filled from the bottom (fuller and greener is better, shorter and redder is worse). */
-export function FormBarVertical({ z, className = '' }: { z: number | null | undefined; className?: string }) {
   if (z === null || z === undefined) {
     return <div className={`h-9 w-1.5 shrink-0 rounded-full bg-white/10 ${className}`} title="No form yet: he needs a couple of matches this season" aria-label="No form yet" />
   }

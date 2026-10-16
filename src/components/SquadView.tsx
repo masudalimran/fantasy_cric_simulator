@@ -10,10 +10,12 @@ import { assignPhysio, injuriesOf, PHYSIOS, physioOf, releasePhysio, SEVERITY_CO
 import { ATTR_LABEL, playerChangeLog, ratingRows, sessionTeam } from '../season/progression'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
 import { usePlayerForm, useTeamMap } from './season/shared'
+import { newBloodSquad, recommendedSquad } from '../season/recommend'
+import { myNextFixture } from '../season/results'
 import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
 import { Sheet } from './Sheet'
-import { accentOf, Delta, FormBar, FormBarVertical, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
+import { accentOf, Delta, FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
@@ -79,8 +81,7 @@ function SquadCard({
           PHY
         </button>
       )}
-      {showForm && <span className="max-md:hidden"><FormBar z={form} /></span>}
-      {showForm && <FormBarVertical z={form} className="md:hidden" />}
+      {showForm && <FormBar z={form} />}
       {change !== undefined && change !== 0 && <span title="Change to his overall rating since the career began" className="text-xs"><Delta n={change} /></span>}
       <span title={career ? `${career > 0 ? '+' : ''}${career} overall since the career began` : undefined}><RatingBadge value={overall(player)} size="sm" /></span>
     </motion.div>
@@ -225,6 +226,11 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
     else { updateSeason(() => out.season); setNotice(`${p.name} now has a physio, so he cannot be injured.`) }
   }
   const draft ={ ...team, players, captainId, keeperId }
+  /** The helpers look at the squad as it is on the screen, the next match of yours, injuries and form (in a career). */
+  const helperInput = () => ({ team: draft, season: careerMine ? season : null, teams: sessionTeams, fixture: careerMine && season ? myNextFixture(season) : null, unavailable: new Set(hurt.keys()) })
+  const apply = (r: { players: Player[]; keeperId?: string; captainId?: string }) => { setPlayers(r.players); setKeeperId(r.keeperId); if (r.captainId) setCaptainId(r.captainId); setSelected(null) }
+  const recommend = () => { const r = recommendedSquad(helperInput()); apply(r); setNotice('Recommended team set: the best XI for the next match' + (careerMine ? ', with form and injuries counted.' : '.')) }
+  const newBlood = () => { const r = newBloodSquad(helperInput()); if (r.ok) apply(r); setNotice(r.message) }
   const swap = (a: number, b: number) => {
     setPlayers((list) => swapPlayers(list, a, b))
     setSelected(null)
@@ -285,7 +291,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
             {notice && <p className="mt-1 text-sm font-semibold text-amber-300" role="status">{notice}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <div className="text-right text-xs uppercase tracking-wider text-slate-400">XI<br />rating</div>
           <RatingBadge value={teamStrength(draft)} size="lg" />
           <button
@@ -295,6 +301,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           >
             Auto-pick XI
           </button>
+          <button onClick={recommend} className="rounded-lg border border-emerald-400/60 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-200 hover:bg-emerald-400/20" title="Sets the best XI for the next match, counting form and injuries">Recommended</button>
+          <button onClick={newBlood} className="rounded-lg border border-sky-400/60 bg-sky-400/10 px-3 py-2 text-sm font-semibold text-sky-200 hover:bg-sky-400/20" title="Squeezes in as many youngsters as the next match can afford">New blood</button>
         </div>
       </div>
 
