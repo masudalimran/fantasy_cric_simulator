@@ -116,6 +116,16 @@ that links to the market) and on the Home page.
   more for your best five, never when you are at the minimum squad). Offers are listed at the top of the Market page
   (the tab shows a dot) for five days: **Accept** sells him and you get the coins, **Decline** turns it down. If the buyer
   is full they release their weakest player.
+- **Yearly fees, retirement and the academy** (`season/careers.ts`): one purse only. Every player costs a yearly fee (half
+  of what he is worth; it moves with how he improved or faded). When you start the next year (`yearEnd`), each team earns
+  income (60% of its bill + win rate + titles, plus your catch-up) and pays its bill. Computer teams over budget release
+  players, then fill their squads from the pool (best prospects first, swapping out their weakest). If your purse ends below
+  zero, the **Contracts** sheet (`ContractsGate`, cannot be dismissed) asks who to let go; fees come back. Every starter has
+  a career of 7 to 10 seasons (9 to 12 for players who joined later) and fades in the last two. Computer teams' veterans
+  retire; yours are offered one more year at 1.4x the fee (compounding, up to four extensions), or **Let him retire**, and an
+  academy graduate of the same role replaces him. Each year about 30+ procedural academy graduates (rating about 40 to 66,
+  hidden ceiling 66 to 97, rarely higher) join the pool; all youth grow quickly (each at his own pace), so a graduate can be a
+  star in a year or two. Old saves: new fields are optional and derived on the fly.
 - **Window closed popup** (`MarketClosed`): the first time you open the Calendar after a window has closed, a card says the
   market is **CLOSED**, with how many transfers happened, how many were yours, the biggest deal, and a **See all transfers**
   button that opens the transfers list for that window. It shows once per window per career.

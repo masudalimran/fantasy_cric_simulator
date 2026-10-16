@@ -29,7 +29,7 @@ describe('careers, fees and the yearly budget', () => {
   it('academy youth are raw but have a ceiling, and are different each year', () => {
     const a = generateYouth(2031, 30, 5)
     expect(a).toHaveLength(30)
-    expect(Math.max(...a.map((p) => overall(p)))).toBeLessThan(75)
+    expect(Math.max(...a.map((p) => overall(p)))).toBeLessThan(70)
     expect(a.every((p) => p.potential > overall(p))).toBe(true)
     expect(generateYouth(2032, 30, 5)[0].id).not.toBe(a[0].id)
   })
@@ -57,12 +57,14 @@ describe('careers, fees and the yearly budget', () => {
 
   it('a young academy player grows into a regular within about four years', () => {
     let s = start()
-    for (let y = 0; y < 4; y++) s = turn(s, 500 + y)
+    for (let y = 0; y < 2; y++) s = turn(s, 500 + y)
     const base = playerIndex(teams, s.market)
     const grads = Object.values(s.market!.squads).flat().filter((id) => id.startsWith('gy-'))
     expect(grads.length).toBeGreaterThan(0)
     const rated = grads.map((id) => overall(applyShift(base.get(id)!, s.shifts?.[id])))
-    expect(Math.max(...rated)).toBeGreaterThan(60)
+    rated.sort((x, y) => y - x)
+    expect(rated[0]).toBeGreaterThan(78)
+    expect(rated[Math.floor(rated.length / 2)]).toBeGreaterThan(62)
   })
 
   it('keeping a veteran costs the raise and a later year costs more; letting go refunds a fee', () => {

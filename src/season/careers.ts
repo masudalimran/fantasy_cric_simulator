@@ -86,8 +86,8 @@ export function generateYouth(year: number, count: number, seed: number): (Playe
   for (let i = 0; i < count; i++) {
     const role = (['BAT', 'BAT', 'BOWL', 'BOWL', 'AR', 'AR', 'WK'] as const)[rng.int(7)]
     const name = `${SYL_A[rng.int(SYL_A.length)]}${SYL_B[rng.int(SYL_B.length)]}${rng.chance(0.5) ? SYL_C[rng.int(SYL_C.length)] : ''} ${SYL_A[rng.int(SYL_A.length)]}${SYL_C[rng.int(SYL_C.length)]}${SYL_B[rng.int(SYL_B.length)]}`
-    const potential = Math.max(58, Math.min(95, Math.round(70 + rng.normal() * 9)))
-    const base = Math.max(36, Math.min(62, Math.round(potential - 24 + rng.normal() * 4)))
+    const potential = Math.max(66, Math.min(97, Math.round(80 + rng.normal() * 7 + (rng.chance(0.05) ? 10 : 0))))
+    const base = Math.max(40, Math.min(66, Math.round(potential - 26 + rng.normal() * 4)))
     const j = () => Math.max(20, Math.min(80, Math.round(base + rng.normal() * 5)))
     const bats = role !== 'BOWL'
     const bowls = role !== 'BAT' && role !== 'WK' || rng.chance(0.2)
@@ -109,7 +109,7 @@ const isYouth = (m: Pick<MarketState, 'players'>, id: string) => YOUTH_BY_ID.has
 
 // ---- The turn of the year -------------------------------------------------------------------------------------------
 
-/** Young players grow quickly now: about half the gap to their ceiling every year, so a graduate is a first-team player in three or four seasons. */
+/** Young players grow quickly now: half to nine-tenths of the gap to their ceiling every year (each at his own pace), so a graduate can be a star in a year or two. */
 function grow(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<string, Player>, rng: Rng): Record<string, PlayerShift> {
   const out: Record<string, PlayerShift> = { ...shifts }
   const everyone = new Set<string>([...m.pool, ...Object.values(m.squads).flat()])
@@ -119,7 +119,8 @@ function grow(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<str
     if (!p) continue
     const gap = ceilingOf(m, p) - overall(applyShift(p, out[id]))
     if (gap <= 1) continue
-    const gain = Math.max(2, Math.round(gap * (0.45 + rng.next() * 0.2)))
+    const talent = 0.62 + (hash(id) % 100) / 100 * 0.33 // each player grows at his own pace: some are ready in a season, some take three
+    const gain = Math.max(2, Math.round(gap * (talent + rng.next() * 0.1)))
     const keys: AttrKey[] = (p.bowling ? ['accuracy', 'variation', 'stamina'] : []).concat(p.role === 'BOWL' ? [] : ['technique', 'power', 'temperament', 'running']) as AttrKey[]
     const cur = out[id] ?? { bat: 0, bowl: 0 }
     const a = { ...(cur.a ?? {}) } as Record<string, number>
@@ -264,7 +265,23 @@ export function yearEnd({ season, base, titles, seed, catchUp }: YearEndInput): 
   const prospect = (id: string) => { const p = lookup(id); return p ? ceilingOf(market, p) * 0.6 + overall(applyShift(p, shifts[id])) * 0.4 : 0 }
   for (const teamId of rng.shuffle(Object.keys(market.squads).filter((id) => id !== me))) {
     let guard = 0
-    while (market.squads[teamId].length < 16 && guard++ < 20) {
+    let swaps = 0
+    while (guard++ < 24) {
+      if (market.squads[teamId].length >= 18) {
+        // a full squad still makes room for a prospect clearly better than its weakest player
+        const squad = [...market.squads[teamId]].sort((a, b) => prospect(a) - prospect(b))
+        const weakest = squad[0]
+        const purse0 = market.budgets[teamId] ?? 0
+        const best = market.pool.filter((id) => (market.asking[id] ?? 99) <= Math.max(purse0, 2)).sort((a, b) => prospect(b) - prospect(a))[0]
+        if (!weakest || !best || swaps >= 3 || prospect(best) < prospect(weakest) + 5) break
+        market.squads[teamId] = market.squads[teamId].filter((id) => id !== weakest)
+        market.budgets[teamId] += market.fees?.[weakest] ?? 1
+        market.pool.push(weakest)
+        const wp = base.get(weakest)
+        if (wp) { market.players[weakest] = market.players[weakest] ?? wp; market.asking[weakest] = Math.max(1, marketValue(wp, 0, shifts[weakest])) }
+        reports.get(teamId)?.released.push(weakest)
+        swaps++
+      }
       const purse = market.budgets[teamId] ?? 0
       const options = market.pool.filter((id) => (market.asking[id] ?? 99) <= Math.max(purse, 2)).sort((a, b) => prospect(b) - prospect(a))
       const pick = options[0]
