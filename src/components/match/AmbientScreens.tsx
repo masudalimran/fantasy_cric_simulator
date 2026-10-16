@@ -4,6 +4,7 @@ import { sfx } from '../../audio/sfx'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
+import { CommentaryBox } from './CommentaryBox'
 import { ManhattanScreen, ScoringScreen, WagonScreen, WormScreen, type StatsInfo } from './StatsScreens'
 
 /**
@@ -15,7 +16,7 @@ export type AmbientInfo =
   | { variant: 'wave'; teams: [Team, Team]; rate: number }
   | { variant: 'huddle'; team: Team; players: Player[]; rate: number }
   | { variant: 'fancam'; team: Team; mood: 'happy' | 'shock'; seed: number; rate: number }
-  | { variant: 'box'; lines: [string, string]; rate: number }
+  | { variant: 'box'; lines: string[]; teams: [Team, Team]; rate: number }
   | { variant: 'blimp'; team: Team; rate: number }
   | { variant: 'lights'; teams: [Team, Team]; rate: number }
   | { variant: 'fireworks'; team: Team; rate: number }
@@ -153,24 +154,6 @@ function FanCam({ team, mood, seed, w, r }: { team: Team; mood: 'happy' | 'shock
   )
 }
 
-function Box({ lines, w, r }: { lines: [string, string]; w: number; r: number }) {
-  return (
-    <>
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg,#1c1530,#0a0a14)' }} />
-      <div className="absolute inset-x-0 top-[15%] z-20 text-center"><Title w={w} delay={0.2 * r} color="#c4b5fd" stroke="#1c1530">IN THE BOX</Title></div>
-      <div className="absolute inset-x-3 bottom-[6%] z-10 flex items-end justify-center gap-3">
-        {[0, 1].map((k) => (
-          <motion.div key={k} className="flex max-w-[48%] flex-1 flex-col items-center" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: (0.4 + k * 1.3) * r }}>
-            <div className="mb-1 rounded-2xl bg-white px-3 py-1.5 text-left text-[12px] font-semibold leading-snug text-slate-900 shadow-lg" style={{ borderBottomLeftRadius: k ? 16 : 2, borderBottomRightRadius: k ? 2 : 16 }}>{lines[k]}</div>
-            <motion.span className="select-none text-5xl" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.5, repeat: Infinity, delay: k * 0.2 }} aria-hidden>{k ? '👩‍💼' : '🧑‍💼'}</motion.span>
-            <span className="text-lg" aria-hidden>🎙️</span>
-          </motion.div>
-        ))}
-      </div>
-    </>
-  )
-}
-
 function Blimp({ team, w, r }: { team: Team; w: number; r: number }) {
   return (
     <>
@@ -245,7 +228,7 @@ export function AmbientScreen({ info }: { info: AmbientInfo }) {
       {info.variant === 'wave' && <Wave teams={info.teams} w={w} r={r} />}
       {info.variant === 'huddle' && <Huddle team={info.team} players={info.players} w={w} r={r} />}
       {info.variant === 'fancam' && <FanCam team={info.team} mood={info.mood} seed={info.seed} w={w} r={r} />}
-      {info.variant === 'box' && <Box lines={info.lines} w={w} r={r} />}
+      {info.variant === 'box' && <CommentaryBox lines={info.lines} teams={info.teams} rate={r} />}
       {info.variant === 'blimp' && <Blimp team={info.team} w={w} r={r} />}
       {info.variant === 'lights' && <Lights teams={info.teams} w={w} r={r} />}
       {info.variant === 'fireworks' && <Fireworks team={info.team} w={w} r={r} />}

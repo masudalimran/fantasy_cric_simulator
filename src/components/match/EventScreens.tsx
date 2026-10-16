@@ -56,6 +56,10 @@ export function FourScreen({ info }: { info: FourInfo }) {
   const endX = 50 + side * 30
   const startX = 50 + side * 6
   const lanes = chasers.length === 1 ? [0] : chasers.length === 2 ? [-1, 1] : [-1, 0, 1]
+  const clampX = (x: number) => Math.max(14, Math.min(86, x))
+  // keep the whole group on screen: where the lanes end up, slide them all together if one would fall off the side
+  const spread = lanes.map((l) => endX + l * 26)
+  const shift = Math.min(0, 86 - Math.max(...spread)) + Math.max(0, 14 - Math.min(...spread))
   const FLY = 1.15 * r // from the bat to the rope
   const SLOW = 0.9 * r // across the rope, in slow motion
   const hit = (0.25 + 1.15 + 0.9) * r // when the ball reaches the boards
@@ -85,15 +89,17 @@ export function FourScreen({ info }: { info: FourInfo }) {
 
       {/* the fielders run across and slide, and come up short */}
       {chasers.map((c, i) => {
-        const lane = lanes[i]
-        const fromX = 50 + lane * 24 + (lane === 0 ? 14 : 0) * (side >= 0 ? -1 : 1)
-        const sx = (startX + endX) / 2 + lane * 10
+        // each chaser gets a lane of his own, 26% of the width apart, and a different height, so no two portraits or names ever overlap
+        const fromX = clampX(50 + lanes[i] * 26)
+        const endLane = clampX(endX + lanes[i] * 26 + shift)
+        const midLane = (fromX + endLane) / 2
+        const hi = i % 2 ? 7 : 0
         return (
           <motion.div
             key={c.player.id} className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-center"
             style={{ left: `${fromX}%`, top: '42%' }}
             initial={{ opacity: 0, scale: 0.55 }}
-            animate={{ left: [`${fromX}%`, `${sx}%`, `${sx + (endX - sx) * 0.55}%`], top: ['42%', '58%', '70%'], scale: [0.55, 1, 1.15], opacity: [0, 1, 1], rotate: [0, 0, side >= 0 ? 78 : -78] }}
+            animate={{ left: [`${fromX}%`, `${midLane}%`, `${endLane}%`], top: ['42%', `${54 + hi}%`, `${66 + hi}%`], scale: [0.55, 1, 1.15], opacity: [0, 1, 1], rotate: [0, 0, side >= 0 ? 78 : -78] }}
             transition={{ delay: (0.25 + i * 0.08) * r, duration: (FLY + 0.35) * r, ease: 'easeIn', times: [0, 0.62, 1] }}
           >
             <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(bowlTeam)}, 0 0 14px ${accentOf(bowlTeam)}88` }}><PlayerAvatar player={c.player} team={bowlTeam} size={size} /></span>

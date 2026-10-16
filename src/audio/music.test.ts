@@ -34,9 +34,9 @@ describe('timeout highlight variety', () => {
     const b = pickReel(cands, used, 8)!.fixtureId
     expect(a).not.toBe(b)
   })
-  it('the cheerleaders come out after roughly a third of boundaries and wickets', () => {
+  it('the cheerleaders come out after roughly six in ten boundaries and wickets', () => {
     const n = Array.from({ length: 900 }, (_, i) => cheersAfter(i + 1)).filter(Boolean).length
-    expect(n).toBeGreaterThan(220)
-    expect(n).toBeLessThan(400)
+    expect(n).toBeGreaterThan(470)
+    expect(n).toBeLessThan(650)
   })
 })

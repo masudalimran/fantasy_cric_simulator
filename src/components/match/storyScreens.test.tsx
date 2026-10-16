@@ -50,7 +50,7 @@ describe('story screens', () => {
       [{ variant: 'wave', teams: [A, B], rate: 1 }, 'THE WAVE!'],
       [{ variant: 'huddle', team: A, players: xi, rate: 1 }, 'HUDDLE!'],
       [{ variant: 'fancam', team: A, mood: 'happy', seed: 3, rate: 1 }, 'fan'],
-      [{ variant: 'box', lines: ['one', 'two'], rate: 1 }, 'IN THE BOX'],
+      [{ variant: 'box', teams: [A, B], lines: ['one', 'two'], rate: 1 }, 'Commentary box'],
       [{ variant: 'blimp', team: A, rate: 1 }, 'GO '],
       [{ variant: 'lights', teams: [A, B], rate: 1 }, 'FLOODLIGHTS ON!'],
       [{ variant: 'fireworks', team: A, rate: 1 }, 'FIREWORKS!'],

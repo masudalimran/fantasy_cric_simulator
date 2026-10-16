@@ -127,11 +127,11 @@ export const isNotOutReview = (seq: number) => hash(seq, 6) < 0.034
 /** True for about two in five caught-behind outs, where the batsman asks for a review (the sound graph) first. */
 export const edgeWasReviewed = (seq: number) => hash(seq, 8) < 0.4
 /** True for about one boundary or wicket in three, where the cheerleaders come out. */
-export const cheersAfter = (seq: number) => hash(seq, 9) < 0.34
+export const cheersAfter = (seq: number) => hash(seq, 9) < 0.62
 /** A stable pick of 0 to n-1 for a ball, to choose between the break-the-monotony screens. */
 export const ambientPick = (seq: number, n: number) => Math.floor(hash(seq, 12) * n) % n
 /** True for about one over end in five, where a quiet screen (the wave, the fan cam, the commentators, a blimp) comes on. */
-export const ambientOver = (seq: number) => hash(seq, 13) < 0.2
+export const ambientOver = (seq: number) => hash(seq, 13) < 0.5
 /** True for about three chases in five: the floodlights come on as the second innings starts. */
 export const ambientLights = (seed: number) => hash(seed, 14) < 0.6
 /** True for roughly a third of lbw outs, where the batsman asks for a review first. */

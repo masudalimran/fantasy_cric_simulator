@@ -45,6 +45,8 @@ export interface Moment {
   phase?: PhaseInfo
   cheer?: CheerInfo
   ambient?: AmbientInfo
+  /** What the commentary box says about the screen, on a bar along the bottom (the crowd, the cheerleaders, the stats desk...). */
+  caption?: string
   haul?: HaulInfo
   /** For a fifty or hundred: the one-screen version (the two batsmen meet and bump fists). Without it the original card is used. */
   fist?: FistInfo
@@ -78,6 +80,16 @@ function Sweep({ color }: { color: string }) {
   )
 }
 
+/** The commentary box's words about what the screen is showing, on a bar along the bottom: "the {team} cheerleaders are so happy for {player}". */
+function CommentaryCaption({ text, delay }: { text: string; delay: number }) {
+  return (
+    <motion.div className="pointer-events-none absolute inset-x-0 bottom-0 z-[80] flex items-center gap-2 border-t-2 border-violet-400/70 bg-black/85 px-3 py-1.5" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 24 }}>
+      <span className="shrink-0 rounded bg-violet-500 px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-widest text-white">🎙️ Commentary</span>
+      <span className="min-w-0 text-[12px] font-semibold leading-snug text-white">{text}</span>
+    </motion.div>
+  )
+}
+
 export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss: () => void }) {
   const box = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(700)
@@ -104,6 +116,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
     return (
       <motion.div data-moment="ambient" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl" initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}>
         <AmbientScreen info={moment.ambient} />
+        {moment.caption && <CommentaryCaption text={moment.caption} delay={moment.delay / 1000 + 0.45} />}
       </motion.div>
     )
   }
@@ -111,6 +124,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
     return (
       <motion.div data-moment="cheer" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl" initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}>
         <CheerScreen info={moment.cheer} />
+        {moment.caption && <CommentaryCaption text={moment.caption} delay={moment.delay / 1000 + 0.45} />}
       </motion.div>
     )
   }
