@@ -107,4 +107,14 @@ describe('careers, fees and the yearly budget', () => {
     expect(out.total).toBeGreaterThan(30)
     expect(projectedIncome(s, out.total).income).toBe(Math.round(out.total * 2)) // nothing played yet: middling
   })
+
+  it('wages alone never force anyone to release a player, even a team that loses every game', () => {
+    let s = start()
+    for (let y = 0; y < 10; y++) {
+      const out = yearEnd({ season: s, base: playerIndex(teams, s.market), titles: {}, seed: 40 + y, catchUp: 0, scoreOf: () => 0 })
+      expect(out.mine?.released).toEqual([])
+      for (const [id, b] of Object.entries(out.market.budgets)) expect(b, id + ' in ' + (s.year + 1)).toBeGreaterThanOrEqual(0)
+      s = generateSeason({ year: s.year + 1, teams, seed: 40 + y, myTeamId: s.myTeamId, difficulty: s.difficulty, shifts: out.shifts, market: { ...out.market, pending: undefined } })
+    }
+  })
 })

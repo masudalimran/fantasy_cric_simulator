@@ -177,6 +177,8 @@ interface YearEndInput {
   seed: number
   /** The extra purse the game gives your team this year. */
   catchUp: number
+  /** For tests: how well each team played, 0 to 1 (otherwise worked out from the season's results). */
+  scoreOf?: (teamId: string) => number
 }
 
 export interface YearEndOutput { market: MarketState; shifts: Record<string, PlayerShift>; mine: YearReport | null }
@@ -185,7 +187,7 @@ export interface YearEndOutput { market: MarketState; shifts: Record<string, Pla
  * Everything that happens to the squads between two seasons: the young grow, the old fade and retire, fees move with form, income comes in and the
  * bill goes out, computer teams let players go if they are over budget and fill their squads from the academy, and a new pool is drawn.
  */
-export function yearEnd({ season, base, titles, seed, catchUp }: YearEndInput): YearEndOutput {
+export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEndInput): YearEndOutput {
   const m0 = season.market as MarketState
   const next = season.year + 1
   const rng = new Rng((seed ^ 0xca7ee7) >>> 0)
@@ -240,7 +242,7 @@ export function yearEnd({ season, base, titles, seed, catchUp }: YearEndInput): 
   for (const teamId of Object.keys(market.squads)) {
     const squad = market.squads[teamId]
     const bill = squad.filter((id) => !pending.some((p) => p.playerId === id)).reduce((s, id) => { const p = base.get(id); return p ? s + feeOf(market, p, shifts[id]) : s }, 0)
-    const income = incomeOf(bill, seasonScore(season, teamId), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
+    const income = incomeOf(bill, (scoreOf ? scoreOf(teamId) : seasonScore(season, teamId)), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
     const purse = market.budgets[teamId] ?? 0
     market.budgets[teamId] = Math.min(Math.max(200, bill * 8), purse + income - bill)
     reports.set(teamId, { year: next, income, bill, before: purse, after: market.budgets[teamId], retired: retiredByTeam.get(teamId)?.filter((id) => allRetired.includes(id)) ?? [], released: [], signed: [] })
