@@ -291,9 +291,11 @@ export function mergeBowl(list: BowlStat[]): BowlStat | undefined {
 export interface PlayerForm {
   bat?: { innings: number; runs: number; average: number | null; sr: number | null; recent: string[] }
   bowl?: { matches: number; wickets: number; economy: number | null; recent: string[] }
+  /** His record in the earlier seasons of this career (not this year), when there are any. */
+  past?: { years: number; bat?: { innings: number; runs: number; average: number | null; high: number; fifties: number; hundreds: number }; bowl?: { matches: number; wickets: number; economy: number | null; bestW: number; bestR: number } }
 }
 
-export function formBefore(season: Season, id: string, excludeFixtureId: string): PlayerForm | null {
+export function formBefore(season: Season, id: string, excludeFixtureId: string, earlier: Season[] = []): PlayerForm | null {
   const results = Object.fromEntries(Object.entries(season.results).filter(([, r]) => r.fixtureId !== excludeFixtureId))
   const c = collect({ ...season, results })
   const roster = season.roster ?? []
@@ -312,5 +314,24 @@ export function formBefore(season: Season, id: string, excludeFixtureId: string)
   const form: PlayerForm = {}
   if (bs && bs.innings > 0) form.bat = { innings: bs.innings, runs: bs.runs, average: average(bs), sr: strikeRate(bs), recent: recentBat }
   if (ws && ws.balls > 0) form.bowl = { matches: ws.bowlApps, wickets: ws.wickets, economy: economy(ws), recent: recentBowl }
-  return form.bat || form.bowl ? form : null
+  // earlier seasons of the career, added up
+  let years = 0
+  const pb = { innings: 0, notOuts: 0, runs: 0, high: 0, fifties: 0, hundreds: 0 }
+  const pw = { matches: 0, balls: 0, runs: 0, wickets: 0, bestW: 0, bestR: 0 }
+  for (const old of earlier) {
+    const oc = collect(old)
+    const ob = oc.bat.get(id), ow = oc.bowl.get(id)
+    if (!ob && !ow) continue
+    years++
+    if (ob) { pb.innings += ob.innings; pb.notOuts += ob.notOuts; pb.runs += ob.runs; pb.high = Math.max(pb.high, ob.high); pb.fifties += ob.fifties; pb.hundreds += ob.hundreds }
+    if (ow) { pw.matches += ow.bowlApps; pw.balls += ow.balls; pw.runs += ow.runs; pw.wickets += ow.wickets; if (ow.bestW > pw.bestW || (ow.bestW === pw.bestW && ow.bestR < pw.bestR)) { pw.bestW = ow.bestW; pw.bestR = ow.bestR } }
+  }
+  if (years > 0) {
+    form.past = {
+      years,
+      bat: pb.innings ? { innings: pb.innings, runs: pb.runs, average: pb.innings - pb.notOuts > 0 ? pb.runs / (pb.innings - pb.notOuts) : null, high: pb.high, fifties: pb.fifties, hundreds: pb.hundreds } : undefined,
+      bowl: pw.balls ? { matches: pw.matches, wickets: pw.wickets, economy: (pw.runs / pw.balls) * 6, bestW: pw.bestW, bestR: pw.bestR } : undefined,
+    }
+  }
+  return form.bat || form.bowl || form.past ? form : null
 }

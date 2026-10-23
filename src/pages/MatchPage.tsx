@@ -980,7 +980,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         {studio && !moment && (
           <StudioShow
             key={`${studio}-${match.innings.length}-${match.clock?.day ?? 0}`} match={match} kind={studio} pool={studioPool} seed={match.seed}
-            extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage, form: season ? (id: string) => formBefore(season, id, fixture.id) : undefined } : undefined}
+            extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage, form: season ? (id: string) => formBefore(season, id, fixture.id, history) : undefined } : undefined}
             onDone={() => { const k = studio; setStudio(null); if (k === 'end') showUpgrades() }}
           />
         )}

@@ -42,7 +42,7 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[radial-gradient(ellipse_at_center,#1e3a8a,#070b14_75%)] px-4 pt-6 text-center">
           <div className="font-display text-4xl leading-none tracking-wider text-amber-300">{clip.title}</div>
-          {clip.lines.filter(Boolean).slice(0, 4).map((l, i) => <div key={i} className={i === 0 ? 'text-base font-bold text-white' : 'text-sm text-slate-300'}>{l}</div>)}
+          {clip.lines.filter(Boolean).slice(0, 6).map((l, i) => <div key={i} className={i === 0 ? 'text-base font-bold text-white' : 'text-xs text-slate-300'}>{l}</div>)}
         </div>
       )
     case 'worm': case 'manhattan': case 'scoring': case 'wagon': {

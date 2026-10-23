@@ -60,4 +60,20 @@ describe('the studio show script', () => {
     const s = buildScript(m, 'end', 11, pool, { form: () => ({ bat: { innings: 5, runs: 120, average: 24, sr: 130, recent: ['10', '30*'] }, bowl: { matches: 5, wickets: 4, economy: 8, recent: ['1/30'] } }) })
     expect(s.beats.some((b) => b.clip?.kind === 'card' && b.clip.title === 'FORM GUIDE')).toBe(true)
   })
+
+  it('the form guide also covers earlier years of the career', () => {
+    const m = play(11)
+    const past = { years: 2, bat: { innings: 30, runs: 900, average: 31, high: 104, fifties: 5, hundreds: 1 }, bowl: { matches: 20, wickets: 25, economy: 7.4, bestW: 4, bestR: 22 } }
+    const s = buildScript(m, 'end', 11, pool, { form: () => ({ past }) })
+    const cards = s.beats.filter((b) => b.clip?.kind === 'card' && b.clip.title === 'FORM GUIDE')
+    expect(cards.length).toBeGreaterThan(0)
+    expect(cards.some((b) => b.clip?.kind === 'card' && b.clip.lines.some((l) => l.startsWith('Earlier years')))).toBe(true)
+  })
+
+  it('quiet performances are wrapped up in short group lines, so the show stays short', () => {
+    let grouped = 0
+    for (let seed = 1; seed <= 20; seed++) for (const b of buildScript(play(seed), 'innings', seed, pool).beats) if (b.clip?.kind === 'card' && ['SMALL KNOCKS', 'THE TAIL', 'SUPPORTING BOWLERS'].includes(b.clip.title)) grouped++
+    expect(grouped).toBeGreaterThan(10)
+    for (let seed = 1; seed <= 20; seed++) expect(buildScript(play(seed), 'innings', seed, pool).beats.length).toBeLessThan(30)
+  })
 })
