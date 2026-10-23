@@ -124,8 +124,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const ev = L.event
       // the two at the crease, the bowler, the keeper and the umpires
       const stance = L.striker.hand === 'L' ? -0.75 : 0.75
-      place('striker', { x: stance, y: (ev?.boundary ? joyHop(f.joy) : 0), z: 0.35 })
-      place('nonstriker', { x: -3.2, y: 0, z: -19.4 })
+      const ra = f.runners?.a ?? { x: stance, y: ev?.boundary ? joyHop(f.joy) : 0, z: 0.35 }
+      const rb = f.runners?.b ?? { x: -3.2, y: 0, z: -19.4 }
+      place('striker', ra)
+      place('nonstriker', rb)
       place('bowler', { x: f.bowler.x, y: (ev?.wicket && ev.wicket.kind !== 'run out' ? joyHop(f.joy) : Math.abs(Math.sin(f.bowler.z * 1.9)) * 0.1 * (f.phase === 'run' ? 1 : 0)), z: f.bowler.z })
       place('umpire1', { x: -1.15, y: 0, z: -22.2 })
       place('umpire2', { x: stance > 0 ? 13 : -13, y: 0, z: -2 })
@@ -164,7 +166,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         node.style.display = 'block'
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${(p.y + 3).toFixed(1)}px,0) translate(-50%,0)`
       }
-      tagOf('tagStriker', { x: stance, y: 0, z: 0.35 })
+      tagOf('tagStriker', { x: ra.x, y: 0, z: ra.z })
       tagOf('tagBowler', { x: f.bowler.x, y: 0, z: f.bowler.z })
       const ci = L.plan.catcher >= 0 ? L.plan.catcher : L.plan.chaser
       if (ci >= 0 && (f.phase === 'flight' || f.phase === 'hold')) { const w = f.moving.get(ci) ?? L.rest[ci]; tagOf('tagField', { x: w.x, y: 0, z: w.z }) } else { const n = nodes.current.get('tagField'); if (n) n.style.display = 'none' }
