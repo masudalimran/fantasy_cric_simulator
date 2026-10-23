@@ -224,8 +224,18 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     winShownRef.current = true
     setWinOpen(true)
   }, [])
+  const clipWait = useRef<{ seq: number; since: number }>({ seq: -1, since: 0 })
   const startNextMoment = useCallback(() => {
     window.clearTimeout(momentTimer.current)
+    // In the broadcast view the screens for a ball wait until its clip has finished playing, then start right away.
+    const head = queue.current[0]
+    if (head && getBroadcastView() && head.key < 1_000_000 && !['batsman', 'bowler', 'target', 'superover'].includes(head.kind)) {
+      const seq = Math.floor(head.key)
+      if (clipWait.current.seq !== seq) clipWait.current = { seq, since: Date.now() }
+      // (if the clip has not been planned yet the field has not drawn this ball: give it a moment, but not forever)
+      const left = clipNow.seq === seq ? clipNow.until - Date.now() : Date.now() - clipWait.current.since < 1500 ? 150 : 0
+      if (left > 0) { busyUntil.current = Infinity; momentTimer.current = window.setTimeout(startNextMoment, Math.min(left + 40, 250)); return }
+    }
     const m = queue.current.shift() ?? null
     current.current = m
     setMoment(m)
@@ -237,15 +247,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
   }, [openWinWhenIdle])
-  // In the broadcast view the screens for a ball wait until its clip has finished (only the first screen of a ball needs the extra wait)
-  const clipWaited = useRef(-1)
   const enqueueMoment = useCallback((m: Moment) => {
-    const seq = Math.floor(m.key)
-    if (getBroadcastView() && m.key < 1_000_000 && !['batsman', 'bowler', 'target', 'superover'].includes(m.kind) && seq !== clipWaited.current) {
-      clipWaited.current = seq
-      const sp = autoRef.current
-      m = { ...m, delay: m.delay + (clipNow.seq === seq ? clipNow.ms : Math.round(3600 * (sp === 4 ? 0.5 : sp === 2 ? 0.75 : 1))) }
-    }
     queue.current.push(m)
     if (!current.current) startNextMoment()
   }, [startNextMoment])
