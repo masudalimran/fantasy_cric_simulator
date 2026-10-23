@@ -4,7 +4,8 @@ import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { eventAngle } from '../../engine/shots'
 import { ballSpeed } from '../../engine/speed'
-import { cancelSpeech, setVoiceMode, speak, useVoiceMode, voiceSupported } from '../../audio/voice'
+import { genderOf } from '../../data/gender'
+import { cancelSpeech, setCastGenders, setVoiceMode, speak, useVoiceMode, voiceSupported } from '../../audio/voice'
 import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
 import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type Pundit, type ShowKind } from '../../season/studio'
 import type { PlayerForm } from '../../season/stats'
@@ -136,6 +137,8 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   const talking = voiceMode !== 'off' && voiceSupported()
   const [voiceFailed, setVoiceFailed] = useState(false)
   const voiced = talking && !voiceFailed
+  // a man speaks in a man's voice and a woman in a woman's: tell the voices who is on the desk
+  useEffect(() => { setCastGenders({ host: genderOf(script.cast[0].player), exp1: genderOf(script.cast[1].player), exp2: genderOf(script.cast[2].player) }); return () => setCastGenders({}) }, [script])
 
   useEffect(() => { sfx.whoosh(); const t = window.setTimeout(() => { setStage('show'); sfx.applause(1.6) }, 2200); return () => window.clearTimeout(t) }, [])
   // a name strap the first time each person talks

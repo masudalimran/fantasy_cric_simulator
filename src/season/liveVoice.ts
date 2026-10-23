@@ -2,8 +2,8 @@ import { commentary } from '../engine/commentary'
 import type { BallEvent } from '../engine/types'
 
 /**
- * What the two commentators say aloud for a ball: the play-by-play man gives the usual line of commentary (now and then with the speed of the ball),
- * and on the big moments the expert adds a word of his own. Chosen from the ball number, so the same ball always gets the same words.
+ * What the two commentators say aloud for a ball: the play-by-play man gives the usual line of commentary (never the ball's speed: that is shown on the screen,
+ * not said aloud), and on the big moments the expert adds a word of his own. Chosen from the ball number, so the same ball always gets the same words.
  */
 export interface LiveLine { text: string; role: 'pbp' | 'colour' }
 export interface LiveNames { striker: string; bowler: string; out?: string; fielder?: string }
@@ -17,12 +17,9 @@ const COLOUR = {
 }
 const pickBy = <T,>(items: T[], seq: number, salt = 0): T => items[Math.abs(Math.floor(seq * 7 + salt)) % items.length]
 
-export function liveLines(ev: BallEvent, n: LiveNames, kmh: number): LiveLine[] {
+export function liveLines(ev: BallEvent, n: LiveNames): LiveLine[] {
   const lines: LiveLine[] = []
-  let main = commentary(ev, n)
-  // about one ball in three starts with how fast it was
-  if (ev.seq % 3 === 0 && !ev.extraType) main = `${kmh} kilometres an hour. ${main}`
-  lines.push({ text: main, role: 'pbp' })
+  lines.push({ text: commentary(ev, n), role: 'pbp' })
   const milestone = ev.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')
   const big = ev.wicket ? COLOUR.wicket : milestone ? COLOUR.milestone : ev.boundary === 6 ? COLOUR.six : ev.boundary === 4 && ev.seq % 3 === 1 ? COLOUR.four : null
   if (big) lines.push({ text: pickBy(big, ev.seq, 3), role: 'colour' })

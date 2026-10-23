@@ -236,7 +236,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           <div className="mt-2 space-y-1.5">
             {englishVoices.length === 0 && <p className="text-[11px] text-slate-400">No English voices were found on this device. On Android: Settings, then Languages, then Text-to-speech output, to add one.</p>}
             {VOICE_ROLES.map((role: VoiceRole) => {
-              const auto = assignVoices(englishVoices, {})[role]
+              const auto = assignVoices(englishVoices, {})[role].voice
               return (
                 <label key={role} className="flex items-center justify-between gap-2 text-[12px] font-semibold text-slate-200">
                   <span className="w-24 shrink-0">{{ host: 'Host', exp1: 'Expert 1', exp2: 'Expert 2', pbp: 'Commentator', colour: 'Co-commentator' }[role]}</span>

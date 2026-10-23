@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assignVoices, chunks, prosody, rankVoices, sameVoices, spoken, type VoiceLike } from './speechText'
+import { assignVoices, chunks, prosody, rankVoices, sameVoices, spoken, voiceGender, type VoiceLike } from './speechText'
 
 describe('speaking lines', () => {
   it('says scores and figures the way a commentator would', () => {
@@ -33,10 +33,29 @@ describe('choosing voices', () => {
   })
   it('gives each role a different voice when there are enough, alternating male and female', () => {
     const a = assignVoices(all)
-    const names = Object.values(a).map((v) => v?.name)
+    const names = Object.values(a).map((v) => v.voice?.name)
     expect(new Set(names).size).toBe(names.length)
-    expect(assignVoices(all, { host: 'Daniel' }).host?.name).toBe('Daniel')
-    expect(assignVoices([]).host).toBeNull()
+    expect(assignVoices(all, { host: 'Daniel' }).host.voice?.name).toBe('Daniel')
+    expect(assignVoices([]).host.voice).toBeNull()
+  })
+  it('gives a man a man\'s voice and a woman a woman\'s, and each speaker of the same kind a different one', () => {
+    const a = assignVoices(all, {}, { host: 'm', exp1: 'f', exp2: 'm' })
+    expect(voiceGender(a.host.voice!)).toBe('m')
+    expect(voiceGender(a.exp1.voice!)).toBe('f')
+    expect(voiceGender(a.exp2.voice!)).toBe('m')
+    expect(a.host.voice!.name).not.toBe(a.exp2.voice!.name)
+    expect(a.host.pitchFix).toBe(1)
+    const unnamed = assignVoices([V('English (United Kingdom)'), V('English (United States)')], {}, { host: 'm', exp1: 'f' })
+    expect(unnamed.host.pitchFix).toBeLessThan(1)
+    expect(unnamed.exp1.pitchFix).toBeGreaterThan(1)
+  })
+  it('lowers the pitch when the phone has only women\'s voices for a man (and raises it the other way)', () => {
+    const women = [V('Google UK English Female', 'en-GB', false), V('Samantha', 'en-US')]
+    const a = assignVoices(women, {}, { host: 'm', exp1: 'f' })
+    expect(a.host.pitchFix).toBeLessThan(1)
+    expect(a.exp1.pitchFix).toBe(1)
+    const men = [V('Google UK English Male', 'en-GB', false)]
+    expect(assignVoices(men, {}, { host: 'f' }).host.pitchFix).toBeGreaterThan(1)
   })
   it('gives every role a different pitch, and excitement is quicker than a serious tone', () => {
     expect(prosody('exp1', undefined, 1).pitch).not.toBe(prosody('exp2', undefined, 1).pitch)

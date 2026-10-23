@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { assignVoices, chunks, prosody, rankVoices, sameVoices, spoken, type VoiceMood, type VoiceRole } from './speechText'
+import { assignVoices, chunks, type SpeakerGender, prosody, rankVoices, sameVoices, spoken, type VoiceMood, type VoiceRole } from './speechText'
 
 /**
  * Spoken voices for the studio show and the live commentary, using the voices the phone already has (the Web Speech API): nothing to download,
@@ -18,7 +18,7 @@ const read = (k: string): string | null => { try { return localStorage.getItem(k
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* just not remembered */ } }
 
 // the commentary is on by default; the phone's say-so is asked for the first time it is needed (see askVoice)
-let mode: VoiceMode = (['off', 'studio', 'full'] as const).find((m) => m === read(KEY_MODE)) ?? 'full'
+let mode: VoiceMode = (['off', 'studio', 'full'] as const).find((m) => m === read(KEY_MODE)) ?? 'studio'
 let speed: VoiceSpeed = (['slow', 'normal', 'fast'] as const).find((m) => m === read(KEY_SPEED)) ?? 'normal'
 let names: Partial<Record<VoiceRole, string>> = (() => { try { return JSON.parse(read(KEY_NAMES) ?? '{}') } catch { return {} } })()
 
@@ -119,6 +119,13 @@ export function cancelSpeech() {
   try { synth()?.cancel() } catch { /* nothing to cancel */ }
 }
 
+/** Who is a woman and who is a man among the people on the studio desk right now (so each gets a fitting voice). */
+let castGenders: Partial<Record<VoiceRole, SpeakerGender>> = {}
+export function setCastGenders(g: Partial<Record<'host' | 'exp1' | 'exp2', SpeakerGender | undefined>>) {
+  castGenders = {}
+  for (const r of ['host', 'exp1', 'exp2'] as const) if (g[r]) castGenders[r] = g[r]
+}
+
 export type SpeakResult = 'done' | 'cancelled' | 'failed'
 
 /** Says a line in the voice of a role and tells when it has finished (or why it did not). Pieces of a long line are said one after another. */
@@ -127,8 +134,10 @@ export function speak(text: string, role: VoiceRole, mood?: VoiceMood, force = f
   if (!s || (!force && (mode === 'off' || consent !== 'granted'))) return Promise.resolve('failed')
   const my = ++token
   try { s.cancel() } catch { /* fine */ }
-  const voice = assignVoices(voices, names)[role]
-  const { pitch, rate } = prosody(role, mood, SPEEDS[speed])
+  const picked = assignVoices(voices, names, castGenders)[role]
+  const voice = picked.voice
+  const base = prosody(role, mood, SPEEDS[speed])
+  const pitch = Math.max(0.5, Math.min(2, base.pitch * picked.pitchFix)), rate = base.rate
   const parts = chunks(spoken(text))
   if (!parts.length) return Promise.resolve('done')
   active = 1

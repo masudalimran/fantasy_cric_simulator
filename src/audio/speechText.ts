@@ -50,8 +50,15 @@ export function chunks(text: string, max = 170): string[] {
 
 export interface VoiceLike { name: string; lang: string; localService: boolean }
 
-const FEMALE = /female|samantha|karen|moira|tessa|victoria|aria|jenny|libby|sonia|natasha|zira|susan|catherine|fiona|veena|serena|kate|hazel|emma|amy|joanna|salli|kendra|kimberly|ivy|nicole/i
-export const isFemaleVoice = (v: VoiceLike) => FEMALE.test(v.name)
+const FEMALE = /female|samantha|karen|moira|tessa|victoria|aria|jenny|libby|sonia|natasha|zira|susan|catherine|fiona|veena|serena|kate|hazel|emma|amy|joanna|salli|kendra|kimberly|ivy|nicole|google us english|google uk english female|heera|ava|allison|jessa|michelle|ana\b|sara/i
+const MALE = /(?<!fe)male|daniel|alex\b|fred|george|thomas|oliver|arthur|james|rishi|ryan|guy\b|davis|mark\b|david|christopher|eric|brian|ravi|liam|matthew|aaron|gordon|lee\b|neerja? ?male|prabhat/i
+export const isFemaleVoice = (v: VoiceLike) => FEMALE.test(v.name) && !MALE.test(v.name)
+/** What a voice's name says about who is speaking: a woman, a man, or nothing (many phone voices are just "English (United Kingdom)"). */
+export function voiceGender(v: VoiceLike): 'f' | 'm' | null {
+  if (MALE.test(v.name)) return 'm'
+  if (FEMALE.test(v.name)) return 'f'
+  return null
+}
 
 /** How good a voice is likely to sound for commentary: natural and online voices first, then the plain English ones. */
 export function voiceScore(v: VoiceLike): number {
@@ -77,18 +84,37 @@ export function rankVoices<T extends VoiceLike>(vs: T[]): T[] {
 export type VoiceRole = 'host' | 'exp1' | 'exp2' | 'pbp' | 'colour'
 export const VOICE_ROLES: VoiceRole[] = ['host', 'exp1', 'exp2', 'pbp', 'colour']
 
-/** Picks a voice for each role from the best on offer: different voices where there are enough, and alternating male and female so they are easy to tell apart. */
-export function assignVoices<T extends VoiceLike>(all: T[], chosen: Partial<Record<VoiceRole, string>> = {}): Record<VoiceRole, T | null> {
+export type SpeakerGender = 'f' | 'm'
+export interface VoicePick<T> { voice: T | null; /** The voice's own sound is the wrong one for the character, so the pitch is moved to make up for it. */ pitchFix: number }
+
+/**
+ * Picks a voice for each role from the best on offer. Where a speaker is known to be a woman or a man (the studio's characters), the voice is a
+ * woman's or a man's, and two speakers of the same kind get different voices; a person who chose a voice for a role keeps it. Where the phone has no
+ * voice of the right kind, the nearest one is used with its pitch moved (lower for a man, higher for a woman) so a man does not sound like a woman.
+ * Speakers whose gender is not known alternate male and female as before.
+ */
+export function assignVoices<T extends VoiceLike>(all: T[], chosen: Partial<Record<VoiceRole, string>> = {}, genders: Partial<Record<VoiceRole, SpeakerGender>> = {}): Record<VoiceRole, VoicePick<T>> {
   const ranked = rankVoices(all)
-  const top = ranked.slice(0, 10)
-  const result = {} as Record<VoiceRole, T | null>
+  const top = ranked.slice(0, 14)
+  const result = {} as Record<VoiceRole, VoicePick<T>>
   const used = new Set<string>()
   let lastFemale: boolean | null = null
   for (const role of VOICE_ROLES) {
+    const want = genders[role]
     const wanted = chosen[role] ? all.find((v) => v.name === chosen[role]) : undefined
     let pick: T | undefined = wanted
-    if (!pick) pick = top.find((v) => !used.has(v.name) && (lastFemale === null || isFemaleVoice(v) !== lastFemale)) ?? top.find((v) => !used.has(v.name)) ?? top[VOICE_ROLES.indexOf(role) % Math.max(1, top.length)]
-    result[role] = pick ?? null
+    let fix = 1
+    if (!pick && want) {
+      const free = top.filter((v) => !used.has(v.name))
+      pick = free.find((v) => voiceGender(v) === want) ?? free.find((v) => voiceGender(v) === null) ?? free[0] ?? top.find((v) => voiceGender(v) === want) ?? top[VOICE_ROLES.indexOf(role) % Math.max(1, top.length)]
+      const g = pick ? voiceGender(pick) : null
+      if (pick && g && g !== want) fix = want === 'm' ? 0.78 : 1.25
+      // a voice whose name does not say (most Android voices) gets a gentle nudge the right way
+      else if (pick && !g && !wanted) fix = want === 'm' ? 0.9 : 1.08
+    } else if (!pick) {
+      pick = top.find((v) => !used.has(v.name) && (lastFemale === null || isFemaleVoice(v) !== lastFemale)) ?? top.find((v) => !used.has(v.name)) ?? top[VOICE_ROLES.indexOf(role) % Math.max(1, top.length)]
+    }
+    result[role] = { voice: pick ?? null, pitchFix: fix }
     if (pick) { used.add(pick.name); lastFemale = isFemaleVoice(pick) }
   }
   return result

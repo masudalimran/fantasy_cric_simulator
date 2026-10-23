@@ -331,7 +331,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         cancelSpeech()
         boxLines.current = null
         const names = { striker: match.player(ev.strikerId).name, bowler: match.player(ev.bowlerId).name, out: ev.wicket ? match.player(ev.wicket.playerId).name : undefined, fielder: ev.wicket?.fielderId ? match.player(ev.wicket.fielderId).name : undefined }
-        const lines = liveLines(ev, names, ballSpeed(ev, match.player(ev.bowlerId)))
+        const lines = liveLines(ev, names)
         const rf = autoRef.current === 4 ? 0.5 : autoRef.current === 2 ? 0.75 : 1
         // in the broadcast view the commentator speaks once the ball has been hit
         voiceTimer.current = window.setTimeout(() => {
