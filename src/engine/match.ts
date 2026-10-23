@@ -5,6 +5,7 @@ import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, parRunsPerOver, REF,
 } from './model'
+import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
 import { sixDistance } from './shots'
 import {
@@ -262,7 +263,10 @@ export class Match {
     const coin = this.rng.chance(0.5) ? 'heads' : 'tails'
     const winnerSide = forced?.winnerSide ?? ((call === coin ? callerSide : 1 - callerSide) as 0 | 1)
     const ai = aiTossDecision(this.format, this.rng) // always drawn, so the rest of the match is the same either way
-    const decision = forced?.decision ?? chosen ?? ai
+    // the computer reads the pitch: on one with a clear edge it makes the smart call about nine times in ten (and no more random draws are taken)
+    const lean = this.format === 'test' ? 0 : pitchLean(this.pitch)
+    const smart: 'bat' | 'bowl' | null = Math.abs(lean) >= 0.25 && (this.seed >>> 5) % 10 !== 0 ? (lean > 0 ? 'bat' : 'bowl') : null
+    const decision = forced?.decision ?? chosen ?? smart ?? ai
     return { callerSide, call, coin, winnerSide, decision }
   }
 
@@ -431,7 +435,7 @@ export class Match {
     const probs = ballProbs({
       shot: this.shotAim[battingSideIdx], delivery: this.deliveryAim[bowlingSideIdx],
       repeat: !!this.deliveryAim[bowlingSideIdx] && this.lastDelivery[bowlingSideIdx]?.line === this.deliveryAim[bowlingSideIdx]!.line && this.lastDelivery[bowlingSideIdx]?.length === this.deliveryAim[bowlingSideIdx]!.length,
-      format, phase, intent, style: BOWL_STYLE_VALUE[this.bowlStyle[bowlingSideIdx] ?? 'normal'], pitch: this.pitch, freeHit: inn.freeHit,
+      format, phase, intent, style: BOWL_STYLE_VALUE[this.bowlStyle[bowlingSideIdx] ?? 'normal'], pitch: this.pitch, inningsIndex: inn.index, freeHit: inn.freeHit,
       forfeit: this.forfeitSide === battingSideIdx ? 'bat' : this.forfeitSide === bowlingSideIdx ? 'bowl' : undefined,
       ballsFaced: strikerLine.balls,
       fieldingAvg: this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx],

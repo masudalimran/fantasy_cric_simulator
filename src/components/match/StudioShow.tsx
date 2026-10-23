@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { eventAngle } from '../../engine/shots'
+import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
 import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type Pundit, type ShowKind } from '../../season/studio'
+import type { PlayerForm } from '../../season/stats'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { FourScreen } from './EventScreens'
@@ -15,7 +17,7 @@ import { WicketReplay } from './WicketReplay'
 const MOOD_EMOJI: Record<Mood, string> = { excited: '🔥', serious: '🧐', laugh: '😂', shocked: '😱', thoughtful: '🤔', proud: '👏', sarcastic: '😏', worried: '😬' }
 const MOOD_COLOR: Record<Mood, string> = { excited: '#fb923c', serious: '#94a3b8', laugh: '#facc15', shocked: '#f472b6', thoughtful: '#60a5fa', proud: '#34d399', sarcastic: '#c084fc', worried: '#f87171' }
 const ROLE: Record<Persona, string> = { host: 'Host', analyst: 'The Analyst', firebrand: 'The Firebrand', veteran: 'The Veteran', jester: 'The Joker', tactician: 'The Tactician' }
-const CLIP_TAG: Record<Clip['kind'], string> = { card: 'Studio graphics', worm: 'The worm', manhattan: 'Over by over', scoring: 'How the runs came', wagon: 'Wagon wheel', six: 'Instant replay · six', four: 'Instant replay · four', wicket: 'Instant replay · wicket', milestone: 'Milestone moment' }
+const CLIP_TAG: Record<Clip['kind'], string> = { card: 'Studio graphics', worm: 'The worm', manhattan: 'Over by over', scoring: 'How the runs came', wagon: 'Wagon wheel', six: 'Instant replay · six', four: 'Instant replay · four', wicket: 'Instant replay · wicket', milestone: 'Milestone moment', stat: 'Player stats' }
 
 /** How a person on the desk moves while he talks, by mood. */
 const MOVE: Record<Mood, object> = {
@@ -27,18 +29,6 @@ const MOVE: Record<Mood, object> = {
   thoughtful: { rotate: [0, -3, 0, 2, 0], transition: { duration: 2.4, repeat: Infinity } },
   sarcastic: { rotate: [0, 5, 5, 0], x: [0, 3, 3, 0], transition: { duration: 1.6, repeat: Infinity } },
   worried: { x: [0, -2, 2, -2, 0], transition: { duration: 0.6, repeat: Infinity, repeatDelay: 0.8 } },
-}
-
-/** Types a line out letter by letter; tapping finishes it. */
-function useTypewriter(text: string, speed = 44) {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    setN(0)
-    let i = 0
-    const t = window.setInterval(() => { i += 1; setN(i); if (i >= text.length) window.clearInterval(t) }, speed)
-    return () => window.clearInterval(t)
-  }, [text, speed])
-  return { shown: text.slice(0, n), done: n >= text.length, finish: () => setN(text.length) }
 }
 
 /** What is on the studio's big screen: a moment of the match, or a stats graphic, built from the match itself. */
@@ -62,18 +52,40 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
     }
     case 'six':
       if (!ev || !evTeams) return null
-      return <SixReplay info={{ batsman: match.player(ev.strikerId), team: evTeams.bat, distance: ev.distance ?? 80, rate: 1 }} />
+      return <SixReplay info={{ batsman: match.player(ev.strikerId), team: evTeams.bat, distance: ev.distance ?? 80, rate: 1, fire: ev.freeHit }} />
     case 'four': {
       if (!ev || !evTeams) return null
       const xi = match.sides[1 - match.innings[ev.innings].battingSide].xi.filter((p) => p.id !== ev.bowlerId)
       const count = 1 + (ev.seq % 3)
       const chasers = xi.slice(ev.seq % Math.max(1, xi.length - count), (ev.seq % Math.max(1, xi.length - count)) + count).map((player) => ({ player, x: 110, y: 40 }))
-      return <FourScreen info={{ batsman: match.player(ev.strikerId), batTeam: evTeams.bat, bowlTeam: evTeams.bowl, angle: eventAngle(ev), chasers, rate: 1 }} />
+      return <FourScreen info={{ batsman: match.player(ev.strikerId), batTeam: evTeams.bat, bowlTeam: evTeams.bowl, angle: eventAngle(ev), chasers, rate: 1, fire: ev.freeHit }} />
     }
     case 'wicket': {
       if (!ev || !evTeams || !ev.wicket) return null
       const out = match.innings[ev.innings].batters.find((b) => b.id === ev.wicket!.playerId)
       return <WicketReplay info={{ kind: ev.wicket.kind, batsman: match.player(ev.wicket.playerId), bowler: match.player(ev.bowlerId), fielder: ev.wicket.fielderId ? match.player(ev.wicket.fielderId) : null, batTeam: evTeams.bat, bowlTeam: evTeams.bowl, rate: 1, score: out ? `${out.runs} (${out.balls})` : '' }} />
+    }
+    case 'stat': {
+      const p = match.player(clip.playerId)
+      const team = clip.as === 'bat' ? side(clip.innings) : match.sides[1 - match.innings[Math.min(clip.innings, match.innings.length - 1)].battingSide].team
+      const col = GRADE_COLOR[clip.grade]
+      let big = '', small = ''
+      if (clip.as === 'bat') {
+        const b = inn(clip.innings).batters.find((x) => x.id === clip.playerId)
+        if (b) { big = `${b.runs}${b.dismissal ? '' : '*'}`; small = `${b.balls} balls · ${b.fours}x4 · ${b.sixes}x6 · SR ${b.balls ? Math.round((b.runs / b.balls) * 100) : 0}` }
+      } else {
+        const l = inn(clip.innings).bowlers.get(clip.playerId)
+        if (l) { big = `${l.wickets}/${l.runs}`; small = `${Math.floor(l.legalBalls / 6)}.${l.legalBalls % 6} ov · ${l.maidens} maidens · econ ${l.legalBalls ? ((l.runs / l.legalBalls) * 6).toFixed(1) : '0.0'}` }
+      }
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[radial-gradient(ellipse_at_center,#1e3a8a,#070b14_75%)] px-4 pt-6 text-center">
+          <PlayerAvatar player={p} team={team} size={52} profile />
+          <div className="text-sm font-bold text-white">{p.name}</div>
+          <div className="font-display text-5xl leading-none text-white">{big}</div>
+          <div className="text-xs text-slate-300">{small}</div>
+          <div className="mt-0.5 rounded-full px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-black" style={{ background: col }}>{GRADE_LABEL[clip.grade]} {clip.as === 'bat' ? 'batting' : 'bowling'}</div>
+        </div>
+      )
     }
     case 'milestone': {
       const line = inn(clip.innings).batters.find((b) => b.id === clip.playerId)
@@ -105,12 +117,11 @@ function Anchor({ cast, active, mood, big }: { cast: Cast; active: boolean; mood
  * The studio show: a host and two experts at a desk, in front of a big screen that plays the moments they talk about. It runs between the
  * innings, at stumps in a Test and after the match. Tap to move on a line; Skip to leave.
  */
-export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: Match; kind: ShowKind; pool: Pundit[]; seed: number; extra?: { competition?: string; stage?: string }; onDone: () => void }) {
+export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: Match; kind: ShowKind; pool: Pundit[]; seed: number; extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }; onDone: () => void }) {
   const script = useMemo(() => buildScript(match, kind, seed, pool, extra), [match, kind, seed, pool, extra])
   const [stage, setStage] = useState<'intro' | 'show' | 'outro'>('intro')
   const [i, setI] = useState(0)
   const beat: Beat = script.beats[Math.min(i, script.beats.length - 1)]
-  const typed = useTypewriter(stage === 'show' ? beat.text : '', 40)
   const introduced = useRef(new Set<number>())
   const [strap, setStrap] = useState<number | null>(null)
   // the clip on the wall stays until another one is asked for
@@ -129,14 +140,14 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
     if (i >= script.beats.length - 1) { setStage('outro'); sfx.applause(2); window.setTimeout(done, 1800); return }
     setI((x) => x + 1)
   }, [stage, i, script.beats.length, done])
-  // lines move on by themselves a moment after they have been typed out
+  // a line shows whole; it moves on by itself after a reading time, or the moment the screen is tapped
   useEffect(() => {
-    if (stage !== 'show' || !typed.done) return
-    const t = window.setTimeout(next, 2200 + beat.text.length * 40)
+    if (stage !== 'show') return
+    const t = window.setTimeout(next, 3200 + beat.text.length * 55)
     return () => window.clearTimeout(t)
-  }, [stage, typed.done, beat.text.length, next])
+  }, [stage, i, beat.text.length, next])
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') done(); else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); typed.done ? next() : typed.finish() } }
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') done(); else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next() } }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
   })
@@ -149,7 +160,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   }, [match, script.title, extra?.competition])
 
   return (
-    <motion.div data-studio data-scroll-lock className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#04060d]" style={{ paddingTop: 'var(--sat)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} aria-label={script.title}>
+    <motion.div data-studio data-scroll-lock onClick={next} className="fixed inset-0 z-[60] flex cursor-pointer flex-col overflow-hidden bg-[#04060d]" style={{ paddingTop: 'var(--sat)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} aria-label={script.title}>
       {/* the set: stage lights and a glossy floor */}
       <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 12%, #1e3a8a66, transparent 55%), radial-gradient(ellipse at 15% 70%, #7c3aed33, transparent 45%), radial-gradient(ellipse at 85% 70%, #0ea5e933, transparent 45%)' }} />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%]" style={{ background: 'linear-gradient(180deg, transparent, #0b1226 40%, #070b18)' }} />
@@ -162,7 +173,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
         </div>
         <div className="min-w-0 flex-1 truncate text-[11px] font-extrabold uppercase tracking-widest text-slate-200">{script.title}</div>
         <span className="flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
-        <button onClick={done} className="rounded-full border border-white/20 px-3 py-1 text-xs font-bold text-slate-200 active:bg-white/10">Skip</button>
+        <button onClick={(e) => { e.stopPropagation(); done() }} className="cursor-pointer rounded-full border border-white/20 px-3 py-1 text-xs font-bold text-slate-200 active:bg-white/10">Skip</button>
       </div>
 
       {/* the big screen behind the desk */}
@@ -195,7 +206,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
         <AnimatePresence mode="wait">
           {stage === 'show' && (
             <motion.div
-              key={i} onClick={() => (typed.done ? next() : typed.finish())}
+              key={i}
               className="relative w-full cursor-pointer rounded-2xl border-2 bg-black/80 p-3 shadow-xl"
               style={{ borderColor: MOOD_COLOR[beat.mood], boxShadow: `0 0 24px ${MOOD_COLOR[beat.mood]}44` }}
               initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8 }} transition={{ type: 'spring', stiffness: 320, damping: 26 }}
@@ -205,7 +216,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{ROLE[speaker.persona]}</span>
                 <motion.span className="ml-auto text-xl" animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 0.9, repeat: Infinity }} aria-hidden>{MOOD_EMOJI[beat.mood]}</motion.span>
               </div>
-              <p className="min-h-[3.6em] text-[15px] leading-snug text-white">{typed.shown}<span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-white/80 align-middle" /></p>
+              <p className="min-h-[3.6em] text-[15px] leading-snug text-white">{beat.text}</p>
               {/* the tail of the bubble points at whoever is talking */}
               <span className="absolute -bottom-2 h-3 w-3 rotate-45 border-b-2 border-r-2 bg-black" style={{ borderColor: MOOD_COLOR[beat.mood], left: beat.who === 0 ? '48%' : beat.who === 1 ? '16%' : '80%' }} />
             </motion.div>

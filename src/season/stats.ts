@@ -286,3 +286,31 @@ export function mergeBowl(list: BowlStat[]): BowlStat | undefined {
   }
   return out
 }
+
+/** A player's record before a given match, for the studio show to set a very good or very bad game against: season totals and his last few scores. */
+export interface PlayerForm {
+  bat?: { innings: number; runs: number; average: number | null; sr: number | null; recent: string[] }
+  bowl?: { matches: number; wickets: number; economy: number | null; recent: string[] }
+}
+
+export function formBefore(season: Season, id: string, excludeFixtureId: string): PlayerForm | null {
+  const results = Object.fromEntries(Object.entries(season.results).filter(([, r]) => r.fixtureId !== excludeFixtureId))
+  const c = collect({ ...season, results })
+  const roster = season.roster ?? []
+  const at = roster.indexOf(id)
+  if (at < 0) return null
+  const order = new Map(season.fixtures.map((f, i) => [f.id, i]))
+  const played = Object.values(results).sort((a, b) => (order.get(b.fixtureId) ?? 0) - (order.get(a.fixtureId) ?? 0))
+  const recentBat: string[] = [], recentBowl: string[] = []
+  for (const r of played) {
+    const b = r.bat?.find((l) => l[0] === at)
+    if (b && recentBat.length < 5) recentBat.push(`${b[1]}${b[5] ? '' : '*'}`)
+    const w = r.bowl?.find((l) => l[0] === at)
+    if (w && recentBowl.length < 5) recentBowl.push(`${w[3]}/${w[2]}`)
+  }
+  const bs = c.bat.get(id), ws = c.bowl.get(id)
+  const form: PlayerForm = {}
+  if (bs && bs.innings > 0) form.bat = { innings: bs.innings, runs: bs.runs, average: average(bs), sr: strikeRate(bs), recent: recentBat }
+  if (ws && ws.balls > 0) form.bowl = { matches: ws.bowlApps, wickets: ws.wickets, economy: economy(ws), recent: recentBowl }
+  return form.bat || form.bowl ? form : null
+}

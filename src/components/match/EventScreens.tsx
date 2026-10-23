@@ -36,6 +36,8 @@ export interface FourInfo {
   /** The one to three fielders nearest the ball's path, with where they stand (field units, 160 x 100). */
   chasers: { player: Player; x: number; y: number }[]
   rate: number
+  /** Hit off a free hit: the ball is on fire and leaves a trail of flames. */
+  fire?: boolean
 }
 
 /** FOUR, seen from above: the ball races to the rope and one to three fielders chase it and come up short. */
@@ -80,8 +82,16 @@ export function FourScreen({ info }: { info: FourInfo }) {
         {/* the ball's path along the ground and its trail */}
         <motion.line x1={HIT.x} y1={HIT.y} x2={end.x} y2={end.y} stroke="#e0f2fe" strokeWidth="0.8" strokeLinecap="round" strokeDasharray="1.6 1.2" initial={{ pathLength: 0, opacity: 0.9 }} animate={{ pathLength: 1 }} transition={{ delay: 0.15 * r, duration: run, ease: 'easeOut' }} />
       </svg>
+      {info.fire && Array.from({ length: 7 }, (_, i) => (
+        <motion.span
+          key={`fl${i}`} className="pointer-events-none absolute z-[19] block rounded-full blur-[3px]"
+          style={{ left: pc(HIT.x, W), top: pc(HIT.y, H), width: 14 - i, height: 14 - i, translateX: '-50%', translateY: '-50%', background: i < 2 ? '#fde047' : i < 4 ? '#fb923c' : '#ef4444' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.85 - i * 0.09, 0], left: [pc(HIT.x, W), pc(end.x, W)], top: [pc(HIT.y, H), pc(end.y, H)] }} transition={{ delay: (0.15 + (i + 1) * 0.05) * r, duration: run, ease: 'easeOut' }}
+        />
+      ))}
       <motion.span
-        className="absolute z-20 block h-3.5 w-3.5 rounded-full border-2 border-red-200 bg-red-500 shadow-[0_0_12px_#ef4444]"
+        className={`absolute z-20 block h-3.5 w-3.5 rounded-full border-2 ${info.fire ? 'border-yellow-200 bg-orange-500 shadow-[0_0_18px_#f97316,0_0_30px_#ef4444]' : 'border-red-200 bg-red-500 shadow-[0_0_12px_#ef4444]'}`}
         style={{ left: pc(HIT.x, W), top: pc(HIT.y, H), translateX: '-50%', translateY: '-50%' }}
         animate={{ left: [pc(HIT.x, W), pc(end.x, W)], top: [pc(HIT.y, H), pc(end.y, H)] }} transition={{ delay: 0.15 * r, duration: run, ease: 'easeOut' }}
       />

@@ -93,6 +93,8 @@ export interface TimeoutReel {
   /** The batting team's score as each ball was bowled in that match (for the little scoreboard), and its short name. */
   scores?: { runs: number; wickets: number; balls: number }[]
   teamShort?: string
+  /** A commentator who introduces the clip in a text bubble. */
+  commentator?: { player: Player; team: Team }
   striker: Player; nonStriker: Player | null; bowler: Player
   battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
 }
@@ -149,7 +151,7 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
         <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">{small ? 'Tap' : 'Tap to carry on'}</span>
       </div>
       {/* the TV */}
-      <div className="absolute inset-x-[5%] bottom-[15%] top-[14%] overflow-hidden rounded-xl border-2 border-slate-500/70 bg-black shadow-[0_0_30px_#38bdf844]">
+      <div className={`absolute inset-x-[5%] top-[14%] overflow-hidden rounded-xl border-2 border-slate-500/70 bg-black shadow-[0_0_30px_#38bdf844] ${inReel && reel?.commentator ? 'bottom-[31%]' : 'bottom-[15%]'}`}>
         {inReel && reel && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black" aria-label="Highlight reel">
             <div className="relative h-full" style={{ aspectRatio: '16 / 10' }}>
@@ -194,6 +196,23 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
         </motion.div>
         <div className="pointer-events-none absolute inset-0 opacity-[0.09]" style={{ background: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)' }} />
       </div>
+      {/* a commentator says what this highlight is about */}
+      {inReel && reel?.commentator && (() => {
+        const c = reel.commentator
+        const opp = reel.team.id === reel.battingTeam.id ? reel.bowlingTeam : reel.battingTeam
+        const text = reel.kind === 'bat'
+          ? `Remember this? ${reel.player.name} for ${reel.team.name}, ${reel.headline} against ${opp.name}.${reel.result ? ` ${reel.result}.` : ''}`
+          : `Look at this spell from ${reel.player.name} of ${reel.team.name}: ${reel.headline} against ${opp.name}.${reel.result ? ` ${reel.result}.` : ''}`
+        return (
+          <div key="commentator" className="absolute inset-x-[5%] bottom-[15.5%] z-20 flex items-center gap-2">
+            <div className="shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(c.team)}` }}><PlayerAvatar player={c.player} team={c.team} size={34} /></div>
+            <div className="relative min-w-0 flex-1 rounded-xl border border-sky-400/60 bg-black/80 px-2 py-1 text-[11px] leading-tight text-white">
+              <span className="absolute -left-1 top-3 h-2 w-2 rotate-45 border-b border-l border-sky-400/60 bg-black" />
+              <span className="font-bold text-sky-300">{c.player.name.split(' ')[0]}: </span>{text}
+            </div>
+          </div>
+        )
+      })()}
       {/* the progress of the 30 seconds, and the teams */}
       <div className="absolute inset-x-[5%] bottom-[9%] z-20 h-1.5 overflow-hidden rounded-full bg-white/15">
         <motion.div className="h-full rounded-full bg-amber-400" initial={{ width: '100%' }} animate={{ width: '0%' }} transition={{ duration: seconds, ease: 'linear' }} />

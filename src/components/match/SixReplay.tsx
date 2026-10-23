@@ -13,6 +13,8 @@ export interface SixInfo {
   rate: number
   /** True when it is the longest six he has hit so far in the match or career. */
   longest?: boolean
+  /** Hit off a free hit: the ball is on fire and leaves a trail of flames. */
+  fire?: boolean
 }
 
 /** Counts up to a number as the ball flies. */
@@ -37,7 +39,7 @@ function Counter({ to, delay, dur }: { to: number; delay: number; dur: number })
  * distance counter runs up to how far it went. Click to skip.
  */
 export function SixReplay({ info }: { info: SixInfo }) {
-  const { batsman, team, distance, rate, longest } = info
+  const { batsman, team, distance, rate, longest, fire } = info
   const box = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(640)
   useEffect(() => {
@@ -81,8 +83,18 @@ export function SixReplay({ info }: { info: SixInfo }) {
           initial={{ pathLength: 0, opacity: 0.9 }} animate={{ pathLength: 1, opacity: [0.9, 0.9, 0.5] }} transition={{ delay: 0.35 * r, duration: fly, ease: 'easeOut' }}
         />
       </motion.svg>
+      {/* a free hit: the ball is on fire and drags a trail of flames behind it */}
+      {fire && Array.from({ length: 7 }, (_, i) => (
+        <motion.span
+          key={`fl${i}`} className="pointer-events-none absolute z-[29] block rounded-full blur-[3px]"
+          style={{ left: '18%', top: '80%', width: 16 - i, height: 16 - i, translateX: '-50%', translateY: '-50%', background: i < 2 ? '#fde047' : i < 4 ? '#fb923c' : '#ef4444' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.8 - i * 0.09, 0.7 - i * 0.09, 0], left: ['18%', `${18 + reach * 0.5}%`, `${18 + reach}%`], top: ['80%', `${-4 - reach * 0.05 + 12}%`, '30%'], scale: [1, 1.2, 0.5] }}
+          transition={{ delay: (0.35 + (i + 1) * 0.05) * r, duration: fly, times: [0, 0.55, 0.9, 1], ease: 'easeOut' }}
+        />
+      ))}
       <motion.span
-        className="absolute z-30 block h-4 w-4 rounded-full border-2 border-red-200 bg-red-500 shadow-[0_0_14px_#ef4444]"
+        className={`absolute z-30 block h-4 w-4 rounded-full border-2 ${fire ? 'border-yellow-200 bg-orange-500 shadow-[0_0_20px_#f97316,0_0_36px_#ef4444]' : 'border-red-200 bg-red-500 shadow-[0_0_14px_#ef4444]'}`}
         style={{ left: '18%', top: '80%', translateX: '-50%', translateY: '-50%' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 1, 0.9], left: ['18%', `${18 + reach * 0.5}%`, `${18 + reach}%`], top: ['80%', `${-4 - reach * 0.05 + 12}%`, '30%'], scale: [1, 1.2, 0.5] }}

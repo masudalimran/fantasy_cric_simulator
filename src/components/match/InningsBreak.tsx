@@ -40,6 +40,7 @@ export function InningsBreak({ match, onClose }: { match: Match; onClose: () => 
         className="pointer-events-auto relative w-full max-w-lg overflow-hidden rounded-3xl border-2 bg-ink shadow-2xl"
         style={{ borderColor: accent, boxShadow: `0 0 60px ${accent}55` }}
       >
+        <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 grid h-8 w-8 cursor-pointer place-items-center rounded-full border border-line bg-black/40 text-sm font-bold text-slate-200 hover:border-slate-400">✕</button>
         <div className="px-6 pb-4 pt-5" style={{ background: `linear-gradient(120deg, ${bat.team.colors.primary}cc, #10131c 70%)` }}>
           <div className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">Innings break</div>
           <div className="mt-1 flex items-center gap-4">
@@ -81,10 +82,7 @@ export function InningsBreak({ match, onClose }: { match: Match; onClose: () => 
           <div className="mt-1 text-sm text-slate-200">{match.sides[chase.battingSide].team.name} need {target} from {match.maxOvers} overs ({rrr.toFixed(2)} an over)</div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-line bg-black/20 px-5 py-3">
-          <span className="text-xs text-slate-400">Look the innings over, then press <b className="text-slate-200">Next innings</b> when you are ready.</span>
-          <button onClick={onClose} className="rounded-full bg-white/10 px-6 py-2 font-display text-xl tracking-wide text-white transition hover:bg-white/20">Close</button>
-        </div>
+        <div className="border-t border-line bg-black/20 px-5 py-3 text-center text-xs text-slate-400">Look the innings over, then press <b className="text-slate-200">Next innings</b> when you are ready.</div>
       </motion.div>
     </motion.div>
   )

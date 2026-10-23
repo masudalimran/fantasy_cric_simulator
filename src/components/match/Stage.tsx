@@ -398,8 +398,18 @@ export function Stage({
         {/* the ball: travels bowler to bat, then away */}
         {event && (
           <motion.g key={event.seq}>
+            {/* a free hit that went for four or six: the ball is a fireball with a trail of flames */}
+            {event.freeHit && event.boundary && [6, 5, 4, 3, 2, 1].map((n) => (
+              <motion.circle
+                key={`fl${n}`} r={(six ? 1.5 : 1) - n * 0.08} fill={n > 4 ? '#ef4444' : n > 2 ? '#fb923c' : '#fde047'} initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 0 }}
+                animate={bounce
+                  ? { cx: [BOWLER_STRIDE.x, bounce.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, bounce.y, HIT.y, end.y], opacity: [0, 0, 0.8 - n * 0.09, 0] }
+                  : { cx: [BOWLER_STRIDE.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, HIT.y, end.y], opacity: [0, 0.8 - n * 0.09, 0] }}
+                transition={bounce ? { duration: 1.1, delay: n * 0.035, times: [0, 0.2, 0.4, 1], ease: 'easeOut' } : { duration: 1.05, delay: n * 0.035, times: [0, 0.38, 1], ease: 'easeOut' }}
+              />
+            ))}
             <motion.circle
-              r={six ? 1.7 : 1.15} fill="#ef4444" stroke="#fecaca" strokeWidth="0.35"
+              r={six ? 1.7 : 1.15} fill={event.freeHit && event.boundary ? '#f97316' : '#ef4444'} stroke={event.freeHit && event.boundary ? '#fde047' : '#fecaca'} strokeWidth="0.35"
               initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 1 }}
               animate={bounce
                 ? { cx: [BOWLER_STRIDE.x, bounce.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, bounce.y, HIT.y, end.y], r: six ? [1.15, 1.15, 1.15, 2.4] : [1.15, 1.15, 1.15, 1.15], opacity: [1, 1, 1, event.boundary ? 0.35 : 1] }

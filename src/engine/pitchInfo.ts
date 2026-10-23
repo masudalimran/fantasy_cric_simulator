@@ -1,8 +1,33 @@
 import type { Pitch } from './types'
 
 /**
+ * How much the pitch rewards the side that makes the right toss call: from -1 (bowling first is the smart choice) to +1 (batting first is).
+ * A flat or turning pitch is at its best early on and wears down, so it favours batting first; a green, fast pitch gives the new ball
+ * a lot early on and then settles, so it favours bowling first. Worked out from the same hidden pitch values, so nothing new is drawn.
+ */
+export function pitchLean(p: Pitch): number {
+  const v = 0.5 * (p.ease / SPREAD.ease) + 0.4 * (p.spin / SPREAD.spin) - 0.55 * (p.pace / SPREAD.pace)
+  return Math.max(-1, Math.min(1, v * 0.8))
+}
+
+/** How strongly the pitch changes each innings, as a share of the batting-versus-bowling balance: 20% in the first innings, 10% (the other way) in the second. */
+export const PITCH_SWING = [0.2, -0.1] as const
+
+/** The toss advice a pitch report gives: which choice the pitch favours, and how strongly. */
+export function tossAdvice(p: Pitch): { choice: 'bat' | 'bowl' | null; strength: 'slight' | 'clear' | 'strong'; text: string } {
+  const lean = pitchLean(p)
+  const a = Math.abs(lean)
+  if (a < 0.2) return { choice: null, strength: 'slight', text: 'No clear edge: the pitch plays the same for both innings, so either call is fine.' }
+  const strength = a > 0.6 ? 'strong' : a > 0.4 ? 'clear' : 'slight'
+  const adj = strength === 'strong' ? 'strongly' : strength === 'clear' ? 'clearly' : 'slightly'
+  return lean > 0
+    ? { choice: 'bat', strength, text: `The pitch ${adj} favours batting first: it is at its best now and will tire, so put runs on the board.` }
+    : { choice: 'bowl', strength, text: `The pitch ${adj} favours bowling first: the new ball will do the most early, and batting gets easier later.` }
+}
+
+/**
  * Every match already has a hidden pitch (how easy it is to bat on, and how much it helps pace and spin), drawn from the match
- * seed. This only puts words on it so the player can see it; nothing here changes a result.
+ * seed. This puts words on it so the player can see it (the engine reads `pitchLean` for the toss edge).
  */
 export type PitchKind = 'balanced' | 'flat' | 'slow' | 'green' | 'dead' | 'dry' | 'true'
 export interface PitchInfo { kind: PitchKind; icon: string; label: string; tip: string }

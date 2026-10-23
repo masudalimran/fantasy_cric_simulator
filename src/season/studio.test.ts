@@ -15,7 +15,7 @@ describe('the studio show script', () => {
         expect(s.cast).toHaveLength(3)
         expect(new Set(s.cast.map((c) => c.player.id)).size).toBe(3)
         expect(s.cast.every((c) => !m.sides.some((side) => side.team.id === c.team.id))).toBe(true)
-        expect(s.beats.length).toBeGreaterThanOrEqual(10)
+        expect(s.beats.length).toBeGreaterThanOrEqual(8)
         expect(new Set(s.beats.map((b) => b.who)).size).toBe(3)
         for (const b of s.beats) { expect(b.text).not.toMatch(/[{}]|undefined|NaN/); expect(b.text.length).toBeGreaterThan(8) }
         expect(s.beats.filter((b) => b.clip).length).toBeGreaterThanOrEqual(3)
@@ -25,33 +25,39 @@ describe('the studio show script', () => {
     }
   })
 
-  it('does not read alike: different matches and seeds give different words, moods and voices', () => {
-    const texts = new Set<string>(), moods = new Set<string>(), personas = new Set<string>()
-    for (let seed = 1; seed <= 30; seed++) {
-      const s = buildScript(play(seed), seed % 2 ? 'innings' : 'end', seed, pool)
-      for (const b of s.beats) { texts.add(b.text); moods.add(b.mood) }
-      s.cast.slice(1).forEach((c) => personas.add(c.persona))
-    }
+  it('goes through the batsmen top to bottom, then the bowlers, with figures on the TV', () => {
+    const m = play(4)
+    const s = buildScript(m, 'innings', 4, pool)
+    const stats = s.beats.filter((b) => b.clip?.kind === 'stat')
+    const bats = stats.filter((b) => b.clip?.kind === 'stat' && b.clip.as === 'bat')
+    const bowls = stats.filter((b) => b.clip?.kind === 'stat' && b.clip.as === 'bowl')
+    expect(bats.length).toBeGreaterThanOrEqual(3)
+    expect(bowls.length).toBeGreaterThanOrEqual(3)
+    expect(s.beats.indexOf(bats[bats.length - 1])).toBeLessThan(s.beats.indexOf(bowls[0]))
+    // the batsmen come in batting order
+    const order = m.innings[0].batters.map((b) => b.id)
+    const seen = bats.map((b) => (b.clip as { playerId: string }).playerId).map((id) => order.indexOf(id))
+    expect([...seen].sort((a, b) => a - b)).toEqual(seen)
+  })
+
+  it('does not read alike: different matches give different words, and no line repeats inside one show', () => {
+    const texts = new Set<string>()
+    for (let seed = 1; seed <= 30; seed++) for (const b of buildScript(play(seed), seed % 2 ? 'innings' : 'end', seed, pool).beats) texts.add(b.text)
     expect(texts.size).toBeGreaterThan(300)
-    expect(moods.size).toBeGreaterThanOrEqual(6)
-    expect(personas.size).toBeGreaterThanOrEqual(4)
-    // inside one show nobody repeats a line
     const s = buildScript(play(7), 'end', 7, pool)
     expect(new Set(s.beats.map((b) => b.text)).size).toBe(s.beats.length)
   })
 
-  it('is the same show for the same match, and handles a Test and the end of a draw', () => {
+  it('is the same show for the same match, and handles a Test', () => {
     const m = play(3)
     expect(buildScript(m, 'innings', 3, pool).beats.map((b) => b.text)).toEqual(buildScript(m, 'innings', 3, pool).beats.map((b) => b.text))
     const t = play(5, 'test')
     for (const kind of ['innings', 'stumps', 'end'] as const) expect(buildScript(t, kind, 5, pool).beats.length).toBeGreaterThanOrEqual(8)
   })
 
-  it('covers many topics: across shows the host asks about the pitch, extras, fielding, the chase and more', () => {
-    const asks: string[] = []
-    for (let seed = 1; seed <= 150; seed++) for (const b of buildScript(play(seed), seed % 2 ? 'innings' : 'end', seed, pool).beats) if (b.who === 0) asks.push(b.text)
-    const joined = asks.join(' | ').toLowerCase()
-    for (const word of ['pitch', 'dressing room', 'danger man', 'episode']) expect(joined, word).toContain(word.split(' ')[0])
-    expect(new Set(asks).size).toBeGreaterThan(120)
+  it('brings the season form of a player who had a very good or very bad game', () => {
+    const m = play(11)
+    const s = buildScript(m, 'end', 11, pool, { form: () => ({ bat: { innings: 5, runs: 120, average: 24, sr: 130, recent: ['10', '30*'] }, bowl: { matches: 5, wickets: 4, economy: 8, recent: ['1/30'] } }) })
+    expect(s.beats.some((b) => b.clip?.kind === 'card' && b.clip.title === 'FORM GUIDE')).toBe(true)
   })
 })

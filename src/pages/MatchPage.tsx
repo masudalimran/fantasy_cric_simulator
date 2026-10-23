@@ -16,7 +16,7 @@ import { getAnimPrefs, setManualPlay, useManualPlay, useSwipeAim } from '../pref
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
-import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
+import { average, bowlAverage, collect, economy, formBefore, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
@@ -385,7 +385,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const ang = eventAngle(lastEv)
           const diff = (f: { x: number; y: number }) => { let d = Math.abs(Math.atan2(f.y - 66, f.x - 80) - ang); if (d > Math.PI) d = 2 * Math.PI - d; return d }
           const chasers = field.filter((f) => f.spot !== 'Wicketkeeper').sort((a, b) => diff(a) - diff(b)).slice(0, 1 + (((lastEv.seq * 2654435761) >>> 0) % 3)).map((f) => ({ player: f.player, x: f.x, y: f.y }))
-          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'four', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms, four: { batsman: match.player(lastEv.strikerId), batTeam: batT, bowlTeam: bowlS.team, angle: ang, chasers, rate } })
+          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'four', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms, four: { batsman: match.player(lastEv.strikerId), batTeam: batT, bowlTeam: bowlS.team, angle: ang, chasers, rate, fire: lastEv.freeHit } })
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
           const keeperId = match.keeperOf(bowlS === match.sides[0] ? 0 : 1)
@@ -495,6 +495,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             reel = {
               player: focus.player, team: focus.team, kind: k, headline: rl.headline,
               versus: [teamMap.get(rl.homeId ?? '')?.name, teamMap.get(rl.awayId ?? '')?.name].filter(Boolean).join(' v ') + ` · ${formatDate(rl.date)}`, result: rl.result, scores: rl.scores, teamShort: focus.team.short,
+              commentator: (() => { const o = studioPool.filter((x) => !match.sides.some((sd) => sd.team.id === x.team.id)); const c = o[(match.seed + lastEv.seq) % Math.max(1, o.length)]; return c ? { player: c.player, team: c.team } : undefined })(),
               balls: rl.balls.map((b, i) => toEvent(b, ids, i)), striker, nonStriker, bowler, battingTeam: batTeam, bowlingTeam: bowlTeam,
               fielders: placeFielders(k === 'bat' ? oppXI : ownXI, bowler.id),
             }
@@ -599,7 +600,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const hitter = match.player(notable.strikerId)
           const earlier = Math.max(0, ...inn.log.filter((e) => e.seq < notable.seq && e.strikerId === notable.strikerId && e.boundary === 6).map((e) => e.distance ?? 0), seasonStats?.bat.get(notable.strikerId)?.longSix ?? 0)
           const rate6 = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
-          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(3300 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, longest: earlier > 0 && notable.distance > earlier } })
+          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(3300 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, longest: earlier > 0 && notable.distance > earlier, fire: notable.freeHit } })
         }
         if (battingMilestone && outLine) {
           // the two batsmen meet in the middle and bump fists, with the innings on it
@@ -829,7 +830,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       />
     )
   }
-  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
+  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} pitch={match.pitch} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
 
   // between the innings the screen stays on the first innings until you press Next innings
   const holding = holdNow
@@ -979,7 +980,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         {studio && !moment && (
           <StudioShow
             key={`${studio}-${match.innings.length}-${match.clock?.day ?? 0}`} match={match} kind={studio} pool={studioPool} seed={match.seed}
-            extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage } : undefined}
+            extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage, form: season ? (id: string) => formBefore(season, id, fixture.id) : undefined } : undefined}
             onDone={() => { const k = studio; setStudio(null); if (k === 'end') showUpgrades() }}
           />
         )}

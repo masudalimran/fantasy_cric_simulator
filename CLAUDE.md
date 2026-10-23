@@ -31,6 +31,7 @@ A personal, non-commercial cricket simulator with anime and video-game character
 - Career = one managed team (`Season.myTeamId`), the CPU runs the rest; difficulty is fixed at the start. Every finished year is kept in `SessionFile.history`; the year summary in `SessionFile.reviews`.
 - Player market (`season/market.ts`): two windows a year, youth pool from `src/data/youth.json`, squad cap 20 / floor 13, release pays 70% of the team ask. Coaching and injuries/physios exist and are wanted (watch whether friends find injuries frustrating; soften rather than remove).
 - Animation screens: one pause rule. Where auto-play pauses (wickets, fifties and hundreds, boundaries, innings end), that event's screen waits for a tap; every other screen closes by itself. Animation level Full / Light / Off.
+- The studio show is a recap (batsmen top to bottom, then bowlers; `season/grade.ts` sets Poor to Exceptional). The pitch has a toss edge: ±20% first innings, ∓10% second (`pitchLean`), checked by `scripts/pitchsim.ts`; it is the one deliberate balance change so far and is mean-neutral.
 - The field view changes by stage of the game (`fieldSets.ts`), scenery only. Every match already has a hidden pitch (`engine/pitchInfo.ts` puts it into words and tints the field).
 
 ## Backlog (agreed, not planned yet)

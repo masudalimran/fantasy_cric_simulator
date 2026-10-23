@@ -1,6 +1,7 @@
 import type { BowlType, MatchFormat, Player, Trait } from '../types'
 import baselines from './data/baselines.json'
 import { aimMods } from './aim'
+import { PITCH_SWING, pitchLean } from './pitchInfo'
 import type { DeliveryAim, Phase, Pitch, ShotAim } from './types'
 
 /**
@@ -133,6 +134,8 @@ export interface BallInput {
   repeat?: boolean
   ballsFaced: number
   pitch: Pitch
+  /** Which innings of a limited-overs match this is (0 or 1); the pitch's toss edge applies to these. */
+  inningsIndex?: number
   freeHit: boolean
   fieldingAvg: number
   /** Set when a side has forfeited: it collapses with the bat and is hammered when bowling. */
@@ -201,6 +204,13 @@ export function ballProbs(i: BallInput): BallProbs {
 
   if (i.forfeit === 'bat') { m[WICKET] *= 6; m[FOUR] *= 0.4; m[SIX] *= 0.3; m[DOT] *= 1.5 }
   if (i.forfeit === 'bowl') { m[WICKET] *= 0.1; m[FOUR] *= 2; m[SIX] *= 2.2; m[DOT] *= 0.5 }
+
+  // The toss edge: a pitch that favours batting first is kind to the side batting first (20% in the first innings) and harder for the chasers (10%),
+  // and the other way round on a pitch that favours bowling first. Swings are symmetric, so averages over many pitches do not move.
+  if (i.format !== 'test' && i.inningsIndex !== undefined && i.inningsIndex < PITCH_SWING.length) {
+    const pe = PITCH_SWING[i.inningsIndex] * pitchLean(i.pitch)
+    m[WICKET] *= 1 - pe; m[FOUR] *= 1 + pe; m[SIX] *= 1 + pe; m[DOT] *= 1 - 0.5 * pe
+  }
 
   const legal = base.legal.map((p, k) => p * m[k])
   if (i.freeHit) legal[WICKET] *= 0.12 // only a run out is possible

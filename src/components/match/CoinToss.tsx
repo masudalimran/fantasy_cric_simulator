@@ -1,9 +1,10 @@
-import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import { overall, teamStrength } from '../../data/builders'
 import { keeperIn } from '../../data/squad'
 import type { NewsItem } from '../../season/selection'
-import type { Side, TossResult } from '../../engine/types'
+import type { Pitch, Side, TossResult } from '../../engine/types'
+import { PitchReport } from './PitchReport'
 import { OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { sfx } from '../../audio/sfx'
@@ -125,8 +126,10 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
  * bar along the bottom: tap it, it spins, the toss is decided (and, if you won it, you choose to bat or bowl),
  * and then play begins.
  */
-export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel, mySide = null, tossed = false, onTossed, startXI, editable = [false, false], careerSquad = false, onSaveSquad }: {
+export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel, mySide = null, tossed = false, onTossed, startXI, editable = [false, false], careerSquad = false, onSaveSquad, pitch }: {
   sides: [Side, Side]; toss: TossResult; onStart: () => void
+  /** The pitch for this match: a report is shown once the coin has landed. */
+  pitch?: Pitch
   /** The toss winner is a person, who hasn't picked yet. */
   mustChoose?: boolean; onChoose?: (c: 'bat' | 'bowl') => void
   /** Changes the computer made to its XI. */
@@ -149,6 +152,14 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
 }) {
   const [editing, setEditing] = useState<0 | 1 | null>(null)
   const [stage, setStage] = useState<'idle' | 'flipping' | 'done'>(tossed ? 'done' : 'idle')
+  // once the coin has landed the pitch report comes up (it can be opened again from the button)
+  const [report, setReport] = useState(false)
+  const reported = useRef(false)
+  useEffect(() => {
+    if (stage !== 'done' || reported.current || !pitch) return
+    const t = window.setTimeout(() => { reported.current = true; setReport(true) }, tossed ? 200 : 700)
+    return () => window.clearTimeout(t)
+  }, [stage, pitch, tossed])
   const caller = sides[toss.callerSide].team
   const winner = sides[toss.winnerSide].team
   const items = news.filter((n): n is NewsItem => typeof n !== 'string')
@@ -160,6 +171,9 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
     sfx.coin()
     setTimeout(() => setStage('done'), 2400)
   }
+
+  const reportEl = <AnimatePresence>{report && pitch && <PitchReport key="pr" pitch={pitch} onClose={() => setReport(false)} />}</AnimatePresence>
+  const reportBtn = stage === 'done' && pitch ? <button onClick={() => setReport(true)} className="mt-1 cursor-pointer rounded-full border border-amber-300/60 px-3 py-0.5 text-xs font-bold text-amber-300 active:bg-white/10">Pitch report</button> : null
 
   const mobile = useIsMobile()
   const [shown, setShown] = useState<0 | 1>(mySide ?? 0)
@@ -179,6 +193,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
           <p className="text-base font-bold leading-tight" style={{ color: accentOf(winner) }}>
             {mustChoose && onChoose ? `${winner.name} won the toss. What will you do?` : `${winner.name} won the toss and chose to ${toss.decision === 'bat' ? 'bat first' : 'bowl first'}.`}
           </p>
+          {reportBtn}
         </motion.div>
       )}
     </div>
@@ -222,6 +237,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
         {editing !== null && onSaveSquad && (
           <SquadDialog team={sides[editing].team} scope={careerSquad ? 'for this career' : 'for this match only'} onClose={() => setEditing(null)} onSave={(order, cap, keep) => { onSaveSquad(editing, order, cap, keep); setEditing(null) }} />
         )}
+        {reportEl}
       </div>
     )
   }
@@ -282,6 +298,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
           onSave={(order, cap, keep) => { onSaveSquad(editing, order, cap, keep); setEditing(null) }}
         />
       )}
+      {reportEl}
     </div>
   )
 }
