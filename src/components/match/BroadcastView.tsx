@@ -3,6 +3,7 @@ import type { Player, Team } from '../../types'
 import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
+import { ballSpeed } from '../../engine/speed'
 import { approach, clipNow, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { drawScene } from './broadcastDraw'
 import { endPoint, type Placed } from './Stage'
@@ -43,6 +44,24 @@ function Figure({ player, team, look, shirt, arm, bat, armL, armR }: { player?: 
   )
 }
 
+/** The speed of the ball, in a TV speed-gun box that shows up as it is let go and fades after a moment. */
+function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number; rate: number }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const k = Math.max(0.3, rate)
+    const a = window.setTimeout(() => setOn(true), (at * 1000) / k)
+    const b = window.setTimeout(() => setOn(false), ((at + dur) * 1000) / k)
+    return () => { window.clearTimeout(a); window.clearTimeout(b) }
+  }, [at, dur, rate])
+  if (!on) return null
+  return (
+    <div className="pointer-events-none absolute right-2 top-9 z-[6001] flex items-baseline gap-1 rounded bg-black/80 px-2 py-0.5 ring-1 ring-sky-300/50 max-sm:right-1 max-sm:top-8">
+      <span className="font-display text-xl leading-none tabular-nums text-sky-300">{kmh}</span>
+      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-300">km/h</span>
+    </div>
+  )
+}
+
 export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1 }: {
   event: BallEvent | null
   striker: Player; nonStriker: Player | null; bowler: Player
@@ -67,7 +86,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const plan: Plan = useMemo(() => {
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
-    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L')
+    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler))
     if (event) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.total * 1000) / Math.max(0.3, rate)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,6 +266,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l2 = el }} armR={(el) => { umpArms.current.r2 = el }} /></div>
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" style={{ background: fire ? '#f97316' : '#dc2626', boxShadow: fire ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : '0 0 6px #00000088' }} />
+      {/* the speed gun: the speed of the ball just after it is let go */}
+      {event && <SpeedGun key={event.seq} kmh={plan.speed} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
       {[['tagStriker', striker.name, accentOf(battingTeam)], ['tagBowler', bowler.name, accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
         <div key={k} ref={setNode(k)} className="pointer-events-none absolute left-0 top-0 z-[5000] hidden whitespace-nowrap rounded bg-black/75 px-1.5 text-[10px] font-bold text-white" style={{ borderBottom: `2px solid ${col}` }}>

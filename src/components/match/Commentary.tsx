@@ -1,6 +1,7 @@
 import { deliveryText, shotText } from './AimPads'
 import { AnimatePresence, motion } from 'framer-motion'
 import { commentary, tagLabel } from '../../engine/commentary'
+import { ballSpeed } from '../../engine/speed'
 import type { Match } from '../../engine/match'
 import { Scorecard } from './Scorecard'
 import { StatsTabs } from './StatsTabs'
@@ -47,7 +48,7 @@ export function Commentary({ match, tab, setTab, controls }: { match: Match; tab
                   )}
                   <div className={`flex items-start gap-2 rounded-lg px-1 py-0.5 text-sm ${ev.wicket ? 'bg-red-500/15' : ev.boundary === 6 ? 'bg-fuchsia-500/15' : ev.boundary === 4 ? 'bg-sky-500/15' : ''}`}>
                     <span className={`mt-0.5 grid h-6 min-w-6 shrink-0 place-items-center rounded-full px-1 text-[11px] font-bold ${c.c}`}>{c.t}</span>
-                    <span className="w-9 shrink-0 pt-0.5 text-xs tabular-nums text-slate-400">{ev.over}.{ev.legal ? ev.ballInOver + 1 : ev.ballInOver}</span>
+                    <span className="w-9 shrink-0 pt-0.5 text-xs tabular-nums text-slate-400">{ev.over}.{ev.legal ? ev.ballInOver + 1 : ev.ballInOver}<span className="block text-[10px] leading-tight text-slate-500">{ballSpeed(ev, match.player(ev.bowlerId))}<span className="text-[9px]"> km/h</span></span></span>
                     <span className={ev.wicket ? 'font-semibold text-red-200' : ev.boundary ? 'font-semibold text-white' : 'text-slate-200'}>
                       {commentary(ev, {
                         striker: match.player(ev.strikerId).name, bowler: match.player(ev.bowlerId).name,

@@ -27,6 +27,7 @@ import { StudioShow } from '../components/match/StudioShow'
 import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/captions'
 import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
+import { ballSpeed } from '../engine/speed'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
 import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
@@ -651,7 +652,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const prefsNow = getAnimPrefs()
           const fx = (type: WicketFxInfo['type'], extra: Record<string, unknown>, key: number) => show({ key: notable.seq + key, kind: 'wicketfx', player: match.player(outLine.id), team, title: 'WICKET', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(WICKET_FX_SECONDS[type] * 1000 * rate), wfx: { type, batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, rate, ...extra } as WicketFxInfo })
           if (prefsNow.wicketcam) {
-            if (w.kind === 'bowled') fx('bowled', bowledFor(notable.seq, bowlerP.bowling?.type), 0.33)
+            if (w.kind === 'bowled') fx('bowled', { ...bowledFor(notable.seq, bowlerP.bowling?.type), kmh: ballSpeed(notable, bowlerP) }, 0.33)
             else if (w.kind === 'stumped') fx('stumping', { keeper: fielderP, cm: stumpGap(notable.seq) }, 0.34)
             else if (w.kind === 'hit wicket') fx('hitwicket', {}, 0.35)
             else if ((w.kind === 'caught' || w.kind === 'caught and bowled') && (w.kind === 'caught and bowled' ? bowlerP : fielderP) && w.fielderId !== match.keeperOf(bowlIdx)) {

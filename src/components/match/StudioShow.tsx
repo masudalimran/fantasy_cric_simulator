@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { eventAngle } from '../../engine/shots'
+import { ballSpeed } from '../../engine/speed'
 import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
 import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type Pundit, type ShowKind } from '../../season/studio'
 import type { PlayerForm } from '../../season/stats'
@@ -69,13 +70,13 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
       const p = match.player(clip.playerId)
       const team = clip.as === 'bat' ? side(clip.innings) : match.sides[1 - match.innings[Math.min(clip.innings, match.innings.length - 1)].battingSide].team
       const col = GRADE_COLOR[clip.grade]
-      let big = '', small = ''
+      let big = '', small = '', fastest = ''
       if (clip.as === 'bat') {
         const b = inn(clip.innings).batters.find((x) => x.id === clip.playerId)
         if (b) { big = `${b.runs}${b.dismissal ? '' : '*'}`; small = `${b.balls} balls · ${b.fours}x4 · ${b.sixes}x6 · SR ${b.balls ? Math.round((b.runs / b.balls) * 100) : 0}` }
       } else {
         const l = inn(clip.innings).bowlers.get(clip.playerId)
-        if (l) { big = `${l.wickets}/${l.runs}`; small = `${Math.floor(l.legalBalls / 6)}.${l.legalBalls % 6} ov · ${l.maidens} maidens · econ ${l.legalBalls ? ((l.runs / l.legalBalls) * 6).toFixed(1) : '0.0'}` }
+        if (l) { big = `${l.wickets}/${l.runs}`; small = `${Math.floor(l.legalBalls / 6)}.${l.legalBalls % 6} ov · ${l.maidens} maidens · econ ${l.legalBalls ? ((l.runs / l.legalBalls) * 6).toFixed(1) : '0.0'}`; const mine = inn(clip.innings).log.filter((e) => e.bowlerId === clip.playerId); if (mine.length) { const top = Math.max(...mine.map((e) => ballSpeed(e, p))); fastest = `Fastest ${top} km/h` } }
       }
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[radial-gradient(ellipse_at_center,#1e3a8a,#070b14_75%)] px-4 pt-6 text-center">
@@ -83,6 +84,7 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
           <div className="text-sm font-bold text-white">{p.name}</div>
           <div className="font-display text-5xl leading-none text-white">{big}</div>
           <div className="text-xs text-slate-300">{small}</div>
+          {fastest && <div className="text-[11px] font-bold text-sky-300">{fastest}</div>}
           <div className="mt-0.5 rounded-full px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-black" style={{ background: col }}>{GRADE_LABEL[clip.grade]} {clip.as === 'bat' ? 'batting' : 'bowling'}</div>
         </div>
       )

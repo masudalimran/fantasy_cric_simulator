@@ -123,6 +123,8 @@ export interface Plan {
   /** The out batsman walks off after the wicket; and when a fifty or hundred is reached he raises his bat. */
   exitAt: number | null
   celebrateAt: number | null
+  /** How fast the ball was bowled (km/h). */
+  speed: number
   /** A word that pops up over somebody's head, and when. */
   react: { text: string; at: number; who: 'striker' | 'bowler' | 'keeper' } | null
 }
@@ -133,7 +135,7 @@ export const clipNow = { seq: -1, ms: 0, until: 0 }
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 
 /** Works out the clip for a ball. `end` is where the top-down field says the ball finished. */
-export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean): Plan {
+export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135): Plan {
   const w = ev.wicket
   const wide = ev.extraType === 'wide'
   const bowlerX = 0.5
@@ -225,7 +227,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   // the batsmen need time to run every run: the clip lasts until they have made them
   let tHold = runOut ? runOut.tThrow + 0.9 : Math.max(0.55, runs * RUN_SECONDS + 0.3 - tFlight)
   const runSeconds = runOut ? (tFlight + runOut.tThrow - 0.12) / (runOut.legs - 1 + 0.78) : RUN_SECONDS
-  const t2 = 0.95 + 0.5, t3 = t2 + tFlight
+  // a quicker ball reaches the bat sooner, a slow one hangs in the air
+  const tDeliver = Math.max(0.36, Math.min(0.85, 0.5 * Math.pow(135 / Math.max(60, speed), 0.7)))
+  const t2 = 0.95 + tDeliver, t3 = t2 + tFlight
   // when the wicket falls: a catch when the ball is taken, the stumps at once, a run out when they are hit; then the batsman walks off
   const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : t2 + 0.25
   if (wicketAt !== null) tHold = Math.max(tHold, wicketAt + 1.6 - t3)
@@ -245,7 +249,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   return {
-    tRun: 0.95, tDeliver: 0.5, tFlight, tHold, total: 0.95 + 0.5 + tFlight + tHold, runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
+    tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - 10 }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     signal, hurt, keeperDive, chaserDive: ev.boundary === 4 && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
