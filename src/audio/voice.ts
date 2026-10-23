@@ -17,9 +17,52 @@ const emit = () => listeners.forEach((l) => l())
 const read = (k: string): string | null => { try { return localStorage.getItem(k) } catch { return null } }
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* just not remembered */ } }
 
-let mode: VoiceMode = (['off', 'studio', 'full'] as const).find((m) => m === read(KEY_MODE)) ?? 'off'
+// the commentary is on by default; the phone's say-so is asked for the first time it is needed (see askVoice)
+let mode: VoiceMode = (['off', 'studio', 'full'] as const).find((m) => m === read(KEY_MODE)) ?? 'full'
 let speed: VoiceSpeed = (['slow', 'normal', 'fast'] as const).find((m) => m === read(KEY_SPEED)) ?? 'normal'
 let names: Partial<Record<VoiceRole, string>> = (() => { try { return JSON.parse(read(KEY_NAMES) ?? '{}') } catch { return {} } })()
+
+export type VoiceConsent = 'unknown' | 'granted' | 'denied'
+const KEY_CONSENT = 'fcs.voiceConsent'
+let consent: VoiceConsent = (['granted', 'denied'] as const).find((c) => c === read(KEY_CONSENT)) ?? 'unknown'
+export const getVoiceConsent = () => consent
+function setConsent(c: VoiceConsent) { consent = c; write(KEY_CONSENT, c); emit() }
+export const useVoiceConsent = (): VoiceConsent => useSyncExternalStore(subscribe, () => consent, () => 'unknown')
+
+/** The question on screen: which mode is waiting for an answer, and whether the phone refused the last try. */
+export interface VoiceAsk { open: boolean; mode: 'studio' | 'full'; refused: boolean }
+let ask: VoiceAsk = { open: false, mode: 'full', refused: false }
+export const useVoiceAsk = (): VoiceAsk => useSyncExternalStore(subscribe, () => ask, () => ask)
+let askedThisVisit = false
+
+/**
+ * Turning the voices on. A browser has no "microphone-style" permission for speaking, but phones block speech until the person has tapped something
+ * and the game cannot know in advance whether this phone will speak, so the person is asked and the game then tries to say a line: if it works the
+ * voices are on for good, if the phone refuses (or the person says no) they stay off, and asking again later works the same way.
+ */
+export function askVoice(m: 'studio' | 'full', automatic = false) {
+  if (!voiceSupported()) return
+  if (consent === 'granted') { setVoiceMode(m); return }
+  if (automatic) { if (askedThisVisit || consent === 'denied') return; askedThisVisit = true }
+  ask = { open: true, mode: m, refused: false }
+  emit()
+}
+/** "Allow": tries to say a line right now (this tap is what lets the phone speak). */
+export async function allowVoice(): Promise<boolean> {
+  const r = await speak('Commentary is on. Let us play.', 'pbp', 'excited', true)
+  if (r === 'done') { setConsent('granted'); setVoiceMode(ask.mode); ask = { ...ask, open: false }; emit(); return true }
+  ask = { ...ask, refused: true }
+  mode = 'off'; write(KEY_MODE, 'off')
+  emit()
+  return false
+}
+/** "No thanks" (or closing the question): the voices stay off until they are asked for again. */
+export function declineVoice() {
+  ask = { ...ask, open: false, refused: false }
+  setConsent('denied')
+  setVoiceMode('off')
+}
+export function closeVoiceAsk() { ask = { ...ask, open: false, refused: false }; emit() }
 
 export const getVoiceMode = () => mode
 export function setVoiceMode(m: VoiceMode) { mode = m; write(KEY_MODE, m); if (m === 'off') cancelSpeech(); emit() }
@@ -81,7 +124,7 @@ export type SpeakResult = 'done' | 'cancelled' | 'failed'
 /** Says a line in the voice of a role and tells when it has finished (or why it did not). Pieces of a long line are said one after another. */
 export function speak(text: string, role: VoiceRole, mood?: VoiceMood, force = false): Promise<SpeakResult> {
   const s = synth()
-  if (!s || (mode === 'off' && !force)) return Promise.resolve('failed')
+  if (!s || (!force && (mode === 'off' || consent !== 'granted'))) return Promise.resolve('failed')
   const my = ++token
   try { s.cancel() } catch { /* fine */ }
   const voice = assignVoices(voices, names)[role]

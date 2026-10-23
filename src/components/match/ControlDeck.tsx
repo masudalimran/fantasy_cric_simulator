@@ -6,7 +6,7 @@ import { FORMATS } from '../../engine/types'
 import { PlayerAvatar } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
-import { cancelSpeech, setVoiceMode, setVoiceName, setVoiceSpeed, speak, useEnglishVoices, useVoiceMode, useVoiceNames, useVoiceSpeed, voiceSupported, type VoiceMode, type VoiceSpeed } from '../../audio/voice'
+import { askVoice, cancelSpeech, setVoiceMode, setVoiceName, setVoiceSpeed, speak, useEnglishVoices, useVoiceMode, useVoiceNames, useVoiceSpeed, voiceSupported, type VoiceMode, type VoiceSpeed } from '../../audio/voice'
 import { VOICE_ROLES, assignVoices, type VoiceRole } from '../../audio/speechText'
 import { animLevelOf, setAnimLevel, setAnimPrefs, setBroadcastView, setSwipeAim, useAnimPrefs, useBroadcastView, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
@@ -221,7 +221,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
       {voiceSupported() && <Fold title="Voices" hint={{ off: 'off', studio: 'studio show', full: 'show + commentary' }[voiceMode]}>
         <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-slate-700">
           {([['off', 'Off'], ['studio', 'Studio'], ['full', 'Full']] as [VoiceMode, string][]).map(([m, label]) => (
-            <button key={m} onClick={() => setVoiceMode(m)} className={`h-8 cursor-pointer text-[13px] font-bold transition ${voiceMode === m ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
+            <button key={m} onClick={() => (m === 'off' ? setVoiceMode('off') : askVoice(m))} className={`h-8 cursor-pointer text-[13px] font-bold transition ${voiceMode === m ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
           ))}
         </div>
         <p className="text-[11px] leading-snug text-slate-400">Studio: the show's host and experts speak their lines. Full: two commentators also call every ball. The voices come from your phone, nothing is downloaded.</p>

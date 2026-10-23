@@ -30,6 +30,7 @@ import { BackupPage } from './pages/BackupPage'
 import { StatsPage } from './pages/StatsPage'
 import { isMuted, setMuted, sfx } from './audio/sfx'
 import { setHideImages, useHideImages, useKeepAwake } from './prefs'
+import { VoicePrompt } from './components/VoicePrompt'
 import { paths } from './routes'
 import { selectSeason, useStore, useTeams } from './store/useStore'
 
@@ -223,6 +224,7 @@ export default function App() {
     <DetailsProvider>
     <CoachGateProvider>
     <Glossary />
+    <VoicePrompt />
     <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${mobile ? (showChrome ? '' : 'px-2.5') : 'pb-16'}`} style={mobile ? { paddingBottom: showChrome ? 'calc(var(--sab) + 84px)' : 'var(--sab)', paddingLeft: 'max(var(--sal), 1rem)', paddingRight: 'max(var(--sar), 1rem)' } : undefined}>
       {mobile && showChrome && <MobileHeader resuming={resuming} playTo={playTo} />}
       <header className="hidden items-center justify-between py-5 md:flex">

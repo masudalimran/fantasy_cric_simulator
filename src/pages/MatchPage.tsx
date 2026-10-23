@@ -28,7 +28,7 @@ import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/cap
 import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
-import { cancelSpeech, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
+import { askVoice, cancelSpeech, getVoiceConsent, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
 import { liveLines } from '../season/liveVoice'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
@@ -820,6 +820,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     return () => window.clearTimeout(timer)
   }, [auto, phase, match, act])
   useEffect(() => () => { window.clearTimeout(voiceTimer.current); cancelSpeech() }, [])
+  // the commentary is on by default: the first time a match is played, ask the phone's owner before the game speaks
+  useEffect(() => {
+    const m = getVoiceMode()
+    if (phase === 'play' && m !== 'off' && getVoiceConsent() === 'unknown') askVoice(m, true)
+  }, [phase])
   useEffect(() => () => { window.clearTimeout(fxTimer.current); window.clearTimeout(noteTimer.current); window.clearTimeout(motmTimer.current) }, []) // (the moment timer is left to finish: it only walks the queue)
 
   // Keyboard: Space = next ball, O = finish the over, P = pause or resume auto-play.
