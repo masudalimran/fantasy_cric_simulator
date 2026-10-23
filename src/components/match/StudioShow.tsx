@@ -4,6 +4,7 @@ import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { eventAngle } from '../../engine/shots'
 import { ballSpeed } from '../../engine/speed'
+import { cancelSpeech, setVoiceMode, speak, useVoiceMode, voiceSupported } from '../../audio/voice'
 import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
 import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type Pundit, type ShowKind } from '../../season/studio'
 import type { PlayerForm } from '../../season/stats'
@@ -129,7 +130,12 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   // the clip on the wall stays until another one is asked for
   const clip = useMemo(() => { for (let k = Math.min(i, script.beats.length - 1); k >= 0; k--) if (script.beats[k].clip) return { clip: script.beats[k].clip as Clip, at: k }; return null }, [i, script])
   const finished = useRef(false)
-  const done = useCallback(() => { if (finished.current) return; finished.current = true; onDone() }, [onDone])
+  const done = useCallback(() => { if (finished.current) return; finished.current = true; cancelSpeech(); onDone() }, [onDone])
+  // the voices: each line is spoken by the person who says it, and the show moves on when the line has been said
+  const voiceMode = useVoiceMode()
+  const talking = voiceMode !== 'off' && voiceSupported()
+  const [voiceFailed, setVoiceFailed] = useState(false)
+  const voiced = talking && !voiceFailed
 
   useEffect(() => { sfx.whoosh(); const t = window.setTimeout(() => { setStage('show'); sfx.applause(1.6) }, 2200); return () => window.clearTimeout(t) }, [])
   // a name strap the first time each person talks
@@ -139,15 +145,29 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   }, [stage, i, beat.who])
   const next = useCallback(() => {
     if (stage !== 'show') return
+    cancelSpeech()
     if (i >= script.beats.length - 1) { setStage('outro'); sfx.applause(2); window.setTimeout(done, 1800); return }
     setI((x) => x + 1)
   }, [stage, i, script.beats.length, done])
-  // a line shows whole; it moves on by itself after a reading time, or the moment the screen is tapped
+  // a line shows whole; it moves on by itself after a reading time (or, with the voices on, once it has been said), or the moment the screen is tapped
   useEffect(() => {
     if (stage !== 'show') return
-    const t = window.setTimeout(next, 3200 + beat.text.length * 55)
-    return () => window.clearTimeout(t)
-  }, [stage, i, beat.text.length, next])
+    let alive = true
+    let t = 0
+    if (voiced) {
+      void speak(beat.text, (['host', 'exp1', 'exp2'] as const)[beat.who], beat.mood).then((r) => {
+        if (!alive) return
+        if (r === 'done') t = window.setTimeout(next, 500)
+        else if (r === 'failed') setVoiceFailed(true)
+      })
+      // (a safety net in case the speech engine stalls)
+      const net = window.setTimeout(next, 6000 + beat.text.length * 130)
+      return () => { alive = false; window.clearTimeout(t); window.clearTimeout(net) }
+    }
+    t = window.setTimeout(next, 3200 + beat.text.length * 55)
+    return () => { alive = false; window.clearTimeout(t) }
+  }, [stage, i, beat.text, beat.who, beat.mood, next, voiced])
+  useEffect(() => () => cancelSpeech(), [])
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') done(); else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next() } }
     window.addEventListener('keydown', k)
@@ -175,6 +195,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
         </div>
         <div className="min-w-0 flex-1 truncate text-[11px] font-extrabold uppercase tracking-widest text-slate-200">{script.title}</div>
         <span className="flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
+        {voiceSupported() && <button onClick={(e) => { e.stopPropagation(); setVoiceFailed(false); if (voiceMode === 'off') setVoiceMode('studio'); else setVoiceMode('off') }} aria-label={voiceMode === 'off' ? 'Turn the voices on' : 'Turn the voices off'} className="cursor-pointer rounded-full border border-white/20 px-2.5 py-1 text-sm active:bg-white/10">{voiceMode === 'off' ? '🔇' : '🔊'}</button>}
         <button onClick={(e) => { e.stopPropagation(); done() }} className="cursor-pointer rounded-full border border-white/20 px-3 py-1 text-xs font-bold text-slate-200 active:bg-white/10">Skip</button>
       </div>
 

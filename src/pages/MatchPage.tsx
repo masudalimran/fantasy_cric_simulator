@@ -28,6 +28,8 @@ import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/cap
 import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
+import { cancelSpeech, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
+import { liveLines } from '../season/liveVoice'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
 import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
@@ -317,9 +319,27 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (bowlerId && (inn.bowlers.get(bowlerId)?.legalBalls ?? 0) === 0 && !seen.current!.has(`bowl:${bowlerId}`)) { seen.current!.add(`bowl:${bowlerId}`); enqueueMoment(mk('bowler', bowlerId)) }
   }, [match, seasonStats, fixture, enqueueMoment])
 
+  // the live commentary: said aloud when the voices are on in "full" mode
+  const voiceTimer = useRef(0)
+  const boxLines = useRef<string[] | null>(null)
   const announceEvents = useCallback(
     (events: BallEvent[]) => {
       force()
+      if (getVoiceMode() === 'full' && !match.isOver && events.length > 0 && events.length <= 12) {
+        const ev = events[events.length - 1]
+        window.clearTimeout(voiceTimer.current)
+        cancelSpeech()
+        boxLines.current = null
+        const names = { striker: match.player(ev.strikerId).name, bowler: match.player(ev.bowlerId).name, out: ev.wicket ? match.player(ev.wicket.playerId).name : undefined, fielder: ev.wicket?.fielderId ? match.player(ev.wicket.fielderId).name : undefined }
+        const lines = liveLines(ev, names, ballSpeed(ev, match.player(ev.bowlerId)))
+        const rf = autoRef.current === 4 ? 0.5 : autoRef.current === 2 ? 0.75 : 1
+        // in the broadcast view the commentator speaks once the ball has been hit
+        voiceTimer.current = window.setTimeout(() => {
+          const extra = boxLines.current
+          boxLines.current = null
+          void speakLines([...lines, ...(extra ?? []).map((text, i) => ({ text, role: (i % 2 ? 'colour' : 'pbp') as 'pbp' | 'colour' }))])
+        }, getBroadcastView() ? 1500 * rf : 350)
+      }
       // Sound for the last delivery (or the final result). The crowd "awws" at wickets and roars at boundaries.
       const lastEv = events[events.length - 1]
       // a tied knockout goes to a super over: the screen comes after the last ball's own screens
@@ -588,7 +608,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const posts = socialPosts({ bat: batT, bowl: bowlS.team, runs: lastEv.score.runs, wickets: lastEv.score.wickets, overs: `${over}.0`, striker: scorer, bowler: first(match.player(lastEv.bowlerId).name), top: top ? { name: first(match.player(top.id).name), runs: top.runs } : null, best: best ? { name: first(match.player(best[0]).name), wickets: best[1].wickets } : null, chase }, lastEv.seq)
             put({ variant: 'social', team: batT, posts, hashtag: `${batT.short}v${bowlS.team.short}`, rate }, 8600, 'FAN CHAT', batT, cap('social', { team: batT.name }))
           }
-          else put({ variant: 'box', lines: boxChat(match, lastEv.seq), teams: [batT, bowlS.team], rate }, 10400, 'COMMENTARY BOX', batT)
+          else { const chat = boxChat(match, lastEv.seq); boxLines.current = chat; put({ variant: 'box', lines: chat, teams: [batT, bowlS.team], rate }, 10400, 'COMMENTARY BOX', batT) }
         }
       }
       const notable =
@@ -782,6 +802,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (current.current || queue.current.length > 0) { timer = window.setTimeout(step, 120); return }
       const wait = busyUntil.current - Date.now()
       if (wait > 0) { timer = window.setTimeout(step, Math.min(wait, 500)); return }
+      // the commentators finish what they are saying first
+      if (getVoiceMode() === 'full' && voiceBusy()) { timer = window.setTimeout(step, 200); return }
       // the broadcast view's clip of the last ball has to finish first
       const clipLeft = getBroadcastView() ? clipNow.until - Date.now() : 0
       if (clipLeft > 0) { timer = window.setTimeout(step, Math.min(clipLeft, 300)); return }
@@ -797,6 +819,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     timer = window.setTimeout(step, 1300 / auto)
     return () => window.clearTimeout(timer)
   }, [auto, phase, match, act])
+  useEffect(() => () => { window.clearTimeout(voiceTimer.current); cancelSpeech() }, [])
   useEffect(() => () => { window.clearTimeout(fxTimer.current); window.clearTimeout(noteTimer.current); window.clearTimeout(motmTimer.current) }, []) // (the moment timer is left to finish: it only walks the queue)
 
   // Keyboard: Space = next ball, O = finish the over, P = pause or resume auto-play.

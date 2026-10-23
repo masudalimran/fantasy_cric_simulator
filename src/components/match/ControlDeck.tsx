@@ -6,6 +6,8 @@ import { FORMATS } from '../../engine/types'
 import { PlayerAvatar } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
+import { cancelSpeech, setVoiceMode, setVoiceName, setVoiceSpeed, speak, useEnglishVoices, useVoiceMode, useVoiceNames, useVoiceSpeed, voiceSupported, type VoiceMode, type VoiceSpeed } from '../../audio/voice'
+import { VOICE_ROLES, assignVoices, type VoiceRole } from '../../audio/speechText'
 import { animLevelOf, setAnimLevel, setAnimPrefs, setBroadcastView, setSwipeAim, useAnimPrefs, useBroadcastView, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
 
@@ -79,6 +81,10 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectating = false, stops, setStops, manual = false, setManual }: Props) {
   const swipeOn = useSwipeAim()
   const bcast = useBroadcastView()
+  const voiceMode = useVoiceMode()
+  const voiceSpeed = useVoiceSpeed()
+  const voiceNames = useVoiceNames()
+  const englishVoices = useEnglishVoices()
   const anim = useAnimPrefs()
   const [overs, setOvers] = useState(5)
   const [askForfeit, setAskForfeit] = useState(false)
@@ -210,6 +216,41 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
           </div>
         </details>
       </Fold>
+
+      {/* VOICES: the studio show and the commentary, spoken */}
+      {voiceSupported() && <Fold title="Voices" hint={{ off: 'off', studio: 'studio show', full: 'show + commentary' }[voiceMode]}>
+        <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-slate-700">
+          {([['off', 'Off'], ['studio', 'Studio'], ['full', 'Full']] as [VoiceMode, string][]).map(([m, label]) => (
+            <button key={m} onClick={() => setVoiceMode(m)} className={`h-8 cursor-pointer text-[13px] font-bold transition ${voiceMode === m ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
+          ))}
+        </div>
+        <p className="text-[11px] leading-snug text-slate-400">Studio: the show's host and experts speak their lines. Full: two commentators also call every ball. The voices come from your phone, nothing is downloaded.</p>
+        <div className="grid grid-cols-3 overflow-hidden rounded-lg bg-slate-700">
+          {([['slow', 'Slower'], ['normal', 'Normal'], ['fast', 'Faster']] as [VoiceSpeed, string][]).map(([m, label]) => (
+            <button key={m} onClick={() => setVoiceSpeed(m)} className={`h-8 cursor-pointer text-[13px] font-bold transition ${voiceSpeed === m ? 'bg-indigo-500 text-white' : 'text-slate-200 hover:bg-slate-600'}`}>{label}</button>
+          ))}
+        </div>
+        <button onClick={() => { cancelSpeech(); void speak('That is out of the ground! What a hit from the captain.', 'pbp', 'excited', true).then((r) => (r === 'done' ? speak('A superb shot, and the crowd loves it.', 'colour', 'proud', true) : r)) }} className="h-8 cursor-pointer rounded-lg bg-white/10 text-[13px] font-bold text-slate-100 hover:bg-white/20">Hear a sample</button>
+        <details className="group">
+          <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200">Choose voices <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></summary>
+          <div className="mt-2 space-y-1.5">
+            {englishVoices.length === 0 && <p className="text-[11px] text-slate-400">No English voices were found on this device. On Android: Settings, then Languages, then Text-to-speech output, to add one.</p>}
+            {VOICE_ROLES.map((role: VoiceRole) => {
+              const auto = assignVoices(englishVoices, {})[role]
+              return (
+                <label key={role} className="flex items-center justify-between gap-2 text-[12px] font-semibold text-slate-200">
+                  <span className="w-24 shrink-0">{{ host: 'Host', exp1: 'Expert 1', exp2: 'Expert 2', pbp: 'Commentator', colour: 'Co-commentator' }[role]}</span>
+                  <select value={voiceNames[role] ?? ''} onChange={(e) => setVoiceName(role, e.target.value || null)} className="min-w-0 flex-1 cursor-pointer rounded bg-slate-700 px-1.5 py-1 text-[12px] text-white">
+                    <option value="">Automatic{auto ? ` (${auto.name})` : ''}</option>
+                    {englishVoices.map((v) => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+                  </select>
+                </label>
+              )
+            })}
+            <p className="text-[11px] leading-snug text-slate-400">On Android, Chrome's "Google" voices usually sound best.</p>
+          </div>
+        </details>
+      </Fold>}
 
       {/* TACTICS */}
       {spectating && <Section title="Watching"><p className="rounded-lg bg-white/5 px-2.5 py-2 text-[12px] text-slate-300">This isn't your team's match. The computer runs both sides, so there are no tactics to set.</p></Section>}
