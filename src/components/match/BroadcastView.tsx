@@ -26,15 +26,15 @@ function Figure({ player, team, look, shirt, arm, bat }: { player?: Player; team
   const pads = look === 'striker' || look === 'nonstriker' || look === 'keeper'
   return (
     <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
-      <div className="absolute rounded-full" style={{ left: 17, top: 80, width: 11, height: 38, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
-      <div className="absolute rounded-full" style={{ left: 32, top: 80, width: 11, height: 38, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
-      <div className="absolute" style={{ left: 14, top: 38, width: 32, height: 46, borderRadius: 10, background: shirt ?? primary, border: `2px solid ${second}` }} />
-      {look === 'bowler' && <div ref={arm} className="absolute" style={{ left: 42, top: 42, width: 8, height: 32, borderRadius: 4, background: second, transformOrigin: '50% 8%', border: `1px solid ${primary}` }} />}
-      {(look === 'striker' || look === 'nonstriker') && <div ref={bat} className="absolute" style={{ left: 40, top: 44, width: 9, height: 40, borderRadius: 3, background: '#e9c98a', border: '1px solid #a16207', transformOrigin: '50% 10%', transform: 'rotate(-25deg)' }} />}
-      {look === 'keeper' && <><div className="absolute rounded-full bg-amber-300" style={{ left: 6, top: 52, width: 10, height: 10 }} /><div className="absolute rounded-full bg-amber-300" style={{ left: 44, top: 52, width: 10, height: 10 }} /></>}
+      <div className="absolute rounded-full" style={{ left: 18, top: 86, width: 10, height: 32, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
+      <div className="absolute rounded-full" style={{ left: 32, top: 86, width: 10, height: 32, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
+      <div className="absolute" style={{ left: 15, top: 52, width: 30, height: 38, borderRadius: 10, background: shirt ?? primary, border: `2px solid ${second}` }} />
+      {look === 'bowler' && <div ref={arm} className="absolute" style={{ left: 42, top: 56, width: 8, height: 30, borderRadius: 4, background: second, transformOrigin: '50% 8%', border: `1px solid ${primary}` }} />}
+      {(look === 'striker' || look === 'nonstriker') && <div ref={bat} className="absolute" style={{ left: 41, top: 58, width: 9, height: 38, borderRadius: 3, background: '#e9c98a', border: '1px solid #a16207', transformOrigin: '50% 10%', transform: 'rotate(-25deg)' }} />}
+      {look === 'keeper' && <><div className="absolute rounded-full bg-amber-300" style={{ left: 5, top: 64, width: 10, height: 10 }} /><div className="absolute rounded-full bg-amber-300" style={{ left: 45, top: 64, width: 10, height: 10 }} /></>}
       {ump
-        ? <><div className="absolute rounded-full" style={{ left: 18, top: 2, width: 24, height: 24, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 12, top: 0, width: 36, height: 9, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
-        : <div className="absolute rounded-full" style={{ left: 10, top: 0, width: 40, height: 40, boxShadow: `0 0 0 2px ${team ? accentOf(team) : '#fff'}`, overflow: 'hidden' }}>{player && team && <PlayerAvatar player={player} team={team} size={40} />}</div>}
+        ? <><div className="absolute rounded-full" style={{ left: 8, top: 4, width: 44, height: 44, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 4, top: 0, width: 52, height: 13, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
+        : <div className="absolute rounded-full" style={{ left: 2, top: 0, width: 56, height: 56, boxShadow: `0 0 0 3px ${team ? accentOf(team) : '#fff'}, 0 0 10px #000a`, overflow: 'hidden' }}>{player && team && <PlayerAvatar player={player} team={team} size={56} />}</div>}
     </div>
   )
 }
@@ -115,7 +115,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const p = project(r, world)
         const h = opts.heightM ?? 1.8
         if (!p || p.x < -80 || p.x > W + 80 || p.y < -40 || p.y > H + 200) { node.style.display = 'none'; return }
-        const s = (r.F * h) / p.d / HEIGHT
+        const s = Math.max(0.4, (r.F * h) / p.d / HEIGHT)
         node.style.display = 'block'
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) scale(${s.toFixed(3)}) translate(-50%,-100%)`
         node.style.zIndex = String(Math.max(1, Math.round(3000 - p.d * 10)))
