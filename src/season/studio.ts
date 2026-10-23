@@ -209,7 +209,8 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
 
   // which innings to go through: the one just finished, or (after the match) all of them
   const last = kind === 'end' ? match.innings.length - 1 : Math.max(0, match.current.done || kind === 'stumps' ? match.current.index : match.current.index - 1)
-  const indices = kind === 'end' ? match.innings.map((_, i) => i) : [Math.min(last, match.innings.length - 1)]
+  // the show covers the innings that has just been played: the first at the break, the last one after the match
+  const indices = [Math.min(last, match.innings.length - 1)]
   const first0 = match.innings[indices[0]]
   const teamOf = (i: number) => match.sides[match.innings[i].battingSide].team
   const vars: Record<string, string | number> = { a: name(1), b: name(2), bat: teamOf(indices[0]).name, score: `${first0.runs}/${first0.wickets}`, result: match.result?.text ?? '' }
@@ -227,7 +228,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pu
     const batTeam = teamOf(ii)
     const bowlTeam = match.sides[1 - inn.battingSide].team
     const fmt = match.format === 'test' ? 'test' : match.format === 'odi' ? 'odi' : 't20'
-    if (indices.length > 1 || ii > 0) say(0, `${indices.length > 1 ? 'Let us go back to the start.' : 'Here we go.'} First, ${batTeam.name}'s innings: ${inn.runs}/${inn.wickets}. We will start with the batsmen, from the top.`, 'serious', { kind: 'worm', innings: ii })
+    if (ii > 0) say(0, `Let us look back at ${batTeam.name}'s innings: ${inn.runs}/${inn.wickets}. We will start with the batsmen, from the top.`, 'serious', { kind: 'worm', innings: ii })
     else say(0, `Let us go through ${batTeam.name}'s innings, ${inn.runs}/${inn.wickets}, starting with the batsmen from the top of the order.`, 'serious', { kind: 'worm', innings: ii })
 
     // ---- the batsmen, top to bottom

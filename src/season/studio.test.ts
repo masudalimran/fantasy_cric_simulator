@@ -40,6 +40,19 @@ describe('the studio show script', () => {
     expect([...seen].sort((a, b) => a - b)).toEqual(seen)
   })
 
+  it('covers the innings just played: the first at the break, the last after the match', () => {
+    const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed: 8 })
+    while (m.current.index === 0) m.playBall()
+    const inStats = (kind: 'innings' | 'end') => buildScript(m, kind, 8, pool).beats.filter((b) => b.clip?.kind === 'stat')
+    const brk = inStats('innings')
+    expect(brk.length).toBeGreaterThan(0)
+    for (const b of brk) expect(b.clip?.kind === 'stat' && b.clip.innings).toBe(0)
+    m.playMatch()
+    const end = inStats('end')
+    expect(end.length).toBeGreaterThan(0)
+    for (const b of end) expect(b.clip?.kind === 'stat' && b.clip.innings).toBe(m.innings.length - 1)
+  })
+
   it('does not read alike: different matches give different words, and no line repeats inside one show', () => {
     const texts = new Set<string>()
     for (let seed = 1; seed <= 30; seed++) for (const b of buildScript(play(seed), seed % 2 ? 'innings' : 'end', seed, pool).beats) texts.add(b.text)
