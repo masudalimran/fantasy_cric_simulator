@@ -5,6 +5,7 @@ import type { BallEvent, DeliveryAim, ShotAim } from '../../engine/types'
 import { eventAngle, reachFactor } from '../../engine/shots'
 import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
+import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { useBroadcastView } from '../../prefs'
 import { BroadcastView } from './BroadcastView'
 import { MomentOverlay, type Moment } from './MomentOverlay'
@@ -331,6 +332,8 @@ export function Stage({
   const swipeFrom = useRef<{ x: number; y: number } | null>(null)
   const end = event ? endPoint(event, fielders) : HIT
   const six = event?.boundary === 6
+  // a free-hit boundary, or a ball bowled very fast, is a fireball; a very slow one is a snowball
+  const bstyle: BallStyle = event?.freeHit && event.boundary ? 'fire' : event ? speedStyle(ballSpeed(event, bowler)) : 'plain'
   // a delivery chosen by a person lands where they put it
   const bounce = event?.delivery ? landingSpot(event.delivery) : null
   const wicket = !!event?.wicket
@@ -407,10 +410,10 @@ export function Stage({
         {/* the ball: travels bowler to bat, then away */}
         {event && (
           <motion.g key={event.seq}>
-            {/* a free hit that went for four or six: the ball is a fireball with a trail of flames */}
-            {event.freeHit && event.boundary && [6, 5, 4, 3, 2, 1].map((n) => (
+            {/* a free-hit boundary or a very quick ball is a fireball with a trail of flames; a very slow ball is a snowball with an icy trail */}
+            {bstyle !== 'plain' && [6, 5, 4, 3, 2, 1].map((n) => (
               <motion.circle
-                key={`fl${n}`} r={(six ? 1.5 : 1) - n * 0.08} fill={n > 4 ? '#ef4444' : n > 2 ? '#fb923c' : '#fde047'} initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 0 }}
+                key={`fl${n}`} r={(six ? 1.5 : 1) - n * 0.08} fill={bstyle === 'ice' ? (n > 4 ? '#7dd3fc' : n > 2 ? '#bae6fd' : '#f0f9ff') : n > 4 ? '#ef4444' : n > 2 ? '#fb923c' : '#fde047'} initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 0 }}
                 animate={bounce
                   ? { cx: [BOWLER_STRIDE.x, bounce.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, bounce.y, HIT.y, end.y], opacity: [0, 0, 0.8 - n * 0.09, 0] }
                   : { cx: [BOWLER_STRIDE.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, HIT.y, end.y], opacity: [0, 0.8 - n * 0.09, 0] }}
@@ -418,7 +421,7 @@ export function Stage({
               />
             ))}
             <motion.circle
-              r={six ? 1.7 : 1.15} fill={event.freeHit && event.boundary ? '#f97316' : '#ef4444'} stroke={event.freeHit && event.boundary ? '#fde047' : '#fecaca'} strokeWidth="0.35"
+              r={six ? 1.7 : 1.15} fill={bstyle === 'fire' ? '#f97316' : bstyle === 'ice' ? '#f0f9ff' : '#ef4444'} stroke={bstyle === 'fire' ? '#fde047' : bstyle === 'ice' ? '#7dd3fc' : '#fecaca'} strokeWidth="0.35"
               initial={{ cx: BOWLER_STRIDE.x, cy: BOWLER_STRIDE.y, opacity: 1 }}
               animate={bounce
                 ? { cx: [BOWLER_STRIDE.x, bounce.x, HIT.x, end.x], cy: [BOWLER_STRIDE.y, bounce.y, HIT.y, end.y], r: six ? [1.15, 1.15, 1.15, 2.4] : [1.15, 1.15, 1.15, 1.15], opacity: [1, 1, 1, event.boundary ? 0.35 : 1] }

@@ -19,9 +19,9 @@ export interface Scene {
   stumps: number
   /** The same for the stumps at the bowler's end (a run out there). */
   stumpsBowl: number
-  /** The ball's last few places, oldest first, for the trail; and whether it is a fireball. */
+  /** The ball's last few places, oldest first, for the trail; and whether it is a fireball or a snowball. */
   trail: V3[]
-  fire: boolean
+  style: 'plain' | 'fire' | 'ice'
 }
 
 const fillPoly = (ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], fill: string) => {
@@ -110,8 +110,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       const a = project(r, sc.trail[i - 1]), b = project(r, sc.trail[i])
       if (!a || !b) continue
       const f = i / sc.trail.length
-      ctx.strokeStyle = sc.fire ? `rgba(${f > 0.5 ? '253,224,71' : '249,115,22'},${0.15 + f * 0.6})` : `rgba(255,255,255,${0.1 + f * 0.35})`
-      ctx.lineWidth = Math.max(1, (sc.fire ? 0.5 : 0.18) * r.F * f / b.d)
+      ctx.strokeStyle = sc.style === 'fire' ? `rgba(${f > 0.5 ? '253,224,71' : '249,115,22'},${0.15 + f * 0.6})` : sc.style === 'ice' ? `rgba(${f > 0.5 ? '240,249,255' : '125,211,252'},${0.18 + f * 0.6})` : `rgba(255,255,255,${0.1 + f * 0.35})`
+      ctx.lineWidth = Math.max(1, (sc.style === 'plain' ? 0.18 : 0.5) * r.F * f / b.d)
       ctx.lineCap = 'round'
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
     }

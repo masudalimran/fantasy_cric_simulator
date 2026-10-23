@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { Match } from './match'
-import { ballSpeed } from './speed'
+import { ballSpeed, speedStyle } from './speed'
 
 describe('ball speed', () => {
   it('is believable for every kind of bowler and the same for the same ball', () => {
@@ -23,6 +23,14 @@ describe('ball speed', () => {
     const fast = (byType.fast ?? []).reduce((a, b) => a + b, 0) / Math.max(1, (byType.fast ?? []).length)
     const spin = [...(byType.offspin ?? []), ...(byType.legspin ?? []), ...(byType.leftspin ?? [])]
     if (spin.length) expect(fast).toBeGreaterThan(spin.reduce((a, b) => a + b, 0) / spin.length + 25)
+  })
+  it('very quick balls are fire, very slow ones are ice, the rest plain', () => {
+    expect(speedStyle(148)).toBe('fire')
+    expect(speedStyle(145)).toBe('fire')
+    expect(speedStyle(144)).toBe('plain')
+    expect(speedStyle(110)).toBe('plain')
+    expect(speedStyle(78)).toBe('ice')
+    expect(speedStyle(70)).toBe('ice')
   })
   it('a slower ball is slower than a fast one from the same bowler', () => {
     const b = { bowling: { type: 'fast' as const, accuracy: 70, variation: 70, stamina: 70 } }

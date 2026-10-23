@@ -3,7 +3,7 @@ import type { Player, Team } from '../../types'
 import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
-import { ballSpeed } from '../../engine/speed'
+import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { approach, clipNow, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { drawScene } from './broadcastDraw'
 import { endPoint, type Placed } from './Stage'
@@ -56,7 +56,7 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   if (!on) return null
   return (
     <div className="pointer-events-none absolute right-2 top-9 z-[6001] flex items-baseline gap-1 rounded bg-black/80 px-2 py-0.5 ring-1 ring-sky-300/50 max-sm:right-1 max-sm:top-8">
-      <span className="font-display text-xl leading-none tabular-nums text-sky-300">{kmh}</span>
+      <span className={`font-display text-xl leading-none tabular-nums ${speedStyle(kmh) === 'fire' ? 'text-orange-400' : speedStyle(kmh) === 'ice' ? 'text-cyan-200' : 'text-sky-300'}`}>{kmh}</span>{speedStyle(kmh) === 'fire' && <span className="text-sm" aria-hidden>🔥</span>}{speedStyle(kmh) === 'ice' && <span className="text-sm" aria-hidden>❄️</span>}
       <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-300">km/h</span>
     </div>
   )
@@ -129,8 +129,11 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const k = 1 - Math.exp(-dt * (f.phase === 'flight' ? 7 : 4.5))
         c.yaw = approach(c.yaw, goal.yaw, k); c.pitch = approach(c.pitch, goal.pitch, k); c.hfov += (f.hfov - c.hfov) * k
       }
+      // a very quick ball is a fireball and a very slow one a snowball while it is bowled; after the bat only a free-hit boundary is on fire
+      const delivering = f.phase === 'run' || f.phase === 'deliver'
+      const style: BallStyle = delivering ? speedStyle(L.plan.speed) : L.fire ? 'fire' : 'plain'
       if (f.ball) { trail.push(f.ball); if (trail.length > 14) trail.shift() } else trail.length = 0
-      drawScene(ctx, c, W, H, { pitch: L.pitch, boardColor: L.battingTeam.colors.primary, crowdColors: [L.battingTeam.colors.primary, L.battingTeam.colors.secondary], stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], fire: L.fire })
+      drawScene(ctx, c, W, H, { pitch: L.pitch, boardColor: L.battingTeam.colors.primary, crowdColors: [L.battingTeam.colors.primary, L.battingTeam.colors.secondary], stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
 
       const place = (key: string, world: V3, opts: { heightM?: number; rot?: number } = {}) => {
@@ -188,7 +191,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const bp = f.ball ? project(r, f.ball) : null
         const gp = f.ball ? project(r, { ...f.ball, y: 0 }) : null
         if (bp && gp && bp.x > -20 && bp.x < W + 20) {
-          const sz = Math.max(5, (r.F * 0.24) / bp.d)
+          ball.style.background = style === 'fire' ? '#f97316' : style === 'ice' ? '#f0f9ff' : '#dc2626'
+          ball.style.borderColor = style === 'ice' ? '#7dd3fc' : style === 'fire' ? '#fde047' : '#fecaca'
+          ball.style.boxShadow = style === 'fire' ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : style === 'ice' ? '0 0 12px 4px #7dd3fc, 0 0 22px 8px #bae6fd88' : '0 0 6px #00000088'
+          const sz = Math.max(style === 'plain' ? 5 : 9, (r.F * (style === 'plain' ? 0.24 : 0.36)) / bp.d)
           ball.style.display = 'block'
           ball.style.width = ball.style.height = `${sz.toFixed(1)}px`
           ball.style.transform = `translate3d(${(bp.x - sz / 2).toFixed(1)}px,${(bp.y - sz / 2).toFixed(1)}px,0)`
@@ -265,7 +271,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l1 = el }} armR={(el) => { umpArms.current.r1 = el }} /></div>
       <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l2 = el }} armR={(el) => { umpArms.current.r2 = el }} /></div>
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
-      <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" style={{ background: fire ? '#f97316' : '#dc2626', boxShadow: fire ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : '0 0 6px #00000088' }} />
+      <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}
       {event && <SpeedGun key={event.seq} kmh={plan.speed} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
