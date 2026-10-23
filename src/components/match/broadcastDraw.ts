@@ -17,6 +17,8 @@ export interface Scene {
   crowdColors: string[]
   /** 0 to 1: how far the batsman's stumps have been knocked over. */
   stumps: number
+  /** The same for the stumps at the bowler's end (a run out there). */
+  stumpsBowl: number
   /** The ball's last few places, oldest first, for the trail; and whether it is a fireball. */
   trail: V3[]
   fire: boolean
@@ -124,7 +126,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     }
     if (fly < 0.2) line({ x: -0.11, y: 0.72, z }, { x: 0.11, y: 0.72, z }, 0.03, '#fbbf24')
   }
-  stumpSet(BOWL_Z, 0)
+  stumpSet(BOWL_Z, sc.stumpsBowl)
   stumpSet(0, sc.stumps)
 
   // a soft vignette, like a lens

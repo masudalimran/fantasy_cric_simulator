@@ -81,6 +81,9 @@ export function projectPoly(r: CamR, pts: V3[]): Screen[] {
 
 export interface FielderIn { id: string; x: number; y: number; spot: string }
 
+/** What an umpire's arms say. */
+export type SignalKind = 'wide' | 'noball' | 'four' | 'six' | 'out' | 'bye' | 'legbye'
+
 export interface Plan {
   /** Seconds (before the speed factor): the run-up, the ball in the air to the bat, the ball after the bat, a pause at the end. */
   tRun: number; tDeliver: number; tFlight: number; tHold: number
@@ -103,6 +106,25 @@ export interface Plan {
   /** Runs the batsmen run between the wickets (1 to 3, or byes and leg byes), and the stance side of the striker. */
   runs: number
   stanceX: number
+  /** A run out: how many runs were tried (the last one not finished), whether the striker was the one out, the end whose stumps were hit, and the throw. */
+  runOut: { legs: number; outIsStriker: boolean; destEnd: 0 | 1; throwTo: V3; tThrow: number } | null
+  /** How long one run takes in this clip. */
+  runSeconds: number
+  /** The bowler runs to take the catch off his own bowling; the batsman steps out of his crease to be stumped. */
+  bowlerCatch: boolean
+  stepOut: boolean
+  /** The umpire's signal and when it starts (seconds into the clip), and which umpire gives it (1 at the bowler's end, 2 at square leg). */
+  signal: { kind: SignalKind; at: number; who: 1 | 2 } | null
+  /** A leg bye: the ball hits the batsman, who winces. */
+  hurt: boolean
+  /** The keeper dives for a wide or a bye (and whether he gets there), a fielder dives at the rope for a four. */
+  keeperDive: { dir: number; at: number; miss: boolean } | null
+  chaserDive: boolean
+  /** The out batsman walks off after the wicket; and when a fifty or hundred is reached he raises his bat. */
+  exitAt: number | null
+  celebrateAt: number | null
+  /** A word that pops up over somebody's head, and when. */
+  react: { text: string; at: number; who: 'striker' | 'bowler' | 'keeper' } | null
 }
 
 /** The clip now on screen (set by the broadcast view as it plans a ball), so the animation screens can wait for it to end. */
@@ -123,7 +145,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bounce: V3 = { x: lineX * 0.8 + bowlerX * 0.2, y: 0, z: lenZ }
   const stanceX = leftHand ? -0.75 : 0.75
   const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket' || w.kind === 'lbw')
-  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : lineX * 0.6, y: toStumps ? 0.5 : 0.85, z: -0.45 }
+  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : 0.85, z: -0.45 }
   const six = ev.boundary === 6
   const boundary = !!ev.boundary
   let end = toWorld(endTop.x, endTop.y)
@@ -132,11 +154,31 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   let swing = !wide && (ev.runsBat > 0 || (!!w && w.kind !== 'bowled' && w.kind !== 'lbw'))
   let catcher = -1, chaser = -1
   let wicketFlies = false
+  let runOut: Plan['runOut'] = null
+  let bowlerCatch = false
+  let hurt = false
+  let keeperDive: Plan['keeperDive'] = null
+  const noball = ev.extraType === 'noball'
+  const bye = ev.extraType === 'bye', legbye = ev.extraType === 'legbye'
   if (w) {
-    if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = false }
+    if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' }
     else if (w.kind === 'lbw') { end = { x: stanceX * 0.7, y: 0.4, z: -0.2 }; kind = 'pad'; swing = false }
-    else if (w.kind === 'stumped') { end = { x: 0, y: 0.9, z: 1.8 }; kind = 'keeper'; wicketFlies = true; swing = false }
-    else if (w.kind === 'caught and bowled') { end = { x: bowlerX, y: 1.1, z: BOWL_Z + 4 }; kind = 'air'; peak = 3 }
+    else if (w.kind === 'stumped') { end = { x: 0, y: 0.9, z: 1.8 }; kind = 'keeper'; wicketFlies = true; swing = false; catcher = 0 }
+    else if (w.kind === 'caught and bowled') { end = { x: bowlerX + 1, y: 1.1, z: BOWL_Z + 4 }; kind = 'air'; peak = 3; bowlerCatch = true }
+    else if (w.kind === 'run out') {
+      // the ball is hit, the batsmen run, a fielder gathers it and throws at the stumps they are running to
+      const k = fielders.findIndex((f) => f.id === w.fielderId)
+      if (k >= 0) { const fw = fielderWorld(fielders[k].x, fielders[k].y, fielders[k].spot); end = { x: fw.x, y: 0.3, z: fw.z }; catcher = k }
+      else end = { x: end.x, y: 0.3, z: end.z }
+      kind = 'ground'
+      swing = true
+      const legs = Math.max(1, ev.runsBat + 1)
+      const lastFromStriker = (legs - 1) % 2 === 0 // the striker starts the last run from his own end
+      const outIsStriker = w.playerId === ev.strikerId
+      const destEnd = (outIsStriker ? (lastFromStriker ? 1 : 0) : (lastFromStriker ? 0 : 1)) as 0 | 1
+      runOut = { legs, outIsStriker, destEnd, throwTo: { x: 0, y: 0.45, z: destEnd === 0 ? 0 : BOWL_Z }, tThrow: 0.75 }
+      wicketFlies = true
+    }
     else {
       const k = fielders.findIndex((f) => f.id === w.fielderId)
       if (k >= 0) { const fw = fielderWorld(fielders[k].x, fielders[k].y, fielders[k].spot); end = { x: fw.x, y: 1.2, z: fw.z }; catcher = k }
@@ -147,29 +189,66 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   } else if (wide) {
     end = { x: lineX * 1.2, y: 0.5, z: 8 }
     kind = 'keeper'
+    catcher = 0
+    keeperDive = { dir: lineX > 0 ? 1 : -1, at: 0, miss: false }
+  } else if (bye) {
+    // the ball beats the bat and the keeper, and runs away behind them
+    end = { x: lineX * 1.6 + (lineX >= 0 ? 2 : -2), y: 0.1, z: 15 }
+    kind = 'ground'
+    keeperDive = { dir: lineX >= 0 ? 1 : -1, at: 0, miss: true }
+    swing = false
+  } else if (legbye) {
+    // it hits the batsman's pad or body and rolls off to the leg side
+    hurt = true
+    swing = false
+    end = { x: stanceX > 0 ? 7 : -7, y: 0.1, z: 7 }
+    kind = 'ground'
   } else {
     end = { x: end.x, y: 0, z: end.z }
     const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
     if (six) { peak = 14 + dist * 0.12; kind = 'air'; end.y = 0 }
     else if (ev.shot?.loft && dist > 14) { peak = Math.min(9, dist * 0.22); kind = 'air' }
     else kind = 'ground'
-    // the nearest fielder (not the keeper) runs towards where the ball is going
-    if (!six && ev.runsBat > 0) {
-      let best = 1e9
-      fielders.forEach((f, i) => { if (i === 0) return; const fw = fielderWorld(f.x, f.y, f.spot); const d = Math.hypot(fw.x - end.x, fw.z - end.z); if (d < best) { best = d; chaser = i } })
-    }
+    // a ball that is not scored off is either played and missed (it goes through to the keeper) or kept out by the bat
+    if (ev.runsBat === 0 && ev.legal && hash01(ev.seq * 2.3) > 0.5) { end = { x: meet.x * 0.5, y: 1, z: 8.5 }; kind = 'keeper'; catcher = 0 }
   }
-  const runs = !w && !boundary && !wide ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
+  // the nearest fielder (not the keeper) runs towards where the ball is going
+  if (!w && !wide && !six && (ev.runsBat > 0 || bye || legbye) && kind !== 'keeper') {
+    let best = 1e9
+    fielders.forEach((f, i) => { if (i === 0) return; const fw = fielderWorld(f.x, f.y, f.spot); const d = Math.hypot(fw.x - end.x, fw.z - end.z); if (d < best) { best = d; chaser = i } })
+  }
+  const runs = runOut ? runOut.legs : !w && !boundary && !wide ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
   const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
   const tFlight = six ? 2 : Math.max(0.7, Math.min(1.6, 0.6 + dist / 42))
   // after the bat the ball goes towards the bowler's end: show it from behind the batsman, where it travels away from the camera
-  const behind = kind === 'stumps' || kind === 'keeper' || kind === 'pad' || end.z > -6
+  const behind = !!runOut || kind === 'stumps' || kind === 'keeper' || kind === 'pad' || end.z > -6
   // the batsmen need time to run every run: the clip lasts until they have made them
-  const tHold = Math.max(0.55, runs * RUN_SECONDS + 0.3 - tFlight)
+  let tHold = runOut ? runOut.tThrow + 0.9 : Math.max(0.55, runs * RUN_SECONDS + 0.3 - tFlight)
+  const runSeconds = runOut ? (tFlight + runOut.tThrow - 0.12) / (runOut.legs - 1 + 0.78) : RUN_SECONDS
+  const t2 = 0.95 + 0.5, t3 = t2 + tFlight
+  // when the wicket falls: a catch when the ball is taken, the stumps at once, a run out when they are hit; then the batsman walks off
+  const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : t2 + 0.25
+  if (wicketAt !== null) tHold = Math.max(tHold, wicketAt + 1.6 - t3)
+  // a fifty or a hundred: he raises his bat once the ball is done
+  const milestone = !w && ev.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')
+  if (milestone) tHold = Math.max(tHold, runs * RUN_SECONDS + 1.3 - tFlight, 1.3)
+  let signal: Plan['signal'] = null
+  if (w) signal = { kind: 'out', at: (wicketAt ?? t3) + (w.kind === 'lbw' ? 0.7 : 0.15), who: 1 }
+  else if (wide) signal = { kind: 'wide', at: t2 + 0.35, who: 1 }
+  else if (noball) signal = { kind: 'noball', at: 0.95 + 0.12, who: 1 }
+  else if (six) signal = { kind: 'six', at: t2 + 0.6, who: 2 }
+  else if (ev.boundary === 4) signal = { kind: 'four', at: t3 - 0.2, who: 2 }
+  else if (bye) signal = { kind: 'bye', at: t2 + 0.4, who: 1 }
+  else if (legbye) signal = { kind: 'legbye', at: t2 + 0.4, who: 2 }
+  if (keeperDive) keeperDive.at = bye ? t2 - 0.05 : t2 + 0.1
+  const react: Plan['react'] = legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
+    : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
+    : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   return {
-    tRun: 0.95, tDeliver: 0.5, tFlight, tHold, total: 0.95 + 0.5 + tFlight + tHold, runs, stanceX,
-    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - 10 }, runTo: { x: bowlerX, y: 0, z: BOWL_Z - 0.7 },
+    tRun: 0.95, tDeliver: 0.5, tFlight, tHold, total: 0.95 + 0.5 + tFlight + tHold, runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
+    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - 10 }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
+    signal, hurt, keeperDive, chaserDive: ev.boundary === 4 && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -184,6 +263,10 @@ export interface Frame {
   ball: V3 | null
   batSwing: number
   stumps: number
+  /** How far the stumps at the bowler's end have been knocked over (a run out there). */
+  stumpsBowl: number
+  /** The striker's own place when he is not running: stepping out of his crease to be stumped. */
+  striker: V3 | null
   reverse: boolean
   /** The place the camera is looking, and how wide. */
   aim: V3; hfov: number
@@ -191,6 +274,14 @@ export interface Frame {
   moving: Map<number, V3>
   /** The two batsmen while they are running (the striker's and the non-striker's places), else null. */
   runners: { a: V3; b: V3 } | null
+  /** An umpire's arms (which umpire, what signal, how far through it), a wince (0 to 1) after a leg bye, a bat raised high (0 to 1). */
+  signal: { kind: SignalKind; k: number; who: 1 | 2 } | null
+  hurt: number
+  raise: number
+  /** Fielders who are diving, by index (the keeper is 0): how far down (0 to 1) and to which side. */
+  dives: Map<number, { k: number; dir: number }>
+  /** A word over somebody's head right now. */
+  react: { text: string; who: 'striker' | 'bowler' | 'keeper' } | null
   /** Hop for joy (0 to 1) of whoever just took a wicket or hit a boundary. */
   joy: number
   phase: 'run' | 'deliver' | 'flight' | 'hold'
@@ -203,7 +294,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   const phase: Frame['phase'] = t < t1 ? 'run' : t < t2 ? 'deliver' : t < t3 ? 'flight' : 'hold'
   // the bowler: runs in to the crease, then follows through
   const rs = clamp01(t / t1)
-  const bowlerPos = t < t1 ? lerp3(plan.runFrom, plan.runTo, rs) : lerp3(plan.runTo, { x: plan.runTo.x + 2.2, y: 0, z: plan.runTo.z + 1.8 }, ease((t - t1) / 0.6))
+  let bowlerPos = t < t1 ? lerp3(plan.runFrom, plan.runTo, rs) : lerp3(plan.runTo, { x: plan.runTo.x + 2.2, y: 0, z: plan.runTo.z + 1.8 }, ease((t - t1) / 0.6))
   const bowlerArm = clamp01((t - (t1 - 0.3)) / 0.32)
   // the ball
   let ball: V3 | null = null
@@ -227,7 +318,18 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   }
   const hitT = t2
   const batSwing = plan.swing ? clamp01((t - (hitT - 0.2)) / 0.45) : clamp01((t - (hitT - 0.12)) / 0.3) * 0.25
-  const stumps = plan.wicketFlies ? clamp01((t - hitT) / 0.8) : 0
+  const ro = plan.runOut
+  const hitAt = ro ? t2 + plan.tFlight + ro.tThrow : hitT
+  const flyNow = plan.wicketFlies ? clamp01((t - hitAt) / 0.8) : 0
+  const stumps = ro ? (ro.destEnd === 0 ? flyNow : 0) : flyNow
+  const stumpsBowl = ro && ro.destEnd === 1 ? flyNow : 0
+  // a run out: the fielder has the ball and throws it at the stumps
+  if (ro && t >= t2 + plan.tFlight) {
+    const s2 = clamp01((t - (t2 + plan.tFlight)) / ro.tThrow)
+    ball = { x: lerp(plan.end.x, ro.throwTo.x, s2), y: Math.max(0.1, lerp(0.9, ro.throwTo.y, s2) + 0.6 * Math.sin(Math.PI * s2)), z: lerp(plan.end.z, ro.throwTo.z, s2) }
+  }
+  // the bowler takes the catch off his own bowling
+  if (plan.bowlerCatch) { const k = ease((t - t2) / plan.tFlight); bowlerPos = lerp3(bowlerPos, { x: plan.end.x, y: 0, z: plan.end.z }, k) }
   // fielders on the move
   const sf = clamp01((t - t2) / plan.tFlight)
   if (plan.catcher >= 0) { const a = fielderAt(plan.catcher); moving.set(plan.catcher, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf * 1.15))) }
@@ -244,26 +346,52 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     aim = plan.reverse ? { x: b.x, y: Math.max(0.5, b.y * 0.7), z: b.z } : lerp3(plan.meet, b, 0.85)
     hfov = (plan.reverse ? Math.min(60, 26 + away * 0.75) : Math.min(52, 22 + away * 0.55)) * deg
     // with runs being taken the picture settles on the pitch so the running can be seen
-    if (plan.runs > 0) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(aim, { x: 0, y: 0.8, z: -9 }, k * 0.8); hfov = Math.max(hfov, lerp(22, 36, k) * deg) }
+    if (plan.runOut) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(lerp3(aim, b, 0.5), { x: 0, y: 0.8, z: -9 }, 0.55 * k + 0.2); hfov = Math.max(hfov, lerp(24, 40, k) * deg) }
+    else if (plan.runs > 0) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(aim, { x: 0, y: 0.8, z: -9 }, k * 0.8); hfov = Math.max(hfov, lerp(22, 36, k) * deg) }
   }
   // running between the wickets: each run is a leg; they cross in the middle, and after an odd number they have swapped ends
   let runners: Frame['runners'] = null
+  let striker: Frame['striker'] = null
   if (plan.runs > 0 && t >= t2) {
-    const u = Math.max(0, (t - (t2 + 0.12)) / RUN_SECONDS)
-    const done = Math.min(plan.runs, Math.floor(u))
-    const f = done >= plan.runs ? 1 : u - done
-    const leg = done >= plan.runs ? plan.runs - 1 : done
-    const aFrom = leg % 2 === 0 ? 0 : 1 // 0: striker's end
+    const u0 = Math.max(0, (t - (t2 + 0.12)) / plan.runSeconds)
     const endZ = (end: number) => (end === 0 ? BAT_END_Z : BOWL_END_Z)
     const endX = (end: number) => (end === 0 ? plan.stanceX : NON_STRIKER_X)
-    const place = (from: number, sign: number): V3 => {
-      const e = ease(f), to = 1 - from
+    // one batsman, starting from `startEnd` (0: the striker's end), `u` runs into the clip
+    const runner = (startEnd: number, sign: number, u: number): V3 => {
+      const done = Math.min(plan.runs, Math.floor(u))
+      const f = done >= plan.runs ? 1 : u - done
+      const leg = done >= plan.runs ? plan.runs - 1 : done
+      const from = (startEnd + leg) % 2, to = 1 - from
+      const e = ease(f)
       return { x: lerp(endX(from), endX(to), e) + sign * 1.1 * Math.sin(Math.PI * e), y: Math.abs(Math.sin(f * Math.PI * 4)) * 0.08, z: lerp(endZ(from), endZ(to), e) }
     }
-    runners = u <= 0 ? null : { a: place(aFrom, 1), b: place(1 - aFrom, -1) }
+    // in a run out the one who is out stops where he is when the stumps are hit
+    const cap = plan.runOut ? plan.runOut.legs - 1 + 0.78 : Infinity
+    const ua = plan.runOut?.outIsStriker ? Math.min(u0, cap) : u0
+    const ub = plan.runOut && !plan.runOut.outIsStriker ? Math.min(u0, cap) : u0
+    runners = u0 <= 0 ? null : { a: runner(0, 1, ua), b: runner(1, -1, ub) }
+  } else if (plan.stepOut) {
+    // stumped: he comes down the pitch and is beaten
+    striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, -1.7, ease((t - (t2 - 0.45)) / 0.5)) }
   }
-  const joy = plan.boundary || plan.wicketFlies || plan.catcher >= 0 ? clamp01((t - t3) / 0.5) : 0
-  return { runners, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2, aim, hfov, moving, joy, phase }
+  // the out batsman walks off once the wicket has fallen
+  if (plan.exitAt !== null && plan.exitAt !== undefined && t > plan.exitAt + 0.3) {
+    const k = ease((t - plan.exitAt - 0.3) / 1.2)
+    const exit: V3 = { x: plan.stanceX > 0 ? 11 : -11, y: 0, z: 17 }
+    const walk = (p: V3): V3 => lerp3(p, exit, k)
+    if (plan.runOut && runners) runners = plan.runOut.outIsStriker ? { a: walk(runners.a), b: runners.b } : { a: runners.a, b: walk(runners.b) }
+    else if (!plan.runOut) striker = walk(striker ?? { x: plan.stanceX, y: 0, z: BAT_END_Z })
+  }
+  // the umpire's arms, the wince, the raised bat, the dives and the word over somebody's head
+  const signal = plan.signal && t >= plan.signal.at ? { kind: plan.signal.kind, k: clamp01((t - plan.signal.at) / 0.3), who: plan.signal.who } : null
+  const hurt = plan.hurt ? clamp01((t - t2) / 0.2) * (1 - clamp01((t - t2 - 1.0) / 0.6)) : 0
+  const raise = plan.celebrateAt !== null && plan.celebrateAt !== undefined ? clamp01((t - plan.celebrateAt) / 0.3) : 0
+  const dives = new Map<number, { k: number; dir: number }>()
+  if (plan.keeperDive) { const d = plan.keeperDive; const k = clamp01((t - d.at) / 0.4) * (1 - clamp01((t - d.at - 1.1) / 0.5)); if (k > 0) dives.set(0, { k, dir: d.dir }) }
+  if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) dives.set(plan.chaser, { k, dir: Math.sign(plan.end.x - fielderAt(plan.chaser).x) || 1 }) }
+  const react = plan.react && t >= plan.react.at && t < plan.react.at + 1.1 ? { text: plan.react.text, who: plan.react.who } : null
+  const joy = plan.boundary || plan.wicketFlies || plan.catcher >= 0 ? clamp01((t - (plan.runOut ? hitAt : t3)) / 0.5) : 0
+  return { signal, hurt, raise, dives, react, runners, striker, stumpsBowl, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2, aim, hfov, moving, joy, phase }
 }
 
 /** The camera turned to look at a point, from where it stands. */

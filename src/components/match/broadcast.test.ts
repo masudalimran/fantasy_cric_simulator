@@ -10,7 +10,8 @@ const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) 
 describe('the broadcast view plan', () => {
   it('works out a finite, sensible clip for every kind of ball', () => {
     const kinds = new Set<string>()
-    for (let seed = 1; seed <= 6; seed++) {
+    const seen = new Set<string>()
+    for (let seed = 1; seed <= 25; seed++) {
       const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
       m.playMatch()
       for (const inn of m.innings) {
@@ -21,9 +22,31 @@ describe('the broadcast view plan', () => {
           const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
           const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
           kinds.add(plan.kind + (plan.reverse ? '+rev' : ''))
+          if (ev.extraType === 'wide') { expect(plan.signal?.kind).toBe('wide'); expect(plan.keeperDive).not.toBeNull() }
+          if (ev.extraType === 'noball') expect(plan.signal?.kind).toBe('noball')
+          if (ev.extraType === 'legbye') expect(plan.hurt).toBe(true)
+          if (ev.extraType === 'bye') expect(plan.keeperDive?.miss).toBe(true)
+          if (ev.boundary === 6 && !ev.extraType) expect(plan.signal?.kind).toBe('six')
+          if (ev.boundary === 4 && !ev.extraType) expect(plan.signal?.kind).toBe('four')
           expect(plan.total).toBeGreaterThan(2.5)
           expect(plan.total).toBeLessThan(5.5)
           expect(finite(plan.end)).toBe(true)
+          if (ev.wicket) {
+            const rest0 = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
+            const last = frameAt(plan, plan.total, (i) => rest0[i])
+            // every way of getting out ends with something to see: the stumps down, or the ball in a fielder's hands
+            if (ev.wicket.kind === 'run out') {
+              seen.add('runout')
+              expect(plan.runOut).not.toBeNull()
+              const ro = plan.runOut!
+              expect((ro.destEnd === 0 ? last.stumps : last.stumpsBowl)).toBeGreaterThan(0.9)
+              expect(Math.hypot(last.ball!.z - ro.throwTo.z, last.ball!.x - ro.throwTo.x)).toBeLessThan(0.1)
+            }
+            if (ev.wicket.kind !== 'run out') expect(plan.signal?.kind).toBe('out')
+            if (ev.wicket.kind === 'bowled' || ev.wicket.kind === 'stumped') expect(last.stumps).toBeGreaterThan(0.9)
+            if (ev.wicket.kind === 'caught and bowled') expect(plan.bowlerCatch).toBe(true)
+            if (ev.wicket.kind === 'stumped') expect(plan.stepOut).toBe(true)
+          }
           const rest = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
           for (let t = 0; t <= plan.total; t += 0.25) {
             const f = frameAt(plan, t, (i) => rest[i])
@@ -38,6 +61,7 @@ describe('the broadcast view plan', () => {
       }
     }
     expect(kinds.size).toBeGreaterThanOrEqual(4)
+    expect(seen.has('runout')).toBe(true)
   })
 
   it('puts the batsman in front of the wide camera and the ball in front of the other one', () => {

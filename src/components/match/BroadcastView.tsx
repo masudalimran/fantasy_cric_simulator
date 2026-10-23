@@ -19,7 +19,7 @@ const WIDTH = 60
 
 type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper'
 
-function Figure({ player, team, look, shirt, arm, bat }: { player?: Player; team?: Team; look: Look; shirt?: string; arm?: React.Ref<HTMLDivElement>; bat?: React.Ref<HTMLDivElement> }) {
+function Figure({ player, team, look, shirt, arm, bat, armL, armR }: { player?: Player; team?: Team; look: Look; shirt?: string; arm?: React.Ref<HTMLDivElement>; bat?: React.Ref<HTMLDivElement>; armL?: React.Ref<HTMLDivElement>; armR?: React.Ref<HTMLDivElement> }) {
   const ump = look === 'umpire'
   const primary = ump ? '#1e293b' : team?.colors.primary ?? '#334155'
   const second = ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
@@ -31,6 +31,10 @@ function Figure({ player, team, look, shirt, arm, bat }: { player?: Player; team
       <div className="absolute" style={{ left: 15, top: 52, width: 30, height: 38, borderRadius: 10, background: shirt ?? primary, border: `2px solid ${second}` }} />
       {look === 'bowler' && <div ref={arm} className="absolute" style={{ left: 42, top: 56, width: 8, height: 30, borderRadius: 4, background: second, transformOrigin: '50% 8%', border: `1px solid ${primary}` }} />}
       {(look === 'striker' || look === 'nonstriker') && <div ref={bat} className="absolute" style={{ left: 41, top: 58, width: 9, height: 38, borderRadius: 3, background: '#e9c98a', border: '1px solid #a16207', transformOrigin: '50% 10%', transform: 'rotate(-25deg)' }} />}
+      {ump && <>
+        <div ref={armL} className="absolute" style={{ left: 8, top: 56, width: 8, height: 32, borderRadius: 4, background: '#f8fafc', border: '1px solid #475569', transformOrigin: '50% 8%' }} />
+        <div ref={armR} className="absolute" style={{ left: 44, top: 56, width: 8, height: 32, borderRadius: 4, background: '#f8fafc', border: '1px solid #475569', transformOrigin: '50% 8%' }} />
+      </>}
       {look === 'keeper' && <><div className="absolute rounded-full bg-amber-300" style={{ left: 5, top: 64, width: 10, height: 10 }} /><div className="absolute rounded-full bg-amber-300" style={{ left: 45, top: 64, width: 10, height: 10 }} /></>}
       {ump
         ? <><div className="absolute rounded-full" style={{ left: 8, top: 4, width: 44, height: 44, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 4, top: 0, width: 52, height: 13, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
@@ -53,6 +57,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const nodes = useRef(new Map<string, HTMLElement | null>())
   const armRef = useRef<HTMLDivElement | null>(null)
   const batRef = useRef<HTMLDivElement | null>(null)
+  const umpArms = useRef<Record<string, HTMLDivElement | null>>({})
   const setNode = (k: string) => (el: HTMLElement | null) => { nodes.current.set(k, el) }
   const [tag, setTag] = useState<'CAM 1' | 'CAM 2'>('CAM 1')
   const [cutKey, setCutKey] = useState(0)
@@ -106,10 +111,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         c.yaw = approach(c.yaw, goal.yaw, k); c.pitch = approach(c.pitch, goal.pitch, k); c.hfov += (f.hfov - c.hfov) * k
       }
       if (f.ball) { trail.push(f.ball); if (trail.length > 14) trail.shift() } else trail.length = 0
-      drawScene(ctx, c, W, H, { pitch: L.pitch, boardColor: L.battingTeam.colors.primary, crowdColors: [L.battingTeam.colors.primary, L.battingTeam.colors.secondary], stumps: f.stumps, trail: [...trail], fire: L.fire })
+      drawScene(ctx, c, W, H, { pitch: L.pitch, boardColor: L.battingTeam.colors.primary, crowdColors: [L.battingTeam.colors.primary, L.battingTeam.colors.secondary], stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], fire: L.fire })
       const r = prep(c, W, H)
 
-      const place = (key: string, world: V3, opts: { heightM?: number; arm?: number; bat?: number } = {}) => {
+      const place = (key: string, world: V3, opts: { heightM?: number; rot?: number } = {}) => {
         const node = nodes.current.get(key)
         if (!node) return
         const p = project(r, world)
@@ -117,27 +122,46 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         if (!p || p.x < -80 || p.x > W + 80 || p.y < -40 || p.y > H + 200) { node.style.display = 'none'; return }
         const s = Math.max(0.4, (r.F * h) / p.d / HEIGHT)
         node.style.display = 'block'
-        node.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) scale(${s.toFixed(3)}) translate(-50%,-100%)`
+        node.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) scale(${s.toFixed(3)}) rotate(${(opts.rot ?? 0).toFixed(0)}deg) translate(-50%,-100%)`
         node.style.zIndex = String(Math.max(1, Math.round(3000 - p.d * 10)))
       }
       const joyHop = (k: number) => 0.55 * Math.sin(Math.PI * Math.min(1, k * 3)) * (k < 0.34 ? 1 : 0)
       const ev = L.event
       // the two at the crease, the bowler, the keeper and the umpires
       const stance = L.striker.hand === 'L' ? -0.75 : 0.75
-      const ra = f.runners?.a ?? { x: stance, y: ev?.boundary ? joyHop(f.joy) : 0, z: 0.35 }
+      const ra = f.runners?.a ?? f.striker ?? { x: stance, y: ev?.boundary ? joyHop(f.joy) : 0, z: 0.35 }
       const rb = f.runners?.b ?? { x: -3.2, y: 0, z: -19.4 }
-      place('striker', ra)
+      place('striker', ra, { rot: -f.hurt * 24 })
       place('nonstriker', rb)
       place('bowler', { x: f.bowler.x, y: (ev?.wicket && ev.wicket.kind !== 'run out' ? joyHop(f.joy) : Math.abs(Math.sin(f.bowler.z * 1.9)) * 0.1 * (f.phase === 'run' ? 1 : 0)), z: f.bowler.z })
       place('umpire1', { x: -1.15, y: 0, z: -22.2 })
       place('umpire2', { x: stance > 0 ? 13 : -13, y: 0, z: -2 })
       if (armRef.current) armRef.current.style.transform = `rotate(${(-f.bowlerArm * 330).toFixed(0)}deg)`
-      if (batRef.current) batRef.current.style.transform = `rotate(${(-25 + f.batSwing * 125).toFixed(0)}deg)`
+      if (batRef.current) batRef.current.style.transform = `rotate(${(-25 + f.batSwing * 125 - f.raise * 150).toFixed(0)}deg)`
+      // the umpires' arms
+      for (const who of [1, 2] as const) {
+        const l = umpArms.current[`l${who}`], rr = umpArms.current[`r${who}`]
+        const sg = f.signal && f.signal.who === who ? f.signal : null
+        let la = 0, ra2 = 0
+        if (sg) {
+          const k = sg.k
+          if (sg.kind === 'wide') { la = 90 * k; ra2 = -90 * k }
+          else if (sg.kind === 'noball') ra2 = -90 * k
+          else if (sg.kind === 'six') { la = 172 * k; ra2 = -172 * k }
+          else if (sg.kind === 'out') ra2 = -172 * k
+          else if (sg.kind === 'four') ra2 = -(40 + 45 * Math.sin(t * 14)) * k
+          else if (sg.kind === 'bye') ra2 = -150 * k
+          else la = 38 * k
+        }
+        if (l) l.style.transform = `rotate(${la.toFixed(0)}deg)`
+        if (rr) rr.style.transform = `rotate(${ra2.toFixed(0)}deg)`
+      }
       // fielders: where they stand, or where they have run to
       L.fielders.forEach((_, i) => {
         const w = f.moving.get(i) ?? L.rest[i]
         const caught = L.plan.catcher === i
-        place(`f${i}`, { x: w.x, y: caught ? joyHop(f.joy) : 0, z: w.z })
+        const dv = f.dives.get(i)
+        place(`f${i}`, { x: w.x, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0), z: w.z }, { rot: dv ? dv.dir * dv.k * 78 : 0 })
       })
       // the ball, and its shadow
       const ball = nodes.current.get('ball'), shadow = nodes.current.get('shadow')
@@ -167,6 +191,13 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${(p.y + 3).toFixed(1)}px,0) translate(-50%,0)`
       }
       tagOf('tagStriker', { x: ra.x, y: 0, z: ra.z })
+      const rn = nodes.current.get('tagReact')
+      if (rn) {
+        const who = f.react?.who
+        const at: V3 | null = !who ? null : who === 'striker' ? { x: ra.x, y: 2.5, z: ra.z } : who === 'bowler' ? { x: f.bowler.x, y: 2.5, z: f.bowler.z } : { x: (f.moving.get(0) ?? L.rest[0])?.x ?? 0, y: 2.4, z: (f.moving.get(0) ?? L.rest[0])?.z ?? 8 }
+        const pp = at ? project(r, at) : null
+        if (pp && pp.x > 20 && pp.x < W - 20 && pp.y > 10) { rn.style.display = 'block'; rn.textContent = f.react!.text; rn.style.transform = `translate3d(${pp.x.toFixed(1)}px,${pp.y.toFixed(1)}px,0) translate(-50%,-100%)` } else rn.style.display = 'none'
+      }
       tagOf('tagBowler', { x: f.bowler.x, y: 0, z: f.bowler.z })
       const ci = L.plan.catcher >= 0 ? L.plan.catcher : L.plan.chaser
       if (ci >= 0 && (f.phase === 'flight' || f.phase === 'hold')) { const w = f.moving.get(ci) ?? L.rest[ci]; tagOf('tagField', { x: w.x, y: 0, z: w.z }) } else { const n = nodes.current.get('tagField'); if (n) n.style.display = 'none' }
@@ -212,10 +243,11 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {nonStriker && <div ref={setNode('nonstriker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={nonStriker} team={battingTeam} look="nonstriker" /></div>}
       <div ref={setNode('striker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={striker} team={battingTeam} look="striker" bat={(el) => { batRef.current = el }} /></div>
       <div ref={setNode('bowler')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={bowler} team={bowlingTeam} look="bowler" arm={(el) => { armRef.current = el }} /></div>
-      <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" /></div>
-      <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" /></div>
+      <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l1 = el }} armR={(el) => { umpArms.current.r1 = el }} /></div>
+      <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l2 = el }} armR={(el) => { umpArms.current.r2 = el }} /></div>
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" style={{ background: fire ? '#f97316' : '#dc2626', boxShadow: fire ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : '0 0 6px #00000088' }} />
+      <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
       {[['tagStriker', striker.name, accentOf(battingTeam)], ['tagBowler', bowler.name, accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
         <div key={k} ref={setNode(k)} className="pointer-events-none absolute left-0 top-0 z-[5000] hidden whitespace-nowrap rounded bg-black/75 px-1.5 text-[10px] font-bold text-white" style={{ borderBottom: `2px solid ${col}` }}>
           {k === 'tagField' ? (event && plan.catcher >= 0 ? fielders[plan.catcher]?.player.name : plan.chaser >= 0 ? fielders[plan.chaser]?.player.name : '') : name}
@@ -223,8 +255,16 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       ))}
       {/* a quick white flash when the picture cuts to the other camera */}
       <div key={cutKey} className="pointer-events-none absolute inset-0 z-[6000] bg-white" style={{ animation: cutKey ? 'bcast-cut 0.28s ease-out forwards' : undefined, opacity: 0 }} />
+      {/* the TV score bug */}
+      {event && (
+        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] flex items-stretch overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
+          <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{battingTeam.short}</span>
+          <span className="px-1.5 py-0.5 font-display text-sm leading-none tabular-nums">{event.score.runs}/{event.score.wickets}</span>
+          <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor(event.score.legalBalls / 6)}.{event.score.legalBalls % 6} ov</span>
+        </div>
+      )}
       <span className="pointer-events-none absolute bottom-1.5 right-2 z-[6001] rounded bg-black/60 px-1.5 text-[10px] font-extrabold tracking-widest text-slate-200">{tag}</span>
-      <span className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
+      <span className="pointer-events-none absolute left-2 bottom-8 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
     </div>
   )
 }
