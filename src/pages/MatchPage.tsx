@@ -779,6 +779,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (current.current || queue.current.length > 0) { timer = window.setTimeout(step, 120); return }
       const wait = busyUntil.current - Date.now()
       if (wait > 0) { timer = window.setTimeout(step, Math.min(wait, 500)); return }
+      // the broadcast view's clip of the last ball has to finish first
+      const clipLeft = getBroadcastView() ? clipNow.until - Date.now() : 0
+      if (clipLeft > 0) { timer = window.setTimeout(step, Math.min(clipLeft, 300)); return }
       const innings = match.current.index
       act({ t: 'ball' })
       if (match.isOver) return
