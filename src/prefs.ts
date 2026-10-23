@@ -63,6 +63,8 @@ export function setBroadcastView(on: boolean) {
   bcastListeners.forEach((l) => l())
 }
 
+export const getBroadcastView = () => bcast
+
 /** Whether the field is shown as a TV broadcast (a camera behind the bowler that follows the ball) instead of from above (off by default). */
 export function useBroadcastView(): boolean {
   return useSyncExternalStore((cb) => { bcastListeners.add(cb); return () => { bcastListeners.delete(cb) } }, () => bcast, () => false)

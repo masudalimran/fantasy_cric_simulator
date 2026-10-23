@@ -96,6 +96,9 @@ export interface Plan {
   boundary: boolean
 }
 
+/** The clip now on screen (set by the broadcast view as it plans a ball), so the animation screens can wait for it to end. */
+export const clipNow = { seq: -1, ms: 0 }
+
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 
 /** Works out the clip for a ball. `end` is where the top-down field says the ball finished. */

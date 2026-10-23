@@ -12,7 +12,7 @@ import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
 import { eventAngle } from '../engine/shots'
-import { getAnimPrefs, setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
+import { getAnimPrefs, getBroadcastView, setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
@@ -26,6 +26,7 @@ import { MotmOverlay } from '../components/match/MotmOverlay'
 import { StudioShow } from '../components/match/StudioShow'
 import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/captions'
 import { boxChat } from '../season/studio'
+import { clipNow } from '../components/match/broadcast'
 import { WinCelebration } from '../components/match/WinCelebration'
 import type { Moment } from '../components/match/MomentOverlay'
 import { Stage, placeFielders, type StageNote } from '../components/match/Stage'
@@ -236,7 +237,15 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
   }, [openWinWhenIdle])
+  // In the broadcast view the screens for a ball wait until its clip has finished (only the first screen of a ball needs the extra wait)
+  const clipWaited = useRef(-1)
   const enqueueMoment = useCallback((m: Moment) => {
+    const seq = Math.floor(m.key)
+    if (getBroadcastView() && m.key < 1_000_000 && !['batsman', 'bowler', 'target', 'superover'].includes(m.kind) && seq !== clipWaited.current) {
+      clipWaited.current = seq
+      const sp = autoRef.current
+      m = { ...m, delay: m.delay + (clipNow.seq === seq ? clipNow.ms : Math.round(3600 * (sp === 4 ? 0.5 : sp === 2 ? 0.75 : 1))) }
+    }
     queue.current.push(m)
     if (!current.current) startNextMoment()
   }, [startNextMoment])

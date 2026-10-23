@@ -3,7 +3,7 @@ import type { Player, Team } from '../../types'
 import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
-import { approach, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, clipNow, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { drawScene } from './broadcastDraw'
 import { endPoint, type Placed } from './Stage'
 
@@ -62,7 +62,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const plan: Plan = useMemo(() => {
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
-    return planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L')
+    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L')
+    if (event) { clipNow.seq = event.seq; clipNow.ms = Math.round((p.total * 1000) / Math.max(0.3, rate)) }
+    return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
 
