@@ -44,7 +44,7 @@ export function OverallStats({ playerId, seasons, live }: { playerId: string; se
           {l.bowl && (
             <div>
               <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Bowl apps', l.bowl.bowlApps)}{tile('Wickets', l.bowl.wickets)}{tile('Economy', f1(economy(l.bowl), 2))}{tile('Bowling avg', f1(bowlAverage(l.bowl)))}{tile('Best', `${l.bowl.bestW}/${l.bowl.bestR}`)}{tile('5-wicket hauls', l.bowl.fiveW)}</div>
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">{tile('Bowl apps', l.bowl.bowlApps)}{tile('Wickets', l.bowl.wickets)}{tile('Economy', f1(economy(l.bowl), 2))}{tile('Bowling avg', f1(bowlAverage(l.bowl)))}{tile('Best', `${l.bowl.bestW}/${l.bowl.bestR}`)}{tile('5-wicket hauls', l.bowl.fiveW)}{tile('Top speed', l.bowl.topKmh > 0 ? `${l.bowl.topKmh} km/h` : '-')}</div>
             </div>
           )}
         </div>

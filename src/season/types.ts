@@ -74,6 +74,8 @@ export interface MatchSummary {
   played?: number[]
   /** The longest six each batsman hit in the match, in metres (roster position, metres). Missing in older saves. */
   six?: [number, number][]
+  /** The fastest ball each bowler bowled in the match, in km/h (roster position, km/h). Missing in matches played before ball speed existed. */
+  fast?: [number, number][]
   /** The best batting or bowling of the match as a replayable reel (missing in matches played before reels existed). */
   reel?: import('./reel').Reel
   /** The quickest fifty of the match: who (roster position) and how many balls he faced to reach it. */
@@ -81,7 +83,8 @@ export interface MatchSummary {
 }
 
 /** A summary as the engine produces it, before player ids are swapped for roster indices. */
-export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six' | 'reel' | 'ff'> & {
+export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six' | 'fast' | 'reel' | 'ff'> & {
+  fast?: [string, number][]
   ff?: [string, number] | null
   reel?: import('./reel').RawReel | null
   six?: [string, number][]

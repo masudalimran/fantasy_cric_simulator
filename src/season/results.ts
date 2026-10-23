@@ -1,3 +1,4 @@
+import { ballSpeed } from '../engine/speed'
 import type { Match } from '../engine/match'
 import { Match as MatchClass } from '../engine/match'
 import { Rng } from '../engine/rng'
@@ -47,8 +48,12 @@ export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: num
   const longest = new Map<string, number>()
   for (const inn of match.innings) for (const e of inn.log) if (e.boundary === 6 && e.distance) longest.set(e.strikerId, Math.max(longest.get(e.strikerId) ?? 0, e.distance))
   const six = [...longest]
+  // the fastest ball each bowler bowled (for show only: worked out from the ball and the bowler, never stored by the engine)
+  const quickest = new Map<string, number>()
+  for (const inn of match.innings) for (const e of inn.log) quickest.set(e.bowlerId, Math.max(quickest.get(e.bowlerId) ?? 0, ballSpeed(e, match.player(e.bowlerId))))
+  const fast = [...quickest]
   const motm = computeAwards(match).motm
-  return { six, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, ...(r.draw ? { draw: true } : {}), ...(match.format === 'test' ? { test: { days: match.clock?.day ?? 5, innings: match.innings.map((i) => ({ teamId: match.sides[i.battingSide].team.id, runs: i.runs, wickets: i.wickets, balls: i.legalBalls, ...(i.declared ? { declared: true } : {}), ...(i.followOn ? { followOn: true } : {}) })) } } : {}), playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
+  return { six, fast, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, ...(r.draw ? { draw: true } : {}), ...(match.format === 'test' ? { test: { days: match.clock?.day ?? 5, innings: match.innings.map((i) => ({ teamId: match.sides[i.battingSide].team.id, runs: i.runs, wickets: i.wickets, balls: i.legalBalls, ...(i.declared ? { declared: true } : {}), ...(i.followOn ? { followOn: true } : {}) })) } } : {}), playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
 }
 
 export function simulateFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): RawSummary {
@@ -151,6 +156,7 @@ export function recordResult(season: Season, raw: RawSummary, teams?: Map<string
     bowl: raw.bowl.map(([id, ...rest]) => [idx(id), ...rest] as MatchSummary['bowl'][number]),
     played: raw.played?.map(idx),
     six: raw.six?.map(([id, m]) => [idx(id), m] as [number, number]),
+    fast: raw.fast?.map(([id, k]) => [idx(id), k] as [number, number]),
     reel: raw.reel ? { p: idx(raw.reel.p), k: raw.reel.k, e: raw.reel.e, ...(raw.reel.s ? { s: raw.reel.s } : {}) } : undefined,
     ff: raw.ff ? [idx(raw.ff[0]), raw.ff[1]] : undefined,
   }

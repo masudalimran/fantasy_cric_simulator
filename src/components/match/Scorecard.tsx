@@ -1,3 +1,4 @@
+import { ballSpeed } from '../../engine/speed'
 import type { Match } from '../../engine/match'
 import { accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
@@ -123,7 +124,7 @@ export function Scorecard({ match }: { match: Match }) {
       <div className="mt-5 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-[11px] uppercase tracking-wider text-slate-500">
-            <tr><th className="px-2 py-1.5 text-left font-medium" style={{ color: accentOf(bowl.team) }}>{bowl.team.name} bowling</th><th className={th}>O</th><th className={th}>M</th><th className={th}>R</th><th className={th}>W</th><th className={th}>Econ</th></tr>
+            <tr><th className="px-2 py-1.5 text-left font-medium" style={{ color: accentOf(bowl.team) }}>{bowl.team.name} bowling</th><th className={th}>O</th><th className={th}>M</th><th className={th}>R</th><th className={th}>W</th><th className={th}>Econ</th><th className={th}>Top km/h</th></tr>
           </thead>
           <tbody>
             {[...inn.bowlers.values()].map((b) => {
@@ -141,6 +142,7 @@ export function Scorecard({ match }: { match: Match }) {
                 <td className="px-2 text-right tabular-nums text-slate-300">{b.runs}</td>
                 <td className="px-2 text-right font-semibold tabular-nums text-white">{b.wickets}</td>
                 <td className="px-2 text-right tabular-nums text-slate-400">{economy(b)}</td>
+                <td className="px-2 text-right tabular-nums text-sky-300">{inn.log.some((e) => e.bowlerId === b.id) ? Math.max(...inn.log.filter((e) => e.bowlerId === b.id).map((e) => ballSpeed(e, match.player(b.id)))) : '-'}</td>
               </tr>
               )
             })}

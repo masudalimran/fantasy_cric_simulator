@@ -78,6 +78,17 @@ describe('season stats', () => {
     for (const b of c.bat.values()) if (b.sixes === 0) expect(b.longSix).toBe(0)
   })
 
+  it('tracks each bowler\'s top speed and the fastest ball of the season', () => {
+    const c = collect(done)
+    const tops = [...c.bowl.values()].map((b) => b.topKmh)
+    expect(Math.max(...tops)).toBeGreaterThan(120)
+    expect(Math.max(...tops)).toBeLessThan(160)
+    for (const b of c.bowl.values()) expect(b.topKmh).toBeGreaterThan(55)
+    const rec = seasonRecords(done).find((r) => r.label === 'Fastest ball')
+    expect(rec?.value).toBe(`${Math.max(...tops)} km/h`)
+    expect(rec?.playerId).toBeDefined()
+  })
+
   it('reports team records and season records', () => {
     const rows = teamRecords(done)
     expect(rows).toHaveLength(20)

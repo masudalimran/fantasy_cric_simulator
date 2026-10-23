@@ -334,7 +334,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
               {w && (
                 <div>
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-sky-300/90">Bowling</div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bowl apps', w.bowlApps)}{stat('Wickets', w.wickets)}{stat('Economy', f1(bowlEcon(w), 2))}{stat('Bowling avg', f1(bowlAverage(w)))}{stat('Best', `${w.bestW}/${w.bestR}`)}{stat('5-wicket hauls', w.fiveW)}</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{stat('Bowl apps', w.bowlApps)}{stat('Wickets', w.wickets)}{stat('Economy', f1(bowlEcon(w), 2))}{stat('Bowling avg', f1(bowlAverage(w)))}{stat('Best', `${w.bestW}/${w.bestR}`)}{stat('5-wicket hauls', w.fiveW)}{stat('Top speed', w.topKmh > 0 ? `${w.topKmh} km/h` : '-')}</div>
                 </div>
               )}
             </div>

@@ -40,6 +40,8 @@ export interface BowlStat {
   fiveW: number
   /** In how many matches he bowled. (`matches` counts every match he was in the XI for.) */
   bowlApps: number
+  /** His fastest ball, in km/h (0 where no match on record has a speed: matches played before ball speed existed). */
+  topKmh: number
 }
 
 export interface PlayerRef {
@@ -115,12 +117,13 @@ export function collect(season: Season, scope: Scope = {}, ownTeamOf?: (playerId
       if (!id || (scope.teamId && ownTeamOf && ownTeamOf(id) !== scope.teamId)) continue
       const [, balls, runs, wickets, maidens] = line
       let s = bowl.get(id)
-      if (!s) bowl.set(id, (s = { id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0, bowlApps: 0 }))
+      if (!s) bowl.set(id, (s = { id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0, bowlApps: 0, topKmh: 0 }))
       note(seen, id, res.fixtureId); note(bowlSeen, id, res.fixtureId)
       s.balls += balls; s.runs += runs; s.wickets += wickets; s.maidens += maidens
       if (wickets > s.bestW || (wickets === s.bestW && runs < s.bestR)) { s.bestW = wickets; s.bestR = runs }
       if (wickets >= 5) s.fiveW++
     }
+    for (const [i, k] of res.fast ?? []) { const id = roster[i]; const s = id ? bowl.get(id) : undefined; if (s && k > s.topKmh) s.topKmh = k }
   }
   for (const [id, s] of bat) { s.matches = seen.get(id)?.size ?? 0; s.batApps = batSeen.get(id)?.size ?? 0 }
   for (const [id, s] of bowl) { s.matches = seen.get(id)?.size ?? 0; s.bowlApps = bowlSeen.get(id)?.size ?? 0 }
@@ -221,6 +224,8 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
   let bigRuns: RecordEntry | null = null, tight: RecordEntry | null = null, bigChase: RecordEntry | null = null
   let topScore: RecordEntry | null = null, bestBowl: RecordEntry | null = null, mostSixes: RecordEntry | null = null, longestSix: RecordEntry | null = null
   let longestSixM = 0
+  let fastest: RecordEntry | null = null
+  let fastestK = 0
   let highSixes = 0, highRuns = -1, bestW = -1, bestR = 1e9, bigRunMargin = -1, tightMargin = 1e9, chaseRuns = -1, lowRuns = 1e9, highTotal = -1
   for (const res of Object.values(season.results)) {
     const f = byId.get(res.fixtureId)
@@ -242,6 +247,7 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
       }
     }
     for (const [i, m] of res.six ?? []) if (m > longestSixM) { longestSixM = m; longestSix = { label: 'Longest six', value: `${m} m`, detail: f.stage, fixtureId: f.id, playerId: roster[i] } }
+    for (const [i, k] of res.fast ?? []) if (k > fastestK) { fastestK = k; fastest = { label: 'Fastest ball', value: `${k} km/h`, detail: f.stage, fixtureId: f.id, playerId: roster[i] } }
     let sixes = 0
     let topSix = { id: '', n: 0 }
     for (const line of res.bat ?? []) {
@@ -257,7 +263,7 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
       if (wk > bestW || (wk === bestW && runs < bestR)) { bestW = wk; bestR = runs; bestBowl = { label: 'Best bowling figures', value: `${wk}/${runs}`, detail: f.stage, fixtureId: f.id, playerId: id } }
     }
   }
-  for (const r of [high, low, bigRuns, tight, bigChase, topScore, bestBowl, mostSixes, longestSix]) if (r) out.push(r)
+  for (const r of [high, low, bigRuns, tight, bigChase, topScore, bestBowl, mostSixes, longestSix, fastest]) if (r) out.push(r)
   return out
 }
 
@@ -279,8 +285,9 @@ export function mergeBat(list: BatStat[]): BatStat | undefined {
 /** Adds one player's bowling lines from several seasons into a single career line. */
 export function mergeBowl(list: BowlStat[]): BowlStat | undefined {
   if (list.length === 0) return undefined
-  const out: BowlStat = { id: list[0].id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0, bowlApps: 0 }
+  const out: BowlStat = { id: list[0].id, matches: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, bestW: 0, bestR: 0, fiveW: 0, bowlApps: 0, topKmh: 0 }
   for (const s of list) {
+    out.topKmh = Math.max(out.topKmh, s.topKmh ?? 0)
     out.bowlApps += s.bowlApps; out.matches += s.matches; out.balls += s.balls; out.runs += s.runs; out.wickets += s.wickets; out.maidens += s.maidens; out.fiveW += s.fiveW
     if (s.bestW > out.bestW || (s.bestW === out.bestW && s.bestW > 0 && s.bestR < out.bestR)) { out.bestW = s.bestW; out.bestR = s.bestR }
   }

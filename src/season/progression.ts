@@ -284,6 +284,7 @@ export function gradePlayedMatches(season: Season, baseTeams: Map<string, Team>)
     const raw: RawSummary = {
       ...res,
       six: res.six?.map(([i, m]) => [roster[i], m] as [string, number]),
+      fast: res.fast?.map(([i, k]) => [roster[i], k] as [string, number]),
       played: res.played?.map((i) => roster[i]),
       reel: undefined,
       ff: undefined,

@@ -80,6 +80,7 @@ function Bowling({ c, index }: { c: Collected; index: Map<string, PlayerEntry> }
     { key: 'econ', label: 'Econ', first: 'asc', get: (s) => economy(s), cell: (s) => f1(economy(s), 2) },
     { key: 'sr', label: 'SR', first: 'asc', get: (s) => bowlStrikeRate(s), cell: (s) => f1(bowlStrikeRate(s)) },
     { key: '5w', label: '5W', get: (s) => s.fiveW, cell: (s) => s.fiveW },
+    { key: 'kmh', label: 'Top km/h', get: (s) => s.topKmh, cell: (s) => (s.topKmh ? s.topKmh : '-') },
   ]
   return <SortTable rows={rows} cols={cols} rowKey={(s) => s.id} lead={(i, def) => <Rank i={i} cap={def ? 'purple' : undefined} />} />
 }
