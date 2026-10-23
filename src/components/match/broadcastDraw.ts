@@ -1,4 +1,5 @@
 import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
+import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
 
 /** Paints the ground, stands, pitch and stumps of the broadcast view onto a canvas. Pure drawing: it reads the camera and nothing else. */
@@ -12,9 +13,12 @@ const CROWD = Array.from({ length: SECTORS * 7 }, (_, i) => ({ sector: Math.floo
 
 export interface Scene {
   pitch: PitchKind
-  /** The batting team's colours: the advertising boards, and the crowd. */
-  boardColor: string
-  crowdColors: string[]
+  /** The home ground's look: stands, boards, crowd, time of day and weather. */
+  look: StadiumLook
+  /** Seconds into the clip, so the rain falls. */
+  tick: number
+  /** The covers are on the pitch (rain stopped play, or a washed-out day). */
+  covers: boolean
   /** 0 to 1: how far the batsman's stumps have been knocked over. */
   stumps: number
   /** The same for the stumps at the bowler's end (a run out there). */
@@ -38,11 +42,15 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   const r = prep(cam, W, H)
   const colors = pitchColors(sc.pitch)
 
-  // the sky and the dark of the stadium
+  const L = sc.look
+  const grey = L.weather === 'overcast' || L.rain > 0 || L.weather === 'bad light'
+  // the sky: blue by day, orange at dusk, black under the lights, and grey when it is overcast or wet
   const g = ctx.createLinearGradient(0, 0, 0, H)
-  g.addColorStop(0, '#05080f'); g.addColorStop(0.55, '#101a30'); g.addColorStop(1, '#0b3a22')
+  const sky = L.time === 'day' ? (grey ? ['#64748b', '#94a3b8'] : ['#38bdf8', '#bae6fd']) : L.time === 'dusk' ? (grey ? ['#475569', '#7c6f7f'] : ['#312e81', '#f59e0b']) : ['#05080f', '#101a30']
+  g.addColorStop(0, sky[0]); g.addColorStop(0.55, sky[1]); g.addColorStop(1, '#0b3a22')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
+  const lift = L.time === 'day' ? (grey ? 0.1 : 0.26) : L.time === 'dusk' ? 0.1 : 0
 
   // the stands, far to near
   const sectors = Array.from({ length: SECTORS }, (_, i) => {
@@ -52,11 +60,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   }).filter((s) => s.d > 0.5).sort((a, b) => b.d - a.d)
   for (const s of sectors) {
     const slope = projectPoly(r, [ringPoint(s.a0, 1.03, 0.9), ringPoint(s.a1, 1.03, 0.9), ringPoint(s.a1, 1.34, 12), ringPoint(s.a0, 1.34, 12)])
-    fillPoly(ctx, slope, s.i % 2 ? '#162036' : '#1b2740')
+    fillPoly(ctx, slope, shade(s.i % 2 ? L.stand[0] : L.stand[1], lift))
     const board = projectPoly(r, [ringPoint(s.a0, 1.03, 0), ringPoint(s.a1, 1.03, 0), ringPoint(s.a1, 1.03, 0.9), ringPoint(s.a0, 1.03, 0.9)])
-    fillPoly(ctx, board, s.i % 3 === 0 ? '#e5e7eb' : sc.boardColor)
+    fillPoly(ctx, board, s.i % 3 === 0 ? '#e5e7eb' : s.i % 2 ? L.board[0] : L.board[1])
   }
-  const palette = [...sc.crowdColors, '#e5e7eb', '#fbbf24', '#94a3b8', '#0f172a']
+  const palette = [...L.crowd, '#0f172a']
   for (const c of CROWD) {
     const a = ((c.sector + c.u) / SECTORS) * Math.PI * 2
     const p = project(r, ringPoint(a, 1.06 + c.v * 0.26, 1.2 + c.v * 10))
@@ -84,6 +92,19 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       fillPoly(ctx, projectPoly(r, [{ x: k * 4, y: 0, z: -80 }, { x: k * 4 + 4, y: 0, z: -80 }, { x: k * 4 + 4, y: 0, z: 60 }, { x: k * 4, y: 0, z: 60 }]), colors.grass[1])
     }
     ctx.restore()
+  }
+  // floodlights: a glow on each of four towers when the lights are on
+  if (L.lights) {
+    for (let k = 0; k < 4; k++) {
+      const a = Math.PI / 4 + (k * Math.PI) / 2
+      const p = project(r, ringPoint(a, 1.3, 26))
+      if (!p) continue
+      const rad = Math.max(14, (r.F * 14) / p.d)
+      const lg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad)
+      lg.addColorStop(0, 'rgba(255,250,220,0.95)'); lg.addColorStop(0.25, 'rgba(255,244,200,0.5)'); lg.addColorStop(1, 'rgba(255,244,200,0)')
+      ctx.fillStyle = lg
+      ctx.fillRect(p.x - rad, p.y - rad, rad * 2, rad * 2)
+    }
   }
   // the rope
   ctx.strokeStyle = '#f8fafc'
@@ -128,6 +149,35 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   }
   stumpSet(BOWL_Z, sc.stumpsBowl)
   stumpSet(0, sc.stumps)
+
+  // the covers over the pitch
+  if (sc.covers) {
+    const sheet = projectPoly(r, [{ x: -2.7, y: 0.05, z: BOWL_Z - 4 }, { x: 2.7, y: 0.05, z: BOWL_Z - 4 }, { x: 2.7, y: 0.05, z: 4 }, { x: -2.7, y: 0.05, z: 4 }])
+    fillPoly(ctx, sheet, '#1e3a5f')
+    for (let k = 0; k < 9; k++) {
+      const z = BOWL_Z - 3.2 + k * 3
+      const pa = project(r, { x: -2.6, y: 0.06, z }), pb = project(r, { x: 2.6, y: 0.06, z })
+      if (!pa || !pb) continue
+      ctx.strokeStyle = 'rgba(147,197,253,0.35)'; ctx.lineWidth = Math.max(1, (r.F * 0.06) / ((pa.d + pb.d) / 2))
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke()
+    }
+    for (const x of [-2.8, 2.8]) { const pa = project(r, { x, y: 0.06, z: BOWL_Z - 4 }), pb = project(r, { x, y: 0.06, z: 4 }); if (pa && pb) { ctx.strokeStyle = 'rgba(226,232,240,0.7)'; ctx.lineWidth = Math.max(1, (r.F * 0.08) / ((pa.d + pb.d) / 2)); ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke() } }
+  }
+  // the light of the hour and the weather over everything
+  const tint = L.time === 'night' ? 'rgba(2,8,30,0.14)' : L.time === 'dusk' ? 'rgba(251,113,40,0.2)' : grey ? 'rgba(100,116,139,0.16)' : null
+  if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H) }
+  if (L.rain > 0) {
+    ctx.fillStyle = `rgba(15,23,42,${0.12 * L.rain})`; ctx.fillRect(0, 0, W, H)
+    ctx.strokeStyle = 'rgba(203,213,225,0.45)'; ctx.lineWidth = 1; ctx.lineCap = 'round'
+    ctx.beginPath()
+    const n = 70 * L.rain
+    for (let i = 0; i < n; i++) {
+      const x = hash01(i * 1.9) * (W + 40)
+      const y = (hash01(i * 4.1) * H + sc.tick * 650 * (0.8 + hash01(i * 2.3) * 0.5)) % H
+      ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 9 + 5 * L.rain)
+    }
+    ctx.stroke()
+  }
 
   // a soft vignette, like a lens
   const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, H * 0.95)

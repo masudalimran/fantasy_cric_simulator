@@ -5,6 +5,7 @@ import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { approach, clipNow, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
 import { endPoint, type Placed } from './Stage'
 
@@ -62,7 +63,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1 }: {
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK }: {
+  /** The home ground's look (time of day, stands, crowd, weather). */
+  look?: StadiumLook
   event: BallEvent | null
   striker: Player; nonStriker: Player | null; bowler: Player
   battingTeam: Team; bowlingTeam: Team
@@ -93,8 +96,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
-  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate })
-  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate }
+  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look })
+  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look }
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
@@ -122,19 +125,26 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const wantReverse = f.reverse
       const base = wantReverse ? camReverse : camWide
       if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; setTag(wantReverse ? 'CAM 2' : 'CAM 1'); setCutKey((k) => k + 1) }
-      const goal = lookAt(base.p, f.aim)
+      // with the covers on there is nothing to follow: a wide picture of the pitch
+      const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
+      const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : f.aim
+      const hfovAt = covers0 ? 0.8 : f.hfov
+      const goal = lookAt(base.p, aimAt)
       const c = cam.current
       c.p = base.p
-      if (snap) { c.yaw = goal.yaw; c.pitch = goal.pitch; c.hfov = f.hfov } else {
+      if (snap) { c.yaw = goal.yaw; c.pitch = goal.pitch; c.hfov = hfovAt } else {
         const k = 1 - Math.exp(-dt * (f.phase === 'flight' ? 7 : 4.5))
-        c.yaw = approach(c.yaw, goal.yaw, k); c.pitch = approach(c.pitch, goal.pitch, k); c.hfov += (f.hfov - c.hfov) * k
+        c.yaw = approach(c.yaw, goal.yaw, k); c.pitch = approach(c.pitch, goal.pitch, k); c.hfov += (hfovAt - c.hfov) * k
       }
       // a very quick ball is a fireball and a very slow one a snowball while it is bowled; after the bat only a free-hit boundary is on fire
       const delivering = f.phase === 'run' || f.phase === 'deliver'
       const style: BallStyle = delivering ? speedStyle(L.plan.speed) : L.fire ? 'fire' : 'plain'
       if (f.ball) { trail.push(f.ball); if (trail.length > 14) trail.shift() } else trail.length = 0
-      drawScene(ctx, c, W, H, { pitch: L.pitch, boardColor: L.battingTeam.colors.primary, crowdColors: [L.battingTeam.colors.primary, L.battingTeam.colors.secondary], stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      // when rain has stopped play (or the day is washed out) the covers are on and nobody is on the field
+      const covers = L.look.covers || (L.event === null && L.look.rain === 2)
+      drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, covers, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
+      if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 
       const place = (key: string, world: V3, opts: { heightM?: number; rot?: number } = {}) => {
         const node = nodes.current.get(key)
@@ -282,6 +292,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       ))}
       {/* a quick white flash when the picture cuts to the other camera */}
       <div key={cutKey} className="pointer-events-none absolute inset-0 z-[6000] bg-white" style={{ animation: cutKey ? 'bcast-cut 0.28s ease-out forwards' : undefined, opacity: 0 }} />
+      {(look.covers || (event === null && look.rain === 2)) && <div className="pointer-events-none absolute inset-x-0 top-10 z-[6001] text-center"><span className="rounded bg-black/75 px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200 ring-1 ring-sky-300/40">{look.weather === 'washout' ? 'Washed out: no play today' : 'Rain stops play: covers on'}</span></div>}
       {/* the TV score bug */}
       {event && (
         <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] flex items-stretch overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
