@@ -67,6 +67,9 @@ export function voiceScore(v: VoiceLike): number {
   return s
 }
 
+/** Whether two voice lists are the same voices (the phone hands back a fresh array each time it is asked, so arrays cannot be compared directly). */
+export const sameVoices = (a: VoiceLike[], b: VoiceLike[]) => a.length === b.length && a.every((v, i) => v.name === b[i].name && v.lang === b[i].lang)
+
 export function rankVoices<T extends VoiceLike>(vs: T[]): T[] {
   return vs.filter((v) => voiceScore(v) > -50).sort((a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name))
 }

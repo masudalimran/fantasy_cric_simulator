@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { assignVoices, chunks, prosody, rankVoices, spoken, type VoiceMood, type VoiceRole } from './speechText'
+import { assignVoices, chunks, prosody, rankVoices, sameVoices, spoken, type VoiceMood, type VoiceRole } from './speechText'
 
 /**
  * Spoken voices for the studio show and the live commentary, using the voices the phone already has (the Web Speech API): nothing to download,
@@ -41,10 +41,13 @@ export const voiceSupported = () => synth() !== null
 // ---- the voices on this phone ------------------------------------------------------------------------------------------
 let voices: SpeechSynthesisVoice[] = []
 const voiceListeners = new Set<() => void>()
+/** Reads the phone's voice list; only when it has really changed (getVoices() hands back a new array every time) does anything hear about it. */
 function refresh() {
   const s = synth()
   if (!s) return
-  voices = s.getVoices()
+  const next = s.getVoices()
+  if (sameVoices(next, voices)) return
+  voices = next
   voiceListeners.forEach((l) => l())
 }
 if (synth()) {
@@ -53,8 +56,9 @@ if (synth()) {
 }
 /** The English voices the phone offers, best first. */
 export function useEnglishVoices(): SpeechSynthesisVoice[] {
-  return useSyncExternalStore((cb) => { voiceListeners.add(cb); refresh(); return () => { voiceListeners.delete(cb) } }, () => cachedRanked(), () => [])
+  return useSyncExternalStore((cb) => { voiceListeners.add(cb); return () => { voiceListeners.delete(cb) } }, () => cachedRanked(), () => EMPTY)
 }
+const EMPTY: SpeechSynthesisVoice[] = []
 let rankedFor: SpeechSynthesisVoice[] | null = null, ranked: SpeechSynthesisVoice[] = []
 function cachedRanked() { if (rankedFor !== voices) { rankedFor = voices; ranked = rankVoices(voices) } return ranked }
 

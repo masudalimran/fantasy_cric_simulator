@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assignVoices, chunks, prosody, rankVoices, spoken, type VoiceLike } from './speechText'
+import { assignVoices, chunks, prosody, rankVoices, sameVoices, spoken, type VoiceLike } from './speechText'
 
 describe('speaking lines', () => {
   it('says scores and figures the way a commentator would', () => {
@@ -19,6 +19,11 @@ describe('speaking lines', () => {
 
 const V = (name: string, lang = 'en-GB', localService = true): VoiceLike => ({ name, lang, localService })
 describe('choosing voices', () => {
+  it('knows a fresh copy of the same voice list is not a change (it caused an endless redraw in Controls)', () => {
+    expect(sameVoices([V('A'), V('B')], [V('A'), V('B')])).toBe(true)
+    expect(sameVoices([V('A')], [V('A'), V('B')])).toBe(false)
+    expect(sameVoices([V('A')], [V('C')])).toBe(false)
+  })
   const all = [V('Google UK English Female', 'en-GB', false), V('Google UK English Male', 'en-GB', false), V('Google US English', 'en-US', false), V('eSpeak English', 'en'), V('Deutsch', 'de-DE'), V('Samantha', 'en-US'), V('Daniel', 'en-GB')]
   it('keeps only English, best first, and drops the robotic ones', () => {
     const r = rankVoices(all).map((v) => v.name)
