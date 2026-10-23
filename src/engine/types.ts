@@ -87,6 +87,8 @@ export interface BallEvent {
   score: { runs: number; wickets: number; legalBalls: number }
   /** Moments worth a callout: fifty, hundred, hat-trick, maiden, etc. */
   tags: string[]
+  /** A challenge was made on this ball (see drs.ts): the wicket in `wicket` is the decision after it. */
+  review?: import('./drs').Review
 }
 
 export interface BatterLine {
@@ -141,6 +143,8 @@ export interface Innings {
   declared?: boolean
   /** Test: this is the second innings of a side that was made to follow on. */
   followOn?: boolean
+  /** Challenges each side has left in this innings (the batting side's and the fielding side's). */
+  reviews?: { bat: number; bowl: number }
   log: BallEvent[]
 }
 

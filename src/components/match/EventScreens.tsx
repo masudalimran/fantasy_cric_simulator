@@ -1,3 +1,4 @@
+import { wideDirection } from '../../engine/wide'
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
@@ -129,6 +130,8 @@ export interface ExtraInfo {
   batsman: Player
   batTeam: Team
   keeper: Player | null
+  /** For a wide: which side it went (see engine/wide.ts) and the batsman's hand, so the picture shows the ball going the way it really went. */
+  wide?: { side: 'off' | 'leg'; hand: 'L' | 'R' }
   rate: number
 }
 
@@ -142,9 +145,9 @@ const EXTRA_STYLE = {
 function WideView({ info }: { info: ExtraInfo }) {
   const { runs, bowler, bowlTeam, rate: r } = info
   const { box, w } = useWidth()
-  const off = Math.random() < 0 ? -1 : 1 // (the side is fixed per ball by the path below)
-  void off
-  const side = bowler.name.length % 2 ? 1 : -1 // a stable side for the same bowler
+  // the side the ball really went: outside off or down the leg side
+  const wideInfo = info.wide ?? { side: 'off' as const, hand: 'R' as const }
+  const side = wideDirection(wideInfo.side, wideInfo.hand, 'above')
   const x = (v: number) => 50 + side * v
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Wide">
@@ -171,7 +174,7 @@ function WideView({ info }: { info: ExtraInfo }) {
       <SkipTag />
       <motion.div className="absolute inset-x-0 bottom-[5%] z-40 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.3 * r, type: 'spring', stiffness: 260, damping: 15 }}>
         <div className="font-display leading-none tracking-wide" style={{ color: '#fbbf24', fontSize: Math.max(40, Math.min(w * 0.13, 88)), WebkitTextStroke: '2px #78350f', paintOrder: 'stroke fill', textShadow: '0 0 30px #fbbf24aa' }}>WIDE!</div>
-        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>Outside the wide line · +{runs} {runs === 1 ? 'run' : 'runs'} <span className="text-slate-300">({bowlTeam.short}, {bowler.name.split(' ')[0]})</span></div>
+        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{wideInfo.side === 'off' ? 'Outside off, past the wide line' : 'Down the leg side, past the wide line'} · +{runs} {runs === 1 ? 'run' : 'runs'} <span className="text-slate-300">({bowlTeam.short}, {bowler.name.split(' ')[0]})</span></div>
       </motion.div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { REVIEWS_PER_INNINGS } from '../../engine/drs'
 import { ballSpeed } from '../../engine/speed'
 import type { Match } from '../../engine/match'
 import { accentOf } from '../ui'
@@ -103,6 +104,17 @@ export function Scorecard({ match }: { match: Match }) {
           </tbody>
         </table>
       </div>
+      {inn.reviews && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          Challenges left
+          {([[bat.team.short, inn.reviews.bat], [bowl.team.short, inn.reviews.bowl]] as const).map(([name, n]) => (
+            <span key={name} className="inline-flex items-center gap-1.5 normal-case text-slate-300"><span className="font-bold">{name}</span>
+              <span className="flex gap-0.5">{Array.from({ length: Math.min(REVIEWS_PER_INNINGS[match.format], 6) }, (_, k) => <span key={k} className={`h-2 w-2 rounded-full ${k < n ? 'bg-amber-300' : 'bg-white/15'}`} />)}</span>
+              <span className="tabular-nums text-slate-400">{n}/{REVIEWS_PER_INNINGS[match.format]}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {yetToBat.length > 0 && (
         <div className="mt-3">
           <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Yet to bat</div>

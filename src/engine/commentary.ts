@@ -9,8 +9,19 @@ interface Names {
 
 const pick = <T,>(items: T[], seq: number): T => items[seq % items.length]
 
-/** One line of commentary for a delivery. Wording rotates by ball number so it never reads like a loop. */
+/** One line of commentary for a delivery. Wording rotates by ball number so it never reads like a loop. A challenge is announced first. */
 export function commentary(ev: BallEvent, n: Names): string {
+  const text = plainCommentary(ev, n)
+  const r = ev.review
+  if (!r) return text
+  const who = r.by === 'bat' ? `${n.striker}` : 'The fielding side'
+  const head = r.overturned
+    ? (r.originalOut ? `${who} challenges, and it is overturned! Not out.` : `${who} take it upstairs, and the decision is overturned! It is out.`)
+    : `${who} ${r.by === 'bat' ? 'challenges' : 'challenge'}, but the decision stands${r.left === 0 ? ' and that is the last of the reviews' : ''}.`
+  return `${head} ${text}`
+}
+
+function plainCommentary(ev: BallEvent, n: Names): string {
   const { striker: s, bowler: b } = n
   const q = ev.seq
   if (ev.wicket) {

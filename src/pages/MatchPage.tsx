@@ -29,6 +29,9 @@ import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
 import { stadiumLook } from '../engine/stadium'
+import { challengeTalk } from '../season/challenge'
+import { challengeSeconds } from '../components/match/ChallengeScreen'
+import { wideSide } from '../engine/wide'
 import { askVoice, cancelSpeech, getVoiceConsent, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
 import { liveLines } from '../season/liveVoice'
 import { WinCelebration } from '../components/match/WinCelebration'
@@ -65,7 +68,7 @@ import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { addDays, formatDate } from '../season/dates'
-import { edgeWasReviewed, isNotOutReview, lbwWasReviewed, partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, overstepCm, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor, bowledFor, catchFor, handsFor, stumpGap } from '../season/moments'
+import { partnershipAt, partnershipMark, ambientLights, ambientOver, ambientPick, cheersAfter, cooledDown, overstepCm, markShown, pickReel, recentHighlight, reelCandidates, runOutGap, trackFor, bowledFor, catchFor, handsFor, stumpGap } from '../season/moments'
 import { toEvent } from '../season/reel'
 import type { AmbientInfo } from '../components/match/AmbientScreens'
 import { keyPlayers } from '../season/preview'
@@ -323,6 +326,26 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // the live commentary: said aloud when the voices are on in "full" mode
   const voiceTimer = useRef(0)
   const boxLines = useRef<string[] | null>(null)
+  /** The screens for a challenge: the huddle (the bowler, the captain and the keeper; or the two batsmen), then the review and its verdict. */
+  const challengeMoments = (ev: BallEvent, rate: number, delay: number) => {
+    const r = ev.review
+    if (!r) return
+    const inn = match.innings[ev.innings]
+    const batS = match.sides[inn.battingSide]
+    const bowlS = match.sides[1 - inn.battingSide]
+    const keeperId = match.keeperOf((1 - inn.battingSide) as 0 | 1)
+    const bowler = match.player(ev.bowlerId)
+    const cap = bowlS.xi.find((p) => p.id === bowlS.team.captainId && p.id !== ev.bowlerId && p.id !== keeperId) ?? bowlS.xi.find((p) => p.id !== ev.bowlerId && p.id !== keeperId) ?? bowler
+    const keeperP = keeperId ? match.player(keeperId) : (bowlS.xi.find((p) => p.id !== ev.bowlerId && p.id !== cap.id) ?? cap)
+    const striker = match.player(ev.strikerId)
+    const partner = match.player(ev.nonStrikerId)
+    const leftBefore = r.left + (r.overturned ? 0 : 1)
+    const talk = challengeTalk({ by: r.by, kind: r.kind, desperate: r.desperate, left: leftBefore, total: r.total, seq: ev.seq, names: { bowler: bowler.name, captain: cap.name, keeper: keeperP.name, striker: striker.name, partner: partner.name } })
+    const who = { bowler, captain: cap, keeper: keeperP, striker, partner }
+    const side = r.by === 'bowl' ? bowlS.team : batS.team
+    enqueueMoment({ key: ev.seq + 0.28, kind: 'challenge', player: r.by === 'bowl' ? cap : striker, team: side, title: 'CHALLENGE', lines: [], delay, ms: Math.round(challengeSeconds(talk.lines) * 1000 * rate), challenge: { by: r.by, kind: r.kind, desperate: r.desperate, left: leftBefore, total: r.total, people: talk.people.map((role) => ({ role, player: who[role], team: side })), lines: talk.lines, rate } })
+    enqueueMoment({ key: ev.seq + 0.3, kind: 'review', player: striker, team: batS.team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((r.kind === 'edge' ? 12200 : 8200) * rate), review: { by: r.by === 'bat' ? 'bat' : 'field', kind: r.kind === 'edge' ? 'edge' : 'track', batsman: striker, batTeam: batS.team, bowler, bowlTeam: bowlS.team, out: r.originalOut, finalOut: r.finalOut, overturned: r.overturned, left: r.left, total: r.total, track: trackFor(ev.seq, r.finalOut), rate } })
+  }
   const announceEvents = useCallback(
     (events: BallEvent[]) => {
       force()
@@ -422,7 +445,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
           const keeperId = match.keeperOf(bowlS === match.sides[0] ? 0 : 1)
-          enqueueMoment({ key: lastEv.seq + 0.6, kind: 'extra', player: match.player(lastEv.bowlerId), team: bowlS.team, title: lastEv.extraType.toUpperCase(), lines: [], delay, ms: Math.round(2600 * rate), extra: { kind: lastEv.extraType, runs: lastEv.extraRuns, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, batsman: match.player(lastEv.strikerId), batTeam: batT, keeper: keeperId ? match.player(keeperId) : null, rate } })
+          enqueueMoment({ key: lastEv.seq + 0.6, kind: 'extra', player: match.player(lastEv.bowlerId), team: bowlS.team, title: lastEv.extraType.toUpperCase(), lines: [], delay, ms: Math.round(2600 * rate), extra: { kind: lastEv.extraType, runs: lastEv.extraRuns, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, batsman: match.player(lastEv.strikerId), batTeam: batT, keeper: keeperId ? match.player(keeperId) : null, ...(lastEv.extraType === 'wide' ? { wide: { side: wideSide(lastEv), hand: match.player(lastEv.strikerId).hand } } : {}), rate } })
         }
         if (prefs.extras && lastEv.tags.includes('maiden')) {
           const ln = innNow.bowlers.get(lastEv.bowlerId)
@@ -456,9 +479,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const pt = partnershipAt(innE.log, lastEv)
           enqueueMoment({ key: lastEv.seq + 0.35, kind: 'partnership', player: match.player(pt.a.id), team: batT, title: `${mark} PARTNERSHIP`, lines: [], delay, ms: Math.round(4200 * rate), partnership: { a: match.player(pt.a.id), b: match.player(pt.b.id), team: batT, mark, runs: pt.runs, balls: pt.balls, aRuns: pt.a.runs, aBalls: pt.a.balls, bRuns: pt.b.runs, bBalls: pt.b.balls, rate } })
         }
-        if (prefs.reviews && !lastEv.wicket && lastEv.legal && !lastEv.freeHit && lastEv.runsBat === 0 && !lastEv.extraType && isNotOutReview(lastEv.seq)) {
-          enqueueMoment({ key: lastEv.seq + 0.45, kind: 'review', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'REVIEW', lines: [], delay, ms: Math.round(8200 * rate), review: { by: 'field', batsman: match.player(lastEv.strikerId), batTeam: batT, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, out: false, track: trackFor(lastEv.seq, false), rate } })
-        }
+        // a challenge: the huddle, the T signal, the picture and the verdict (the engine decided it; see engine/drs.ts)
+        if (prefs.reviews && lastEv.review) challengeMoments(lastEv, rate, delay)
         // a batsman reaching the nineties
         if (prefs.milestone && !lastEv.wicket) {
           const bl = innE.batters.find((b) => b.id === lastEv.strikerId)
@@ -666,9 +688,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const reviews = getAnimPrefs().reviews
           // a run out goes to the third umpire first; some lbw outs are reviewed by the batsman first
           if (reviews && w.kind === 'run out') { const gap = runOutGap(notable.seq); show({ key: notable.seq + 0.3, kind: 'runout', player: match.player(outLine.id), team, title: 'RUN OUT?', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(7200 * rate), runout: { batsman: match.player(outLine.id), batTeam: team, fielder: fielderP, bowlTeam: bowlSideNow.team, cm: gap.cm, text: gap.text, rate } }) }
-          if (reviews && w.kind === 'lbw') show({ key: notable.seq + 0.3, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((lbwWasReviewed(notable.seq) ? 7600 : 6200) * rate), review: { plain: !lbwWasReviewed(notable.seq), by: 'bat', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
+          if (reviews && !notable.review && w.kind === 'lbw') show({ key: notable.seq + 0.3, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6200 * rate), review: { plain: true, by: 'bat', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
           const bowlIdx = (1 - match.innings[notable.innings].battingSide) as 0 | 1
-          if (reviews && w.kind === 'caught' && w.fielderId && w.fielderId === match.keeperOf(bowlIdx)) show({ key: notable.seq + 0.32, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((edgeWasReviewed(notable.seq) ? 12200 : 10000) * rate), review: { plain: !edgeWasReviewed(notable.seq), by: 'bat', kind: 'edge', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
+          if (reviews && !notable.review && w.kind === 'caught' && w.fielderId && w.fielderId === match.keeperOf(bowlIdx)) show({ key: notable.seq + 0.32, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(10000 * rate), review: { plain: true, by: 'bat', kind: 'edge', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
           // the special wicket screens: how it happened, seen the way a broadcast would show it (they have their own switch)
           const prefsNow = getAnimPrefs()
           const fx = (type: WicketFxInfo['type'], extra: Record<string, unknown>, key: number) => show({ key: notable.seq + key, kind: 'wicketfx', player: match.player(outLine.id), team, title: 'WICKET', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(WICKET_FX_SECONDS[type] * 1000 * rate), wfx: { type, batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, rate, ...extra } as WicketFxInfo })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BallEvent } from '../engine/types'
-import { cooledDown, HIGHLIGHT_COOLDOWN, isNotOutReview, markShown, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from './moments'
+import { cooledDown, HIGHLIGHT_COOLDOWN, markShown, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from './moments'
 import type { Season } from './types'
 
 const ev = (seq: number, o: Partial<BallEvent> & { runs: number; wk?: number }): BallEvent => ({
@@ -38,9 +38,6 @@ describe('moments data', () => {
     for (let s = 1; s < 50; s++) { const g = runOutGap(s).cm; expect(g).toBeGreaterThanOrEqual(2); expect(g).toBeLessThanOrEqual(70) }
     for (let s = 1; s < 50; s++) { const t = trackFor(s, true); expect(Math.abs(t.stumpsX)).toBeLessThanOrEqual(0.18); expect(t.wickets).toMatch(/Hitting/) }
     for (let s = 1; s < 50; s++) expect(trackFor(s, false).wickets).toBe(Math.abs(trackFor(s, false).stumpsX) <= 0.18 ? 'Hitting' : 'Missing')
-    const reviews = Array.from({ length: 600 }, (_, i) => isNotOutReview(i + 1)).filter(Boolean).length
-    expect(reviews).toBeGreaterThan(5)
-    expect(reviews).toBeLessThan(45)
   })
 })
 

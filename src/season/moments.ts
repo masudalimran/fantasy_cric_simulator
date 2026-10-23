@@ -122,10 +122,6 @@ export function trackFor(seq: number, out: boolean): Track {
   }
 }
 
-/** True for the few balls (about one in 30) where a side asks for a review that is not an lbw out. */
-export const isNotOutReview = (seq: number) => hash(seq, 6) < 0.034
-/** True for about two in five caught-behind outs, where the batsman asks for a review (the sound graph) first. */
-export const edgeWasReviewed = (seq: number) => hash(seq, 8) < 0.4
 /** How far over the popping crease a no-ball's front foot landed, in centimetres (a believable 2 to 24). */
 export const overstepCm = (seq: number): number => Math.round(2 + hash(seq, 15) * 22)
 /** True for about one boundary or wicket in three, where the cheerleaders come out. */
@@ -136,8 +132,6 @@ export const ambientPick = (seq: number, n: number) => Math.floor(hash(seq, 12) 
 export const ambientOver = (seq: number) => hash(seq, 13) < 0.5
 /** True for about three chases in five: the floodlights come on as the second innings starts. */
 export const ambientLights = (seed: number) => hash(seed, 14) < 0.6
-/** True for roughly a third of lbw outs, where the batsman asks for a review first. */
-export const lbwWasReviewed = (seq: number) => hash(seq, 7) < 0.4
 
 // ---- A highlight reel from an earlier match ---------------------------------------------------------------------
 

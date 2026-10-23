@@ -5,6 +5,7 @@ import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, parRunsPerOver, REF,
 } from './model'
+import { REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
 import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
 import { sixDistance } from './shots'
@@ -277,7 +278,7 @@ export class Match {
       extras: { wides: 0, noballs: 0, byes: 0, legByes: 0 },
       batters: [], strikerId: xi[0].id, nonStrikerId: xi[1].id, nextBatsman: 2,
       bowlers: new Map(), bowlerId: null, prevBowlerId: null, overRuns: 0,
-      fow: [], target, freeHit: false, done: false, log: [],
+      fow: [], target, freeHit: false, done: false, log: [], reviews: { bat: REVIEWS_PER_INNINGS[this.format], bowl: REVIEWS_PER_INNINGS[this.format] },
     }
     inn.batters.push(this.newBatter(xi[0].id), this.newBatter(xi[1].id))
     this.innings.push(inn)
@@ -482,6 +483,33 @@ export class Match {
       extraType = null; extraRuns = 0; runsBat = 0; legal = true
       if (!wasFreeHit) dismissal = this.makeDismissal(inn, striker, bowler, bowlXI, bowlingSideIdx, bowlType, false)
     }
+    // ---- Challenges: the batsman can ask for an lbw or a catch behind he has been given out to be checked, and the fielding side can ask about a
+    // close not-out. The decision after the review is what is applied below. (A separate random stream, so nothing else in the match shifts.)
+    let review: Review | undefined
+    if (this.forfeitSide === null && inn.reviews) {
+      const rr = new Rng((this.seed ^ Math.imul(this.seq + 1, 0x85ebca6b) ^ 0xd125) >>> 0)
+      const ctx = (by: 'bat' | 'bowl'): DrsCtx => ({ by, left: inn.reviews![by], batRuns: strikerLine.runs, batBalls: strikerLine.balls, position: inn.batters.indexOf(strikerLine), wickets: inn.wickets, ballsLeft: format === 'test' ? null : this.maxOvers * 6 - inn.legalBalls, need: inn.target !== null ? inn.target - inn.runs : null, recentWickets })
+      const keeperId = this.keeper[bowlingSideIdx]
+      if (dismissal && (dismissal.kind === 'lbw' || (dismissal.kind === 'caught' && dismissal.fielderId !== null && dismissal.fielderId === keeperId))) {
+        const d = wantsChallenge(ctx('bat'), rr.next())
+        if (d.yes) {
+          const wrong = rr.chance(WRONG_OUT)
+          const kind: Review['kind'] = dismissal.kind === 'lbw' ? 'lbw' : 'edge'
+          if (!wrong) inn.reviews.bat--
+          review = { by: 'bat', kind, originalOut: true, finalOut: !wrong, overturned: wrong, desperate: d.desperate, left: inn.reviews.bat, total: REVIEWS_PER_INNINGS[format] }
+          if (wrong) { dismissal = null; runsBat = 0 }
+        }
+      } else if (!dismissal && legal && !extraType && runsBat === 0 && !wasFreeHit && rr.chance(CLOSE_CALL[format])) {
+        const d = wantsChallenge(ctx('bowl'), rr.next())
+        if (d.yes) {
+          const out = rr.chance(MISSED_OUT)
+          const edge = keeperId !== null && !rr.chance(0.62)
+          if (!out) inn.reviews.bowl--
+          review = { by: 'bowl', kind: edge ? 'edge' : 'lbw', originalOut: false, finalOut: out, overturned: out, desperate: d.desperate, left: inn.reviews.bowl, total: REVIEWS_PER_INNINGS[format] }
+          if (out) dismissal = { kind: edge ? 'caught' : 'lbw', bowlerId: bowler.id, fielderId: edge ? keeperId : null, playerId: striker.id }
+        }
+      }
+    }
     if (legal) inn.freeHit = false
 
     // ---- Apply it
@@ -520,6 +548,7 @@ export class Match {
       ...(this.shotAim[battingSideIdx] ? { shot: this.shotAim[battingSideIdx] as ShotAim } : {}),
       ...(this.deliveryAim[bowlingSideIdx] ? { delivery: this.deliveryAim[bowlingSideIdx] as DeliveryAim } : {}),
       score: { runs: inn.runs, wickets: inn.wickets, legalBalls: inn.legalBalls }, tags,
+      ...(review ? { review } : {}),
     }
 
     if (runsBat === 6) ev.distance = sixDistance(ev.seq, striker.batting.power)

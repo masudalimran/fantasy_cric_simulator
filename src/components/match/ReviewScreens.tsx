@@ -124,11 +124,11 @@ export function BallTrackView({ track, out, rate = 1, compact = false, after = 0
 // ---- The sound graph for a caught behind ----------------------------------------------------------------------------------------
 
 const SPIKE_AT = 122 // where along the graph the ball passes the bat
-const wave = (): string => {
+const wave = (flat = false): string => {
   const pts: string[] = []
   for (let i = 0; i <= 100; i++) {
     const x = i * 2
-    const spike = i >= 58 && i <= 64 ? (i % 2 ? -1 : 1) * (26 - Math.abs(i - 61) * 6) : 0
+    const spike = !flat && i >= 58 && i <= 64 ? (i % 2 ? -1 : 1) * (26 - Math.abs(i - 61) * 6) : 0
     pts.push(`${x},${50 + Math.sin(i * 12.9898) * 2 + spike}`)
   }
   return pts.join(' ')
@@ -143,9 +143,9 @@ const PASS_TWO = 3.6
  * The broadcast's edge-detection picture: a sound wave along the bottom, and a straight vertical line that sweeps across it. Where the line crosses
  * the ball passing the bat the wave spikes. Then the same moment plays again in slow motion, zoomed in, so the spike can be seen to line up with the bat.
  */
-export function SnickoView({ rate = 1, after = 0 }: { rate?: number; after?: number }) {
+export function SnickoView({ rate = 1, after = 0, flat = false }: { rate?: number; after?: number; /** No edge: the graph stays flat. */ flat?: boolean }) {
   const r = rate
-  const pts = wave()
+  const pts = wave(flat)
   const slowFrom = 100, slowTo = 146 // the part of the graph the slow-motion replay looks at
   const hitFrac1 = SPIKE_AT / 200
   const hitFrac2 = (SPIKE_AT - slowFrom) / (slowTo - slowFrom)
@@ -174,10 +174,10 @@ export function SnickoView({ rate = 1, after = 0 }: { rate?: number; after?: num
         </svg>
       </motion.div>
       <div className="absolute inset-x-2 bottom-2 z-20 grid grid-cols-3 gap-1.5 text-center">
-        {([['Sound', 'Spike', PASS_ONE * hitFrac1 + 0.2], ['Bat', 'Ball passes', PASS_ONE * hitFrac1 + 0.2], ['Verdict', 'Edge', PASS_TWO_AT + PASS_TWO]] as const).map(([label, value, at]) => (
+        {([['Sound', flat ? 'No spike' : 'Spike', PASS_ONE * hitFrac1 + 0.2], ['Bat', 'Ball passes', PASS_ONE * hitFrac1 + 0.2], ['Verdict', flat ? 'No edge' : 'Edge', PASS_TWO_AT + PASS_TWO]] as const).map(([label, value, at]) => (
           <motion.div key={label} className="rounded-lg bg-black/75 px-1 py-1 ring-1 ring-white/15" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (after + at) * r }}>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
-            <div className="text-[11px] font-extrabold leading-tight" style={{ color: '#34d399' }}>{value}</div>
+            <div className="text-[11px] font-extrabold leading-tight" style={{ color: flat && label === 'Verdict' ? '#f87171' : '#34d399' }}>{value}</div>
           </motion.div>
         ))}
       </div>
@@ -197,12 +197,19 @@ export interface ReviewInfo {
   kind?: 'track' | 'edge'
   /** Nobody asked for a review: the picture is shown on its own, as the broadcast does for every lbw and every catch behind. */
   plain?: boolean
+  /** For a real challenge (see engine/drs.ts): the decision after the review, whether it changed, and the challenges left. `out` is the decision on the field. */
+  finalOut?: boolean
+  overturned?: boolean
+  left?: number
+  total?: number
   rate: number
 }
 
 /** A side asks for a review: the T signal, "checking", then the picture and the verdict. The decision never changes (it is what the match already decided). */
 export function ReviewScreen({ info }: { info: ReviewInfo }) {
-  const { by, batsman, batTeam, bowler, bowlTeam, out, track, rate: r } = info
+  const { by, batsman, batTeam, bowler, bowlTeam, out: fieldOut, track, rate: r } = info
+  // what the decision is once the picture has been looked at (a real challenge can change it)
+  const out = info.finalOut ?? fieldOut
   const [box, w] = useWidth()
   const asker = by === 'bat' ? batsman : bowler
   const askTeam = by === 'bat' ? batTeam : bowlTeam
@@ -215,7 +222,9 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
     const ts = [window.setTimeout(() => sfx.howzat(), 100), ...(plain ? [] : [window.setTimeout(() => sfx.thinking(), 2300 * r)]), window.setTimeout(() => (out ? sfx.decisionOut() : sfx.decisionNotOut()), (t0 + len) * r)]
     return () => ts.forEach(clearTimeout)
   }, [out, r, plain, t0, len])
-  const sub = plain ? (info.kind === 'edge' ? 'Snicko shows the spike: caught behind' : out ? 'Ball tracking: hitting the stumps' : 'Ball tracking') : info.kind === 'edge' ? 'A clear spike: the decision stands' : out ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
+  const sub = info.overturned
+    ? (out ? (info.kind === 'edge' ? 'A clear spike: the decision is overturned, he is out' : 'Hitting the stumps: the decision is overturned, he is out') : (info.kind === 'edge' ? 'No spike: the decision is overturned, not out' : 'Missing the stumps: the decision is overturned, not out'))
+    : plain ? (info.kind === 'edge' ? 'Snicko shows the spike: caught behind' : out ? 'Ball tracking: hitting the stumps' : 'Ball tracking') : info.kind === 'edge' ? (fieldOut ? 'A clear spike: the decision stands' : 'No spike: the decision stands') : fieldOut ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
   return (
     <div ref={box} className="absolute inset-0" aria-label="Review">
       <TvFrame title={plain ? (info.kind === 'edge' ? 'Snicko' : 'Ball tracking') : 'Decision review'}>
@@ -227,11 +236,12 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
         </motion.div>}
         {/* ball tracking and the verdict */}
         <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: t0 * r }}>
-          {info.kind === 'edge' ? <SnickoView rate={r} after={t0} /> : <BallTrackView track={track} out={out} rate={r} after={t0} />}
+          {info.kind === 'edge' ? <SnickoView rate={r} after={t0} flat={!out} /> : <BallTrackView track={track} out={out} rate={r} after={t0} />}
         </motion.div>
         <motion.div className="absolute inset-x-0 top-[10%] z-30 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: (t0 + len) * r, type: 'spring', stiffness: 260, damping: 15 }}>
           <div className="font-display leading-none tracking-wide" style={{ color: out ? '#f87171' : '#34d399', fontSize: Math.max(36, Math.min(w * 0.13, 84)), WebkitTextStroke: '2px #05070d', paintOrder: 'stroke fill', textShadow: `0 0 30px ${out ? '#ef4444' : '#10b981'}aa` }}>{verdict}</div>
           <div className="text-xs font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{sub}</div>
+          {info.left !== undefined && info.total !== undefined && <div className="mt-1 inline-block rounded-full bg-black/70 px-2.5 py-0.5 text-[11px] font-bold" style={{ color: info.overturned ? '#34d399' : '#fbbf24' }}>{info.overturned ? 'Challenge upheld, kept' : 'Challenge lost'} · {info.left} of {info.total} left</div>}
         </motion.div>
       </TvFrame>
     </div>
