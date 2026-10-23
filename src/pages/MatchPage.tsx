@@ -1001,7 +1001,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} {...aimProps}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -1030,7 +1030,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} {...aimProps}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -1076,7 +1076,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />

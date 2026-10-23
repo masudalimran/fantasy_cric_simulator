@@ -5,6 +5,8 @@ import type { BallEvent, DeliveryAim, ShotAim } from '../../engine/types'
 import { eventAngle, reachFactor } from '../../engine/shots'
 import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
+import { useBroadcastView } from '../../prefs'
+import { BroadcastView } from './BroadcastView'
 import { MomentOverlay, type Moment } from './MomentOverlay'
 
 /**
@@ -293,8 +295,10 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe, freeHit,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1,
 }: {
+  /** How fast the clip of a ball plays in the broadcast view (1 = full length). */
+  rate?: number
   /** The chase in its last two overs: what is needed, off how many balls (it pulses in the last over). */
   chase?: { need: number; balls: number; wickets: number } | null
   /** The kind of pitch, which tints the grass and the strip. */
@@ -311,6 +315,9 @@ export function Stage({
   striker: Player; nonStriker: Player | null; bowler: Player
   battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
 }) {
+  // The broadcast view replaces the field from above; dragging to aim a shot only works on the view from above.
+  const broadcast = useBroadcastView()
+  const onSwipe = broadcast ? undefined : onSwipeProp
   // The tokens are drawn for a 730px-wide field; shrink them on smaller ones.
   const box = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
@@ -360,6 +367,8 @@ export function Stage({
         onSwipe({ angle: Math.atan2((dy / rect.height) * H, (dx / rect.width) * W), loft: len > rect.width * 0.3 })
       } : undefined}
     >
+      {broadcast && <BroadcastView event={event} striker={striker} nonStriker={nonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} />}
+      {!broadcast && (
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
         <Ground battingColor={battingTeam.colors.primary} pitch={pitch} />
         <Crowd colors={[battingTeam.colors.primary, battingTeam.colors.secondary, bowlingTeam.colors.primary, bowlingTeam.colors.secondary]} pulse={crowdPulse} />
@@ -419,6 +428,7 @@ export function Stage({
           </motion.g>
         )}
       </svg>
+      )}
 
       {/* a free hit: a red wash and a tag, so the ball (and what it did) stands out */}
       {freeHit && (
@@ -454,8 +464,10 @@ export function Stage({
       </AnimatePresence>
 
       {/* what the ball scored, shown lightly for everything except boundaries and wickets (those have their own show) */}
-      {event && !event.boundary && !event.wicket && <RunChip key={`run${event.seq}`} event={event} x={end.x} y={end.y} scale={scale} />}
+      {!broadcast && event && !event.boundary && !event.wicket && <RunChip key={`run${event.seq}`} event={event} x={end.x} y={end.y} scale={scale} />}
 
+      {!broadcast && (
+      <>
       {/* fielders */}
       {fielders.map(({ player, x, y, spot }) => (
         <motion.div
@@ -481,6 +493,9 @@ export function Stage({
       <Token key={striker.id} player={striker} team={battingTeam} role="striker" x={STRIKER.x} y={STRIKER.y} size={58} scale={scale} celebrate={strikerJoy} extra={<Bat swing={hit ? seq + 1 : 0} />} />
       <Token key={bowler.id} player={bowler} team={bowlingTeam} role="bowler" x={BOWLER_START.x} y={BOWLER_START.y} size={54} scale={scale} delivering={seq + 1} celebrate={bowlerJoy} extra={<Ball className="absolute -left-4 bottom-1" />} />
 
+      </>
+      )}
+
       {/* a milestone or a dismissal takes over the whole field with the batsman as a stick man */}
       <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={() => onDismissMoment?.()} />}</AnimatePresence>
 
@@ -504,7 +519,7 @@ export function Stage({
       )}
 
       {/* a little legend so the colours mean something */}
-      <div className="pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[10px] font-bold tracking-wider max-sm:hidden">
+      <div className={`pointer-events-none absolute bottom-2 left-2 z-30 flex gap-1.5 text-[10px] font-bold tracking-wider max-sm:hidden ${broadcast ? 'hidden' : ''}`}>
         <span className="rounded bg-amber-400 px-1.5 py-0.5 text-black">BATTING: {battingTeam.name}</span>
         <span className="rounded bg-red-500 px-1.5 py-0.5 text-white">BOWLING: {bowlingTeam.name}</span>
       </div>

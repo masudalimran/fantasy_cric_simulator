@@ -52,6 +52,22 @@ export function useSwipeAim(): boolean {
   return useSyncExternalStore((cb) => { swipeListeners.add(cb); return () => { swipeListeners.delete(cb) } }, () => swipe, () => true)
 }
 
+// ---- Broadcast view: the field drawn the way a TV camera sees it --------------------------------------------
+const BCAST_KEY = 'fcs.broadcast'
+const bcastListeners = new Set<() => void>()
+let bcast = (() => { try { return localStorage.getItem(BCAST_KEY) === '1' } catch { return false } })()
+
+export function setBroadcastView(on: boolean) {
+  bcast = on
+  try { localStorage.setItem(BCAST_KEY, on ? '1' : '0') } catch { /* just not remembered */ }
+  bcastListeners.forEach((l) => l())
+}
+
+/** Whether the field is shown as a TV broadcast (a camera behind the bowler that follows the ball) instead of from above (off by default). */
+export function useBroadcastView(): boolean {
+  return useSyncExternalStore((cb) => { bcastListeners.add(cb); return () => { bcastListeners.delete(cb) } }, () => bcast, () => false)
+}
+
 // ---- Play manually: no auto-play, the controls take its place --------------------------------------------------
 const MANUAL_KEY = 'fcs.manual'
 const manualListeners = new Set<() => void>()
