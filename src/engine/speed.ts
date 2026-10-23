@@ -7,11 +7,11 @@ import type { BallEvent } from './types'
  */
 const hash = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 
-/** A very quick ball (145 km/h and up) is drawn as a fireball and a very slow one (78 and under) as a snowball; the rest are plain. Looks only. */
+/** A very quick ball (145 km/h and up) is drawn as a fireball and a very slow one (under 80) as a snowball; the rest are plain. Looks only. */
 export const FIRE_KMH = 145
-export const ICE_KMH = 78
+export const ICE_KMH = 80
 export type BallStyle = 'plain' | 'fire' | 'ice'
-export const speedStyle = (kmh: number): BallStyle => (kmh >= FIRE_KMH ? 'fire' : kmh <= ICE_KMH ? 'ice' : 'plain')
+export const speedStyle = (kmh: number): BallStyle => (kmh >= FIRE_KMH ? 'fire' : kmh < ICE_KMH ? 'ice' : 'plain')
 
 export function ballSpeed(ev: Pick<BallEvent, 'seq' | 'delivery'>, bowler: Pick<Player, 'bowling'>): number {
   const b = bowler.bowling

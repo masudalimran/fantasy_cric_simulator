@@ -29,7 +29,8 @@ describe('ball speed', () => {
     expect(speedStyle(145)).toBe('fire')
     expect(speedStyle(144)).toBe('plain')
     expect(speedStyle(110)).toBe('plain')
-    expect(speedStyle(78)).toBe('ice')
+    expect(speedStyle(79)).toBe('ice')
+    expect(speedStyle(80)).toBe('plain')
     expect(speedStyle(70)).toBe('ice')
   })
   it('a slower ball is slower than a fast one from the same bowler', () => {
