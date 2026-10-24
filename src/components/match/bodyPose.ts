@@ -47,8 +47,8 @@ const ease = (t: number) => { const c = clamp01(t); return c * c * (3 - 2 * c) }
 export const dirOf = (deg: number): P => ({ x: -Math.sin(rad(deg)), y: Math.cos(rad(deg)) })
 
 export const standing = (): Pose => ({
-  hip: { x: 30, y: 88 }, lean: 0, head: { dx: 0, dy: 0, tilt: 0 },
-  handL: { x: -10, y: 24 }, handR: { x: 10, y: 24 }, footL: { x: 22, y: 117 }, footR: { x: 38, y: 117 }, bat: null, two: false, ball: false,
+  hip: { x: 30, y: 87 }, lean: 0, head: { dx: 0, dy: 0, tilt: 0 },
+  handL: { x: -10, y: 24 }, handR: { x: 10, y: 24 }, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 }, bat: null, two: false, ball: false,
 })
 
 export function mixPose(a: Pose, b: Pose, k: number): Pose {
@@ -154,41 +154,41 @@ const batPose = (hip: P, lean: number, grip: P, angle: number, footL: P, footR: 
 })
 
 /** Waiting at the crease with the bat resting by the foot, one hand on the handle. */
-const WAIT: Pose = { ...batPose({ x: 30, y: 90 }, -3, { x: 9, y: 22 }, -18, { x: 22, y: 117 }, { x: 38, y: 117 }, 3), two: false, handL: { x: -9, y: 23 } }
-const STANCE = batPose({ x: 30, y: 90 }, 3, { x: -5, y: 21 }, 24, { x: 21, y: 117 }, { x: 39, y: 117 })
-const LIFT = batPose({ x: 30, y: 90 }, 1, { x: -9, y: 10 }, 158, { x: 21, y: 117 }, { x: 39, y: 117 })
+const WAIT: Pose = { ...batPose({ x: 30, y: 88 }, -3, { x: 9, y: 22 }, -18, { x: 22, y: 117 }, { x: 38, y: 117 }, 3), two: false, handL: { x: -9, y: 23 } }
+const STANCE = batPose({ x: 30, y: 88 }, 3, { x: -5, y: 21 }, 24, { x: 21, y: 117 }, { x: 39, y: 117 })
+const LIFT = batPose({ x: 30, y: 88 }, 1, { x: -9, y: 10 }, 158, { x: 21, y: 117 }, { x: 39, y: 117 })
 
 /** Where the bat and body are as the ball is met (`c`) and when the shot is finished (`f`), for each kind of shot, for a right-hander. */
 const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
   defend: {
-    b: batPose({ x: 30, y: 90 }, 1, { x: -5, y: 15 }, 172, { x: 21, y: 117 }, { x: 39, y: 117 }),
-    c: batPose({ x: 29, y: 93 }, 8, { x: -5, y: 23 }, 6, { x: 19, y: 118 }, { x: 40, y: 116 }, 4),
-    f: batPose({ x: 29, y: 93 }, 8, { x: -5, y: 23 }, 4, { x: 19, y: 118 }, { x: 40, y: 116 }, 4),
+    b: batPose({ x: 30, y: 88 }, 1, { x: -5, y: 15 }, 172, { x: 21, y: 117 }, { x: 39, y: 117 }),
+    c: batPose({ x: 29, y: 91 }, 8, { x: -5, y: 23 }, 6, { x: 19, y: 118 }, { x: 40, y: 116 }, 4),
+    f: batPose({ x: 29, y: 91 }, 8, { x: -5, y: 23 }, 4, { x: 19, y: 118 }, { x: 40, y: 116 }, 4),
   },
   drive: {
     b: LIFT,
-    c: batPose({ x: 28, y: 94 }, 9, { x: -13, y: 20 }, 38, { x: 17, y: 118 }, { x: 41, y: 115 }, 3),
-    f: batPose({ x: 30, y: 89 }, 3, { x: 3, y: -14 }, 208, { x: 20, y: 118 }, { x: 40, y: 112 }),
+    c: batPose({ x: 28, y: 92 }, 9, { x: -13, y: 20 }, 38, { x: 17, y: 118 }, { x: 41, y: 115 }, 3),
+    f: batPose({ x: 30, y: 87 }, 3, { x: 3, y: -14 }, 208, { x: 20, y: 118 }, { x: 40, y: 112 }),
   },
   loft: {
-    b: batPose({ x: 30, y: 90 }, -4, { x: -9, y: 2 }, 166, { x: 20, y: 117 }, { x: 40, y: 117 }, -3),
-    c: batPose({ x: 30, y: 91 }, 0, { x: -9, y: 21 }, 18, { x: 19, y: 117 }, { x: 41, y: 116 }),
+    b: batPose({ x: 30, y: 88 }, -4, { x: -9, y: 2 }, 166, { x: 20, y: 117 }, { x: 40, y: 117 }, -3),
+    c: batPose({ x: 30, y: 89 }, 0, { x: -9, y: 21 }, 18, { x: 19, y: 117 }, { x: 41, y: 116 }),
     f: batPose({ x: 31, y: 86 }, -12, { x: 9, y: -17 }, 218, { x: 24, y: 117 }, { x: 40, y: 111 }, -5),
   },
   cut: {
-    b: batPose({ x: 30, y: 91 }, -2, { x: -8, y: 3 }, 168, { x: 20, y: 117 }, { x: 40, y: 117 }),
-    c: batPose({ x: 31, y: 91 }, -8, { x: -15, y: 7 }, 96, { x: 14, y: 117 }, { x: 44, y: 114 }, -3),
-    f: batPose({ x: 31, y: 91 }, -10, { x: -7, y: 15 }, 58, { x: 13, y: 117 }, { x: 45, y: 113 }, -4),
+    b: batPose({ x: 30, y: 89 }, -2, { x: -8, y: 3 }, 168, { x: 20, y: 117 }, { x: 40, y: 117 }),
+    c: batPose({ x: 31, y: 89 }, -8, { x: -15, y: 7 }, 96, { x: 14, y: 117 }, { x: 44, y: 114 }, -3),
+    f: batPose({ x: 31, y: 89 }, -10, { x: -7, y: 15 }, 58, { x: 13, y: 117 }, { x: 45, y: 113 }, -4),
   },
   pull: {
-    b: batPose({ x: 30, y: 91 }, -2, { x: -6, y: 2 }, 118, { x: 20, y: 117 }, { x: 40, y: 117 }),
-    c: batPose({ x: 30, y: 91 }, -6, { x: 8, y: 5 }, -96, { x: 20, y: 116 }, { x: 40, y: 117 }, -3),
-    f: batPose({ x: 30, y: 90 }, -9, { x: 11, y: -8 }, -152, { x: 24, y: 117 }, { x: 38, y: 113 }, -6),
+    b: batPose({ x: 30, y: 89 }, -2, { x: -6, y: 2 }, 118, { x: 20, y: 117 }, { x: 40, y: 117 }),
+    c: batPose({ x: 30, y: 89 }, -6, { x: 8, y: 5 }, -96, { x: 20, y: 116 }, { x: 40, y: 117 }, -3),
+    f: batPose({ x: 30, y: 88 }, -9, { x: 11, y: -8 }, -152, { x: 24, y: 117 }, { x: 38, y: 113 }, -6),
   },
   flick: {
     b: LIFT,
-    c: batPose({ x: 30, y: 92 }, 4, { x: 6, y: 19 }, -34, { x: 19, y: 118 }, { x: 40, y: 116 }),
-    f: batPose({ x: 30, y: 91 }, 5, { x: 11, y: 11 }, -66, { x: 20, y: 118 }, { x: 40, y: 115 }),
+    c: batPose({ x: 30, y: 90 }, 4, { x: 6, y: 19 }, -34, { x: 19, y: 118 }, { x: 40, y: 116 }),
+    f: batPose({ x: 30, y: 89 }, 5, { x: 11, y: 11 }, -66, { x: 20, y: 118 }, { x: 40, y: 115 }),
   },
   sweep: {
     b: batPose({ x: 30, y: 102 }, 4, { x: -4, y: 16 }, 64, { x: 14, y: 117 }, { x: 45, y: 114 }),
@@ -197,13 +197,13 @@ const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
   },
   beaten: {
     b: LIFT,
-    c: batPose({ x: 29, y: 93 }, 9, { x: -12, y: 20 }, 34, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
-    f: batPose({ x: 29, y: 93 }, 9, { x: -8, y: 18 }, 24, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
+    c: batPose({ x: 29, y: 91 }, 9, { x: -12, y: 20 }, 34, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
+    f: batPose({ x: 29, y: 91 }, 9, { x: -8, y: 18 }, 24, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
   },
   leave: {
-    b: batPose({ x: 30, y: 90 }, -2, { x: -5, y: 6 }, 172, { x: 21, y: 117 }, { x: 39, y: 117 }),
-    c: batPose({ x: 30, y: 91 }, -7, { x: -5, y: -6 }, 178, { x: 20, y: 117 }, { x: 40, y: 117 }, -4),
-    f: batPose({ x: 30, y: 91 }, -7, { x: -5, y: -6 }, 178, { x: 20, y: 117 }, { x: 40, y: 117 }, -4),
+    b: batPose({ x: 30, y: 88 }, -2, { x: -5, y: 6 }, 172, { x: 21, y: 117 }, { x: 39, y: 117 }),
+    c: batPose({ x: 30, y: 89 }, -7, { x: -5, y: -6 }, 178, { x: 20, y: 117 }, { x: 40, y: 117 }, -4),
+    f: batPose({ x: 30, y: 89 }, -7, { x: -5, y: -6 }, 178, { x: 20, y: 117 }, { x: 40, y: 117 }, -4),
   },
 }
 
@@ -245,7 +245,7 @@ export function batsmanPose(c: BatCtx): Pose {
 
 /** One hand carries the bat, pointing down and a little forward. */
 function carryBat(p: Pose): Pose {
-  return { ...p, handR: { x: 11, y: 22 }, handL: { x: -10, y: 24 }, bat: 14, two: false, lean: 0, hip: { x: 30, y: 89 }, footL: { x: 22, y: 117 }, footR: { x: 38, y: 117 } }
+  return { ...p, handR: { x: 11, y: 22 }, handL: { x: -10, y: 24 }, bat: 14, two: false, lean: 0, hip: { x: 30, y: 87 }, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 } }
 }
 
 /** Legs and arms going for a walk or a run: `speed` in metres a second, `cyc` the angle of the stride. */
@@ -256,7 +256,7 @@ export function locomotion(p: Pose, speed: number, cyc: number, slow = false): P
   const swing = (slow ? 3 : 5) + 6 * k
   return {
     ...p,
-    hip: { x: p.hip.x, y: p.hip.y + 1 + k * 3 - Math.abs(a) * (1.2 + 2.5 * k) },
+    hip: { x: p.hip.x, y: p.hip.y + k * 2 - Math.abs(a) * (1 + 2 * k) },
     footL: { x: p.footL.x + 3 * a, y: p.footL.y - Math.max(0, a) * lift },
     footR: { x: p.footR.x + 3 * b, y: p.footR.y - Math.max(0, b) * lift },
     handL: p.bat !== null && p.two ? p.handL : { x: p.handL.x - 1, y: p.handL.y - a * swing + 2 * k },
@@ -287,7 +287,7 @@ export function bowlerPose(c: BowlCtx): Pose {
   let p: Pose = { ...standing(), ball: true }
   if (run) {
     // running in, the ball held up at the chest, both fists pumping
-    p = locomotion({ ...p, hip: { x: 30, y: 90 }, handR: { x: 6, y: 12 }, handL: { x: -6, y: 14 }, lean: 0 }, Math.max(3, c.speed), c.cyc)
+    p = locomotion({ ...p, hip: { x: 30, y: 88 }, handR: { x: 6, y: 12 }, handL: { x: -6, y: 14 }, lean: 0 }, Math.max(3, c.speed), c.cyc)
   } else {
     // the jump and the whirl of the arm: the front arm points up and pulls down as the bowling arm comes over
     const a = clamp01(c.arm)
@@ -299,7 +299,7 @@ export function bowlerPose(c: BowlCtx): Pose {
     const front = 1 - ease((a - 0.35) / 0.5)
     p = {
       ...p,
-      hip: { x: 30, y: 90 - 5 * Math.sin(Math.PI * clamp01(load)) + 6 * ease((a - 0.6) / 0.4) },
+      hip: { x: 30, y: 88 - 5 * Math.sin(Math.PI * clamp01(load)) + 5 * ease((a - 0.6) / 0.4) },
       lean: lerp(-4, 7, ease((a - 0.4) / 0.5)),
       handR, handL: { x: lerp(-12, -13, front), y: lerp(20, -18, front) },
       footL: { x: 20, y: lerp(117, 119, ease(a)) }, footR: { x: 40, y: lerp(117, 112, ease((a - 0.5) / 0.5)) },
@@ -309,7 +309,7 @@ export function bowlerPose(c: BowlCtx): Pose {
     if (c.t > c.t1 + 0.1) {
       // after the follow-through he gets his breath back
       const k = ease((c.t - c.t1 - 0.1) / 0.5)
-      p = mixPose(p, { ...standing(), hip: { x: 30, y: 92 }, lean: 6, handL: { x: -8, y: 26 }, handR: { x: 8, y: 26 } }, k)
+      p = mixPose(p, { ...standing(), hip: { x: 30, y: 89 }, lean: 6, handL: { x: -8, y: 26 }, handR: { x: 8, y: 26 } }, k)
       p.ball = false
     }
     if (c.speed > 1) p = locomotion(p, c.speed * 0.6, c.cyc, true)
@@ -335,13 +335,13 @@ export interface FieldCtx {
 
 export function fielderPose(c: FieldCtx): Pose {
   const idle: Pose = c.keeper
-    ? { ...standing(), hip: { x: 30, y: 100 }, footL: { x: 15, y: 117 }, footR: { x: 45, y: 117 }, handL: { x: -12, y: 26 }, handR: { x: 12, y: 26 }, head: { dx: 0, dy: 2, tilt: 0 } }
-    : { ...standing(), hip: { x: 30, y: 92 }, lean: 0, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -8, y: 24 }, handR: { x: 8, y: 24 } }
+    ? { ...standing(), hip: { x: 30, y: 97 }, footL: { x: 16, y: 117 }, footR: { x: 44, y: 117 }, handL: { x: -12, y: 26 }, handR: { x: 12, y: 26 }, head: { dx: 0, dy: 2, tilt: 0 } }
+    : { ...standing(), hip: { x: 30, y: 88 }, lean: 0, footL: { x: 22, y: 117 }, footR: { x: 38, y: 117 }, handL: { x: -8, y: 24 }, handR: { x: 8, y: 24 } }
   const ready: Pose = c.keeper
-    ? { ...idle, hip: { x: 30, y: 103 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 } }
-    : { ...idle, hip: { x: 30, y: 97 }, footL: { x: 18, y: 117 }, footR: { x: 42, y: 117 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 }, head: { dx: 0, dy: 2, tilt: 0 } }
+    ? { ...idle, hip: { x: 30, y: 100 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 } }
+    : { ...idle, hip: { x: 30, y: 91 }, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 }, head: { dx: 0, dy: 2, tilt: 0 } }
   let p = mixPose(idle, ready, ease(c.ready))
-  if (c.speed > 0.8) p = locomotion({ ...p, hip: { x: 30, y: 90 } }, c.speed, c.cyc)
+  if (c.speed > 0.8) p = locomotion({ ...p, hip: { x: 30, y: 87 } }, c.speed, c.cyc)
   if (c.stop > 0) p = mixPose(p, { ...standing(), hip: { x: 31, y: 105 }, lean: 6, head: { dx: 0, dy: 3, tilt: 0 }, footL: { x: 14, y: 117 }, footR: { x: 42, y: 116 }, handL: { x: -8, y: 28 }, handR: { x: 6, y: 30 } }, ease(c.stop))
   if (c.catchK > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: c.keeper ? 98 : 90 }, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -5, y: -17 }, handR: { x: 5, y: -17 } }, ease(c.catchK))
   if (c.throwK > 0) {

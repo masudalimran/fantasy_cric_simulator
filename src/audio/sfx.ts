@@ -194,23 +194,23 @@ export const sfx = {
       }
     })
   },
-  four() {
+  /** Only the bat meeting the ball, for a four or a six (played at the moment of contact; the crowd comes later). */
+  crack(big: boolean) {
     safely((c) => {
-      burst(c, { dur: 0.08, type: 'bandpass', freq: 2300, q: 1.3, peak: 0.6 })
-      tone(c, { dur: 0.12, freq: 200, freqEnd: 70, peak: 0.4 })
+      burst(c, { dur: big ? 0.09 : 0.08, type: 'bandpass', freq: big ? 2600 : 2300, q: big ? 1.4 : 1.3, peak: big ? 0.75 : 0.6 })
+      tone(c, { dur: big ? 0.14 : 0.12, freq: big ? 210 : 200, freqEnd: big ? 60 : 70, peak: big ? 0.5 : 0.4 })
+      if (big) burst(c, { at: 0.1, dur: 1.2, type: 'highpass', freq: 600, freqEnd: 4200, q: 0.7, peak: 0.1, attack: 0.5 }) // the ball sailing away
     })
-    sfx.cheer(0.7)
   },
-  six() {
-    safely((c) => {
-      burst(c, { dur: 0.09, type: 'bandpass', freq: 2600, q: 1.4, peak: 0.75 })
-      tone(c, { dur: 0.14, freq: 210, freqEnd: 60, peak: 0.5 })
-      burst(c, { at: 0.1, dur: 1.2, type: 'highpass', freq: 600, freqEnd: 4200, q: 0.7, peak: 0.1, attack: 0.5 }) // the ball sailing away
-    })
+  /** The crowd for a four or a six, without the bat. */
+  crowdFour() { sfx.cheer(0.7) },
+  crowdSix() {
     sfx.cheer(1.15)
     sfx.whistle(0.5)
     sfx.pops(4)
   },
+  four() { sfx.crack(false); sfx.crowdFour() },
+  six() { sfx.crack(true); sfx.crowdSix() },
   /** The crowd goes quiet as the ball is on its way: a low hush that dips in, then the stumps rattle and the "awww". */
   wicket() {
     safely((c) => {

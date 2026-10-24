@@ -188,6 +188,10 @@ export function elevation(ev: Pick<BallEvent, 'seq' | 'boundary' | 'distance' | 
   return { kind: 'ground', peak: 0 }
 }
 
+/** How long a ball bowled at this speed takes to reach the bat, in clip seconds (the run-up, then the ball in the air). */
+export const tDeliverFor = (speed: number) => Math.max(0.36, Math.min(0.85, 0.5 * Math.pow(135 / Math.max(60, speed), 0.7)))
+export const contactAt = (speed: number) => 0.95 + tDeliverFor(speed)
+
 /** Works out the clip for a ball. `end` is where the top-down field says the ball finished. */
 export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135): Plan {
   const w = ev.wicket
@@ -287,7 +291,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   let tHold = runOut ? runOut.tThrow + 0.9 : Math.max(0.55, runs * RUN_SECONDS + 0.3 - tFlight)
   const runSeconds = runOut ? (tFlight + runOut.tThrow - 0.12) / (runOut.legs - 1 + 0.78) : RUN_SECONDS
   // a quicker ball reaches the bat sooner, a slow one hangs in the air
-  const tDeliver = Math.max(0.36, Math.min(0.85, 0.5 * Math.pow(135 / Math.max(60, speed), 0.7)))
+  const tDeliver = tDeliverFor(speed)
   const t2 = 0.95 + tDeliver, t3 = t2 + tFlight
   // when the wicket falls: a catch when the ball is taken, the stumps at once, a run out when they are hit; then the batsman walks off
   const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : t2 + 0.25
@@ -407,7 +411,13 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   // fielders on the move
   const sf = clamp01((t - t2) / plan.tFlight)
   if (plan.catcher >= 0) { const a = fielderAt(plan.catcher); moving.set(plan.catcher, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf * 1.15))) }
-  if (plan.chaser >= 0) { const a = fielderAt(plan.chaser); moving.set(plan.chaser, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf) * (plan.boundary ? 0.8 : 0.9))) }
+  if (plan.chaser >= 0) {
+    const a = fielderAt(plan.chaser)
+    // a diver at the rope stops short: the ball gets past just beyond his fingertips (a metre or so), however near or far he started
+    const D = Math.hypot(plan.end.x - a.x, plan.end.z - a.z) || 1
+    const frac = plan.chaserDive ? Math.max(0.05, Math.min(0.9, 1 - 2.4 / D)) : plan.boundary ? 0.8 : 0.9
+    moving.set(plan.chaser, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf) * frac))
+  }
   // where the camera looks
   const b = ball ?? bowlerPos
   const stump = { x: 0, y: 0.5, z: -6 }

@@ -26,7 +26,7 @@ import { MotmOverlay } from '../components/match/MotmOverlay'
 import { StudioShow } from '../components/match/StudioShow'
 import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/captions'
 import { boxChat } from '../season/studio'
-import { clipNow } from '../components/match/broadcast'
+import { clipNow, contactAt } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
 import { commentary } from '../engine/commentary'
 import { catchCause, catchContact, fourContact, sixContact } from '../engine/contact'
@@ -426,6 +426,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (match.isOver) {
         // the celebration (or defeat) screen has its own sound
       } else if (lastEv && events.length <= 12) {
+        // the crack of the bat is heard when the ball meets it (the clip's moment of contact), not when the result is shown
+        if (!lastEv.wicket && lastEv.extraType !== 'wide' && lastEv.extraType !== 'noball') {
+          const crack = () => { if (lastEv.boundary) sfx.crack(lastEv.boundary === 6); else sfx.hit(lastEv.runsBat >= 2 ? 0.55 : 0.25) }
+          if (holding) {
+            const speedNow = ballSpeed(lastEv, match.player(lastEv.bowlerId))
+            window.setTimeout(crack, (contactAt(speedNow) * 1000) / Math.max(0.15, autoRef.current === 4 ? 0.5 : autoRef.current === 2 ? 0.75 : 1))
+          } else crack()
+        }
         later(() => {
           if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) haptic([30, 80, 30, 60, 90]) // the fist bump
           else if (lastEv.wicket) haptic([60, 40, 90])
@@ -435,10 +443,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           else if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) sfx.fistBump()
           else if (lastEv.tags.includes('five-wickets')) sfx.milestone()
           else if (lastEv.wicket) sfx.wicket()
-          else if (lastEv.boundary === 6) sfx.six()
-          else if (lastEv.boundary === 4) sfx.four()
+          else if (lastEv.boundary === 6) sfx.crowdSix()
+          else if (lastEv.boundary === 4) sfx.crowdFour()
           else if (lastEv.extraType === 'noball') sfx.noBall()
-          else sfx.hit(lastEv.runsBat >= 2 ? 0.55 : 0.25)
         })
       }
       if (match.isOver) {
