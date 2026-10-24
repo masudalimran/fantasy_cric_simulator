@@ -11,6 +11,8 @@ import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
 import { firstName } from './format'
 import { endPoint, type Placed } from './Stage'
+import { Body, type Kit, type Rig } from './Body'
+import { batsmanPose, bowlerPose, clamp01, fielderPose, nonStrikerPose, umpirePose } from './bodyPose'
 
 /**
  * The broadcast view: the match as it looks on TV. The camera stands behind the bowler, zooms in as he runs up, follows the ball after the bat,
@@ -38,28 +40,24 @@ export interface ScoreBug {
 
 type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper'
 
-function Figure({ player, team, look, shirt, arm, bat, armL, armR }: { player?: Player; team?: Team; look: Look; shirt?: string; arm?: React.Ref<HTMLDivElement>; bat?: React.Ref<HTMLDivElement>; armL?: React.Ref<HTMLDivElement>; armR?: React.Ref<HTMLDivElement> }) {
+function Figure({ player, team, look, rig }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void }) {
   const ump = look === 'umpire'
   const primary = ump ? '#1e293b' : team?.colors.primary ?? '#334155'
   const second = ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
-  const pads = look === 'striker' || look === 'nonstriker' || look === 'keeper'
+  const bat = look === 'striker' || look === 'nonstriker'
+  const kit: Kit = {
+    shirt: primary, trim: second, trousers: ump ? '#0f172a' : '#e5e7eb', pads: bat || look === 'keeper',
+    gloves: bat ? '#f8fafc' : look === 'keeper' ? '#fbbf24' : null, boots: ump ? '#020617' : '#f8fafc',
+  }
   return (
     <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
       {/* the shadow on the grass */}
       <div className="absolute rounded-full" style={{ left: 6, top: 110, width: 48, height: 12, background: 'rgba(0,0,0,0.32)' }} />
-      <div className="absolute rounded-full" style={{ left: 18, top: 86, width: 10, height: 32, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
-      <div className="absolute rounded-full" style={{ left: 32, top: 86, width: 10, height: 32, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
-      <div className="absolute" style={{ left: 15, top: 52, width: 30, height: 38, borderRadius: 10, background: shirt ?? primary, border: `2px solid ${second}` }} />
-      {look === 'bowler' && <div ref={arm} className="absolute" style={{ left: 42, top: 56, width: 8, height: 30, borderRadius: 4, background: second, transformOrigin: '50% 8%', border: `1px solid ${primary}` }} />}
-      {(look === 'striker' || look === 'nonstriker') && <div ref={bat} className="absolute" style={{ left: 41, top: 58, width: 9, height: 38, borderRadius: 3, background: '#e9c98a', border: '1px solid #a16207', transformOrigin: '50% 10%', transform: 'rotate(-25deg)' }} />}
-      {ump && <>
-        <div ref={armL} className="absolute" style={{ left: 8, top: 56, width: 8, height: 32, borderRadius: 4, background: '#f8fafc', border: '1px solid #475569', transformOrigin: '50% 8%' }} />
-        <div ref={armR} className="absolute" style={{ left: 44, top: 56, width: 8, height: 32, borderRadius: 4, background: '#f8fafc', border: '1px solid #475569', transformOrigin: '50% 8%' }} />
-      </>}
-      {look === 'keeper' && <><div className="absolute rounded-full bg-amber-300" style={{ left: 5, top: 64, width: 10, height: 10 }} /><div className="absolute rounded-full bg-amber-300" style={{ left: 45, top: 64, width: 10, height: 10 }} /></>}
-      {ump
-        ? <><div className="absolute rounded-full" style={{ left: 8, top: 4, width: 44, height: 44, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 4, top: 0, width: 52, height: 13, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
-        : <div className="absolute rounded-full" style={{ left: 2, top: 0, width: 56, height: 56, boxShadow: `0 0 0 3px ${team ? accentOf(team) : '#fff'}, 0 0 10px #000a`, overflow: 'hidden' }}>{player && team && <PlayerAvatar player={player} team={team} size={56} />}</div>}
+      <Body kit={kit} rigRef={rig}>
+        {ump
+          ? <><div className="absolute rounded-full" style={{ left: 8, top: 4, width: 44, height: 44, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 4, top: 0, width: 52, height: 13, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
+          : <div className="absolute rounded-full" style={{ left: 2, top: 0, width: 56, height: 56, boxShadow: `0 0 0 3px ${team ? accentOf(team) : '#fff'}, 0 0 10px #000a`, overflow: 'hidden' }}>{player && team && <PlayerAvatar player={player} team={team} size={56} />}</div>}
+      </Body>
     </div>
   )
 }
@@ -106,9 +104,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const box = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const nodes = useRef(new Map<string, HTMLElement | null>())
-  const armRef = useRef<HTMLDivElement | null>(null)
-  const batRef = useRef<HTMLDivElement | null>(null)
-  const umpArms = useRef<Record<string, HTMLDivElement | null>>({})
+  const rigs = useRef(new Map<string, Rig>())
+  const setRig = (k: string) => (r: Rig | null) => { if (r) rigs.current.set(k, r); else rigs.current.delete(k) }
   const setNode = (k: string) => (el: HTMLElement | null) => { nodes.current.set(k, el) }
   const [tag, setTag] = useState<string>('CAM 1')
   const [cutKey, setCutKey] = useState(0)
@@ -146,6 +143,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     let prev = t0
     let stopped = false
     const trail: V3[] = []
+    const prevPos = new Map<string, V3>(), speeds = new Map<string, number>(), cycles = new Map<string, number>()
     const walkFrom = new Map(lastRest.current)
     lastRest.current = new Map(live.current.fielders.map((fd, i) => [fd.player.id, live.current.rest[i]]))
 
@@ -200,6 +198,17 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) scale(${s.toFixed(3)}) rotate(${(opts.rot ?? 0).toFixed(0)}deg) translate(-50%,-100%)`
         node.style.zIndex = String(Math.max(1, Math.round(3000 - p.d * 10)))
       }
+      // how fast each person is moving and where he is in his stride, for the walk, the run and the legs
+      const move = (key: string, w: V3) => {
+        const before = prevPos.get(key)
+        prevPos.set(key, w)
+        const inst = before && dt > 0 && !snap ? Math.hypot(w.x - before.x, w.z - before.z) / dt : 0
+        const v = (speeds.get(key) ?? 0) * 0.55 + Math.min(11, inst) * 0.45
+        speeds.set(key, v)
+        const cyc = (cycles.get(key) ?? 0) + dt * (5 + v * 1.7)
+        cycles.set(key, cyc)
+        return { v: v < 0.4 ? 0 : v, cyc }
+      }
       const joyHop = (k: number) => 0.55 * Math.sin(Math.PI * Math.min(1, k * 3)) * (k < 0.34 ? 1 : 0)
       const ev = L.event
       // the two at the crease, the bowler, the keeper and the umpires
@@ -211,11 +220,17 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       place('bowler', { x: f.bowler.x, y: (ev?.wicket && ev.wicket.kind !== 'run out' ? joyHop(f.joy) : Math.abs(Math.sin(f.bowler.z * 1.9)) * 0.1 * (f.phase === 'run' ? 1 : 0)), z: f.bowler.z })
       place('umpire1', { x: -1.15, y: 0, z: -22.2 })
       place('umpire2', { x: stance > 0 ? 13 : -13, y: 0, z: -2 })
-      if (armRef.current) armRef.current.style.transform = `rotate(${(-f.bowlerArm * 330).toFixed(0)}deg)`
-      if (batRef.current) batRef.current.style.transform = `rotate(${(-25 + f.batSwing * 125 - f.raise * 150).toFixed(0)}deg)`
+      const pl = L.plan
+      const t2c = pl.tRun + pl.tDeliver, t3c = t2c + pl.tFlight
+      const out = pl.exitAt !== null && pl.exitAt !== undefined && t > pl.exitAt + 0.3
+      const lh = L.striker.hand === 'L'
+      const ms = move('striker', f.striker ?? ra), mn = move('nonstriker', rb), mb = move('bowler', f.bowler)
+      const strikerOut = out && (!pl.runOut || pl.runOut.outIsStriker)
+      rigs.current.get('striker')?.apply(batsmanPose({ style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut }), lh)
+      rigs.current.get('nonstriker')?.apply(nonStrikerPose({ t, t1: pl.tRun, speed: mn.v, cyc: mn.cyc, bat: true, walkOff: out && !!pl.runOut && !pl.runOut.outIsStriker }), L.nonStriker?.hand === 'L')
+      rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' }))
       // the umpires' arms
       for (const who of [1, 2] as const) {
-        const l = umpArms.current[`l${who}`], rr = umpArms.current[`r${who}`]
         const sg = f.signal && f.signal.who === who ? f.signal : null
         let la = 0, ra2 = 0
         if (sg) {
@@ -229,8 +244,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           else if (sg.kind === 'notout') { la = 22 * k; ra2 = -22 * k }
           else la = 38 * k
         }
-        if (l) l.style.transform = `rotate(${la.toFixed(0)}deg)`
-        if (rr) rr.style.transform = `rotate(${ra2.toFixed(0)}deg)`
+        rigs.current.get(`umpire${who}`)?.apply(umpirePose(la, ra2))
       }
       // fielders: where they stand, or where they have run to
       L.fielders.forEach((_, i) => {
@@ -244,6 +258,16 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const dn = dv ? Math.hypot(dv.dx, dv.dz) || 1 : 1
         const back = dv ? 1.45 * dv.k : 0
         place(`f${i}`, { x: w.x - (dv ? (dv.dx / dn) * back : 0), y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: w.z - (dv ? (dv.dz / dn) * back : 0) }, { rot: dv ? screenSide(dv, c.yaw) * dv.k * 78 : 0 })
+        const mf = move(`f${i}`, w)
+        const sfp = clamp01((t - t2c) / pl.tFlight)
+        const thrower = pl.runOut ? pl.catcher === i : pl.chaser === i
+        const keeperTake = i === 0 && pl.catcher === 0 && !dv
+        const takeAt = keeperTake ? t2c : t3c
+        const catchK = (caught && !dv && !(pl.runOut) && (pl.kind === 'air' || pl.kind === 'keeper') ? clamp01((t - (takeAt - (keeperTake ? 0.14 : 0.32))) / 0.22) : 0) * (1 - clamp01((t - takeAt - 0.7) / 0.35))
+        const stopK = thrower && !pl.boundary && !pl.six && !dv && pl.kind === 'ground' ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
+        const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
+        const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
+        rigs.current.get(`f${i}`)?.apply(fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0 }))
       })
       // the ball, and its shadow
       const ball = nodes.current.get('ball'), shadow = nodes.current.get('shadow')
@@ -328,14 +352,14 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       {fielders.map((f, i) => (
         <div key={f.player.id} ref={setNode(`f${i}`)} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}>
-          <Figure player={f.player} team={bowlingTeam} look={i === 0 ? 'keeper' : 'fielder'} />
+          <Figure player={f.player} team={bowlingTeam} look={i === 0 ? 'keeper' : 'fielder'} rig={setRig(`f${i}`)} />
         </div>
       ))}
-      {nonStriker && <div ref={setNode('nonstriker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={nonStriker} team={battingTeam} look="nonstriker" /></div>}
-      <div ref={setNode('striker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={striker} team={battingTeam} look="striker" bat={(el) => { batRef.current = el }} /></div>
-      <div ref={setNode('bowler')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={bowler} team={bowlingTeam} look="bowler" arm={(el) => { armRef.current = el }} /></div>
-      <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l1 = el }} armR={(el) => { umpArms.current.r1 = el }} /></div>
-      <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" armL={(el) => { umpArms.current.l2 = el }} armR={(el) => { umpArms.current.r2 = el }} /></div>
+      {nonStriker && <div ref={setNode('nonstriker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={nonStriker} team={battingTeam} look="nonstriker" rig={setRig('nonstriker')} /></div>}
+      <div ref={setNode('striker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={striker} team={battingTeam} look="striker" rig={setRig('striker')} /></div>
+      <div ref={setNode('bowler')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={bowler} team={bowlingTeam} look="bowler" rig={setRig('bowler')} /></div>
+      <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire1')} /></div>
+      <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire2')} /></div>
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}

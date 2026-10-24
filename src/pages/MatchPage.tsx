@@ -93,6 +93,9 @@ import { TipBanner } from '../components/TipBanner'
 import type { MatchFormat, Player, Team } from '../types'
 
 /** How long auto-play waits before the next ball. Big moments hold for a few seconds (shorter at higher speeds). */
+// the screens that settle whether the batsman is out, so the result waits for them
+const DECIDING = new Set(['runout', 'review', 'challenge', 'challengewon'])
+
 function delayAfter(ev: BallEvent | undefined, speed: 1 | 2 | 4): number {
   const base = 1300 / speed
   if (!ev) return base
@@ -897,7 +900,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (revealHold === null) return
     const started = Date.now()
     const id = window.setInterval(() => {
-      const waiting = current.current || queue.current.length > 0 || (getBroadcastView() && clipNow.until > Date.now())
+      // only the screens that decide the ball (appeal, challenge, run-out check) keep the result back; the replays and cheers that follow it do not
+      const deciding = (m: Moment | null) => !!m && DECIDING.has(m.kind) && m.key >= revealHold && m.key < revealHold + 1
+      const waiting = deciding(current.current) || queue.current.some((m) => deciding(m)) || (getBroadcastView() && clipNow.until > Date.now())
       if (!waiting || Date.now() - started > 20000) { setRevealHold(null); flushOutcome() }
     }, 120)
     return () => window.clearInterval(id)

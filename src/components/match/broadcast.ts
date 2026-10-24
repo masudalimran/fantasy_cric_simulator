@@ -8,6 +8,7 @@ import type { BallEvent } from '../../engine/types'
  * Z = 0 and the bowler's at Z = -20.12. The top-down field of the normal view is stretched onto it so the fielders keep their places.
  */
 import { wideDirection, wideSide } from '../../engine/wide'
+import { classifyShot, type ShotStyle } from './bodyPose'
 
 export interface V3 { x: number; y: number; z: number }
 export interface Cam { p: V3; yaw: number; pitch: number; hfov: number }
@@ -161,6 +162,8 @@ export interface Plan {
   realTotal: number
   /** A word that pops up over somebody's head, and when. */
   react: { text: string; at: number; who: 'striker' | 'bowler' | 'keeper' } | null
+  /** The shot the batsman is drawn playing (looks only). */
+  shot: ShotStyle
 }
 
 /** The clip now on screen (set by the broadcast view as it plans a ball), so the animation screens can wait for it to end. */
@@ -314,6 +317,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, slow, realTotal: 0.95 + tDeliver + tFlight + tHold + (slow ? slow.len / slow.factor - slow.len : 0), runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
+    shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
     signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
