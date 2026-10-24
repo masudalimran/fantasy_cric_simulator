@@ -9,6 +9,7 @@ import { BatContact, ContactMeters } from './ContactPanel'
 import { replayCamFor } from './broadcast'
 import { BALL_R, STUMP_HALF, STUMP_HEIGHT, type Miss } from './nearMiss'
 import type { AlmostCaught } from './almost'
+import { wideDirection } from '../../engine/wide'
 import { ReplayFrame, type ReplayBase } from './ReplayFrame'
 import { useWidth } from './ReviewScreens'
 
@@ -117,9 +118,34 @@ export interface ExtraCastInfo {
   title: string
   sub: string
   color: string
+  /** For a wide: which side, the batsman's hand and how far outside the wide line it went (cm), drawn as a gap. */
+  wide?: { side: 'off' | 'leg'; hand: 'L' | 'R'; cm: number }
   rate: number
 }
 export const EXTRA_CAST_SECONDS = 4.4
+
+/** The pitch from above with the wide lines and the ball going past one, and the gap outside the line marked: a wide of 10 cm and one of 150 cm look different. */
+function WideGap({ wide, w }: { wide: NonNullable<ExtraCastInfo['wide']>; w: number }) {
+  const side = wideDirection(wide.side, wide.hand, 'above')
+  // the wide line is 18 units from the middle; every 100 cm outside it is 20 more (so 150 cm just fits)
+  const out = 18 + wide.cm * 0.2
+  const x = (v: number) => 50 + side * v
+  return (
+    <svg viewBox="0 0 100 62" width={w} className="shrink-0 rounded-lg bg-[#0b2a19]" aria-hidden>
+      <rect x="40" y="0" width="20" height="62" fill="#c9a864" opacity="0.45" />
+      <line x1="2" x2="98" y1="46" y2="46" stroke="#fff" strokeWidth="0.7" opacity="0.8" />
+      {[47, 50, 53].map((sx) => <line key={sx} x1={sx} x2={sx} y1="48" y2="53" stroke="#fef3c7" strokeWidth="1.2" strokeLinecap="round" />)}
+      {[-1, 1].map((d) => <line key={d} x1={50 + d * 18} x2={50 + d * 18} y1="4" y2="58" stroke="#ef4444" strokeWidth="0.7" strokeDasharray="2 1.4" />)}
+      <motion.path d={`M50 4 Q${x(out / 3)} 22 ${x(out)} 46 T${x(Math.min(48, out * 1.15))} 60`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeDasharray="2 1.2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.4, duration: 1.2 }} />
+      <motion.circle r="2" cx={x(out)} cy="46" fill="#ef4444" stroke="#fecaca" strokeWidth="0.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} />
+      <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}>
+        <line x1={x(18)} x2={x(out)} y1="39" y2="39" stroke="#fde68a" strokeWidth="1" />
+        <line x1={x(18)} x2={x(18)} y1="37" y2="41" stroke="#fde68a" strokeWidth="0.8" /><line x1={x(out)} x2={x(out)} y1="37" y2="41" stroke="#fde68a" strokeWidth="0.8" />
+        <text x={x((18 + out) / 2)} y="34" fontSize="5.5" fontWeight="800" textAnchor="middle" fill="#fef3c7">{wide.cm} cm</text>
+      </motion.g>
+    </svg>
+  )
+}
 
 /** An extra, the broadcast way: a short replay of the ball and a banner saying what it was and how many it cost. */
 export function ExtraCast({ info }: { info: ExtraCastInfo }) {
@@ -130,7 +156,8 @@ export function ExtraCast({ info }: { info: ExtraCastInfo }) {
       <ReplayFrame base={info.replay} rate={1.2 * r} share={0.7} cam={replayCamFor('extra', info.replay.event.seq)} />
       <Bottom from={0.7}>
         <div className="flex h-full items-center justify-center gap-3 px-3">
-          <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(26, Math.min(w * 0.085, 52)), WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: `0 0 22px ${info.color}aa`, color: info.color }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>{info.title}</motion.div>
+          {info.wide && <WideGap wide={info.wide} w={Math.max(96, Math.min(w * 0.3, 150))} />}
+          <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(26, Math.min(w * (info.wide ? 0.07 : 0.085), 52)), WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: `0 0 22px ${info.color}aa`, color: info.color }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>{info.title}</motion.div>
           <motion.div className="min-w-0 text-xs font-semibold leading-tight text-slate-100 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 * r }}>{info.sub}</motion.div>
         </div>
       </Bottom>

@@ -136,4 +136,12 @@ describe('the broadcast-style screens', () => {
     expect(Math.min(...cms)).toBeGreaterThanOrEqual(4)
     expect(Math.max(...cms)).toBeLessThanOrEqual(34)
   })
+
+  it('a wide draws the ball going past the line with the gap in centimetres', () => {
+    const ev = all.find((e) => e.extraType === 'wide')!
+    for (const cm of [12, 140]) {
+      const html = clean(renderToString(<ExtraCast info={{ replay: baseFor(m, ev), title: 'WIDE!', sub: 'x', color: '#fbbf24', wide: { side: 'off', hand: 'R', cm }, rate: 1 }} />))
+      expect(html).toContain(`>${cm} cm<`)
+    }
+  })
 })
