@@ -16,8 +16,8 @@ export interface Screen { x: number; y: number; d: number }
 
 export const PITCH_LEN = 20.12
 export const BOWL_Z = -PITCH_LEN
-/** The rope, an ellipse on the ground. */
-export const ROPE = { cx: 0, cz: (50 - 70) * 0.78, rx: 66 * 0.72, rz: 40 * 0.78 }
+/** The rope, an ellipse on the ground: a real-sized ground, about 70 m from the middle (the pitch is 20 m long, the stumps at either end of it). */
+export const ROPE = { cx: 0, cz: -10, rx: 70, rz: 68 }
 
 /**
  * Where a six lands, as a share of the way from the bat to the rope along its line: 1 is the rope, the stands run to about 1.34 and beyond that is
@@ -41,7 +41,10 @@ export function ropeDistance(from: V3, dx: number, dz: number): number {
 export const standHeight = (reach: number) => 0.9 + Math.max(0, Math.min(1, (reach - 1.03) / 0.31)) * 11.1
 
 /** The top-down field (160 x 100) onto the ground in metres, with the batsman's stumps as the origin. */
-export function toWorld(x: number, y: number): V3 { return { x: -(x - 80) * 0.72, y: 0, z: (y - 70) * 0.78 } }
+export function toWorld(x: number, y: number): V3 {
+  // a real ground: the rope is about 70 m from the middle (the top-down map has the batsman near its bottom edge, so the way behind him is stretched more than the way in front)
+  return { x: -(x - 80) * 1.06, y: 0, z: y < 70 ? (y - 70) * 1.3 : (y - 70) * 2.9 }
+}
 
 /** A fielder's place on the ground; the people close to the bat are set by hand because the top-down map stretches them. */
 export function fielderWorld(x: number, y: number, spot: string): V3 {
@@ -354,7 +357,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const runs = runOut ? runOut.legs : !w && !boundary && !wide && !byeFour ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
   const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
   // a six hangs in the air for as long as its height asks for
-  const tFlight = six ? Math.min(3.2, 1.5 + peak / 22) : Math.max(0.7, Math.min(1.6, 0.6 + dist / 42))
+  const tFlight = six ? Math.min(3.2, 1.5 + peak / 22) : Math.max(0.7, Math.min(2.4, 0.6 + dist / 36))
   // after the bat the ball goes towards the bowler's end: show it from behind the batsman, where it travels away from the camera
   const behind = !!runOut || kind === 'stumps' || kind === 'keeper' || kind === 'pad' || end.z > -6
   // the batsmen need time to run every run: the clip lasts until they have made them

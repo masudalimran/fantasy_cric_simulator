@@ -27,6 +27,8 @@ const lerp3v = (a: V3, b: V3, t: number): V3 => { const k = t * t * (3 - 2 * t);
 const STUB = { seq: 1, runsBat: 0, boundary: null, tags: [], wicket: null, extraType: null, delivery: null } as unknown as BallEvent
 const HEIGHT = 120
 const WIDTH = 60
+/** The smallest a person is drawn (far fielders shrink with the distance, but never to nothing). */
+const MIN_SCALE = 0.24
 
 /** What the TV score bug shows: the score, the two batsmen, the bowler and, in a chase, what is needed. */
 export interface ScoreBug {
@@ -216,7 +218,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const p = project(r, world)
         const h = opts.heightM ?? 1.8
         if (!p || p.x < -80 || p.x > W + 80 || p.y < -40 || p.y > H + 200) { node.style.display = 'none'; return }
-        const s = Math.max(0.4, (r.F * h) / p.d / HEIGHT)
+        const s = Math.max(MIN_SCALE, (r.F * h) / p.d / HEIGHT)
         anchors.set(key, { x: p.x, y: p.y, s, rot: opts.rot ?? 0 })
         node.style.display = 'block'
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) scale(${s.toFixed(3)}) rotate(${(opts.rot ?? 0).toFixed(0)}deg) translate(-50%,-100%)`
@@ -286,7 +288,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         if (dv && i === L.plan.chaser && L.plan.chaserDive) {
           const pe = project(r, { x: L.plan.end.x, y: 0, z: L.plan.end.z })
           if (pe) {
-            const ratio = Math.max(1, 0.4 / Math.max(0.01, (r.F * 1.8) / pe.d / HEIGHT))
+            const ratio = Math.max(1, MIN_SCALE / Math.max(0.01, (r.F * 1.8) / pe.d / HEIGHT))
             px += (L.plan.end.x - Math.sign(dv.dx) * (1.8 + diveGapMetres(L.plan) / 1.4) * ratio - px) * dv.k
             pz += (L.plan.end.z - pz) * dv.k
           }
@@ -349,7 +351,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         if (!node) return
         const p = project(r, world)
         if (!p || p.x < 10 || p.x > W - 10 || p.y < 10 || p.y > H) { node.style.display = 'none'; return }
-        const headTop = p.y - HEIGHT * Math.max(0.4, (r.F * 1.8) / p.d / HEIGHT)
+        const headTop = p.y - HEIGHT * Math.max(MIN_SCALE, (r.F * 1.8) / p.d / HEIGHT)
         if (headTop < 12) { node.style.display = 'none'; return }
         node.style.display = 'block'
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${(headTop - 2).toFixed(1)}px,0) translate(-50%,-100%)`

@@ -29,7 +29,7 @@ describe('the broadcast view plan', () => {
           if (ev.boundary === 6 && !ev.extraType) expect(plan.signal?.kind).toBe('six')
           if (ev.boundary === 4 && !ev.extraType) expect(plan.signal?.kind).toBe('four')
           expect(plan.total).toBeGreaterThan(2.5)
-          expect(plan.total).toBeLessThan(5.5)
+          expect(plan.total).toBeLessThan(7)
           expect(finite(plan.end)).toBe(true)
           if (ev.wicket) {
             const rest0 = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
