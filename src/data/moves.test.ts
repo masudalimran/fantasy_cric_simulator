@@ -21,13 +21,13 @@ describe('signature moves', () => {
 
   it('a star uses his own move and everybody else his team\'s', () => {
     expect(moveFor('dragonball-vegeta', { id: 'dragonball' })?.name).toBe('FINAL FLASH!')
-    expect(moveFor('dragonball-yamcha', { id: 'dragonball' })?.name).toBe('KAMEHAMEHA!')
+    expect(moveFor('a-youth-player', { id: 'dragonball' })?.name).toBe('KAMEHAMEHA!')
     expect(moveFor('x', { id: 'my-own-team' })).toBeNull()
   })
 
   it('a six always shows the move, a four only sometimes, a wicket the bowler\'s, and nothing else', () => {
     const ev = { seq: 1, boundary: 0 as 0 | 4 | 6, intent: 1, wicket: null as unknown, extraType: null as unknown }
-    const t = { id: 'naruto' }, b = { id: 'bleach-kon' }
+    const t = { id: 'naruto' }, b = { id: 'a-youth-bowler' }
     const call = (e: Partial<typeof ev>) => moveForBall({ ...ev, ...e } as never, { id: 'naruto-sasuke-uchiha' }, t, b, { id: 'bleach' })
     expect(call({ boundary: 6 })?.move.name).toBe('CHIDORI!')
     expect(call({ boundary: 6 })?.size).toBe(1)

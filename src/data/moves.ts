@@ -1,4 +1,5 @@
 import type { BallEvent } from '../engine/types'
+import { PLAYER_MOVES } from './playerMoves'
 
 /**
  * Signature moves: the special attack a team (or a star) shows on a six, a strong four or a wicket. Drawn in code from a few shapes (no pictures, no
@@ -45,8 +46,8 @@ export const TEAM_MOVES: Record<string, Move> = {
   halo: m('ENERGY SWORD!', 'slash', '#22d3ee', '#ecfeff'),
 }
 
-/** A few stars have a move of their own (by player id). */
-export const STAR_MOVES: Record<string, Move> = {
+/** Stars with a hand-picked move (by player id); they win over the generated ones in `playerMoves.ts`. */
+const HAND_MOVES: Record<string, Move> = {
   'dragonball-son-goku': m('KAMEHAMEHA!', 'beam', '#38bdf8', '#e0f2fe'),
   'dragonball-vegeta': m('FINAL FLASH!', 'beam', '#facc15', '#fffbeb'),
   'dragonball-son-gohan': m('MASENKO!', 'beam', '#fb923c', '#fef3c7'),
@@ -107,6 +108,9 @@ export const STAR_MOVES: Record<string, Move> = {
   'elderscrolls-alduin': m('DRAGONFIRE!', 'flame', '#ef4444', '#fde047'),
   'aot-levi-ackerman': m('SPINNING SLASH!', 'slash', '#e5e7eb', '#38bdf8'),
 }
+
+/** Every player's own move: the hand-picked ones first, then a move written for each of the other players in the built-in squads. */
+export const STAR_MOVES: Record<string, Move> = { ...PLAYER_MOVES, ...HAND_MOVES }
 
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 
