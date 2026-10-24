@@ -357,9 +357,9 @@ In every match row the winner's crest has a gold ring and a W badge; the loser's
 A finished match opens a popup (Match summary first, then Scorecards, teams in batting order with the opposition's
 bowling against them). A player's portrait or name opens his profile. A team name goes to the team page. When you add
 a screen that mentions a match, player or team, link it the same way.
+- **No spoilers while a ball is being shown**: on the broadcast view the scoreboard, scorecard, commentary and bowler/batsman cards keep showing the game *as it was before the ball* until the ball's clip and every screen for it (appeal, third umpire, review, replay) have finished, then update together (`engine/asOf.ts` rebuilds the earlier state from the ball log; the real match is never changed). Sounds, vibration, confetti, SIX/FOUR/wicket banners, the screen flash and the wicket shake wait for the same moment, so nothing celebrates before the result is known. The strategic-timeout highlight reel now fits every ball into its time (at most 9 balls) so each ball finishes before the next starts, and on the third umpire's run-out screen a NOT OUT batsman's bat is drawn inside the crease.
 
 ---
-- **No spoilers while a ball is being shown**: on the broadcast view the scoreboard, scorecard, commentary and bowler/batsman cards keep showing the game *as it was before the ball* until the ball's clip and every screen for it (appeal, third umpire, review, replay) have finished, then update together (`engine/asOf.ts` rebuilds the earlier state from the ball log; the real match is never changed). Sounds, vibration, confetti, SIX/FOUR/wicket banners, the screen flash and the wicket shake wait for the same moment, so nothing celebrates before the result is known. The strategic-timeout highlight reel now fits every ball into its time (at most 9 balls) so each ball finishes before the next starts, and on the third umpire's run-out screen a NOT OUT batsman's bat is drawn inside the crease.
 
 ## Easy for beginners
 
