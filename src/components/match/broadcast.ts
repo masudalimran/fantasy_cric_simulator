@@ -19,6 +19,27 @@ export const BOWL_Z = -PITCH_LEN
 /** The rope, an ellipse on the ground. */
 export const ROPE = { cx: 0, cz: (50 - 70) * 0.78, rx: 66 * 0.72, rz: 40 * 0.78 }
 
+/**
+ * Where a six lands, as a share of the way from the bat to the rope along its line: 1 is the rope, the stands run to about 1.34 and beyond that is
+ * outside the stadium. A short six drops just over the rope, a 100 m one in the top of the stands, a big one clears the roof and a monster goes miles.
+ */
+export function sixReach(distance: number): number {
+  const d = Math.max(50, Math.min(220, distance))
+  return d <= 100 ? 1.04 + ((d - 60) / 40) * 0.26 : 1.3 + ((d - 100) / 100) * 1.3
+}
+
+/** How far along a line from a point on the ground, going the way (dx, dz) (a unit step), the rope is (the ground is inside it). */
+export function ropeDistance(from: V3, dx: number, dz: number): number {
+  const ax = (from.x - ROPE.cx) / ROPE.rx, az = (from.z - ROPE.cz) / ROPE.rz
+  const bx = dx / ROPE.rx, bz = dz / ROPE.rz
+  const A = bx * bx + bz * bz, B = 2 * (ax * bx + az * bz), C = ax * ax + az * az - 1
+  const disc = Math.max(0, B * B - 4 * A * C)
+  return Math.max(1, (-B + Math.sqrt(disc)) / (2 * A))
+}
+
+/** How high the stands are at this share of the rope's size (the slope runs from 0.9 m at 1.03 up to 12 m at 1.34). */
+export const standHeight = (reach: number) => 0.9 + Math.max(0, Math.min(1, (reach - 1.03) / 0.31)) * 11.1
+
 /** The top-down field (160 x 100) onto the ground in metres, with the batsman's stumps as the origin. */
 export function toWorld(x: number, y: number): V3 { return { x: -(x - 80) * 0.72, y: 0, z: (y - 70) * 0.78 } }
 
@@ -289,8 +310,16 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     kind = 'ground'
   } else {
     end = { x: end.x, y: 0, z: end.z }
+    // a six lands where its distance says: just over the rope, up in the stands or out of the stadium
+    if (ev.boundary === 6 && ev.distance) {
+      const ux = end.x - meet.x, uz = end.z - meet.z
+      const len = Math.hypot(ux, uz) || 1
+      const reach = sixReach(ev.distance)
+      const t = ropeDistance(meet, ux / len, uz / len) * reach
+      end = { x: meet.x + (ux / len) * t, y: reach <= 1.34 ? standHeight(reach) : 0, z: meet.z + (uz / len) * t }
+    }
     const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
-    end.y = 0
+    if (!(ev.boundary === 6 && ev.distance)) end.y = 0
     const el = elevation(ev, dist)
     peak = el.peak
     kind = el.kind
@@ -305,7 +334,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const runs = runOut ? runOut.legs : !w && !boundary && !wide && !byeFour ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
   const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
   // a six hangs in the air for as long as its height asks for
-  const tFlight = six ? Math.min(2.6, 1.5 + peak / 22) : Math.max(0.7, Math.min(1.6, 0.6 + dist / 42))
+  const tFlight = six ? Math.min(3.2, 1.5 + peak / 22) : Math.max(0.7, Math.min(1.6, 0.6 + dist / 42))
   // after the bat the ball goes towards the bowler's end: show it from behind the batsman, where it travels away from the camera
   const behind = !!runOut || kind === 'stumps' || kind === 'keeper' || kind === 'pad' || end.z > -6
   // the batsmen need time to run every run: the clip lasts until they have made them

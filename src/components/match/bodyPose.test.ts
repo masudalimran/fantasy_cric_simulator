@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { batHitsBall, beatenDot, diveSpot, planBall } from './broadcast'
+import { batHitsBall, beatenDot, diveSpot, planBall, ROPE, ropeDistance, sixReach, standHeight } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 import { FORE, SHIN, THIGH, UPPER, batsmanPose, bowlerPose, classifyShot, fielderPose, mirrorPose, nonStrikerPose, solve, standing, umpirePose, type Pose, type ShotStyle } from './bodyPose'
 
@@ -107,5 +107,34 @@ describe('the bodies drawn in the broadcast view', () => {
     const right = diveSpot(plan, { x: 36, y: 0, z: 35 })
     expect(right.spot.x - plan.end.x).toBeGreaterThan(2)
     expect(right.dx).toBe(-1)
+  })
+
+  it('a six lands where its distance says: in the stands for a normal one, outside the stadium for a monster', () => {
+    expect(sixReach(60)).toBeLessThan(1.1)
+    expect(sixReach(100)).toBeLessThanOrEqual(1.31)
+    expect(sixReach(110)).toBeGreaterThan(1.34)
+    expect(sixReach(150)).toBeGreaterThan(sixReach(110))
+    expect(sixReach(200)).toBeGreaterThan(2)
+    expect(standHeight(1.03)).toBeCloseTo(0.9)
+    expect(standHeight(1.34)).toBeCloseTo(12)
+    // the rope is where the line from the middle of the field meets the ellipse
+    const t = ropeDistance({ x: ROPE.cx, y: 0, z: ROPE.cz }, 1, 0)
+    expect(t).toBeCloseTo(ROPE.rx, 3)
+    for (let seed = 1; seed <= 6; seed++) {
+      const mm = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      mm.playMatch()
+      for (const inn of mm.innings) {
+        const bowlSide = mm.sides[1 - inn.battingSide]
+        for (const ev of inn.log.filter((e) => e.boundary === 6 && e.distance)) {
+          const striker = mm.player(ev.strikerId)
+          const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
+          const reach = Math.hypot((plan.end.x - ROPE.cx) / ROPE.rx, (plan.end.z - ROPE.cz) / ROPE.rz)
+          expect(reach).toBeGreaterThan(0.95)
+          if (ev.distance! >= 130) expect(reach).toBeGreaterThan(1.36)
+        }
+      }
+    }
   })
 })

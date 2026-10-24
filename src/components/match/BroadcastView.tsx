@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -320,7 +320,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             hand = { x: an.x + lx * Math.cos(a) - ly * Math.sin(a), y: an.y + lx * Math.sin(a) + ly * Math.cos(a) }
           } else held = 0
         }
-        if (held < 0) { ball.style.display = 'none'; shadow.style.display = 'none' } else
+        // a ball that has gone out of the stadium is behind the stands: gone from sight
+        const gone = !!f.ball && L.plan.six && f.ball.y < 12 && Math.hypot((f.ball.x - ROPE.cx) / ROPE.rx, (f.ball.z - ROPE.cz) / ROPE.rz) > 1.36 && t > t2c + 0.3
+        if (held < 0 || gone) { ball.style.display = 'none'; shadow.style.display = 'none' } else
         if (bp && gp && bp.x > -20 && bp.x < W + 20) {
           if (moveDraw) { ball.style.background = `radial-gradient(circle, #ffffff, ${moveDraw.c2} 45%, ${moveDraw.c1})`; ball.style.borderColor = moveDraw.c2; ball.style.boxShadow = `0 0 16px 7px ${moveDraw.c1}, 0 0 30px 12px ${moveDraw.c1}66` } else {
             ball.style.background = style === 'fire' ? '#f97316' : style === 'ice' ? '#f0f9ff' : '#dc2626'
