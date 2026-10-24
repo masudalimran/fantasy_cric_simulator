@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { planBall } from './broadcast'
+import { batHitsBall, beatenDot, diveSpot, planBall } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 import { FORE, SHIN, THIGH, UPPER, batsmanPose, bowlerPose, classifyShot, fielderPose, mirrorPose, nonStrikerPose, solve, standing, umpirePose, type Pose, type ShotStyle } from './bodyPose'
 
@@ -80,5 +80,32 @@ describe('the bodies drawn in the broadcast view', () => {
       }
     }
     expect(seen.size).toBeGreaterThanOrEqual(6)
+  })
+
+  it('the bat is only heard when it meets the ball', () => {
+    const ev = { seq: 5, runsBat: 0, legal: true, wicket: null, extraType: null, boundary: 0 as const }
+    expect(batHitsBall({ ...ev, extraType: 'wide' })).toBe(false)
+    expect(batHitsBall({ ...ev, extraType: 'bye' })).toBe(false)
+    expect(batHitsBall({ ...ev, extraType: 'legbye' })).toBe(false)
+    expect(batHitsBall({ ...ev, runsBat: 1 })).toBe(true)
+    expect(batHitsBall({ ...ev, boundary: 4, runsBat: 4 })).toBe(true)
+    const dd = { kind: 'bowled' as const, playerId: 'x' }
+    expect(batHitsBall({ ...ev, wicket: dd as never })).toBe(false)
+    expect(batHitsBall({ ...ev, wicket: { kind: 'caught', playerId: 'x' } as never })).toBe(true)
+    // a dot ball is either played and missed (no sound) or kept out by the bat (a soft thud), never both
+    const dots = Array.from({ length: 40 }, (_, i) => ({ ...ev, seq: i + 1 }))
+    for (const d of dots) expect(batHitsBall(d)).toBe(!beatenDot(d))
+    expect(dots.some((d) => beatenDot(d))).toBe(true)
+    expect(dots.some((d) => !beatenDot(d))).toBe(true)
+  })
+
+  it('a diver at the rope falls across the ball from the side he came, well short of it', () => {
+    const plan = { meet: { x: 0, y: 0.8, z: -0.4 }, end: { x: 30, y: 0, z: 40 } }
+    const left = diveSpot(plan, { x: 22, y: 0, z: 35 })
+    expect(plan.end.x - left.spot.x).toBeGreaterThan(2)
+    expect(left.dx).toBe(1)
+    const right = diveSpot(plan, { x: 36, y: 0, z: 35 })
+    expect(right.spot.x - plan.end.x).toBeGreaterThan(2)
+    expect(right.dx).toBe(-1)
   })
 })

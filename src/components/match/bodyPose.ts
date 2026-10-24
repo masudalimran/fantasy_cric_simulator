@@ -47,8 +47,8 @@ const ease = (t: number) => { const c = clamp01(t); return c * c * (3 - 2 * c) }
 export const dirOf = (deg: number): P => ({ x: -Math.sin(rad(deg)), y: Math.cos(rad(deg)) })
 
 export const standing = (): Pose => ({
-  hip: { x: 30, y: 87 }, lean: 0, head: { dx: 0, dy: 0, tilt: 0 },
-  handL: { x: -10, y: 24 }, handR: { x: 10, y: 24 }, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 }, bat: null, two: false, ball: false,
+  hip: { x: 30, y: 85.3 }, lean: 0, head: { dx: 0, dy: 0, tilt: 0 },
+  handL: { x: -10, y: 24 }, handR: { x: 10, y: 24 }, footL: { x: 25, y: 117 }, footR: { x: 35, y: 117 }, bat: null, two: false, ball: false,
 })
 
 export function mixPose(a: Pose, b: Pose, k: number): Pose {
@@ -133,6 +133,7 @@ export type ShotStyle = 'defend' | 'drive' | 'cut' | 'pull' | 'flick' | 'sweep' 
 export function classifyShot(c: { swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
   if (c.wide) return 'leave'
   if (c.kind === 'stumps' || c.kind === 'pad' || (!c.swing && c.runsBat === 0)) return 'beaten'
+  if (c.runsBat === 0 && c.kind === 'ground' && c.boundary === 0) return 'defend'
   if (c.kind === 'keeper' && c.runsBat === 0 && c.boundary === 0) return c.seq % 3 === 0 ? 'leave' : 'beaten'
   const short = c.length < -7.5
   const full = c.length > -4.5
@@ -154,7 +155,7 @@ const batPose = (hip: P, lean: number, grip: P, angle: number, footL: P, footR: 
 })
 
 /** Waiting at the crease with the bat resting by the foot, one hand on the handle. */
-const WAIT: Pose = { ...batPose({ x: 30, y: 88 }, -3, { x: 9, y: 22 }, -18, { x: 22, y: 117 }, { x: 38, y: 117 }, 3), two: false, handL: { x: -9, y: 23 } }
+const WAIT: Pose = { ...batPose({ x: 30, y: 85.5 }, -3, { x: 9, y: 22 }, -18, { x: 24, y: 117 }, { x: 36, y: 117 }, 3), two: false, handL: { x: -9, y: 23 } }
 const STANCE = batPose({ x: 30, y: 88 }, 3, { x: -5, y: 21 }, 24, { x: 21, y: 117 }, { x: 39, y: 117 })
 const LIFT = batPose({ x: 30, y: 88 }, 1, { x: -9, y: 10 }, 158, { x: 21, y: 117 }, { x: 39, y: 117 })
 
@@ -245,7 +246,7 @@ export function batsmanPose(c: BatCtx): Pose {
 
 /** One hand carries the bat, pointing down and a little forward. */
 function carryBat(p: Pose): Pose {
-  return { ...p, handR: { x: 11, y: 22 }, handL: { x: -10, y: 24 }, bat: 14, two: false, lean: 0, hip: { x: 30, y: 87 }, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 } }
+  return { ...p, handR: { x: 11, y: 22 }, handL: { x: -10, y: 24 }, bat: 14, two: false, lean: 0, hip: { x: 30, y: 85.5 }, footL: { x: 24, y: 117 }, footR: { x: 36, y: 117 } }
 }
 
 /** Legs and arms going for a walk or a run: `speed` in metres a second, `cyc` the angle of the stride. */
@@ -287,7 +288,7 @@ export function bowlerPose(c: BowlCtx): Pose {
   let p: Pose = { ...standing(), ball: true }
   if (run) {
     // running in, the ball held up at the chest, both fists pumping
-    p = locomotion({ ...p, hip: { x: 30, y: 88 }, handR: { x: 6, y: 12 }, handL: { x: -6, y: 14 }, lean: 0 }, Math.max(3, c.speed), c.cyc)
+    p = locomotion({ ...p, hip: { x: 30, y: 86 }, handR: { x: 6, y: 12 }, handL: { x: -6, y: 14 }, lean: 0 }, Math.max(3, c.speed), c.cyc)
   } else {
     // the jump and the whirl of the arm: the front arm points up and pulls down as the bowling arm comes over
     const a = clamp01(c.arm)
@@ -309,7 +310,7 @@ export function bowlerPose(c: BowlCtx): Pose {
     if (c.t > c.t1 + 0.1) {
       // after the follow-through he gets his breath back
       const k = ease((c.t - c.t1 - 0.1) / 0.5)
-      p = mixPose(p, { ...standing(), hip: { x: 30, y: 89 }, lean: 6, handL: { x: -8, y: 26 }, handR: { x: 8, y: 26 } }, k)
+      p = mixPose(p, { ...standing(), hip: { x: 30, y: 86 }, lean: 4, handL: { x: -8, y: 26 }, handR: { x: 8, y: 26 } }, k)
       p.ball = false
     }
     if (c.speed > 1) p = locomotion(p, c.speed * 0.6, c.cyc, true)
@@ -336,12 +337,12 @@ export interface FieldCtx {
 export function fielderPose(c: FieldCtx): Pose {
   const idle: Pose = c.keeper
     ? { ...standing(), hip: { x: 30, y: 97 }, footL: { x: 16, y: 117 }, footR: { x: 44, y: 117 }, handL: { x: -12, y: 26 }, handR: { x: 12, y: 26 }, head: { dx: 0, dy: 2, tilt: 0 } }
-    : { ...standing(), hip: { x: 30, y: 88 }, lean: 0, footL: { x: 22, y: 117 }, footR: { x: 38, y: 117 }, handL: { x: -8, y: 24 }, handR: { x: 8, y: 24 } }
+    : { ...standing(), handL: { x: -8, y: 24 }, handR: { x: 8, y: 24 } }
   const ready: Pose = c.keeper
     ? { ...idle, hip: { x: 30, y: 100 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 } }
-    : { ...idle, hip: { x: 30, y: 91 }, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 }, head: { dx: 0, dy: 2, tilt: 0 } }
+    : { ...idle, hip: { x: 30, y: 90 }, footL: { x: 21, y: 117 }, footR: { x: 39, y: 117 }, handL: { x: -9, y: 22 }, handR: { x: 9, y: 22 }, head: { dx: 0, dy: 2, tilt: 0 } }
   let p = mixPose(idle, ready, ease(c.ready))
-  if (c.speed > 0.8) p = locomotion({ ...p, hip: { x: 30, y: 87 } }, c.speed, c.cyc)
+  if (c.speed > 0.8) p = locomotion({ ...p, hip: { x: 30, y: 85.5 } }, c.speed, c.cyc)
   if (c.stop > 0) p = mixPose(p, { ...standing(), hip: { x: 31, y: 105 }, lean: 6, head: { dx: 0, dy: 3, tilt: 0 }, footL: { x: 14, y: 117 }, footR: { x: 42, y: 116 }, handL: { x: -8, y: 28 }, handR: { x: 6, y: 30 } }, ease(c.stop))
   if (c.catchK > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: c.keeper ? 98 : 90 }, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -5, y: -17 }, handR: { x: 5, y: -17 } }, ease(c.catchK))
   if (c.throwK > 0) {
@@ -361,7 +362,7 @@ export function umpirePose(la: number, ra: number): Pose {
   const armL = dirOf(la), armR = dirOf(ra)
   const out = la !== 0 || ra !== 0
   return {
-    ...p, hip: { x: 30, y: 89 },
+    ...p, hip: { x: 30, y: 85.3 },
     handL: out && la !== 0 ? { x: -SH + armL.x * 25, y: armL.y * 25 } : { x: -6, y: 26 },
     handR: out && ra !== 0 ? { x: SH + armR.x * 25, y: armR.y * 25 } : { x: 6, y: 26 },
   }

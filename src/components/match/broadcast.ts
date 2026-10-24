@@ -188,6 +188,16 @@ export function elevation(ev: Pick<BallEvent, 'seq' | 'boundary' | 'distance' | 
   return { kind: 'ground', peak: 0 }
 }
 
+/** A ball that is not scored off and is played and missed (it goes through to the keeper) rather than kept out by the bat. */
+export const beatenDot = (ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'wicket' | 'extraType'>) => !ev.wicket && !ev.extraType && ev.runsBat === 0 && ev.legal && hash01(ev.seq * 2.3) > 0.5
+
+/** Whether the bat really met the ball (the sound of the bat is only heard then): not on a wide, a bye, a leg bye, a miss, or a ball that bowled, trapped or stumped him. */
+export function batHitsBall(ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'wicket' | 'extraType' | 'boundary'>): boolean {
+  if (ev.extraType === 'wide' || ev.extraType === 'bye' || ev.extraType === 'legbye') return false
+  if (ev.wicket) return ev.wicket.kind === 'caught' || ev.wicket.kind === 'caught and bowled' || ev.wicket.kind === 'run out'
+  return ev.runsBat > 0 || ev.boundary > 0 || !beatenDot(ev)
+}
+
 /** How long a ball bowled at this speed takes to reach the bat, in clip seconds (the run-up, then the ball in the air). */
 export const tDeliverFor = (speed: number) => Math.max(0.36, Math.min(0.85, 0.5 * Math.pow(135 / Math.max(60, speed), 0.7)))
 export const contactAt = (speed: number) => 0.95 + tDeliverFor(speed)
@@ -274,7 +284,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     peak = el.peak
     kind = el.kind
     // a ball that is not scored off is either played and missed (it goes through to the keeper) or kept out by the bat
-    if (ev.runsBat === 0 && ev.legal && hash01(ev.seq * 2.3) > 0.5) { end = { x: meet.x * 0.5, y: 1, z: 8.5 }; kind = 'keeper'; catcher = 0 }
+    if (beatenDot(ev)) { end = { x: meet.x * 0.5, y: 1, z: 8.5 }; kind = 'keeper'; catcher = 0 } else if (ev.runsBat === 0 && kind === 'ground') swing = true // kept out with a defensive push
   }
   // the nearest fielder (not the keeper) runs towards where the ball is going
   if (!w && !wide && !six && (ev.runsBat > 0 || bye || legbye) && kind !== 'keeper') {
@@ -365,6 +375,18 @@ export interface Frame {
   phase: 'run' | 'deliver' | 'flight' | 'hold'
 }
 
+/**
+ * A fielder diving to stop a four falls sideways towards the ball's line from the side he ran from, so the whole of him is clear of the ball and his fingertips
+ * end up a good way short of where it goes.
+ */
+export function diveSpot(plan: Pick<Plan, 'meet' | 'end'>, from: V3): { spot: V3; dx: number; dz: number } {
+  // across the picture (the camera looks along the pitch or back down it), so the gap is plain to see on screen
+  const sgn = from.x >= plan.end.x ? 1 : -1
+  // the body reaches about 2.2 m from where he leaves the ground, and the picture sets him back 1.45 m from the place he is at; the ball passes 1.4 m beyond his fingertips
+  const gap = 2.2 + 1.4 - 1.45
+  return { spot: { x: plan.end.x + sgn * gap, y: 0, z: plan.end.z }, dx: -sgn, dz: 0 }
+}
+
 /** Everything's place `t` seconds into the clip. `fielderAt` gives the resting place of a fielder by index. */
 export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Frame {
   const moving = new Map<number, V3>()
@@ -413,10 +435,8 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (plan.catcher >= 0) { const a = fielderAt(plan.catcher); moving.set(plan.catcher, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf * 1.15))) }
   if (plan.chaser >= 0) {
     const a = fielderAt(plan.chaser)
-    // a diver at the rope stops short: the ball gets past just beyond his fingertips (a metre or so), however near or far he started
-    const D = Math.hypot(plan.end.x - a.x, plan.end.z - a.z) || 1
-    const frac = plan.chaserDive ? Math.max(0.05, Math.min(0.9, 1 - 2.4 / D)) : plan.boundary ? 0.8 : 0.9
-    moving.set(plan.chaser, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf) * frac))
+    const target = plan.chaserDive ? diveSpot(plan, a).spot : { x: plan.end.x, y: 0, z: plan.end.z }
+    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive ? 1 : plan.boundary ? 0.8 : 0.9)))
   }
   // where the camera looks
   const b = ball ?? bowlerPos
@@ -486,7 +506,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (plan.keeperDive) { const d = plan.keeperDive; const k = clamp01((t - d.at) / 0.4) * (1 - clamp01((t - d.at - 1.1) / 0.5)); if (k > 0) dives.set(0, { k, dir: d.dir, dx: d.dir, dz: 0 }) }
   // a low catch is a dive; a high one is taken standing
   if (plan.catcher > 0 && plan.kind === 'air' && plan.peak < 3.4) { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1, dx: plan.end.x - fielderAt(plan.catcher).x, dz: plan.end.z - fielderAt(plan.catcher).z }) }
-  if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) dives.set(plan.chaser, { k, dir: Math.sign(plan.end.x - fielderAt(plan.chaser).x) || 1, dx: plan.end.x - fielderAt(plan.chaser).x, dz: plan.end.z - fielderAt(plan.chaser).z }) }
+  if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) { const d = diveSpot(plan, fielderAt(plan.chaser)); dives.set(plan.chaser, { k, dir: Math.sign(d.dx) || 1, dx: d.dx, dz: d.dz }) } }
   const react = plan.react && t >= plan.react.at && t < plan.react.at + 1.1 ? { text: plan.react.text, who: plan.react.who } : null
   // the boards at the boundary light up with FOUR or SIX where the ball went
   let board: Frame['board'] = null

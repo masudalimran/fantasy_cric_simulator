@@ -143,6 +143,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     let prev = t0
     let stopped = false
     const trail: V3[] = []
+    const anchors = new Map<string, { x: number; y: number; s: number; rot: number }>()
     const prevPos = new Map<string, V3>(), speeds = new Map<string, number>(), cycles = new Map<string, number>()
     const walkFrom = new Map(lastRest.current)
     lastRest.current = new Map(live.current.fielders.map((fd, i) => [fd.player.id, live.current.rest[i]]))
@@ -194,6 +195,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const h = opts.heightM ?? 1.8
         if (!p || p.x < -80 || p.x > W + 80 || p.y < -40 || p.y > H + 200) { node.style.display = 'none'; return }
         const s = Math.max(0.4, (r.F * h) / p.d / HEIGHT)
+        anchors.set(key, { x: p.x, y: p.y, s, rot: opts.rot ?? 0 })
         node.style.display = 'block'
         node.style.transform = `translate3d(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px,0) scale(${s.toFixed(3)}) rotate(${(opts.rot ?? 0).toFixed(0)}deg) translate(-50%,-100%)`
         node.style.zIndex = String(Math.max(1, Math.round(3000 - p.d * 10)))
@@ -257,13 +259,22 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         // a diver falls head first towards the ball: the feet are where he left the ground, so the body is set back along the way he came and the hands reach the ball
         const dn = dv ? Math.hypot(dv.dx, dv.dz) || 1 : 1
         const back = dv ? 1.45 * dv.k : 0
-        place(`f${i}`, { x: w.x - (dv ? (dv.dx / dn) * back : 0), y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: w.z - (dv ? (dv.dz / dn) * back : 0) }, { rot: dv ? screenSide(dv, c.yaw) * dv.k * 78 : 0 })
+        let px = w.x - (dv ? (dv.dx / dn) * back : 0), pz = w.z - (dv ? (dv.dz / dn) * back : 0)
+        // a diver at the rope: far people are drawn bigger than they really are (so they can be seen), so his gap to the ball is worked out in drawn size, not in metres
+        if (dv && i === L.plan.chaser && L.plan.chaserDive) {
+          const pe = project(r, { x: L.plan.end.x, y: 0, z: L.plan.end.z })
+          if (pe) {
+            const ratio = Math.max(1, 0.4 / Math.max(0.01, (r.F * 1.8) / pe.d / HEIGHT))
+            px += (L.plan.end.x - Math.sign(dv.dx) * 2.8 * ratio - px) * dv.k
+            pz += (L.plan.end.z - pz) * dv.k
+          }
+        }
+        place(`f${i}`, { x: px, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: pz }, { rot: dv ? screenSide(dv, c.yaw) * dv.k * 78 : 0 })
         const mf = move(`f${i}`, w)
         const sfp = clamp01((t - t2c) / pl.tFlight)
         const thrower = pl.runOut ? pl.catcher === i : pl.chaser === i
-        const keeperTake = i === 0 && pl.catcher === 0 && !dv
-        const takeAt = keeperTake ? t2c : t3c
-        const catchK = (caught && !dv && !(pl.runOut) && (pl.kind === 'air' || pl.kind === 'keeper') ? clamp01((t - (takeAt - (keeperTake ? 0.14 : 0.32))) / 0.22) : 0) * (1 - clamp01((t - takeAt - 0.7) / 0.35))
+        const takeAt = t3c
+        const catchK = (caught && !dv && !(pl.runOut) && (pl.kind === 'air' || pl.kind === 'keeper') ? clamp01((t - (takeAt - 0.32)) / 0.22) : 0) * (1 - clamp01((t - takeAt - 0.7) / 0.35))
         const stopK = thrower && !pl.boundary && !pl.six && !dv && pl.kind === 'ground' ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
         const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
@@ -274,6 +285,20 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       if (ball && shadow) {
         const bp = f.ball ? project(r, f.ball) : null
         const gp = f.ball ? project(r, { ...f.ball, y: 0 }) : null
+        // a catch: the ball flies into his hands and stays there (the hands are wherever his pose has put them)
+        let held = 0
+        let hand: { x: number; y: number } | null = null
+        const ci2 = L.plan.runOut ? -1 : L.plan.catcher
+        if (ci2 >= 0 && (L.plan.kind === 'air' || L.plan.kind === 'keeper')) {
+          held = clamp01((t - (t3c - 0.25)) / 0.25)
+          if (held > 0 && !ev?.wicket && t > t3c + 0.8) held = -1
+          const an = anchors.get(`f${ci2}`), hd = rigs.current.get(`f${ci2}`)?.hands()
+          if (an && hd) {
+            const lx = (hd.x - 30) * an.s, ly = (hd.y - 120) * an.s, a = (an.rot * Math.PI) / 180
+            hand = { x: an.x + lx * Math.cos(a) - ly * Math.sin(a), y: an.y + lx * Math.sin(a) + ly * Math.cos(a) }
+          } else held = 0
+        }
+        if (held < 0) { ball.style.display = 'none'; shadow.style.display = 'none' } else
         if (bp && gp && bp.x > -20 && bp.x < W + 20) {
           ball.style.background = style === 'fire' ? '#f97316' : style === 'ice' ? '#f0f9ff' : '#dc2626'
           ball.style.borderColor = style === 'ice' ? '#7dd3fc' : style === 'fire' ? '#fde047' : '#fecaca'
@@ -281,9 +306,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           const sz = Math.max(style === 'plain' ? 5 : 9, (r.F * (style === 'plain' ? 0.24 : 0.36)) / bp.d)
           ball.style.display = 'block'
           ball.style.width = ball.style.height = `${sz.toFixed(1)}px`
-          ball.style.transform = `translate3d(${(bp.x - sz / 2).toFixed(1)}px,${(bp.y - sz / 2).toFixed(1)}px,0)`
+          const bx = hand && held > 0 ? bp.x + (hand.x - bp.x) * held : bp.x, by = hand && held > 0 ? bp.y + (hand.y - bp.y) * held : bp.y
+          ball.style.transform = `translate3d(${(bx - sz / 2).toFixed(1)}px,${(by - sz / 2).toFixed(1)}px,0)`
           ball.style.zIndex = '4000'
-          shadow.style.display = 'block'
+          shadow.style.display = held >= 1 ? 'none' : 'block'
           shadow.style.width = `${(sz * 1.3).toFixed(1)}px`
           shadow.style.height = `${(sz * 0.45).toFixed(1)}px`
           shadow.style.transform = `translate3d(${(gp.x - sz * 0.65).toFixed(1)}px,${(gp.y - sz * 0.2).toFixed(1)}px,0)`

@@ -16,6 +16,8 @@ export interface Kit {
 export interface Rig {
   /** Puts the body in this pose (a left-hander is the same pose turned round). Does nothing when it has not changed. */
   apply: (pose: Pose, left?: boolean) => void
+  /** Where the hands are together (in the 60 x 120 box), for a ball being held. */
+  hands: () => P
 }
 
 const SKIN = '#f0c8a0'
@@ -77,13 +79,16 @@ function makeRig(root: HTMLElement): Rig {
   root.querySelectorAll<SVGElement>('[data-e]').forEach((n) => { e[n.dataset.e!] = n })
   const head = root.querySelector<HTMLElement>('[data-head]')
   let last = ''
+  let hand: P = { x: 30, y: 70 }
   return {
+    hands: () => hand,
     apply(pose, left = false) {
       const q = left ? mirrorPose(pose) : pose
       const key = [q.hip.x, q.hip.y, q.lean, q.head.dx, q.head.dy, q.head.tilt, q.handL.x, q.handL.y, q.handR.x, q.handR.y, q.footL.x, q.footL.y, q.footR.x, q.footR.y, q.bat, q.two, q.ball].map((v) => (typeof v === 'number' ? Math.round(v * 4) : String(v))).join()
       if (key === last) return
       last = key
       const s = solve(q)
+      hand = { x: (s.handL.x + s.handR.x) / 2, y: (s.handL.y + s.handR.y) / 2 }
       const set = (name: string, d: string) => { if (p[name]) p[name].setAttribute('d', d) }
       set('legL', line(s.hipL, s.kneeL, s.footL))
       set('legR', line(s.hipR, s.kneeR, s.footR))

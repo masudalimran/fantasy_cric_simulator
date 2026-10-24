@@ -26,7 +26,7 @@ import { MotmOverlay } from '../components/match/MotmOverlay'
 import { StudioShow } from '../components/match/StudioShow'
 import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/captions'
 import { boxChat } from '../season/studio'
-import { clipNow, contactAt } from '../components/match/broadcast'
+import { batHitsBall, clipNow, contactAt } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
 import { commentary } from '../engine/commentary'
 import { catchCause, catchContact, fourContact, sixContact } from '../engine/contact'
@@ -427,7 +427,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         // the celebration (or defeat) screen has its own sound
       } else if (lastEv && events.length <= 12) {
         // the crack of the bat is heard when the ball meets it (the clip's moment of contact), not when the result is shown
-        if (!lastEv.wicket && lastEv.extraType !== 'wide' && lastEv.extraType !== 'noball') {
+        if (batHitsBall(lastEv) && !lastEv.wicket) {
           const crack = () => { if (lastEv.boundary) sfx.crack(lastEv.boundary === 6); else sfx.hit(lastEv.runsBat >= 2 ? 0.55 : 0.25) }
           if (holding) {
             const speedNow = ballSpeed(lastEv, match.player(lastEv.bowlerId))
