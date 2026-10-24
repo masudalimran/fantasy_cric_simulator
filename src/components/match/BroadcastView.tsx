@@ -171,12 +171,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       if (f.ball) { trail.push(f.ball); if (trail.length > 14) trail.shift() } else trail.length = 0
       // when rain has stopped play (or the day is washed out) the covers are on and nobody is on the field
       const covers = L.look.covers || (L.event === null && L.look.rain === 2)
-      // a four or a six: the picture punches in and shakes for a moment; the crowd is on its feet for boundaries and wickets
+      // the crowd is on its feet for boundaries and wickets (the picture itself stays steady so the play is easy to follow)
       const tHit = L.plan.tRun + L.plan.tDeliver
-      const punch = L.plan.boundary ? Math.max(0, 1 - (t - tHit) / 0.4) : 0
       const cheerAt = L.plan.boundary ? tHit + 0.6 : L.plan.exitAt
       const cheer = cheerAt !== null && cheerAt !== undefined && t >= cheerAt && (L.plan.boundary || !!L.plan.wicketFlies || L.plan.catcher >= 0) ? Math.min(1, (t - cheerAt) / 0.3) * (1 - Math.min(1, Math.max(0, (t - cheerAt - 1.6) / 0.6))) : 0
-      if (punch > 0) { c.yaw += Math.sin(t * 70) * 0.006 * punch; c.pitch += Math.cos(t * 83) * 0.004 * punch; c.hfov *= 1 - 0.05 * punch }
       drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
