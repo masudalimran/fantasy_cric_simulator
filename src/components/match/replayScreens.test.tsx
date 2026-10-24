@@ -1,12 +1,11 @@
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
-import { fourContact } from '../../engine/contact'
 import { Match } from '../../engine/match'
 import { DEFAULT_LOOK } from '../../engine/stadium'
 import { wicketCard } from '../../season/wicketCards'
 import { fieldPlan } from './fieldSets'
-import { ExtraCast, FourCast, WicketCast } from './ReplayScreens'
+import { ExtraCast, WicketCast } from './ReplayScreens'
 import { placeFielders } from './Stage'
 import type { ReplayBase } from './ReplayFrame'
 
@@ -24,14 +23,6 @@ describe('the broadcast-style screens', () => {
   m.playMatch()
   const all = m.innings.flatMap((i) => i.log)
 
-  it('a four replays the ball and shows the contact, the bat speed and the timing', () => {
-    const ev = all.find((e) => e.boundary === 4)!
-    const html = clean(renderToString(<FourCast info={{ replay: baseFor(m, ev), contact: fourContact(ev, 70), shot: 'Cover, along the ground', batsman: m.player(ev.strikerId), batTeam: A, rate: 1 }} />))
-    expect(html).toContain('FOUR!')
-    expect(html).toContain('Replay')
-    expect(html).toContain('Bat speed')
-    expect(html).toContain('Cover, along the ground')
-  })
   it('a wicket replays the ball with a headline, three facts and a sentence', () => {
     const ev = all.find((e) => e.wicket?.kind === 'bowled')!
     const card = wicketCard('bowled', ev.seq, { bowlerName: m.player(ev.bowlerId).name, bowlerType: 'fast', kmh: 139 })
@@ -46,5 +37,22 @@ describe('the broadcast-style screens', () => {
     const html = clean(renderToString(<ExtraCast info={{ replay: baseFor(m, ev), title: 'WIDE!', sub: '+1 run to the total · outside off', color: '#fbbf24', rate: 1 }} />))
     expect(html).toContain('WIDE!')
     expect(html).toContain('outside off')
+  })
+})
+
+describe('the four in the broadcast view', () => {
+  it('writes where the ball met the bat, the bat speed and the timing on the picture itself', async () => {
+    const { BroadcastView } = await import('./BroadcastView')
+    const { fourContact } = await import('../../engine/contact')
+    const m = new Match({ teamA: A, teamB: B, format: 't20', seed: 6 })
+    m.playMatch()
+    const ev = m.innings.flatMap((i) => i.log).find((e) => e.boundary === 4)!
+    const b = baseFor(m, ev)
+    const html = clean(renderToString(<BroadcastView event={ev} striker={b.striker} nonStriker={b.nonStriker} bowler={b.bowler} battingTeam={b.batTeam} bowlingTeam={b.bowlTeam} fielders={b.fielders} shotCard={{ contact: fourContact(ev, 70), shot: 'Cover, along the ground' }} />))
+    expect(html).toContain('Four · Cover, along the ground')
+    expect(html).toContain('Bat speed')
+    expect(html).toContain('Timing')
+    const without = clean(renderToString(<BroadcastView event={ev} striker={b.striker} nonStriker={b.nonStriker} bowler={b.bowler} battingTeam={b.batTeam} bowlingTeam={b.bowlTeam} fielders={b.fielders} />))
+    expect(without).not.toContain('Bat speed')
   })
 })
