@@ -8,7 +8,7 @@ import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
 import { askVoice, cancelSpeech, setVoiceMode, setVoiceName, setVoiceSpeed, speak, useEnglishVoices, useVoiceMode, useVoiceNames, useVoiceSpeed, voiceSupported, type VoiceMode, type VoiceSpeed } from '../../audio/voice'
 import { VOICE_ROLES, assignVoices, type VoiceRole } from '../../audio/speechText'
-import { animLevelOf, setAnimLevel, setAnimPrefs, setBroadcastView, setCaptions, setSwipeAim, useAnimPrefs, useBroadcastView, useCaptions, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
+import { animLevelOf, setAnimLevel, setAnimPrefs, setBroadcastView, setCaptions, setScoreBar, setSwipeAim, useAnimPrefs, useBroadcastView, useCaptions, useScoreBar, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
 
 type Auto = 0 | 1 | 2 | 4
@@ -66,6 +66,17 @@ function Fold({ title, hint, badge, children }: { title: string; hint?: string; 
   )
 }
 
+/** One on/off row of the controls. */
+function SwitchRow({ title, hint, on, set, tip }: { title: string; hint: string; on: boolean; set: (v: boolean) => void; tip?: string }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white/5 px-2.5 py-2" title={tip}>
+      <span><span className="block text-[13px] font-bold text-white">{title}</span><span className="block text-[11px] text-slate-400">{hint}</span></span>
+      <span role="switch" aria-checked={on} onClick={(e) => { e.preventDefault(); set(!on) }} className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-indigo-500' : 'bg-slate-600'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} /></span>
+      <input type="checkbox" className="sr-only" checked={on} onChange={(e) => set(e.target.checked)} />
+    </label>
+  )
+}
+
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2 px-3 py-2.5">
@@ -82,6 +93,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
   const swipeOn = useSwipeAim()
   const bcast = useBroadcastView()
   const captionsOn = useCaptions()
+  const scoreBarOn = useScoreBar()
   const voiceMode = useVoiceMode()
   const voiceSpeed = useVoiceSpeed()
   const voiceNames = useVoiceNames()
@@ -115,25 +127,11 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
     <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-panel">
       {/* PLAY */}
       <Section title="Play">
-        {setManual && (
-          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white/5 px-2.5 py-2" title="Play every ball yourself: the auto-play options go away and the controls stay in view">
-            <span><span className="block text-[13px] font-bold text-white">Play manually</span><span className="block text-[11px] text-slate-400">{manual ? 'On: no auto-play, the controls stay in view' : 'Off: auto-play is available'}</span></span>
-            <span role="switch" aria-checked={manual} onClick={(e) => { e.preventDefault(); setManual(!manual) }} className={`relative h-6 w-11 shrink-0 rounded-full transition ${manual ? 'bg-indigo-500' : 'bg-slate-600'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${manual ? 'left-[22px]' : 'left-0.5'}`} /></span>
-            <input type="checkbox" className="sr-only" checked={manual} onChange={(e) => setManual(e.target.checked)} />
-          </label>
-        )}
         <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white/5 px-2.5 py-2" title="Show the match the way it looks on TV">
           <span><span className="block text-[13px] font-bold text-white">Broadcast view</span><span className="block text-[11px] text-slate-400">{bcast ? 'On: a TV camera follows the bowler and the ball (aim shots with the shot pad)' : 'Off: the field is shown from above'}</span></span>
           <span role="switch" aria-checked={bcast} onClick={(e) => { e.preventDefault(); setBroadcastView(!bcast) }} className={`relative h-6 w-11 shrink-0 rounded-full transition ${bcast ? 'bg-indigo-500' : 'bg-slate-600'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${bcast ? 'left-[22px]' : 'left-0.5'}`} /></span>
           <input type="checkbox" className="sr-only" checked={bcast} onChange={(e) => setBroadcastView(e.target.checked)} />
         </label>
-        {bcast && (
-          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white/5 px-2.5 py-2" title="Write the commentary line of each ball along the top of the picture">
-            <span><span className="block text-[13px] font-bold text-white">Captions</span><span className="block text-[11px] text-slate-400">{captionsOn ? 'On: the commentary line is written on the picture' : 'Off: no captions on the picture'}</span></span>
-            <span role="switch" aria-checked={captionsOn} onClick={(e) => { e.preventDefault(); setCaptions(!captionsOn) }} className={`relative h-6 w-11 shrink-0 rounded-full transition ${captionsOn ? 'bg-indigo-500' : 'bg-slate-600'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${captionsOn ? 'left-[22px]' : 'left-0.5'}`} /></span>
-            <input type="checkbox" className="sr-only" checked={captionsOn} onChange={(e) => setCaptions(e.target.checked)} />
-          </label>
-        )}
         <div className="grid grid-cols-[1.6fr_1fr] gap-1.5">
           <button className={`${base} bg-emerald-500 text-black hover:bg-emerald-400`} onClick={() => act({ t: 'ball' })}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
@@ -161,7 +159,13 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
                 )
             )}
           </>
-        )}        <Fold title="More ways to play" hint="sim ahead, next wicket, finish">
+        )}
+        <Fold title="Display options" hint="score bar, captions, play manually" badge={manual ? 'Playing manually' : null}>
+          {bcast && <SwitchRow title="Score bar" tip="The score, the two batsmen and the bowler in the corner of the picture" on={scoreBarOn} set={setScoreBar} hint={scoreBarOn ? 'On: the score is shown in the corner of the picture' : 'Off: the corner of the picture is clear'} />}
+          {bcast && <SwitchRow title="Captions" tip="Write the commentary line of each ball along the top of the picture" on={captionsOn} set={setCaptions} hint={captionsOn ? 'On: the commentary line is written on the picture' : 'Off: no captions on the picture'} />}
+          {setManual && <SwitchRow title="Play manually" tip="Play every ball yourself: the auto-play options go away and the controls stay in view" on={manual} set={setManual} hint={manual ? 'On: no auto-play, the controls stay in view' : 'Off: auto-play is available'} />}
+        </Fold>
+        <Fold title="More ways to play" hint="sim ahead, next wicket, finish">
         <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-semibold text-slate-400">Sim</span>
             <div className="flex h-9 items-center overflow-hidden rounded-lg bg-slate-700">

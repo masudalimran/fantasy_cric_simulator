@@ -6,7 +6,7 @@ import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
-import { useCaptions } from '../../prefs'
+import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
 import type { MoveDraw } from './moveFx'
@@ -114,6 +114,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const [cutKey, setCutKey] = useState(0)
   const fire = !!event?.freeHit && !!event.boundary
   const captionsOn = useCaptions()
+  const scoreBarOn = useScoreBar()
   // where each fielder stood at the end of the last clip, so the field can change between balls with the fielders walking to their new places
   const lastRest = useRef(new Map<string, V3>())
 
@@ -442,7 +443,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div key={cutKey} className="pointer-events-none absolute inset-0 z-[6000] bg-white" style={{ animation: cutKey ? 'bcast-cut 0.28s ease-out forwards' : undefined, opacity: 0 }} />
       {(look.covers || (event === null && look.rain === 2)) && <div className="pointer-events-none absolute inset-x-0 top-10 z-[6001] text-center"><span className="rounded bg-black/75 px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200 ring-1 ring-sky-300/40">{look.weather === 'washout' ? 'Washed out: no play today' : 'Rain stops play: covers on'}</span></div>}
       {/* the TV score bug: the score and overs, the two batsmen and the bowler, and in a chase what is needed */}
-      {(scoreBug || event) && (
+      {scoreBarOn && (scoreBug || event) && (
         <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
           <div className="flex items-stretch">
             <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{scoreBug?.team ?? battingTeam.short}</span>

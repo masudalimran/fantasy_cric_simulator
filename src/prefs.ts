@@ -86,6 +86,22 @@ export function useCaptions(): boolean {
   return useSyncExternalStore((cb) => { captionListeners.add(cb); return () => { captionListeners.delete(cb) } }, () => captions, () => false)
 }
 
+// ---- Score bar: the score in the corner of the broadcast picture ---------------------------------------------
+const SCOREBAR_KEY = 'fcs.scorebar'
+const scoreBarListeners = new Set<() => void>()
+let scoreBar = (() => { try { return localStorage.getItem(SCOREBAR_KEY) !== '0' } catch { return true } })()
+
+export function setScoreBar(on: boolean) {
+  scoreBar = on
+  try { localStorage.setItem(SCOREBAR_KEY, on ? '1' : '0') } catch { /* just not remembered */ }
+  scoreBarListeners.forEach((l) => l())
+}
+
+/** Whether the score bar (score, overs, the two batsmen, the bowler) is drawn in the corner of the broadcast picture (on by default). */
+export function useScoreBar(): boolean {
+  return useSyncExternalStore((cb) => { scoreBarListeners.add(cb); return () => { scoreBarListeners.delete(cb) } }, () => scoreBar, () => true)
+}
+
 // ---- Play manually: no auto-play, the controls take its place --------------------------------------------------
 const MANUAL_KEY = 'fcs.manual'
 const manualListeners = new Set<() => void>()
