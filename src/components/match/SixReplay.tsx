@@ -23,6 +23,8 @@ export interface SixInfo {
   contact?: Contact
   /** The batsman's signature move, for the biggest sixes: a cut-in plays over the start of the screen. */
   move?: Move
+  /** A power-up picture of him for that cut-in, if one has been added (data/moveArt.ts). */
+  moveArt?: string
 }
 
 /** Counts up to a number as the ball flies. */
@@ -76,7 +78,7 @@ export function SixReplay({ info }: { info: SixInfo }) {
           animate={{ y: [0, -4, 0] }} transition={{ delay: 0.9 * r + (i % 9) * 0.05, duration: 0.5, repeat: 3 }} />
       ))}
       <div className="absolute inset-x-0 top-[52%] h-[2px] bg-white/80" />
-      {info.move && <MoveCutIn move={info.move} batsman={batsman} team={team} rate={r} />}
+      {info.move && <MoveCutIn move={info.move} batsman={batsman} team={team} rate={r} art={info.moveArt ?? null} />}
 
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300"><span className="h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />{monster ? 'Monster six' : 'Six'}</div>
       <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
