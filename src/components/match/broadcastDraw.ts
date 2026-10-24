@@ -1,6 +1,7 @@
 import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
+import { drawMove, type MoveDraw } from './moveFx'
 
 /** Paints the ground, stands, pitch and stumps of the broadcast view onto a canvas. Pure drawing: it reads the camera and nothing else. */
 
@@ -32,6 +33,8 @@ export interface Scene {
   /** The ball's last few places, oldest first, for the trail; and whether it is a fireball or a snowball. */
   trail: V3[]
   style: 'plain' | 'fire' | 'ice'
+  /** A signature move going on (a six off the bat, a bowler's wicket). */
+  move?: MoveDraw | null
 }
 
 const fillPoly = (ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], fill: string) => {
@@ -192,6 +195,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   }
   stumpSet(BOWL_Z, sc.stumpsBowl)
   stumpSet(0, sc.stumps)
+  if (sc.move) drawMove(ctx, r, sc.move)
 
   // the covers over the pitch
   if (sc.covers) {

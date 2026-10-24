@@ -6,7 +6,8 @@ import { Match } from '../../engine/match'
 import { DEFAULT_LOOK } from '../../engine/stadium'
 import { wicketCard } from '../../season/wicketCards'
 import { fieldPlan } from './fieldSets'
-import { ExtraCast, FourCast, WicketCast } from './ReplayScreens'
+import { ExtraCast, FourCast, MissCast, WicketCast } from './ReplayScreens'
+import { nearMiss, stumpGap, type Miss } from './nearMiss'
 import { placeFielders } from './Stage'
 import type { ReplayBase } from './ReplayFrame'
 
@@ -46,5 +47,37 @@ describe('the broadcast-style screens', () => {
     const html = clean(renderToString(<ExtraCast info={{ replay: baseFor(m, ev), title: 'WIDE!', sub: '+1 run to the total · outside off', color: '#fbbf24', rate: 1 }} />))
     expect(html).toContain('WIDE!')
     expect(html).toContain('outside off')
+  })
+
+  it('a close call says how near the ball went to the stumps or the edge of the bat', () => {
+    const ev = all.find((e) => e.legal && !e.wicket && !e.extraType && e.runsBat === 0)!
+    const stumps: Miss = { kind: 'stumps', cm: 2, x: 0.05, y: 0.8, side: 'over', left: false }
+    const html = clean(renderToString(<MissCast info={{ replay: baseFor(m, ev), miss: stumps, batsman: m.player(ev.strikerId), bowler: m.player(ev.bowlerId), batTeam: A, rate: 1 }} />))
+    expect(html).toContain('SO CLOSE!')
+    expect(html).toContain('Over the top of the stumps by 2 cm')
+    const bat = clean(renderToString(<MissCast info={{ replay: baseFor(m, ev), miss: { ...stumps, kind: 'bat', cm: 1, side: 'off' }, batsman: m.player(ev.strikerId), bowler: m.player(ev.bowlerId), batTeam: A, rate: 1 }} />))
+    expect(bat).toContain('BEATEN!')
+    expect(bat).toContain('1 cm from the edge of the bat')
+  })
+  it('only balls that beat the bat and went close are close calls, with a sensible gap', () => {
+    expect(stumpGap(0, 0.76).gap).toBeCloseTo(0.013, 2)
+    expect(stumpGap(0.3, 0.4).dx).toBeGreaterThan(0.1)
+    let stumpsN = 0, batN = 0
+    for (let seed = 1; seed <= 8; seed++) {
+      const mm = new Match({ teamA: A, teamB: B, format: 't20', seed })
+      mm.playMatch()
+      for (const e of mm.innings.flatMap((i) => i.log)) {
+        const x = nearMiss(e, mm.player(e.strikerId).hand === 'L')
+        if (!x) continue
+        expect(e.runsBat).toBe(0)
+        expect(e.wicket).toBeNull()
+        expect(e.extraType).toBeNull()
+        expect(x.cm).toBeGreaterThanOrEqual(1)
+        expect(x.cm).toBeLessThanOrEqual(3)
+        if (x.kind === 'stumps') stumpsN++; else batN++
+      }
+    }
+    expect(stumpsN).toBeGreaterThan(0)
+    expect(batN).toBeGreaterThan(0)
   })
 })

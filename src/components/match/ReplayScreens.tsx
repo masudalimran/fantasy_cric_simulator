@@ -7,6 +7,7 @@ import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BatContact, ContactMeters } from './ContactPanel'
 import { replayCamFor } from './broadcast'
+import { BALL_R, STUMP_HALF, STUMP_HEIGHT, type Miss } from './nearMiss'
 import { ReplayFrame, type ReplayBase } from './ReplayFrame'
 import { useWidth } from './ReviewScreens'
 
@@ -130,6 +131,81 @@ export function ExtraCast({ info }: { info: ExtraCastInfo }) {
         <div className="flex h-full items-center justify-center gap-3 px-3">
           <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(26, Math.min(w * 0.085, 52)), WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: `0 0 22px ${info.color}aa`, color: info.color }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>{info.title}</motion.div>
           <motion.div className="min-w-0 text-xs font-semibold leading-tight text-slate-100 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 * r }}>{info.sub}</motion.div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+// ---- A near miss: the ball that beat the bat -------------------------------------------------------------------------------------
+
+export interface MissCastInfo {
+  replay: ReplayBase
+  miss: Miss
+  batsman: Player
+  bowler: Player
+  batTeam: Team
+  rate: number
+}
+export const MISS_CAST_SECONDS = 6
+
+/** The stumps from the front, with the ball where it went past them and the gap marked in centimetres. */
+function StumpsGap({ miss, w }: { miss: Miss; w: number }) {
+  // centimetres, the ground at the bottom
+  const stumps = [-9.7, 0, 9.7]
+  const bx = miss.x * 100, by = -miss.y * 100
+  const nx = Math.max(-STUMP_HALF * 100, Math.min(STUMP_HALF * 100, bx)), ny = -Math.min(STUMP_HEIGHT * 100, Math.max(0, -by))
+  return (
+    <svg viewBox="-40 -105 80 112" width={w} className="shrink-0" aria-hidden>
+      <line x1="-40" y1="0" x2="40" y2="0" stroke="#4ade80" strokeWidth="1.2" opacity="0.6" />
+      {stumps.map((x) => <rect key={x} x={x - 1.75} y={-STUMP_HEIGHT * 100} width="3.5" height={STUMP_HEIGHT * 100} rx="1" fill="#f1e2b0" />)}
+      <rect x="-12" y={-STUMP_HEIGHT * 100 - 1.6} width="11" height="2.2" rx="1" fill="#fde68a" /><rect x="1" y={-STUMP_HEIGHT * 100 - 1.6} width="11" height="2.2" rx="1" fill="#fde68a" />
+      <motion.line x1={nx} y1={ny} x2={bx} y2={by} stroke="#fbbf24" strokeWidth="1.2" strokeDasharray="2.5 2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.6 }} />
+      <motion.circle r={BALL_R * 100} fill="#dc2626" stroke="#fecaca" strokeWidth="0.8" initial={{ cx: bx, cy: by - 70, opacity: 0 }} animate={{ cx: bx, cy: by, opacity: 1 }} transition={{ delay: 2.0, duration: 0.5 }} />
+      <motion.text x={(nx + bx) / 2 + (bx >= 0 ? 6 : -6)} y={(ny + by) / 2 - 3} textAnchor={bx >= 0 ? 'start' : 'end'} fontSize="10" fontWeight="800" fill="#fbbf24" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.8 }}>{miss.cm} cm</motion.text>
+    </svg>
+  )
+}
+
+/** The edge of the bat from the side, with the ball going past it and the gap marked. */
+function BatGap({ miss, w }: { miss: Miss; w: number }) {
+  const gap = miss.cm * 7
+  return (
+    <svg viewBox="0 0 110 90" width={w} className="shrink-0" aria-hidden>
+      <rect x="14" y="8" width="16" height="74" rx="6" fill="#e9c98a" stroke="#a16207" strokeWidth="1.2" />
+      <rect x="19" y="-2" width="6" height="14" rx="2" fill="#7c2d12" />
+      <motion.line x1="30" y1="46" x2={30 + gap} y2="46" stroke="#fbbf24" strokeWidth="1.4" strokeDasharray="2.5 2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.6 }} />
+      <motion.circle r="6" fill="#dc2626" stroke="#fecaca" strokeWidth="1" initial={{ cx: 30 + gap + 6, cy: -10, opacity: 0 }} animate={{ cx: 30 + gap + 6, cy: 46, opacity: 1 }} transition={{ delay: 2.0, duration: 0.5 }} />
+      <motion.text x={32 + gap / 2} y="40" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fbbf24" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.8 }}>{miss.cm} cm</motion.text>
+    </svg>
+  )
+}
+
+/** A close call: the ball that beat the bat, played again, and how near it went to the stumps or to the edge of the bat. */
+export function MissCast({ info }: { info: MissCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => sfx.aww(0.55), 2300 * r); return () => window.clearTimeout(t) }, [r])
+  const m = info.miss
+  const stumps = m.kind === 'stumps'
+  const title = stumps ? 'SO CLOSE!' : 'BEATEN!'
+  const side = m.side === 'off' ? 'off' : 'leg'
+  const line = stumps
+    ? m.side === 'over' ? `Over the top of the stumps by ${m.cm} cm` : `Just missed ${side} stump by ${m.cm} cm`
+    : `Played and missed: the ball went ${m.cm} cm from the edge of the bat`
+  const sub = stumps ? `${info.bowler.name} was a whisker away from bowling ${info.batsman.name}.` : `${info.batsman.name} went at one outside ${side} stump and found nothing.`
+  const compact = w < 520
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={title}>
+      <ReplayFrame base={info.replay} rate={1.5 * r} share={0.56} cam={stumps ? 'stump' : 'side'} tag="Close call" />
+      <Bottom from={0.56}>
+        <div className="flex h-full items-center gap-3 px-3">
+          {stumps ? <StumpsGap miss={m} w={compact ? 96 : 130} /> : <BatGap miss={m} w={compact ? 104 : 140} />}
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 28 : 40, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 14px #f59e0b' }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>{title}</motion.div>
+            <motion.div className="text-xs font-extrabold leading-tight text-amber-300 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>{line}</motion.div>
+            <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{sub}</motion.div>
+          </div>
         </div>
       </Bottom>
     </div>

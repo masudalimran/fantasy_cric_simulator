@@ -46,7 +46,8 @@ export type ReplayCam = 'side' | 'high' | 'stump'
 export function replayCamera(kind: ReplayCam, seq: number): { cam: Cam; minHfov: number; label: string; /** Stay wide even in the slow-motion moment (no close-up). */ keepWide?: boolean } {
   const deg = Math.PI / 180
   if (kind === 'high') return { cam: { p: { x: 0.01, y: 46, z: -10 }, yaw: 0, pitch: 1.2, hfov: 70 * deg }, minHfov: 68 * deg, label: 'Spider cam', keepWide: true }
-  if (kind === 'stump') return { cam: { p: { x: -0.08, y: 0.55, z: 1.4 }, yaw: Math.PI, pitch: 0.02, hfov: 38 * deg }, minHfov: 32 * deg, label: 'Stump cam' }
+  // (well back behind the stumps and zoomed right out, so the stumps, the batsman and the ball can all be seen)
+  if (kind === 'stump') return { cam: { p: { x: -1.4, y: 1.0, z: 4.2 }, yaw: Math.PI, pitch: 0.05, hfov: 56 * deg }, minHfov: 54 * deg, label: 'Stump cam', keepWide: true }
   const dir = hash01(seq * 7.7) < 0.5 ? -1 : 1
   return { cam: { p: { x: dir * 34, y: 4.5, z: -9 }, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0.1, hfov: 34 * deg }, minHfov: 30 * deg, label: 'Side-on' }
 }
@@ -189,6 +190,16 @@ export function elevation(ev: Pick<BallEvent, 'seq' | 'boundary' | 'distance' | 
 }
 
 /** A ball that is not scored off and is played and missed (it goes through to the keeper) rather than kept out by the bat. */
+export const hash01Pub = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
+/**
+ * How high a played-and-missed ball goes past the stumps (metres; they are 0.711 m tall): over the top when it is in line with them, anywhere when it
+ * is wide of them.
+ */
+export const missHeight = (ev: Pick<BallEvent, 'seq' | 'delivery'>) => {
+  const x = (ev.delivery ? ev.delivery.line / 50 : (hash01Pub(ev.seq * 3.1) - 0.5) * 0.9) * 0.6 * 0.975
+  const h = hash01Pub(ev.seq * 5.1)
+  return Math.abs(x) <= 0.152 ? 0.76 + h * 0.22 : 0.3 + h * 0.68
+}
 export const beatenDot = (ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'wicket' | 'extraType'>) => !ev.wicket && !ev.extraType && ev.runsBat === 0 && ev.legal && hash01(ev.seq * 2.3) > 0.5
 
 /** Whether the bat really met the ball (the sound of the bat is only heard then): not on a wide, a bye, a leg bye, a miss, or a ball that bowled, trapped or stumped him. */
@@ -215,7 +226,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bounce: V3 = { x: lineX * 0.8 + bowlerX * 0.2, y: 0, z: lenZ }
   const stanceX = leftHand ? -0.75 : 0.75
   const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket' || w.kind === 'lbw')
-  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : 0.85, z: -0.45 }
+  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : 0.85, z: -0.45 }
   const six = ev.boundary === 6
   // four byes or four leg byes: the ball races to the rope with nobody running
   const byeFour = (ev.extraType === 'bye' || ev.extraType === 'legbye') && ev.extraRuns >= 4

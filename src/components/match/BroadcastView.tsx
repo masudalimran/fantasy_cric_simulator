@@ -9,6 +9,9 @@ import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, 
 import { useCaptions } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
+import type { MoveDraw } from './moveFx'
+import { moveForBall, type MoveShow } from '../../data/moves'
+import { getAnimPrefs } from '../../prefs'
 import { firstName } from './format'
 import { endPoint, type Placed } from './Stage'
 import { Body, type Kit, type Rig } from './Body'
@@ -129,8 +132,13 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
-  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam })
-  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam }
+  // a team's (or a star's) signature move on a six, a strong four or a wicket (not in the timeout reel)
+  const show: MoveShow | null = useMemo(
+    () => (event && !fitSeconds && getAnimPrefs().moves ? moveForBall(event, striker, battingTeam, bowler, bowlingTeam) : null),
+    [event?.seq, fitSeconds, striker.id, bowler.id, battingTeam.id, bowlingTeam.id], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show })
+  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show }
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
@@ -143,6 +151,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     let prev = t0
     let stopped = false
     const trail: V3[] = []
+    const movePath: V3[] = []
     const anchors = new Map<string, { x: number; y: number; s: number; rot: number }>()
     const prevPos = new Map<string, V3>(), speeds = new Map<string, number>(), cycles = new Map<string, number>()
     const walkFrom = new Map(lastRest.current)
@@ -184,7 +193,19 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const tHit = L.plan.tRun + L.plan.tDeliver
       const cheerAt = L.plan.boundary ? tHit + 0.6 : L.plan.exitAt
       const cheer = cheerAt !== null && cheerAt !== undefined && t >= cheerAt && (L.plan.boundary || !!L.plan.wicketFlies || L.plan.catcher >= 0) ? Math.min(1, (t - cheerAt) / 0.3) * (1 - Math.min(1, Math.max(0, (t - cheerAt - 1.6) / 0.6))) : 0
-      drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      // a signature move: it starts when the bat meets the ball (or when the wicket falls) and goes with the ball
+      let moveDraw: MoveDraw | null = null
+      const sh = L.show
+      if (sh && L.event) {
+        const tStart = sh.by === 'bat' ? L.plan.tRun + L.plan.tDeliver : (L.plan.exitAt ?? L.plan.tRun + L.plan.tDeliver + L.plan.tFlight)
+        const kk = t - tStart
+        const life = sh.by === 'bat' ? L.plan.tFlight + 0.45 : 1.3
+        if (kk >= 0 && kk <= life) {
+          if (f.ball) { const last = movePath[movePath.length - 1]; if (!last || Math.hypot(last.x - f.ball.x, last.z - f.ball.z, last.y - f.ball.y) > 0.25) movePath.push({ ...f.ball }); if (movePath.length > 70) movePath.shift() }
+          moveDraw = { style: sh.move.style, c1: sh.move.c1, c2: sh.move.c2, k: kk, life, size: sh.size, from: sh.by === 'bat' ? L.plan.meet : (f.ball ?? L.plan.end), path: movePath, ball: f.ball, seed: L.event.seq }
+        }
+      }
+      drawScene(ctx, c, W, H, { move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 
@@ -300,10 +321,12 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         }
         if (held < 0) { ball.style.display = 'none'; shadow.style.display = 'none' } else
         if (bp && gp && bp.x > -20 && bp.x < W + 20) {
-          ball.style.background = style === 'fire' ? '#f97316' : style === 'ice' ? '#f0f9ff' : '#dc2626'
-          ball.style.borderColor = style === 'ice' ? '#7dd3fc' : style === 'fire' ? '#fde047' : '#fecaca'
-          ball.style.boxShadow = style === 'fire' ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : style === 'ice' ? '0 0 12px 4px #7dd3fc, 0 0 22px 8px #bae6fd88' : '0 0 6px #00000088'
-          const sz = Math.max(style === 'plain' ? 5 : 9, (r.F * (style === 'plain' ? 0.24 : 0.36)) / bp.d)
+          if (moveDraw) { ball.style.background = `radial-gradient(circle, #ffffff, ${moveDraw.c2} 45%, ${moveDraw.c1})`; ball.style.borderColor = moveDraw.c2; ball.style.boxShadow = `0 0 16px 7px ${moveDraw.c1}, 0 0 30px 12px ${moveDraw.c1}66` } else {
+            ball.style.background = style === 'fire' ? '#f97316' : style === 'ice' ? '#f0f9ff' : '#dc2626'
+            ball.style.borderColor = style === 'ice' ? '#7dd3fc' : style === 'fire' ? '#fde047' : '#fecaca'
+            ball.style.boxShadow = style === 'fire' ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : style === 'ice' ? '0 0 12px 4px #7dd3fc, 0 0 22px 8px #bae6fd88' : '0 0 6px #00000088'
+          }
+          const sz = Math.max(style === 'plain' ? 5 : 9, (r.F * (style === 'plain' ? 0.24 : 0.36)) / bp.d) * (moveDraw ? 1.8 : 1)
           ball.style.display = 'block'
           ball.style.width = ball.style.height = `${sz.toFixed(1)}px`
           const bx = hand && held > 0 ? bp.x + (hand.x - bp.x) * held : bp.x, by = hand && held > 0 ? bp.y + (hand.y - bp.y) * held : bp.y
@@ -338,6 +361,19 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       tagOf('tagBowler', { x: f.bowler.x, y: 0, z: f.bowler.z })
       const ci = L.plan.catcher >= 0 ? L.plan.catcher : L.plan.chaser
       if (ci >= 0 && (f.phase === 'flight' || f.phase === 'hold')) { const w = f.moving.get(ci) ?? L.rest[ci]; tagOf('tagField', { x: w.x, y: 0, z: w.z }) } else { const n = nodes.current.get('tagField'); if (n) n.style.display = 'none' }
+      const moveTag = nodes.current.get('tagMove')
+      if (moveTag) {
+        if (moveDraw && sh && moveDraw.k < 1.9) {
+          if (moveTag.textContent !== sh.move.name) moveTag.textContent = sh.move.name
+          moveTag.style.color = '#ffffff'
+          moveTag.style.webkitTextStroke = `3px ${sh.move.c1}`
+          moveTag.style.textShadow = `0 0 18px ${sh.move.c1}, 0 0 34px ${sh.move.c1}`
+          const pop = Math.min(1, moveDraw.k / 0.15)
+          moveTag.style.display = 'block'
+          moveTag.style.opacity = String(Math.max(0, Math.min(1, (1.9 - moveDraw.k) / 0.4)))
+          moveTag.style.transform = `scale(${(0.6 + 0.5 * pop + 0.05 * Math.sin(moveDraw.k * 14)).toFixed(3)}) rotate(-3deg)`
+        } else moveTag.style.display = 'none'
+      }
       const slowTag = nodes.current.get('tagSlow')
       if (slowTag) slowTag.style.display = f.slowmo ? 'block' : 'none'
       lastT.current = t
@@ -394,6 +430,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.15, rate), duration: 3.4 / Math.max(0.15, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}
       {replay && <div className="pointer-events-none absolute inset-0 z-[5500]" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.10), rgba(2,6,23,0.18))', boxShadow: 'inset 0 0 0 2px rgba(56,189,248,0.55), inset 0 0 40px rgba(2,6,23,0.55)' }} />}
+      <div ref={setNode('tagMove')} className="pointer-events-none absolute inset-x-0 top-[16%] z-[5002] hidden whitespace-nowrap text-center font-display text-3xl uppercase leading-none tracking-wider sm:text-5xl" style={{ paintOrder: 'stroke fill' }} />
       <div ref={setNode('tagSlow')} className="pointer-events-none absolute bottom-8 right-2 z-[6001] hidden rounded bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
       {[['tagStriker', firstName(striker.name), accentOf(battingTeam)], ['tagBowler', firstName(bowler.name), accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
