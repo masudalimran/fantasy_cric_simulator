@@ -5,6 +5,12 @@ import { challengeTalk } from '../../season/challenge'
 import { trackFor } from '../../season/moments'
 import { ChallengeScreen, challengeSeconds } from './ChallengeScreen'
 import { ChallengeResultScreen, CHALLENGE_RESULT_SECONDS } from './ChallengeResult'
+import { Match } from '../../engine/match'
+import { catchCause, catchContact } from '../../engine/contact'
+import { DEFAULT_LOOK } from '../../engine/stadium'
+import { fieldPlan } from './fieldSets'
+import { placeFielders } from './Stage'
+import { CatchScreen } from './CatchScreen'
 import { RAIN_DELAY_SECONDS, RainDelayScreen } from './RainDelay'
 import { ReviewScreen } from './ReviewScreens'
 import { TIMEOUT_INTRO_SECONDS, TimeoutIntroScreen } from './TimeoutIntro'
@@ -75,5 +81,32 @@ describe('rain stops play', () => {
     expect(light).toContain('BAD LIGHT')
     expect(light).toContain('1 over lost')
     expect(RAIN_DELAY_SECONDS).toBeGreaterThan(4)
+  })
+})
+
+describe('the catch screen', () => {
+  it('replays the ball and says where it met the bat, how fast the bat was and the timing, with a headline for the cause', () => {
+    let done = 0
+    for (let seed = 1; seed <= 20 && done < 2; seed++) {
+      const m = new Match({ teamA: A, teamB: B, format: 't20', seed })
+      m.playMatch()
+      for (const inn of m.innings) for (const ev of inn.log) {
+        if (!ev.wicket || ev.wicket.kind !== 'caught' || !ev.wicket.fielderId || done >= 2) continue
+        const batter = m.player(ev.wicket.playerId), catcher = m.player(ev.wicket.fielderId), bowler = m.player(ev.bowlerId)
+        const bowlSide = m.sides[1 - inn.battingSide]
+        const plan = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: batter.hand })
+        const cause = catchCause({ seq: ev.seq, byKeeper: ev.wicket.fielderId === m.keeperOf((1 - inn.battingSide) as 0 | 1), peak: 5, dist: 20 })
+        const html = renderToString(<CatchScreen info={{ event: ev, kind: 'caught', batsman: batter, nonStriker: m.player(ev.nonStrikerId), bowler, fielder: catcher, batTeam: m.sides[inn.battingSide].team, bowlTeam: bowlSide.team, fielders: placeFielders(bowlSide.xi, ev.bowlerId, plan.spots), pitch: 'balanced', look: DEFAULT_LOOK, cause, contact: catchContact(ev.seq, cause, batter.batting.power), reaction: 210, score: '12 (9)', rate: 1 }} />).replace(/<!-- -->/g, '')
+        expect(html).toContain('Replay')
+        expect(html).toContain(batter.name)
+        expect(html).toContain(catcher.name)
+        expect(html).toContain('Bat speed')
+        expect(html).toContain('Timing')
+        expect(html).toContain('Reaction 210 ms')
+        expect(html).toMatch(/EDGED!|TOP EDGE!|OFF THE TOE!|MISTIMED!/)
+        done++
+      }
+    }
+    expect(done).toBe(2)
   })
 })

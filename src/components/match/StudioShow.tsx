@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { eventAngle } from '../../engine/shots'
+import { sixContact } from '../../engine/contact'
 import { ballSpeed } from '../../engine/speed'
 import { cancelSpeech, setCastGenders, setVoiceMode, speak, useVoiceMode, voiceSupported } from '../../audio/voice'
 import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
@@ -54,7 +55,7 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
     }
     case 'six':
       if (!ev || !evTeams) return null
-      return <SixReplay info={{ batsman: match.player(ev.strikerId), team: evTeams.bat, distance: ev.distance ?? 80, rate: 1, fire: ev.freeHit }} />
+      return <SixReplay info={{ batsman: match.player(ev.strikerId), team: evTeams.bat, distance: ev.distance ?? 80, rate: 1, fire: ev.freeHit, contact: sixContact(ev, match.player(ev.strikerId).batting.power) }} />
     case 'four': {
       if (!ev || !evTeams) return null
       const xi = match.sides[1 - match.innings[ev.innings].battingSide].xi.filter((p) => p.id !== ev.bowlerId)

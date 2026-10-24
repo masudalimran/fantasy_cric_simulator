@@ -216,6 +216,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           else if (sg.kind === 'out') ra2 = -172 * k
           else if (sg.kind === 'four') ra2 = -(40 + 45 * Math.sin(t * 14)) * k
           else if (sg.kind === 'bye') ra2 = -150 * k
+          else if (sg.kind === 'notout') { la = 22 * k; ra2 = -22 * k }
           else la = 38 * k
         }
         if (l) l.style.transform = `rotate(${la.toFixed(0)}deg)`

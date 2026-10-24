@@ -29,6 +29,8 @@ import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
 import { commentary } from '../engine/commentary'
+import { catchCause, catchContact, sixContact } from '../engine/contact'
+import { CATCH_SECONDS } from '../components/match/CatchScreen'
 import { stadiumLook } from '../engine/stadium'
 import { challengeTalk } from '../season/challenge'
 import { TIMEOUT_INTRO_SECONDS } from '../components/match/TimeoutIntro'
@@ -253,7 +255,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (!m) { busyUntil.current = 0; openWinWhenIdle(); return }
     // One rule: where auto-play pauses (wickets, fifties and hundreds, boundaries), that event's screen waits for a tap too.
     const st = stopsRef.current
-    if (((m.kind === 'replay' || m.kind === 'hattrick' || m.kind === 'haul') && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
+    if (((m.kind === 'replay' || m.kind === 'catch' || m.kind === 'hattrick' || m.kind === 'haul') && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
@@ -330,6 +332,22 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   // the live commentary: said aloud when the voices are on in "full" mode
   const voiceTimer = useRef(0)
   const boxLines = useRef<string[] | null>(null)
+  /** An appeal turned down on the field: the ball tracking or sound graph shows why, or the third umpire clears the batsman of a run out. */
+  const turnedDownMoments = (ev: BallEvent, rate: number, delay: number) => {
+    const ap = ev.appeal
+    if (!ap || ap.out) return
+    const inn = match.innings[ev.innings]
+    const batS = match.sides[inn.battingSide]
+    const bowlS = match.sides[1 - inn.battingSide]
+    const striker = match.player(ev.strikerId)
+    const bowler = match.player(ev.bowlerId)
+    if (ap.kind === 'runout') {
+      const gap = runOutGap(ev.seq)
+      enqueueMoment({ key: ev.seq + 0.3, kind: 'runout', player: striker, team: batS.team, title: 'RUN OUT?', lines: [], delay, ms: Math.round(7200 * rate), runout: { batsman: striker, batTeam: batS.team, fielder: null, bowlTeam: bowlS.team, cm: gap.cm, text: gap.text, out: false, rate } })
+      return
+    }
+    enqueueMoment({ key: ev.seq + 0.3, kind: 'review', player: striker, team: batS.team, title: 'APPEAL', lines: [], delay, ms: Math.round((ap.kind === 'edge' ? 10000 : 6200) * rate), review: { plain: true, by: 'field', kind: ap.kind === 'edge' ? 'edge' : 'track', batsman: striker, batTeam: batS.team, bowler, bowlTeam: bowlS.team, out: false, finalOut: false, track: trackFor(ev.seq, false), rate } })
+  }
   /** The screens for a challenge: the huddle (the bowler, the captain and the keeper; or the two batsmen), then the review and its verdict. */
   const challengeMoments = (ev: BallEvent, rate: number, delay: number) => {
     const r = ev.review
@@ -495,6 +513,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         }
         // a challenge: the huddle, the T signal, the picture and the verdict (the engine decided it; see engine/drs.ts)
         if (prefs.reviews && lastEv.review) challengeMoments(lastEv, rate, delay)
+        // an appeal the umpire turned down (and nobody challenged), or a run out the third umpire found not out
+        if (prefs.reviews && lastEv.appeal && !lastEv.appeal.out && !lastEv.review) turnedDownMoments(lastEv, rate, delay)
         // a batsman reaching the nineties
         if (prefs.milestone && !lastEv.wicket) {
           const bl = innE.batters.find((b) => b.id === lastEv.strikerId)
@@ -671,7 +691,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const hitter = match.player(notable.strikerId)
           const earlier = Math.max(0, ...inn.log.filter((e) => e.seq < notable.seq && e.strikerId === notable.strikerId && e.boundary === 6).map((e) => e.distance ?? 0), seasonStats?.bat.get(notable.strikerId)?.longSix ?? 0)
           const rate6 = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
-          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(3300 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, longest: earlier > 0 && notable.distance > earlier, fire: notable.freeHit } })
+          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(5800 * rate6), six: { batsman: hitter, team, distance: notable.distance, rate: rate6, contact: sixContact(notable, hitter.batting.power), longest: earlier > 0 && notable.distance > earlier, fire: notable.freeHit } })
         }
         if (battingMilestone && outLine) {
           // the two batsmen meet in the middle and bump fists, with the innings on it
@@ -727,7 +747,20 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const outward = spotNow2 ? Math.hypot((spotNow2.x - 80) / 66, (spotNow2.y - 50) / 40) : 0.5
           const normalCatch = (w.kind === 'caught' || w.kind === 'caught and bowled') && !!catchBy && w.fielderId !== match.keeperOf(bowlIdx)
           const ropeCatch = normalCatch && w.kind === 'caught' && outward > 0.68 && prefsNow.wicketcam
-          if (wantReplay) show({
+          // a catch gets the broadcast replay with the contact analysis (where the ball met the bat, the bat speed, the timing); every other wicket keeps the stick-man replay
+          const isCatch = (w.kind === 'caught' || w.kind === 'caught and bowled') && !!catchBy
+          if (wantReplay && isCatch && catchBy) {
+            const placed = placedAt(notable)
+            const spotNow = placed.find((f) => f.player.id === w.fielderId)
+            const dist = spotNow ? Math.hypot((spotNow.x - 80) * 0.72, (spotNow.y - 70) * 0.78) : 12
+            const peakGuess = Math.min(12, 0.8 + dist * 0.17 + (Math.abs(Math.sin(notable.seq * 4.7 * 12.9898 + 78.233) * 43758.5453) % 1) * 4)
+            const cause = catchCause({ seq: notable.seq, byKeeper: w.fielderId === match.keeperOf(bowlIdx), peak: peakGuess, dist })
+            const lookNow = stadiumLook(match.sides[0].team, match.seed, match.format, match.clock?.plan.weather ?? null)
+            show({
+              key: notable.seq + 0.5, kind: 'catch', player: match.player(outLine.id), team, title: 'CAUGHT', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(CATCH_SECONDS * 1000 * rate),
+              catchInfo: { event: notable, kind: w.kind as 'caught' | 'caught and bowled', batsman: match.player(outLine.id), nonStriker: match.player(notable.nonStrikerId), bowler: bowlerP, fielder: catchBy, batTeam: team, bowlTeam: bowlSideNow.team, fielders: placed, pitch: pitchKind, look: lookNow, cause, contact: catchContact(notable.seq, cause, match.player(outLine.id).batting.power), reaction: normalCatch && !ropeCatch ? handsFor(notable.seq).reaction : undefined, score: `${outLine.runs} (${outLine.balls})`, rate },
+            })
+          } else if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((ropeCatch ? 9200 : 6300) * rate),
             replay: { rope: ropeCatch ? catchFor(notable.seq) : undefined, reaction: normalCatch && !ropeCatch ? handsFor(notable.seq) : undefined, kind: w.kind, batsman: match.player(outLine.id), bowler: bowlerP, fielder: w.kind === 'caught and bowled' ? bowlerP : fielderP, spot: placedAt(notable).find((f) => f.player.id === w.fielderId) ?? null, batTeam: team, bowlTeam: bowlSideNow.team, rate, score: `${outLine.runs} (${outLine.balls})`, details: { lines: outLines, duck: outLine.runs === 0 }, track: w.kind === 'lbw' && !reviews ? trackFor(notable.seq, true) : undefined, card: { lines: outLines, duck: outLine.runs === 0 } },
           })

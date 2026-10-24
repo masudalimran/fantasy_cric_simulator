@@ -84,7 +84,7 @@ export function projectPoly(r: CamR, pts: V3[]): Screen[] {
 export interface FielderIn { id: string; x: number; y: number; spot: string }
 
 /** What an umpire's arms say. */
-export type SignalKind = 'wide' | 'noball' | 'four' | 'six' | 'out' | 'bye' | 'legbye'
+export type SignalKind = 'wide' | 'noball' | 'four' | 'six' | 'out' | 'bye' | 'legbye' | 'notout'
 
 export interface Plan {
   /** Seconds (before the speed factor): the run-up, the ball in the air to the bat, the ball after the bat, a pause at the end. */
@@ -273,11 +273,12 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   else if (noball) signal = { kind: 'noball', at: 0.95 + 0.12, who: 1 }
   else if (six) signal = { kind: 'six', at: t2 + 0.6, who: 2 }
   else if (ev.boundary === 4) signal = { kind: 'four', at: t3 - 0.2, who: 2 }
+  else if (ev.appeal && !ev.appeal.out && ev.appeal.kind !== 'runout') signal = { kind: 'notout', at: t2 + 0.9, who: 1 }
   else if (byeFour) signal = { kind: 'four', at: t3 - 0.2, who: 2 }
   else if (bye) signal = { kind: 'bye', at: t2 + 0.4, who: 1 }
   else if (legbye) signal = { kind: 'legbye', at: t2 + 0.4, who: 2 }
   if (keeperDive) keeperDive.at = bye ? t2 - 0.05 : t2 + 0.1
-  const appeal = w && (w.kind === 'lbw' || (kind === 'keeper' && w.kind === 'caught'))
+  const appeal = (w && (w.kind === 'lbw' || (kind === 'keeper' && w.kind === 'caught'))) || (!!ev.appeal && ev.appeal.kind !== 'runout')
   const react: Plan['react'] = appeal ? { text: 'Howzat!', at: t2 + 0.15, who: 'bowler' } : legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
     : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null

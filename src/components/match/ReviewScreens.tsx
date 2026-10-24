@@ -224,6 +224,7 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
   }, [out, r, plain, t0, len])
   const sub = info.overturned
     ? (out ? (info.kind === 'edge' ? 'A clear spike: the decision is overturned, he is out' : 'Hitting the stumps: the decision is overturned, he is out') : (info.kind === 'edge' ? 'No spike: the decision is overturned, not out' : 'Missing the stumps: the decision is overturned, not out'))
+    : plain && !out ? (info.kind === 'edge' ? 'No spike: not out' : track.wickets === 'Missing' ? 'Missing the stumps: not out' : "Umpire's call: not out")
     : plain ? (info.kind === 'edge' ? 'Snicko shows the spike: caught behind' : out ? 'Ball tracking: hitting the stumps' : 'Ball tracking') : info.kind === 'edge' ? (fieldOut ? 'A clear spike: the decision stands' : 'No spike: the decision stands') : fieldOut ? (track.umpiresCall ? "Umpire's call: the decision stands" : 'The decision stands') : (track.wickets === 'Missing' ? 'Missing the stumps: the decision stands' : "Umpire's call: the decision stands")
   return (
     <div ref={box} className="absolute inset-0" aria-label="Review">
@@ -250,16 +251,20 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
 
 // ---- A run out sent to the third umpire ----------------------------------------------------------------------------
 
-export interface RunOutInfo { batsman: Player; batTeam: Team; fielder: Player | null; bowlTeam: Team; cm: number; text: string; rate: number }
+export interface RunOutInfo { batsman: Player; batTeam: Team; fielder: Player | null; bowlTeam: Team; cm: number; text: string; rate: number
+  /** False when the third umpire finds the bat in (the batsman is safe). Missing means out. */
+  out?: boolean }
 
 /** The stadium screen for a run out: the third umpire checks the frames, a close-up shows the bat short of the line and by how much, then OUT. */
 export function RunOutReview({ info }: { info: RunOutInfo }) {
-  const { batsman, batTeam, cm, text, rate: r } = info
+  const { batsman, batTeam, cm, rate: r } = info
+  const safe = info.out === false
+  const text = safe ? `in by ${cm} cm: he makes his ground` : info.text
   const [box, w] = useWidth()
   useEffect(() => {
-    const ts = [window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 1300 * r), window.setTimeout(() => sfx.decisionOut(), 4200 * r)]
+    const ts = [window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 1300 * r), window.setTimeout(() => (safe ? sfx.decisionNotOut() : sfx.decisionOut()), 4200 * r)]
     return () => ts.forEach(clearTimeout)
-  }, [r])
+  }, [r, safe])
   const gap = Math.min(30, 4 + cm * 0.38) // the gap drawn between the bat and the line, in picture units
   return (
     <div ref={box} className="absolute inset-0" aria-label="Run out decision">
@@ -285,7 +290,7 @@ export function RunOutReview({ info }: { info: RunOutInfo }) {
             </motion.g>
             {/* the measurement */}
             <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.0 * r }}>
-              <line x1="20" x2={20 + gap} y1="31" y2="31" stroke="#f87171" strokeWidth="1" />
+              <line x1="20" x2={20 + gap} y1="31" y2="31" stroke={safe ? '#34d399' : '#f87171'} strokeWidth="1" />
               <line x1="20" x2="20" y1="28.5" y2="33.5" stroke="#f87171" strokeWidth="1" />
               <line x1={20 + gap} x2={20 + gap} y1="28.5" y2="33.5" stroke="#f87171" strokeWidth="1" />
               <text x={20 + gap / 2} y="38" fontSize="4.2" fontWeight="800" textAnchor="middle" fill="#fca5a5">{cm} cm</text>
@@ -294,11 +299,11 @@ export function RunOutReview({ info }: { info: RunOutInfo }) {
         </motion.div>
         <motion.div className="absolute inset-x-2 bottom-[5%] z-20 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.1 * r }}>
           <div className="inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-1 text-xs font-bold text-slate-100">
-            <PlayerAvatar player={batsman} team={batTeam} size={22} />{batsman.name}<span className="text-red-300">{text}</span>
+            <PlayerAvatar player={batsman} team={batTeam} size={22} />{batsman.name}<span className={safe ? 'text-emerald-300' : 'text-red-300'}>{text}</span>
           </div>
         </motion.div>
         <motion.div className="absolute inset-x-0 top-[10%] z-30 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 4.2 * r, type: 'spring', stiffness: 260, damping: 15 }}>
-          <div className="rounded-xl bg-black/60 py-1 font-display leading-none tracking-wide" style={{ color: '#f87171', fontSize: Math.max(40, Math.min(w * 0.15, 90)), WebkitTextStroke: '2px #05070d', paintOrder: 'stroke fill', textShadow: '0 0 30px #ef4444aa' }}>OUT!</div>
+          <div className="rounded-xl bg-black/60 py-1 font-display leading-none tracking-wide" style={{ color: safe ? '#34d399' : '#f87171', fontSize: Math.max(40, Math.min(w * 0.15, 90)), WebkitTextStroke: '2px #05070d', paintOrder: 'stroke fill', textShadow: `0 0 30px ${safe ? '#10b981' : '#ef4444'}aa` }}>{safe ? 'NOT OUT!' : 'OUT!'}</div>
         </motion.div>
       </TvFrame>
     </div>

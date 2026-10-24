@@ -5,7 +5,7 @@ import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, parRunsPerOver, REF,
 } from './model'
-import { BYE_FOUR, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
+import { BYE_FOUR, RUNOUT_CHECK, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
 import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
 import { sixDistance } from './shots'
@@ -487,28 +487,37 @@ export class Match {
     // ---- Challenges: the batsman can ask for an lbw or a catch behind he has been given out to be checked, and the fielding side can ask about a
     // close not-out. The decision after the review is what is applied below. (A separate random stream, so nothing else in the match shifts.)
     let review: Review | undefined
-    if (this.forfeitSide === null && inn.reviews) {
+    let appeal: BallEvent['appeal']
+    if (this.forfeitSide === null) {
       const rr = new Rng((this.seed ^ Math.imul(this.seq + 1, 0x85ebca6b) ^ 0xd125) >>> 0)
-      const ctx = (by: 'bat' | 'bowl'): DrsCtx => ({ by, left: inn.reviews![by], batRuns: strikerLine.runs, batBalls: strikerLine.balls, position: inn.batters.indexOf(strikerLine), wickets: inn.wickets, ballsLeft: format === 'test' ? null : this.maxOvers * 6 - inn.legalBalls, need: inn.target !== null ? inn.target - inn.runs : null, recentWickets })
+      const ctx = (by: 'bat' | 'bowl'): DrsCtx => ({ by, left: inn.reviews?.[by] ?? 0, batRuns: strikerLine.runs, batBalls: strikerLine.balls, position: inn.batters.indexOf(strikerLine), wickets: inn.wickets, ballsLeft: format === 'test' ? null : this.maxOvers * 6 - inn.legalBalls, need: inn.target !== null ? inn.target - inn.runs : null, recentWickets })
       const keeperId = this.keeper[bowlingSideIdx]
       if (dismissal && (dismissal.kind === 'lbw' || (dismissal.kind === 'caught' && dismissal.fielderId !== null && dismissal.fielderId === keeperId))) {
+        appeal = { kind: dismissal.kind === 'lbw' ? 'lbw' : 'edge', out: true }
         const d = wantsChallenge(ctx('bat'), rr.next())
-        if (d.yes) {
+        if (d.yes && inn.reviews) {
           const wrong = rr.chance(WRONG_OUT)
           const kind: Review['kind'] = dismissal.kind === 'lbw' ? 'lbw' : 'edge'
           if (!wrong) inn.reviews.bat--
           review = { by: 'bat', kind, originalOut: true, finalOut: !wrong, overturned: wrong, desperate: d.desperate, left: inn.reviews.bat, total: REVIEWS_PER_INNINGS[format] }
           if (wrong) { dismissal = null; runsBat = 0 }
         }
+      } else if (dismissal && dismissal.kind === 'run out') {
+        appeal = { kind: 'runout', out: true }
       } else if (!dismissal && legal && !extraType && runsBat === 0 && !wasFreeHit && rr.chance(CLOSE_CALL[format])) {
+        // the fielding side appeals for a close one and the umpire says not out; they may take it upstairs
+        const edge = keeperId !== null && !rr.chance(0.62)
+        appeal = { kind: edge ? 'edge' : 'lbw', out: false }
         const d = wantsChallenge(ctx('bowl'), rr.next())
-        if (d.yes) {
+        if (d.yes && inn.reviews) {
           const out = rr.chance(MISSED_OUT)
-          const edge = keeperId !== null && !rr.chance(0.62)
           if (!out) inn.reviews.bowl--
           review = { by: 'bowl', kind: edge ? 'edge' : 'lbw', originalOut: false, finalOut: out, overturned: out, desperate: d.desperate, left: inn.reviews.bowl, total: REVIEWS_PER_INNINGS[format] }
           if (out) dismissal = { kind: edge ? 'caught' : 'lbw', bowlerId: bowler.id, fielderId: edge ? keeperId : null, playerId: striker.id }
         }
+      } else if (!dismissal && legal && !wasFreeHit && ((runsBat >= 1 && runsBat <= 3) || ((extraType === 'bye' || extraType === 'legbye') && extraRuns <= 3)) && rr.chance(RUNOUT_CHECK)) {
+        // a throw at the stumps and a run out checked by the third umpire: the batsman made his ground
+        appeal = { kind: 'runout', out: false }
       }
     }
     if (legal) inn.freeHit = false
@@ -550,6 +559,7 @@ export class Match {
       ...(this.deliveryAim[bowlingSideIdx] ? { delivery: this.deliveryAim[bowlingSideIdx] as DeliveryAim } : {}),
       score: { runs: inn.runs, wickets: inn.wickets, legalBalls: inn.legalBalls }, tags,
       ...(review ? { review } : {}),
+      ...(appeal ? { appeal } : {}),
     }
 
     if (runsBat === 6) ev.distance = sixDistance(ev.seq, striker.batting.power)

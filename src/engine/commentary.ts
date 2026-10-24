@@ -13,6 +13,9 @@ const pick = <T,>(items: T[], seq: number): T => items[seq % items.length]
 export function commentary(ev: BallEvent, n: Names): string {
   const text = plainCommentary(ev, n)
   const r = ev.review
+  const ap = ev.appeal
+  // an appeal turned down on the field: told before the ball's own line
+  if (!r && ap && !ap.out) return `${ap.kind === 'lbw' ? 'Big appeal for lbw, but the umpire says not out.' : ap.kind === 'edge' ? 'A huge appeal for a catch behind, but the umpire is unmoved.' : 'A throw at the stumps and a run out check: the batsman has made his ground.'} ${text}`
   if (!r) return text
   const who = r.by === 'bat' ? `${n.striker}` : 'The fielding side'
   const head = r.overturned

@@ -1,3 +1,5 @@
+import type { Contact } from '../../engine/contact'
+import { BatContact, ContactMeters } from './ContactPanel'
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
@@ -15,6 +17,8 @@ export interface SixInfo {
   longest?: boolean
   /** Hit off a free hit: the ball is on fire and leaves a trail of flames. */
   fire?: boolean
+  /** Where the ball met the bat, how fast the bat was and how well it was timed (see engine/contact.ts): the longer the six, the better all three. */
+  contact?: Contact
 }
 
 /** Counts up to a number as the ball flies. */
@@ -72,6 +76,18 @@ export function SixReplay({ info }: { info: SixInfo }) {
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300"><span className="h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />{monster ? 'Monster six' : 'Six'}</div>
       <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
 
+      {/* how it was hit: the hot spot on the bat, the bat speed and the timing: they are why it went this far */}
+      {info.contact && (
+        <motion.div className="absolute left-2 top-11 z-30 flex w-[min(50%,260px)] gap-2 rounded-xl border border-white/15 bg-black/70 p-2" initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 * r }}>
+          <div className="shrink-0"><BatContact contact={info.contact} height={Math.max(78, Math.min(w * 0.17, 104))} delay={0.7} rate={r} /></div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-fuchsia-300">How it was hit</div>
+            <ContactMeters contact={info.contact} delay={0.9} rate={r} compact />
+            <motion.div className="mt-1 text-[10px] font-extrabold uppercase leading-tight tracking-wide text-amber-200" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>{info.contact.spot === 'Middle' ? 'Middled' : info.contact.spot}</motion.div>
+          </div>
+        </motion.div>
+      )}
+
       {/* the batsman, and the ball leaving the bat in an arc over the rope and out of the ground */}
       <motion.div className="absolute bottom-[6%] left-[8%] z-20 text-center" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.4 }}>
         <div className="mx-auto inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accent}, 0 0 20px ${accent}99` }}><PlayerAvatar player={batsman} team={team} size={Math.max(40, Math.min(w * 0.11, 70))} /></div>
@@ -126,7 +142,7 @@ export function SixReplay({ info }: { info: SixInfo }) {
       )}
 
       {/* the word and the distance */}
-      <motion.div className="absolute inset-x-0 bottom-[8%] z-40 text-center" initial={{ opacity: 0, scale: 2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.1 * r, type: 'spring', stiffness: 240, damping: 15 }}>
+      <motion.div className="absolute inset-x-0 bottom-[8%] z-40 text-center" style={{ left: info.contact ? '34%' : 0 }} initial={{ opacity: 0, scale: 2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.1 * r, type: 'spring', stiffness: 240, damping: 15 }}>
         <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: monster ? Math.max(36, Math.min(w * 0.12, 88)) : Math.max(40, Math.min(w * 0.14, 96)), WebkitTextStroke: monster ? '2px #7c2d12' : '2px #581c87', paintOrder: 'stroke fill', textShadow: monster ? '0 0 36px #fb923ccc, 0 0 70px #ef4444aa' : '0 0 30px #d946efaa', color: monster ? '#fde68a' : undefined }}>{monster ? 'MONSTER SIX!' : 'SIX!'}</div>
         <div className="mt-1 flex items-baseline justify-center gap-1 font-display tracking-wide text-amber-300" style={{ fontSize: Math.max(26, Math.min(w * 0.085, 54)) }}>
           <span><Counter to={distance} delay={0.4 * r} dur={fly} /></span><span className="text-[0.55em] text-amber-200">metres</span>

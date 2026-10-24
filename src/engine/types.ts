@@ -87,6 +87,8 @@ export interface BallEvent {
   score: { runs: number; wickets: number; legalBalls: number }
   /** Moments worth a callout: fifty, hundred, hat-trick, maiden, etc. */
   tags: string[]
+  /** The bowling side appealed (an lbw, a catch behind) or a run out was checked, and what the umpire said on the field: `out` true means out, false means not out. A close call that was turned down is a not-out appeal. */
+  appeal?: { kind: 'lbw' | 'edge' | 'runout'; out: boolean }
   /** A challenge was made on this ball (see drs.ts): the wicket in `wicket` is the decision after it. */
   review?: import('./drs').Review
 }

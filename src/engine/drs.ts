@@ -16,6 +16,8 @@ export const REVIEWS_PER_INNINGS: Record<MatchFormat, number> = { t20: 2, odi: 4
 export const WRONG_OUT = 0.5 // a batsman given out who was not: a challenge turns it round half the time
 export const MISSED_OUT = 0.5 // a close not-out that was in fact out: a challenge turns it round half the time
 /** Of legal dot balls, how many are close enough for the fielding side to think about a review (fewer in the longer formats, which have many more balls to an innings; tuned by simulation so wickets and runs hardly move). */
+/** Of balls scored off, how many have a run out checked by the third umpire and found not out (the batsman made his ground). */
+export const RUNOUT_CHECK = 0.009
 export const CLOSE_CALL: Record<MatchFormat, number> = { t20: 0.04, odi: 0.015, test: 0.0075 }
 
 export interface DrsCtx {
