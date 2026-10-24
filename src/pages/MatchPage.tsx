@@ -47,7 +47,7 @@ import { TIMEOUT_INTRO_SECONDS } from '../components/match/TimeoutIntro'
 import { challengeSeconds } from '../components/match/ChallengeScreen'
 import { CHALLENGE_RESULT_SECONDS } from '../components/match/ChallengeResult'
 import { RAIN_DELAY_SECONDS } from '../components/match/RainDelay'
-import { wideSide } from '../engine/wide'
+import { wideCm, wideSide } from '../engine/wide'
 import { askVoice, cancelSpeech, getVoiceConsent, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
 import { liveLines } from '../season/liveVoice'
 import { WinCelebration } from '../components/match/WinCelebration'
@@ -509,7 +509,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
           const nameOf = lastEv.extraType === 'wide' ? 'WIDE!' : lastEv.extraRuns >= 4 ? (lastEv.extraType === 'bye' ? 'FOUR BYES!' : 'FOUR LEG BYES!') : lastEv.extraType === 'bye' ? 'BYE!' : 'LEG BYE!'
-          const subOf = `+${lastEv.extraRuns} ${lastEv.extraRuns === 1 ? 'run' : 'runs'} to the total${lastEv.extraType === 'wide' ? (wideSide(lastEv) === 'off' ? ' · outside off' : ' · down the leg side') : lastEv.extraType === 'bye' ? ' · it beats the bat and the keeper' : ' · off the pad'}`
+          const subOf = `+${lastEv.extraRuns} ${lastEv.extraRuns === 1 ? 'run' : 'runs'} to the total${lastEv.extraType === 'wide' ? (wideSide(lastEv) === 'off' ? ' · outside off' : ' · down the leg side') + ` · ${wideCm(lastEv.seq)} cm outside the wide line` : lastEv.extraType === 'bye' ? ' · it beats the bat and the keeper' : ' · off the pad'}`
           enqueueMoment({ key: lastEv.seq + 0.6, kind: 'extracast', player: match.player(lastEv.bowlerId), team: bowlS.team, title: lastEv.extraType.toUpperCase(), lines: [], delay, ms: Math.round(EXTRA_CAST_SECONDS * 1000 * rate), extraCast: { replay: replayBase(lastEv), title: nameOf, sub: subOf, color: lastEv.extraType === 'wide' ? '#fbbf24' : lastEv.extraType === 'bye' ? '#2dd4bf' : '#a5b4fc', rate } })
         }
         // a ball that beat the bat and went very close to the stumps or the edge of the bat gets a close-call replay

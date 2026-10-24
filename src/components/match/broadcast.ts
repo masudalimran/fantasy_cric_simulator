@@ -7,7 +7,7 @@ import type { BallEvent } from '../../engine/types'
  * World: X to the right of a camera that stands behind the bowler, Y up, Z from the bowler towards the batsman. The batsman's stumps are at
  * Z = 0 and the bowler's at Z = -20.12. The top-down field of the normal view is stretched onto it so the fielders keep their places.
  */
-import { wideDirection, wideSide } from '../../engine/wide'
+import { WIDE_LINE_M, wideCm, wideDirection, wideSide } from '../../engine/wide'
 import { classifyShot, type ShotStyle } from './bodyPose'
 
 export interface V3 { x: number; y: number; z: number }
@@ -250,7 +250,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bowlerX = 0.5
   // the line the ball took: a chosen one, otherwise a small stable spread around off stump
   const line = ev.delivery ? ev.delivery.line / 50 : (hash01(ev.seq * 3.1) - 0.5) * 0.9
-  const lineX = wide ? wideDirection(wideSide(ev), leftHand ? 'L' : 'R', 'behind-bowler') * 2.7 : line * 1.1
+  const lineX = wide ? wideDirection(wideSide(ev), leftHand ? 'L' : 'R', 'behind-bowler') * (WIDE_LINE_M + wideCm(ev.seq) / 100) : line * 1.1
   const release: V3 = { x: bowlerX, y: 2.05, z: BOWL_Z - 0.4 }
   const lenZ = ev.delivery ? (ev.delivery.length === 'yorker' ? -1.2 : ev.delivery.length === 'full' ? -3.2 : ev.delivery.length === 'good' ? -6 : -9.5) : -3 - hash01(ev.seq * 1.7) * 6
   const bounce: V3 = { x: lineX * 0.8 + bowlerX * 0.2, y: 0, z: lenZ }

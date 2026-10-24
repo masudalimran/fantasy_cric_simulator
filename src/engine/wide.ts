@@ -19,3 +19,8 @@ export const wideDirection = (side: 'off' | 'leg', hand: 'L' | 'R', view: 'above
   const dir = (side === 'off' ? offRight : -offRight) * (hand === 'L' ? -1 : 1)
   return dir as 1 | -1
 }
+
+/** How far outside the wide line the ball went, in centimetres (10 to 150, mostly not very far). Scenery only, the same for the wide screen and the broadcast view. */
+export const wideCm = (seq: number): number => Math.round(10 + hash01(seq * 1.3 + 4) ** 1.5 * 140)
+/** Where the wide line is, in metres from the middle stump. */
+export const WIDE_LINE_M = 1.0

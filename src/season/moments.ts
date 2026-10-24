@@ -122,8 +122,8 @@ export function trackFor(seq: number, out: boolean): Track {
   }
 }
 
-/** How far over the popping crease a no-ball's front foot landed, in centimetres (a believable 2 to 24). */
-export const overstepCm = (seq: number): number => Math.round(2 + hash(seq, 15) * 22)
+/** How far over the popping crease a no-ball's front foot landed, in centimetres (4 to 34: far enough over to see). */
+export const overstepCm = (seq: number): number => Math.round(4 + hash(seq, 15) * 30)
 /** True for about one boundary or wicket in three, where the cheerleaders come out. */
 export const cheersAfter = (seq: number) => hash(seq, 9) < 0.62
 /** A stable pick of 0 to n-1 for a ball, to choose between the break-the-monotony screens. */

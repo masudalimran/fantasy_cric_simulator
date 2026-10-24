@@ -131,7 +131,7 @@ export interface ExtraInfo {
   batTeam: Team
   keeper: Player | null
   /** For a wide: which side it went (see engine/wide.ts) and the batsman's hand, so the picture shows the ball going the way it really went. */
-  wide?: { side: 'off' | 'leg'; hand: 'L' | 'R' }
+  wide?: { side: 'off' | 'leg'; hand: 'L' | 'R'; /** How far outside the wide line the ball went, in centimetres. */ cm?: number }
   rate: number
 }
 
@@ -148,6 +148,9 @@ function WideView({ info }: { info: ExtraInfo }) {
   // the side the ball really went: outside off or down the leg side
   const wideInfo = info.wide ?? { side: 'off' as const, hand: 'R' as const }
   const side = wideDirection(wideInfo.side, wideInfo.hand, 'above')
+  const cm = wideInfo.cm ?? 60
+  // the wide line is 15 units from the middle; every 100 cm outside it is 18 more
+  const out = Math.min(33, 15 + cm * 0.18)
   const x = (v: number) => 50 + side * v
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Wide">
@@ -164,10 +167,16 @@ function WideView({ info }: { info: ExtraInfo }) {
         {[-1, 1].map((d) => <line key={d} x1={50 + d * 15} x2={50 + d * 15} y1="8" y2="56" stroke="#ef4444" strokeWidth="0.7" strokeDasharray="2 1.4" />)}
         <text x={50 + side * 15 + 1} y="10" fontSize="3" fill="#fca5a5" fontWeight="700">WIDE LINE</text>
         {/* the ball: from the bowler's end, past the outside of the wide line */}
-        <motion.path d={`M50 6 Q${x(8)} 22 ${x(24)} 40 T${x(30)} 56`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" strokeDasharray="2 1.2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn' }} />
-        <motion.circle r="1.7" fill="#ef4444" stroke="#fecaca" strokeWidth="0.4" initial={{ cx: 50, cy: 6 }} animate={{ cx: [50, x(8), x(24), x(30)], cy: [6, 22, 40, 56] }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn', times: [0, 0.4, 0.75, 1] }} />
-        <motion.g initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.1 * r, type: 'spring' }} style={{ transformOrigin: `${x(24)}px 40px` }}>
-          <circle cx={x(24)} cy="40" r="3" fill="none" stroke="#fbbf24" strokeWidth="0.8" />
+        <motion.path d={`M50 6 Q${x(out / 3)} 22 ${x(out)} 40 T${x(Math.min(46, out * 1.2))} 56`} fill="none" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" strokeDasharray="2 1.2" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn' }} />
+        <motion.circle r="1.7" fill="#ef4444" stroke="#fecaca" strokeWidth="0.4" initial={{ cx: 50, cy: 6 }} animate={{ cx: [50, x(out / 3), x(out), x(Math.min(46, out * 1.2))], cy: [6, 22, 40, 56] }} transition={{ delay: 0.3 * r, duration: 1.5 * r, ease: 'easeIn', times: [0, 0.4, 0.75, 1] }} />
+        <motion.g initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.1 * r, type: 'spring' }} style={{ transformOrigin: `${x(out)}px 40px` }}>
+          <circle cx={x(out)} cy="40" r="3" fill="none" stroke="#fbbf24" strokeWidth="0.8" />
+        </motion.g>
+        {/* how far outside the line it went */}
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 * r }}>
+          <line x1={x(15)} x2={x(out)} y1="46" y2="46" stroke="#fde68a" strokeWidth="0.9" />
+          <line x1={x(15)} x2={x(15)} y1="44" y2="48" stroke="#fde68a" strokeWidth="0.8" /><line x1={x(out)} x2={x(out)} y1="44" y2="48" stroke="#fde68a" strokeWidth="0.8" />
+          <text x={x((15 + out) / 2)} y="52" fontSize="3.6" fontWeight="800" textAnchor="middle" fill="#fef3c7">{cm} cm wide</text>
         </motion.g>
       </svg>
       <Tag text="Extra: wide" color="#fbbf24" />
@@ -284,7 +293,7 @@ export interface NoBallInfo { bowler: Player; bowlTeam: Team; /** How far over t
 export function NoBallScreen({ info }: { info: NoBallInfo }) {
   const { bowler, bowlTeam, cm, rate: r } = info
   const { box, w } = useWidth()
-  const over = Math.min(22, 4 + cm * 0.7)
+  const over = Math.min(40, 10 + cm * 1.0)
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="No ball">
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #1c0a0a, #3b0d0d 55%, #14532d 56%, #0b2a19)' }} />

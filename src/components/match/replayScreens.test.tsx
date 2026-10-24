@@ -9,6 +9,8 @@ import { fieldPlan } from './fieldSets'
 import { AlmostCast, ExtraCast, FourCast, MissCast, WicketCast } from './ReplayScreens'
 import { almostCaught } from './almost'
 import { fielderWorld, planBall } from './broadcast'
+import { WIDE_LINE_M, wideCm } from '../../engine/wide'
+import { overstepCm } from '../../season/moments'
 import { endPoint } from './Stage'
 import { nearMiss, stumpGap, type Miss } from './nearMiss'
 import { placeFielders } from './Stage'
@@ -117,5 +119,21 @@ describe('the broadcast-style screens', () => {
     expect(html).toContain('SO NEARLY!')
     expect(html).toContain('fell 1.4 m in front of')
     expect(html).toContain('41 m')
+  })
+
+  it('a wide says how far outside the line it went, and the ball in the clip goes exactly there', () => {
+    const cms = Array.from({ length: 200 }, (_, i) => wideCm(i + 1))
+    expect(Math.min(...cms)).toBeGreaterThanOrEqual(10)
+    expect(Math.max(...cms)).toBeLessThanOrEqual(150)
+    expect(new Set(cms).size).toBeGreaterThan(40)
+    const wide = all.find((e) => e.extraType === 'wide')!
+    const base = baseFor(m, wide)
+    const plan = planBall(wide, base.fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(wide, base.fielders), false)
+    expect(Math.abs(plan.bounce.x) / 0.8).toBeGreaterThan(WIDE_LINE_M * 0.95)
+  })
+  it('a no ball oversteps by a clear margin', () => {
+    const cms = Array.from({ length: 200 }, (_, i) => overstepCm(i + 1))
+    expect(Math.min(...cms)).toBeGreaterThanOrEqual(4)
+    expect(Math.max(...cms)).toBeLessThanOrEqual(34)
   })
 })
