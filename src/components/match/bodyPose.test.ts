@@ -137,4 +137,38 @@ describe('the bodies drawn in the broadcast view', () => {
       }
     }
   })
+
+  it('a challenge keeps the clip honest: the umpire\'s decision on the field, no walk-off, no celebration until the review is over', () => {
+    let done = 0
+    for (let seed = 1; seed <= 30 && done < 2; seed++) {
+      const mm = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      mm.playMatch()
+      for (const inn of mm.innings) {
+        const bowlSide = mm.sides[1 - inn.battingSide]
+        const ev = inn.log.find((e) => e.wicket?.kind === 'lbw' && !e.review)
+        if (!ev) continue
+        const striker = mm.player(ev.strikerId)
+        const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+        const fielders = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+        const plan = (e: typeof ev) => planBall(e, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(e, fielders), striker.hand === 'L')
+        const review = { by: 'bowl' as const, kind: 'lbw' as const, originalOut: false, finalOut: true, overturned: true, desperate: false, left: 1, total: 2 }
+        // given not out on the field, then the bowling side won the challenge: the clip shows a not-out and nobody leaves
+        const won = plan({ ...ev, review })
+        expect(won.reviewed).toBe(true)
+        expect(won.exitAt).toBeNull()
+        expect(won.signal?.kind).toBe('notout')
+        // given out on the field and upheld: the finger goes up, but still nobody walks off in the clip
+        const upheld = plan({ ...ev, review: { ...review, originalOut: true, overturned: false, by: 'bat' as const } })
+        expect(upheld.exitAt).toBeNull()
+        expect(upheld.signal?.kind).toBe('out')
+        // no challenge: he walks off as before
+        const plain = plan(ev)
+        expect(plain.exitAt).not.toBeNull()
+        expect(plain.reviewed).toBe(false)
+        done++
+        break
+      }
+    }
+    expect(done).toBeGreaterThan(0)
+  })
 })

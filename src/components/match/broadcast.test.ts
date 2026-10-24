@@ -42,7 +42,7 @@ describe('the broadcast view plan', () => {
               expect((ro.destEnd === 0 ? last.stumps : last.stumpsBowl)).toBeGreaterThan(0.9)
               expect(Math.hypot(last.ball!.z - ro.throwTo.z, last.ball!.x - ro.throwTo.x)).toBeLessThan(0.1)
             }
-            if (ev.wicket.kind !== 'run out') expect(plan.signal?.kind).toBe('out')
+            if (ev.wicket.kind !== 'run out') expect(plan.signal?.kind).toBe(ev.review && !ev.review.originalOut ? 'notout' : 'out')
             if (ev.wicket.kind === 'bowled' || ev.wicket.kind === 'stumped') expect(last.stumps).toBeGreaterThan(0.9)
             if (ev.wicket.kind === 'caught and bowled') expect(plan.bowlerCatch).toBe(true)
             if (ev.wicket.kind === 'stumped') expect(plan.stepOut).toBe(true)

@@ -186,6 +186,8 @@ export interface Plan {
   react: { text: string; at: number; who: 'striker' | 'bowler' | 'keeper' } | null
   /** The shot the batsman is drawn playing (looks only). */
   shot: ShotStyle
+  /** A challenge decides this ball: the clip shows only what the umpire said on the field, nobody walks off and nobody celebrates until the review is done. */
+  reviewed: boolean
 }
 
 /** The clip now on screen (set by the broadcast view as it plans a ball), so the animation screens can wait for it to end. */
@@ -235,7 +237,7 @@ export const tDeliverFor = (speed: number) => Math.max(0.36, Math.min(0.85, 0.5 
 export const contactAt = (speed: number) => 0.95 + tDeliverFor(speed)
 
 /** Works out the clip for a ball. `end` is where the top-down field says the ball finished. */
-export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135): Plan {
+export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135, opts: { /** A run out goes upstairs to the third umpire, so the clip does not show the verdict. */ holdRunOut?: boolean } = {}): Plan {
   const w = ev.wicket
   const wide = ev.extraType === 'wide'
   const bowlerX = 0.5
@@ -353,7 +355,11 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const nick = !!w && w.kind === 'caught' && (kind === 'keeper' || (peak < 3 && Math.hypot(end.x - meet.x, end.z - meet.z) < 14))
   const slow: Plan['slow'] = nick ? { at: t2 - 0.14, len: 0.5, factor: 0.3 } : null
   let signal: Plan['signal'] = null
-  if (w) signal = { kind: 'out', at: (wicketAt ?? t3) + (w.kind === 'lbw' ? 0.7 : 0.15), who: 1 }
+  const rv = ev.review
+  // a challenge: the clip shows the umpire's decision on the field (a finger up, or a shake of the head) and nothing more, as the review is still to come
+  if (rv) signal = rv.originalOut ? { kind: 'out', at: (wicketAt ?? t2 + 0.25) + (rv.kind === 'lbw' ? 0.7 : 0.15), who: 1 } : { kind: 'notout', at: t2 + 0.9, who: 1 }
+  else if (runOut && opts.holdRunOut) signal = null
+  else if (w) signal = { kind: 'out', at: (wicketAt ?? t3) + (w.kind === 'lbw' ? 0.7 : 0.15), who: 1 }
   else if (wide) signal = { kind: 'wide', at: t2 + 0.35, who: 1 }
   else if (noball) signal = { kind: 'noball', at: 0.95 + 0.12, who: 1 }
   else if (six) signal = { kind: 'six', at: t2 + 0.6, who: 2 }
@@ -372,7 +378,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
-    signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -554,7 +560,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     const k = clamp01((t - (t3 - 0.15)) / 0.2) * (1 - clamp01((t - t3 - 1.4) / 0.5))
     if (k > 0) board = { a: Math.atan2((plan.end.z - ROPE.cz) / ROPE.rz, (plan.end.x - ROPE.cx) / ROPE.rx), text: plan.six ? 'SIX' : 'FOUR', k }
   }
-  const joy = plan.boundary || plan.wicketFlies || plan.catcher >= 0 ? clamp01((t - (plan.runOut ? hitAt : t3)) / 0.5) : 0
+  const joy = !plan.reviewed && (plan.boundary || plan.wicketFlies || plan.catcher >= 0) ? clamp01((t - (plan.runOut ? hitAt : t3)) / 0.5) : 0
   return { slowmo, board, signal, hurt, raise, dives, react, runners, striker, stumpsBowl, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2 && !(plan.celebrateAt !== null && plan.celebrateAt !== undefined && t >= plan.celebrateAt - 0.15), aim, hfov, moving, joy, phase }
 }
 

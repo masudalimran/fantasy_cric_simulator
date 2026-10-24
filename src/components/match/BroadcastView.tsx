@@ -122,7 +122,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const plan0: Plan = useMemo(() => {
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
-    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler))
+    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler), { holdRunOut: getAnimPrefs().reviews })
     // (a replay inside an animation screen must not touch the clock the live clip keeps)
     if (event && !replay && !fitSeconds) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.15, rateProp)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
@@ -135,7 +135,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
   // a team's (or a star's) signature move on a six, a strong four or a wicket (not in the timeout reel)
   const show: MoveShow | null = useMemo(
-    () => (event && !fitSeconds && getAnimPrefs().moves ? moveForBall(event, striker, battingTeam, bowler, bowlingTeam) : null),
+    () => (event && !event.review && !fitSeconds && getAnimPrefs().moves ? moveForBall(event, striker, battingTeam, bowler, bowlingTeam) : null),
     [event?.seq, fitSeconds, striker.id, bowler.id, battingTeam.id, bowlingTeam.id], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show })
@@ -252,7 +252,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const strikerOut = out && (!pl.runOut || pl.runOut.outIsStriker)
       rigs.current.get('striker')?.apply(batsmanPose({ style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut }), lh)
       rigs.current.get('nonstriker')?.apply(nonStrikerPose({ t, t1: pl.tRun, speed: mn.v, cyc: mn.cyc, bat: true, walkOff: out && !!pl.runOut && !pl.runOut.outIsStriker }), L.nonStriker?.hand === 'L')
-      rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' }))
+      rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' && !pl.reviewed }))
       // the umpires' arms
       for (const who of [1, 2] as const) {
         const sg = f.signal && f.signal.who === who ? f.signal : null
