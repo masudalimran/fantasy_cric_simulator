@@ -29,7 +29,12 @@ import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
 import { commentary } from '../engine/commentary'
-import { catchCause, catchContact, sixContact } from '../engine/contact'
+import { catchCause, catchContact, fourContact, sixContact } from '../engine/contact'
+import { shotText } from '../components/match/AimPads'
+import { cheerVariantFor } from '../components/match/CheerScreen'
+import type { ReplayBase } from '../components/match/ReplayFrame'
+import { EXTRA_CAST_SECONDS, FOUR_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
+import { wicketCard } from '../season/wicketCards'
 import { CATCH_SECONDS } from '../components/match/CatchScreen'
 import { stadiumLook } from '../engine/stadium'
 import { challengeTalk } from '../season/challenge'
@@ -255,7 +260,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (!m) { busyUntil.current = 0; openWinWhenIdle(); return }
     // One rule: where auto-play pauses (wickets, fifties and hundreds, boundaries), that event's screen waits for a tap too.
     const st = stopsRef.current
-    if (((m.kind === 'replay' || m.kind === 'catch' || m.kind === 'hattrick' || m.kind === 'haul') && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four') && st.boundaries)) { busyUntil.current = Infinity; return }
+    if (((m.kind === 'replay' || m.kind === 'catch' || m.kind === 'wicketcast' || m.kind === 'hattrick' || m.kind === 'haul') && st.wickets) || (m.kind === 'milestone' && st.milestones) || ((m.kind === 'six' || m.kind === 'four' || m.kind === 'fourcast') && st.boundaries)) { busyUntil.current = Infinity; return }
     const total = m.delay + m.ms + (queue.current.length ? 0 : 350) // no pause when another moment follows straight away
     busyUntil.current = Date.now() + total
     momentTimer.current = window.setTimeout(startNextMoment, total)
@@ -436,6 +441,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         })
         return placeFielders(match.sides[1 - innE.battingSide].xi, ev.bowlerId, plan.spots)
       }
+      /** What the broadcast view needs to play a ball again inside an animation screen. */
+      const replayBase = (ev: BallEvent): ReplayBase => {
+        const innE = match.innings[ev.innings]
+        return { event: ev, striker: match.player(ev.strikerId), nonStriker: match.player(ev.nonStrikerId), bowler: match.player(ev.bowlerId), batTeam: match.sides[innE.battingSide].team, bowlTeam: match.sides[1 - innE.battingSide].team, fielders: placedAt(ev), pitch: pitchKind, look: stadium }
+      }
       // the no-ball itself: the front foot over the line, before the free hit
       if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && !match.isOver) {
         const spd = autoRef.current
@@ -460,20 +470,17 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const spd = autoRef.current
         const rate = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
         const delay = spd === 4 ? 150 : spd === 2 ? 250 : 450
-        const ms = Math.round(2700 * rate)
         const innNow = match.innings[lastEv.innings]
         const batT = match.sides[innNow.battingSide].team
         const bowlS = match.sides[1 - innNow.battingSide]
         if (prefs.four && lastEv.boundary === 4) {
-          const field = placedAt(lastEv)
           const ang = eventAngle(lastEv)
-          const diff = (f: { x: number; y: number }) => { let d = Math.abs(Math.atan2(f.y - 66, f.x - 80) - ang); if (d > Math.PI) d = 2 * Math.PI - d; return d }
-          const chasers = field.filter((f) => f.spot !== 'Wicketkeeper').sort((a, b) => diff(a) - diff(b)).slice(0, 1 + (((lastEv.seq * 2654435761) >>> 0) % 3)).map((f) => ({ player: f.player, x: f.x, y: f.y }))
-          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'four', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms, four: { batsman: match.player(lastEv.strikerId), batTeam: batT, bowlTeam: bowlS.team, angle: ang, chasers, rate, fire: lastEv.freeHit } })
+          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'fourcast', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms: Math.round(FOUR_SECONDS * 1000 * rate), fourCast: { replay: replayBase(lastEv), contact: fourContact(lastEv, match.player(lastEv.strikerId).batting.power), shot: shotText({ angle: ang, loft: !!lastEv.shot?.loft }) ?? 'Along the ground', batsman: match.player(lastEv.strikerId), batTeam: batT, fire: lastEv.freeHit, rate } })
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
-          const keeperId = match.keeperOf(bowlS === match.sides[0] ? 0 : 1)
-          enqueueMoment({ key: lastEv.seq + 0.6, kind: 'extra', player: match.player(lastEv.bowlerId), team: bowlS.team, title: lastEv.extraType.toUpperCase(), lines: [], delay, ms: Math.round(2600 * rate), extra: { kind: lastEv.extraType, runs: lastEv.extraRuns, bowler: match.player(lastEv.bowlerId), bowlTeam: bowlS.team, batsman: match.player(lastEv.strikerId), batTeam: batT, keeper: keeperId ? match.player(keeperId) : null, ...(lastEv.extraType === 'wide' ? { wide: { side: wideSide(lastEv), hand: match.player(lastEv.strikerId).hand } } : {}), rate } })
+          const nameOf = lastEv.extraType === 'wide' ? 'WIDE!' : lastEv.extraRuns >= 4 ? (lastEv.extraType === 'bye' ? 'FOUR BYES!' : 'FOUR LEG BYES!') : lastEv.extraType === 'bye' ? 'BYE!' : 'LEG BYE!'
+          const subOf = `+${lastEv.extraRuns} ${lastEv.extraRuns === 1 ? 'run' : 'runs'} to the total${lastEv.extraType === 'wide' ? (wideSide(lastEv) === 'off' ? ' · outside off' : ' · down the leg side') : lastEv.extraType === 'bye' ? ' · it beats the bat and the keeper' : ' · off the pad'}`
+          enqueueMoment({ key: lastEv.seq + 0.6, kind: 'extracast', player: match.player(lastEv.bowlerId), team: bowlS.team, title: lastEv.extraType.toUpperCase(), lines: [], delay, ms: Math.round(EXTRA_CAST_SECONDS * 1000 * rate), extraCast: { replay: replayBase(lastEv), title: nameOf, sub: subOf, color: lastEv.extraType === 'wide' ? '#fbbf24' : lastEv.extraType === 'bye' ? '#2dd4bf' : '#a5b4fc', rate } })
         }
         if (prefs.extras && lastEv.tags.includes('maiden')) {
           const ln = innNow.bowlers.get(lastEv.bowlerId)
@@ -640,7 +647,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const team = lastEv.wicket ? bowlS.team : batT
           const pool = lastEv.wicket ? ['cheer', 'huddle'] : lastEv.boundary === 6 && innE.legalBalls >= 90 ? ['cheer', 'stands', 'fireworks'] : ['cheer', 'stands']
           const v = pool[ambientPick(lastEv.seq, pool.length)]
-          if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, why: lastEv.wicket ? 'wicket' : 'boundary', rate }, caption: cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }) }) }
+          if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, variant: cheerVariantFor(lastEv.seq), why: lastEv.wicket ? 'wicket' : 'boundary', rate }, caption: cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }) }) }
           else if (v === 'huddle') put({ variant: 'huddle', team, players: bowlS.xi.slice(0, 8), rate }, 3800, 'HUDDLE', team, cap('huddle', { team: team.name }))
           else if (v === 'fireworks') put({ variant: 'fireworks', team, rate }, 4200, 'FIREWORKS', team, cap('fireworks', { team: team.name, extra: 'big hit' }))
           else put({ variant: 'stands', team, sign: lastEv.boundary === 6 ? '6' : lastEv.boundary === 4 ? '4' : null, name: lastEv.wicket ? match.player(lastEv.bowlerId).name : match.player(lastEv.strikerId).name, seed: lastEv.seq, rate }, 4400, 'THE STANDS', team, cap(lastEv.wicket ? 'stands-bowling' : 'stands-batting', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
@@ -759,6 +766,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             show({
               key: notable.seq + 0.5, kind: 'catch', player: match.player(outLine.id), team, title: 'CAUGHT', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(CATCH_SECONDS * 1000 * rate),
               catchInfo: { event: notable, kind: w.kind as 'caught' | 'caught and bowled', batsman: match.player(outLine.id), nonStriker: match.player(notable.nonStrikerId), bowler: bowlerP, fielder: catchBy, batTeam: team, bowlTeam: bowlSideNow.team, fielders: placed, pitch: pitchKind, look: lookNow, cause, contact: catchContact(notable.seq, cause, match.player(outLine.id).batting.power), reaction: normalCatch && !ropeCatch ? handsFor(notable.seq).reaction : undefined, score: `${outLine.runs} (${outLine.balls})`, rate },
+            })
+          } else if (wantReplay && (w.kind === 'bowled' || w.kind === 'lbw' || w.kind === 'stumped' || w.kind === 'hit wicket' || w.kind === 'run out')) {
+            // every other way of getting out also gets the broadcast replay, with three facts on how it happened
+            const keeperP = match.keeperOf(bowlIdx) ? match.player(match.keeperOf(bowlIdx)!) : null
+            show({
+              key: notable.seq + 0.5, kind: 'wicketcast', player: match.player(outLine.id), team, title: 'WICKET', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(WICKET_CAST_SECONDS * 1000 * rate),
+              wicketCast: { replay: replayBase(notable), card: wicketCard(w.kind, notable.seq, { bowlerName: bowlerP.name, bowlerType: bowlerP.bowling?.type, kmh: ballSpeed(notable, bowlerP), keeperName: keeperP?.name, fielderName: fielderP?.name }), batsman: match.player(outLine.id), batTeam: team, score: `${outLine.runs} (${outLine.balls})`, how: outLines[0], rate },
             })
           } else if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((ropeCatch ? 9200 : 6300) * rate),

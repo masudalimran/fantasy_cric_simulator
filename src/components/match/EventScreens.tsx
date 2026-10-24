@@ -309,8 +309,11 @@ export function NoBallScreen({ info }: { info: NoBallInfo }) {
         </motion.g>
         </g>
       </svg>
-      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />Overstepped</div>
+      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-red-300"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />Front foot cam</div>
       <SkipTag />
+      {/* the lens: viewfinder corners and a slow-motion tag, like the broadcast's front-foot camera */}
+      {[['left-2 top-10', 'border-l-2 border-t-2'], ['right-2 top-10', 'border-r-2 border-t-2'], ['left-2 bottom-2', 'border-b-2 border-l-2'], ['right-2 bottom-2', 'border-b-2 border-r-2']].map(([pos, b]) => <span key={pos} className={`pointer-events-none absolute z-20 h-4 w-4 border-white/60 ${pos} ${b}`} />)}
+      <div className="pointer-events-none absolute right-3 top-10 z-20 rounded bg-red-600/90 px-1.5 py-px text-[9px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>
       <motion.div className="absolute left-[8%] top-[18%] z-20 text-center" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 * r }}>
         <span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 3px ${accentOf(bowlTeam)}` }}><PlayerAvatar player={bowler} team={bowlTeam} size={Math.max(36, Math.min(w * 0.1, 60))} /></span>
         <div className="mx-auto mt-1 max-w-[110px] truncate rounded bg-black/70 px-1.5 text-[11px] font-semibold text-white">{bowler.name}</div>

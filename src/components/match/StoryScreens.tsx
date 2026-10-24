@@ -24,6 +24,31 @@ const Slam = ({ children, color, stroke, w, delay, max = 84 }: { children: React
   <motion.div className="font-display leading-none tracking-wide" style={{ color, fontSize: Math.max(30, Math.min(w * 0.12, max)), WebkitTextStroke: `2px ${stroke}`, paintOrder: 'stroke fill', textShadow: `0 0 30px ${color}99` }} initial={{ opacity: 0, scale: 2.3 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 15 }}>{children}</motion.div>
 )
 
+/**
+ * The one TV graphic the story screens (a momentum swing, a record, the field changing) share: a dark broadcast backdrop, the tag in the corner, and a lower
+ * third across the bottom (a colour bar, a small heading, the headline and a line under it), so they read as parts of one broadcast.
+ */
+const TvBackdrop = ({ tint }: { tint: string }) => (
+  <>
+    <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 38%, ${tint}, #05080e 80%)` }} />
+    <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ background: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px)' }} />
+  </>
+)
+function LowerThird({ accent, tag, title, sub, delay }: { accent: string; tag: string; title: string; sub?: string; delay: number }) {
+  return (
+    <motion.div className="absolute inset-x-0 bottom-0 z-40 px-2.5 pb-2.5" initial={{ y: 70, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay, type: 'spring', stiffness: 200, damping: 20 }}>
+      <div className="flex items-stretch overflow-hidden rounded-lg bg-black/85 ring-1 ring-white/15">
+        <span className="w-1.5 shrink-0" style={{ background: accent }} />
+        <div className="min-w-0 flex-1 px-3 py-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-[0.22em]" style={{ color: accent }}>{tag}</div>
+          <div className="truncate font-display text-2xl leading-none tracking-wide text-white sm:text-3xl">{title}</div>
+          {sub && <div className="mt-0.5 truncate text-xs font-semibold text-slate-300">{sub}</div>}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ---- Tension: a hat-trick ball, or a batsman in the nineties --------------------------------------------------------------
 
 export interface TensionInfo {
@@ -158,14 +183,14 @@ export interface SwingInfo { chasing: Team; defending: Team; before: number; aft
 /** The win-chance bar swinging from one side to the other. Click to skip. */
 export function SwingScreen({ info }: { info: SwingInfo }) {
   const { chasing, defending, before, after, rate: r } = info
-  const [box, w] = useWidth()
+  const [box] = useWidth()
   const up = after > before
   const lead = after >= 0.5 ? chasing : defending
   const pct = Math.round((after >= 0.5 ? after : 1 - after) * 100)
   const [c1, c2] = [accentOf(chasing), accentOf(defending)]
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Momentum shift">
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 45%, #10243a, #05080e 80%)' }} />
+      <TvBackdrop tint="#10243a" />
       <Tag text="Momentum shift" color="#38bdf8" />
       <SkipTag />
       <div className="absolute inset-x-[7%] top-[26%] z-20">
@@ -177,10 +202,7 @@ export function SwingScreen({ info }: { info: SwingInfo }) {
         </div>
         <div className="mt-1 flex justify-between font-display text-2xl leading-none tabular-nums text-white"><span>{Math.round(after * 100)}%</span><span>{Math.round((1 - after) * 100)}%</span></div>
       </div>
-      <div className="absolute inset-x-0 bottom-[6%] z-40 px-3 text-center">
-        <Slam color={up ? '#38bdf8' : '#fbbf24'} stroke="#04111c" w={w} delay={2.1 * r} max={70}>{up ? `${chasing.short} SURGE!` : `${defending.short} FIGHT BACK!`}</Slam>
-        <motion.div className="mt-1 text-sm font-semibold text-slate-100" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>{lead.name} are now {pct}% to win</motion.div>
-      </div>
+      <LowerThird accent={up ? '#38bdf8' : '#fbbf24'} tag="Momentum" title={up ? `${chasing.short} SURGE!` : `${defending.short} FIGHT BACK!`} sub={`${lead.name} are now ${pct}% to win`} delay={1.9 * r} />
     </div>
   )
 }
@@ -195,7 +217,7 @@ export function RecordScreen({ info }: { info: RecordInfo }) {
   const [box, w] = useWidth()
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label={`Record: ${category}`}>
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, #78350f, #0b0703 78%)' }} />
+      <TvBackdrop tint="#78350f" />
       <motion.div className="pointer-events-none absolute left-1/2 top-[38%] h-[160%] w-[100%] -translate-x-1/2 -translate-y-1/2 opacity-25" style={{ background: 'repeating-conic-gradient(from 0deg, #fbbf2400 0deg 12deg, #fbbf24cc 12deg 24deg)', borderRadius: '50%' }} animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }} />
       <Tag text="New record" color="#fbbf24" />
       <SkipTag />
@@ -203,13 +225,7 @@ export function RecordScreen({ info }: { info: RecordInfo }) {
         <motion.div className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 4px ${accentOf(team)}, 0 0 30px #fbbf24aa` }} initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.2 * r, type: 'spring', stiffness: 200, damping: 12 }}><PlayerAvatar player={player} team={team} size={Math.max(52, Math.min(w * 0.15, 90))} /></motion.div>
         <div className="mt-1 text-sm font-bold text-white">{player.name} <span className="font-semibold text-slate-300">· {team.short}</span></div>
       </div>
-      <div className="absolute inset-x-0 bottom-[4%] z-40 px-3 text-center">
-        <Slam color="#fde68a" stroke="#451a03" w={w} delay={0.9 * r} max={80}>RECORD!</Slam>
-        <motion.div className="mt-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 * r }}>
-          <div className="text-base font-extrabold text-amber-300">{category}: {value}</div>
-          {previous && <div className="text-[11px] text-slate-300">{previous}</div>}
-        </motion.div>
-      </div>
+      <LowerThird accent="#fbbf24" tag="New record" title={`${category}: ${value}`} sub={previous} delay={0.8 * r} />
     </div>
   )
 }
@@ -228,7 +244,7 @@ export interface PhaseInfo {
 /** The field being reset: a top-down ground with the fielders walking to their new places. Click to skip. */
 export function PhaseScreen({ info }: { info: PhaseInfo }) {
   const { variant, from, to, bowlTeam, batTeam, overs, runs, wickets, rate: r } = info
-  const [box, w] = useWidth()
+  const [box] = useWidth()
   const title = variant === 'powerplay' ? 'POWERPLAY OVER' : 'DEATH OVERS'
   const sub = variant === 'powerplay' ? `${batTeam.short} are ${runs}/${wickets} after ${overs} overs: the ring goes back` : `${batTeam.short} ${runs}/${wickets} after ${overs} overs: everyone to the rope`
   return (
@@ -248,10 +264,7 @@ export function PhaseScreen({ info }: { info: PhaseInfo }) {
       </svg>
       <Tag text="The field changes" color="#7dd3fc" />
       <SkipTag />
-      <div className="absolute inset-x-0 bottom-[4%] z-40 px-3 text-center">
-        <Slam color="#7dd3fc" stroke="#06202f" w={w} delay={0.3 * r} max={66}>{title}</Slam>
-        <motion.div className="mt-1 text-sm font-semibold text-slate-100" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 * r }} style={{ textShadow: '0 1px 4px #000' }}>{sub}</motion.div>
-      </div>
+      <LowerThird accent="#7dd3fc" tag="Field change" title={title} sub={sub} delay={0.3 * r} />
     </div>
   )
 }

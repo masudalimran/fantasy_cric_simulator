@@ -30,7 +30,7 @@ describe('story screens', () => {
     expect(so).toContain('MATCH TIED!')
     expect(so).toContain('win the super over')
     expect(renderToString(<SwingScreen info={{ chasing: A, defending: B, before: 0.3, after: 0.62, rate: 1 }} />)).toContain('are now')
-    expect(renderToString(<RecordScreen info={{ category: 'Highest score of the season', value: '121*', previous: 'The old mark was 110', player: p, team: A, rate: 1 }} />)).toContain('RECORD!')
+    expect(renderToString(<RecordScreen info={{ category: 'Highest score of the season', value: '121*', previous: 'The old mark was 110', player: p, team: A, rate: 1 }} />)).toContain('Highest score of the season')
     const ctx = { format: 't20' as const, maxOvers: 20, runs: 50, legalBalls: 36, target: null, freeHit: false, bowlType: null, hand: 'R' as const }
     expect(renderToString(<PhaseScreen info={{ variant: 'powerplay', from: fieldPlan({ ...ctx, over: 5 }).spots, to: fieldPlan({ ...ctx, over: 6 }).spots, bowlTeam: B, batTeam: A, overs: 6, runs: 50, wickets: 1, rate: 1 }} />)).toContain('POWERPLAY OVER')
     const rv = renderToString(<ReviewScreen info={{ by: 'bat', kind: 'edge', batsman: p, batTeam: A, bowler: q, bowlTeam: B, out: true, track: trackFor(3, true), rate: 1 }} />)

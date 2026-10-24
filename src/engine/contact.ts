@@ -65,6 +65,18 @@ export function sixContact(ev: Pick<BallEvent, 'seq' | 'distance'>, power: numbe
   return build(0.55 + 0.45 * q, speed, timing, signOf(hash(ev.seq * 4.3)) * off * 0.85, signOf(hash(ev.seq * 5.9)) * off * 0.5)
 }
 
+/**
+ * A four: well hit but not as perfectly as the biggest sixes. How well comes from how attacking the batsman was and his power; a harder hit is nearer the
+ * sweet spot with a faster bat, a ball that merely found the gap is hit off a part of the bat and a touch early or late.
+ */
+export function fourContact(ev: Pick<BallEvent, 'seq' | 'intent'>, power: number): Contact {
+  const p = clamp((power - 40) / 55, 0, 1)
+  const a = clamp((ev.intent + 1) / 3, 0, 1)
+  const q = clamp(0.42 + 0.3 * p + 0.15 * a + (hash(ev.seq * 1.9) - 0.5) * 0.3, 0.2, 0.92)
+  const off = (1 - q) * 0.9
+  return build(q, 86 + 14 * q + 8 * p + (hash(ev.seq * 2.7) - 0.5) * 6, signOf(hash(ev.seq * 3.3)) * (1 - q) * 28, signOf(hash(ev.seq * 4.9)) * off * 0.8, signOf(hash(ev.seq * 5.7)) * off * 0.55)
+}
+
 export type CatchCause = 'edge' | 'skier' | 'toe' | 'mistimed'
 /** How a catch came about, from the kind of catch: a catch behind or at slip is an edge, a high one a top edge, a low one in the ring a toe end, and one in the deep a mistimed shot. */
 export function catchCause(g: { seq: number; byKeeper: boolean; peak: number; dist: number }): CatchCause {

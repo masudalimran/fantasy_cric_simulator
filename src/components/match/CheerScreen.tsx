@@ -4,7 +4,38 @@ import { sfx } from '../../audio/sfx'
 import type { Team } from '../../types'
 import { TeamLogo } from '../season/Details'
 
-export interface CheerInfo { team: Team; /** What got them going: a boundary for the batting side, a wicket for the fielding side. */ why: 'boundary' | 'wicket'; rate: number }
+export type CheerVariant = 'pompom' | 'pyramid' | 'flags' | 'cards'
+export const CHEER_VARIANTS: CheerVariant[] = ['pompom', 'pyramid', 'flags', 'cards']
+/** Which of the cheer screens a ball gets: a stable pick from the ball number, so they take turns and the same ball is always the same. */
+export const cheerVariantFor = (seq: number): CheerVariant => CHEER_VARIANTS[Math.floor(Math.abs(Math.sin(seq * 12.9898 + 78.233) * 43758.5453) % 1 * CHEER_VARIANTS.length) % CHEER_VARIANTS.length]
+export interface CheerInfo { team: Team; /** What got them going: a boundary for the batting side, a wicket for the fielding side. */ why: 'boundary' | 'wicket'; rate: number; /** Which show: pom-poms in a row (the original), a pyramid, big flags, or a card stunt in the stands. */ variant?: CheerVariant }
+
+// a 5 by 7 dot font for the card stunt (the team's letters, written in the stands)
+const FONT: Record<string, string[]> = {
+  A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'], B: ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'], C: ['.####', '#....', '#....', '#....', '#....', '#....', '.####'],
+  D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'], E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'], F: ['#####', '#....', '#....', '####.', '#....', '#....', '#....'],
+  G: ['.####', '#....', '#....', '#.###', '#...#', '#...#', '.####'], H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'], I: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '#####'],
+  J: ['..###', '...#.', '...#.', '...#.', '...#.', '#..#.', '.##..'], K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'], L: ['#....', '#....', '#....', '#....', '#....', '#....', '#####'],
+  M: ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'], N: ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'], O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'], Q: ['.###.', '#...#', '#...#', '#...#', '#.#.#', '#..#.', '.##.#'], R: ['####.', '#...#', '#...#', '####.', '#.#..', '#..#.', '#...#'],
+  S: ['.####', '#....', '#....', '.###.', '....#', '....#', '####.'], T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'], U: ['#...#', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  V: ['#...#', '#...#', '#...#', '#...#', '#...#', '.#.#.', '..#..'], W: ['#...#', '#...#', '#...#', '#.#.#', '#.#.#', '##.##', '#...#'], X: ['#...#', '#...#', '.#.#.', '..#..', '.#.#.', '#...#', '#...#'],
+  Y: ['#...#', '#...#', '.#.#.', '..#..', '..#..', '..#..', '..#..'], Z: ['#####', '....#', '...#.', '..#..', '.#...', '#....', '#####'],
+  '0': ['.###.', '#...#', '#..##', '#.#.#', '##..#', '#...#', '.###.'], '1': ['..#..', '.##..', '..#..', '..#..', '..#..', '..#..', '.###.'], '2': ['.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'],
+  '3': ['####.', '....#', '....#', '.###.', '....#', '....#', '####.'], '4': ['...#.', '..##.', '.#.#.', '#..#.', '#####', '...#.', '...#.'], '5': ['#####', '#....', '####.', '....#', '....#', '#...#', '.###.'],
+  '6': ['.###.', '#....', '#....', '####.', '#...#', '#...#', '.###.'], '7': ['#####', '....#', '...#.', '..#..', '.#...', '.#...', '.#...'], '8': ['.###.', '#...#', '#...#', '.###.', '#...#', '#...#', '.###.'],
+  '9': ['.###.', '#...#', '#...#', '.####', '....#', '....#', '.###.'],
+}
+/** The dots of a word in the 5 by 7 font, as rows of booleans (letters side by side with a one-dot gap). */
+export function cardGrid(word: string): boolean[][] {
+  const chars = word.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3).split('')
+  const rows: boolean[][] = Array.from({ length: 7 }, () => [])
+  chars.forEach((ch, ci) => {
+    const g = FONT[ch] ?? FONT.O
+    for (let y = 0; y < 7; y++) { if (ci > 0) rows[y].push(false); for (const c of g[y]) rows[y].push(c === '#') }
+  })
+  return rows
+}
 
 const SKIN = ['#f5d0b0', '#e8b48a', '#c98f66', '#8d5a3b', '#f1c9a5']
 const HAIR = ['#3b2a1d', '#f2c94c', '#d94f3d', '#1f1f2e', '#7a4a2a']
@@ -78,17 +109,85 @@ export function CheerScreen({ info }: { info: CheerInfo }) {
       {Array.from({ length: w < 520 ? 6 : 12 }, (_, i) => (
         <motion.span key={i} className="pointer-events-none absolute select-none text-sm" style={{ left: `${(i * 37 + 8) % 92}%`, top: `${(i * 23 + 6) % 50}%`, color: i % 2 ? a : b }} animate={{ opacity: [0, 1, 0], scale: [0.5, 1.3, 0.5] }} transition={{ duration: 1.2 * r, repeat: Infinity, delay: (i % 6) * 0.2 }} aria-hidden>✦</motion.span>
       ))}
-      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-pink-300"><span className="h-2 w-2 animate-pulse rounded-full bg-pink-400" />Cheerleaders</div>
+      <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-pink-300"><span className="h-2 w-2 animate-pulse rounded-full bg-pink-400" />{info.variant === 'cards' ? 'Crowd stunt' : 'Cheerleaders'}</div>
       <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
       <motion.div className="absolute inset-x-0 top-[14%] z-20 flex items-center justify-center gap-3 text-center" initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 * r, type: 'spring', stiffness: 220, damping: 12 }}>
         <TeamLogo team={team} size={Math.max(34, Math.min(w * 0.1, 60))} />
-        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(30, Math.min(w * 0.12, 80)), WebkitTextStroke: '2px #0a0c14', paintOrder: 'stroke fill', textShadow: `0 0 28px ${b}` }}>GO {team.short.toUpperCase()}!</div>
+        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(30, Math.min(w * 0.12, 80)), WebkitTextStroke: '2px #0a0c14', paintOrder: 'stroke fill', textShadow: `0 0 28px ${b}` }}>{info.variant === 'flags' ? 'WAVE THE FLAG!' : info.variant === 'cards' ? 'CARD STUNT!' : `GO ${team.short.toUpperCase()}!`}</div>
       </motion.div>
-      <div className="absolute inset-x-0 bottom-[9%] z-10 flex items-end justify-center gap-[2%]">
-        {Array.from({ length: w < 520 ? 3 : 5 }, (_, i) => <Dancer key={i} team={team} i={i} size={size} delay={(i % 2) * 0.12} />)}
-      </div>
+      <CheerStage variant={info.variant ?? 'pompom'} team={team} w={w} size={size} r={r} />
       <div className="absolute inset-x-0 bottom-0 z-0 h-[16%]" style={{ background: `linear-gradient(180deg, transparent, ${a}55)` }} />
       <div className="absolute inset-x-0 bottom-[1%] z-20 text-center text-[11px] font-semibold text-slate-200" style={{ textShadow: '0 1px 3px #000' }}>{why === 'boundary' ? 'The crowd goes wild for a boundary' : 'The crowd erupts for the wicket'}</div>
+    </div>
+  )
+}
+
+
+/** The part of the screen that changes from one cheer to the next. */
+function CheerStage({ variant, team, w, size, r }: { variant: CheerVariant; team: Team; w: number; size: number; r: number }) {
+  const [a, b] = [team.colors.primary, team.colors.secondary]
+  if (variant === 'pyramid') {
+    // four at the bottom, three on their shoulders, one on top who jumps
+    const s = Math.max(26, Math.min(size * 0.6, 46))
+    const rows: { n: number; lift: number }[] = [{ n: 4, lift: 0 }, { n: 3, lift: 0.5 }, { n: 1, lift: 1.0 }]
+    return (
+      <div className="absolute inset-x-0 bottom-[6%] z-10 flex flex-col-reverse items-center" style={{ height: s * 1.85 * 2.3 }}>
+        {rows.map((row, ri) => (
+          <div key={ri} className="relative flex items-end justify-center gap-[1%]" style={{ marginBottom: ri === 0 ? 0 : -s * 0.62, zIndex: 10 + ri }}>
+            {Array.from({ length: row.n }, (_, i) => (
+              <motion.div key={i} initial={{ y: 40, opacity: 0 }} animate={{ y: ri === 2 ? [0, -s * 0.5, 0, -s * 0.35, 0] : 0, opacity: 1 }} transition={ri === 2 ? { delay: 0.9 * r, duration: 1.1 * r, repeat: Infinity } : { delay: (0.15 + ri * 0.3) * r, duration: 0.3 }}>
+                <Dancer team={team} i={ri * 4 + i} size={s} delay={(i % 2) * 0.12} />
+              </motion.div>
+            ))}
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (variant === 'flags') {
+    const flagW = Math.max(70, Math.min(w * 0.24, 150))
+    const wave = ['M0 4 Q12 -4 25 4 T50 4 T75 4 L75 40 Q62 48 50 40 T25 40 T0 40 Z', 'M0 4 Q12 12 25 4 T50 4 T75 4 L75 40 Q62 32 50 40 T25 40 T0 40 Z', 'M0 4 Q12 -4 25 4 T50 4 T75 4 L75 40 Q62 48 50 40 T25 40 T0 40 Z']
+    return (
+      <>
+        <div className="absolute inset-x-0 top-[34%] z-10 flex items-start justify-around px-[6%]">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="relative" style={{ width: flagW, height: flagW * 1.15 }}>
+              <div className="absolute left-0 top-0 h-full w-1 rounded bg-slate-200" />
+              <motion.svg viewBox="0 0 75 48" width={flagW * 0.95} className="absolute left-1 top-0" aria-hidden>
+                <motion.path fill={i % 2 ? b : a} stroke="#ffffff55" strokeWidth="0.6" initial={{ d: wave[0] }} animate={{ d: wave }} transition={{ duration: 1.2 * r, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }} />
+                <text x="37" y="30" textAnchor="middle" fontSize="15" fontWeight="900" fill={i % 2 ? a : b} opacity="0.95">{team.short.slice(0, 3).toUpperCase()}</text>
+              </motion.svg>
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-x-0 bottom-[9%] z-10 flex items-end justify-center gap-[3%]">{Array.from({ length: w < 520 ? 3 : 4 }, (_, i) => <Dancer key={i} team={team} i={i + 2} size={size * 0.9} delay={(i % 2) * 0.12} />)}</div>
+      </>
+    )
+  }
+  if (variant === 'cards') {
+    const grid = cardGrid(team.short)
+    const cols = grid[0].length + 2
+    const cell = Math.max(8, Math.min((w * 0.82) / cols, 24))
+    return (
+      <div className="absolute inset-x-0 bottom-[10%] z-10 flex justify-center">
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, ${cell}px)`, gap: 2 }}>
+          {Array.from({ length: 9 }, (_, y) => Array.from({ length: cols }, (_, x) => {
+            const on = y >= 1 && y <= 7 && x >= 1 && x <= cols - 2 && grid[y - 1][x - 1]
+            return (
+              <motion.div key={`${x}-${y}`} className="rounded-[3px]" style={{ width: cell, height: cell * 0.8 }}
+                initial={{ background: '#1e293b' }}
+                animate={{ background: on ? ['#1e293b', a, '#ffffff', b] : ['#1e293b', a, b, a] }}
+                transition={{ delay: (0.2 + x * 0.045 + y * 0.03) * r, duration: 1.1 * r, times: [0, 0.35, 0.65, 1] }} />
+            )
+          }))}
+        </div>
+      </div>
+    )
+  }
+  // pom-poms in a row (the original)
+  return (
+    <div className="absolute inset-x-0 bottom-[9%] z-10 flex items-end justify-center gap-[2%]">
+      {Array.from({ length: w < 520 ? 3 : 5 }, (_, i) => <Dancer key={i} team={team} i={i} size={size} delay={(i % 2) * 0.12} />)}
     </div>
   )
 }

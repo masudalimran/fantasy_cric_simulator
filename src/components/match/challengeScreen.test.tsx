@@ -110,3 +110,24 @@ describe('the catch screen', () => {
     expect(done).toBe(2)
   })
 })
+
+describe('the cheer screens', () => {
+  it('there are four of them, and each has its own words and look', async () => {
+    const { CheerScreen, CHEER_VARIANTS, cardGrid, cheerVariantFor } = await import('./CheerScreen')
+    expect(CHEER_VARIANTS).toHaveLength(4)
+    const seen = new Set<string>()
+    for (let s = 1; s <= 60; s++) seen.add(cheerVariantFor(s))
+    expect(seen.size).toBe(4)
+    const text = (v: (typeof CHEER_VARIANTS)[number]) => renderToString(<CheerScreen info={{ team: A, why: 'boundary', rate: 1, variant: v }} />).replace(/<!-- -->/g, '')
+    expect(text('pompom')).toContain(`GO ${A.short.toUpperCase()}!`)
+    expect(text('flags')).toContain('WAVE THE FLAG!')
+    expect(text('cards')).toContain('CARD STUNT!')
+    expect(text('pyramid')).toContain('Cheerleaders')
+    // the card stunt writes the team's letters: every glyph is five dots wide, seven tall, and a three-letter name fits in 17 columns
+    const g = cardGrid('SOR')
+    expect(g).toHaveLength(7)
+    for (const row of g) expect(row).toHaveLength(17)
+    expect(g.flat().filter(Boolean).length).toBeGreaterThan(30)
+    expect(cardGrid('U7W')[0]).toHaveLength(17)
+  })
+})
