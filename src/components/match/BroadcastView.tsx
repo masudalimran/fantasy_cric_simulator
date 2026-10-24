@@ -164,7 +164,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : f.aim
-      const hfovAt = covers0 ? 0.8 : L.replayCam && !f.slowmo ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
+      const hfovAt = covers0 ? 0.8 : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
       const goal = lookAt(base.p, aimAt)
       const c = cam.current
       c.p = base.p
