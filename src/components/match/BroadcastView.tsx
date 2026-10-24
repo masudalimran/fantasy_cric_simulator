@@ -6,9 +6,7 @@ import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { approach, clipNow, warpTime, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
-import type { Contact } from '../../engine/contact'
 import { useCaptions } from '../../prefs'
-import { BatContact, ContactMeters } from './ContactPanel'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
 import { endPoint, type Placed } from './Stage'
@@ -83,9 +81,7 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0, shotCard }: {
-  /** For a four: where the ball met the bat, the bat speed and the timing, written on the picture once the bat has met the ball. */
-  shotCard?: { contact: Contact; shot: string } | null
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0 }: {
   /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
   wear?: number
   /** The commentary line of this ball, written along the top once the bat has met it. */
@@ -328,15 +324,6 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}
       {event && <SpeedGun key={event.seq} kmh={plan.speed} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
-      {shotCard && event && (
-        <motion.div key={`shot${event.seq}`} className="pointer-events-none absolute left-2 top-9 z-[6001] flex w-[min(54%,250px)] gap-2 rounded-xl border border-white/15 bg-black/70 p-1.5" initial={{ opacity: 0, x: -12 }} animate={{ opacity: [0, 1, 1, 0], x: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver + 0.1) / Math.max(0.3, rate), duration: 3.8 / Math.max(0.3, rate), times: [0, 0.08, 0.86, 1] }}>
-          <div className="shrink-0"><BatContact contact={shotCard.contact} height={74} delay={0.15} rate={1} /></div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[10px] font-extrabold uppercase tracking-widest text-sky-300">Four · {shotCard.shot}</div>
-            <ContactMeters contact={shotCard.contact} delay={0.2} rate={1} compact />
-          </div>
-        </motion.div>
-      )}
       {captionsOn && caption && event && (
         <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.3, rate), duration: 3.4 / Math.max(0.3, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}

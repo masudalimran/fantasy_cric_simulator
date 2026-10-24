@@ -12,7 +12,7 @@ import { ChallengeScreen, type ChallengeInfo } from './ChallengeScreen'
 import { ChallengeResultScreen, type ChallengeResultInfo } from './ChallengeResult'
 import { RainDelayScreen, type RainDelayInfo } from './RainDelay'
 import { CatchScreen, type CatchInfo } from './CatchScreen'
-import { ExtraCast, WicketCast, type ExtraCastInfo, type WicketCastInfo } from './ReplayScreens'
+import { ExtraCast, FourCast, WicketCast, type ExtraCastInfo, type FourCastInfo, type WicketCastInfo } from './ReplayScreens'
 import { TimeoutIntroScreen, type TimeoutIntroInfo } from './TimeoutIntro'
 import { ReviewScreen, RunOutReview, type ReviewInfo, type RunOutInfo } from './ReviewScreens'
 import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInfo } from './TimeoutScreens'
@@ -28,7 +28,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'wicketcast' | 'extracast'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -42,7 +42,8 @@ export interface Moment {
   review?: ReviewInfo
   /** The huddle before a challenge. */
   challenge?: ChallengeInfo
-  /** The broadcast-style screens: a wicket, an extra. */
+  /** The broadcast-style screens: a four, a wicket, an extra. */
+  fourCast?: FourCastInfo
   wicketCast?: WicketCastInfo
   extraCast?: ExtraCastInfo
   /** A catch: the ball again from the TV camera and where it met the bat. */
@@ -174,12 +175,13 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  if ((moment.kind === 'wicketcast' && moment.wicketCast) || (moment.kind === 'extracast' && moment.extraCast) || (moment.kind === 'catch' && moment.catchInfo) || (moment.kind === 'raindelay' && moment.rainDelay) || (moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
+  if ((moment.kind === 'fourcast' && moment.fourCast) || (moment.kind === 'wicketcast' && moment.wicketCast) || (moment.kind === 'extracast' && moment.extraCast) || (moment.kind === 'catch' && moment.catchInfo) || (moment.kind === 'raindelay' && moment.rainDelay) || (moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
     return (
       <motion.div
         data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
         initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
       >
+        {moment.kind === 'fourcast' && moment.fourCast && <FourCast info={moment.fourCast} />}
         {moment.kind === 'wicketcast' && moment.wicketCast && <WicketCast info={moment.wicketCast} />}
         {moment.kind === 'extracast' && moment.extraCast && <ExtraCast info={moment.extraCast} />}
         {moment.kind === 'catch' && moment.catchInfo && <CatchScreen info={moment.catchInfo} />}

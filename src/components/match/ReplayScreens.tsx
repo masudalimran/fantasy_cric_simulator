@@ -1,15 +1,62 @@
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { sfx } from '../../audio/sfx'
+import type { Contact } from '../../engine/contact'
 import type { WicketCard } from '../../season/wicketCards'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
+import { BatContact, ContactMeters } from './ContactPanel'
 import { ReplayFrame, type ReplayBase } from './ReplayFrame'
 import { useWidth } from './ReviewScreens'
 
+const SPOT_WORDS: Record<Contact['spot'], string> = { Middle: 'right in the middle of the bat', 'Off centre': 'just off the middle of the bat', 'Toe end': 'off the toe of the bat', 'Top edge': 'off the top edge', 'Outside edge': 'off the outside edge', 'Inside edge': 'off the inside edge' }
 const Bottom = ({ children, from = 0.52 }: { children: React.ReactNode; from?: number }) => (
   <div className="absolute inset-x-0 bottom-0 border-t-2 border-sky-400/50" style={{ top: `${from * 100}%`, background: 'linear-gradient(180deg, #0b1424, #070b14)' }}>{children}</div>
 )
+
+// ---- A four ---------------------------------------------------------------------------------------------------------------------
+
+export interface FourCastInfo {
+  replay: ReplayBase
+  contact: Contact
+  /** Where it went, in words: "Cover, along the ground". */
+  shot: string
+  batsman: Player
+  batTeam: Team
+  /** The ball was hit off a free hit. */
+  fire?: boolean
+  rate: number
+}
+export const FOUR_SECONDS = 8.4
+
+/** A four, the broadcast way: the ball played again to the rope, and under it where the ball met the bat, the bat speed and the timing. */
+export function FourCast({ info }: { info: FourCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => sfx.four(), 1900 * r); return () => window.clearTimeout(t) }, [r])
+  const c = info.contact
+  const compact = w < 520
+  const how = c.quality >= 0.8 ? 'Middled it' : c.quality >= 0.55 ? 'Well timed' : 'Found the gap'
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Four">
+      <ReplayFrame base={info.replay} rate={1.1 * r} />
+      <Bottom>
+        <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3">
+          <motion.div className="shrink-0 self-center" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r }}><BatContact contact={c} height={compact ? 84 : 118} delay={1.7} rate={r} /></motion.div>
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
+              <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.batTeam)}` }}><PlayerAvatar player={info.batsman} team={info.batTeam} size={compact ? 28 : 36} /></span>
+              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold text-slate-300">{info.shot}</div></div>
+              <motion.div className="ml-auto shrink-0 font-display text-2xl leading-none tracking-wide text-white sm:text-3xl" style={{ WebkitTextStroke: '1.5px #0c4a6e', paintOrder: 'stroke fill', textShadow: info.fire ? '0 0 20px #f97316' : '0 0 20px #38bdf8aa' }} initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>FOUR!</motion.div>
+            </motion.div>
+            <ContactMeters contact={c} delay={1.8} rate={r} compact />
+            <motion.p className="text-[10px] font-semibold leading-tight text-amber-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{how}: {c.speedLabel.toLowerCase()}, {c.timingLabel.toLowerCase()}, {SPOT_WORDS[c.spot]}.</motion.p>
+          </div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
 
 // ---- A wicket (bowled, lbw, stumped, hit wicket, run out) -----------------------------------------------------------------------
 
