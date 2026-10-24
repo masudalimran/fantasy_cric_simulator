@@ -136,6 +136,23 @@ export const clipNow = { seq: -1, ms: 0, until: 0 }
 
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 
+/**
+ * How high the ball goes after the bat, from a skimming drive to a towering six. A six climbs with how far it went (its distance), a four is either
+ * driven along the ground or lofted over the infield (more often when the batsman was attacking, and always when he chose to loft it), and an
+ * ordinary scoring shot is on the ground with the odd mis-hit in the air. Looks only.
+ */
+export function elevation(ev: Pick<BallEvent, 'seq' | 'boundary' | 'distance' | 'intent' | 'runsBat' | 'shot'>, dist: number): { kind: 'ground' | 'air'; peak: number } {
+  const h = hash01(ev.seq * 5.3 + 1)
+  const power = Math.max(0, Math.min(1, (ev.intent + 1) / 3))
+  if (ev.boundary === 6) return { kind: 'air', peak: 7 + Math.max(0, (ev.distance ?? 80) - 55) * 0.16 + h * 3 }
+  if (ev.boundary === 4) {
+    const air = ev.shot ? ev.shot.loft : h < 0.3 + power * 0.3
+    return air ? { kind: 'air', peak: 2.2 + h * 4.5 + power * 1.5 } : { kind: 'ground', peak: 0 }
+  }
+  if (ev.runsBat >= 1 && (ev.shot ? ev.shot.loft && dist > 10 : h > 0.86 && dist > 12)) return { kind: 'air', peak: 1.4 + h * 3 }
+  return { kind: 'ground', peak: 0 }
+}
+
 /** Works out the clip for a ball. `end` is where the top-down field says the ball finished. */
 export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135): Plan {
   const w = ev.wicket
@@ -151,7 +168,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket' || w.kind === 'lbw')
   const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : 0.85, z: -0.45 }
   const six = ev.boundary === 6
-  const boundary = !!ev.boundary
+  // four byes or four leg byes: the ball races to the rope with nobody running
+  const byeFour = (ev.extraType === 'bye' || ev.extraType === 'legbye') && ev.extraRuns >= 4
+  const boundary = !!ev.boundary || byeFour
   let end = toWorld(endTop.x, endTop.y)
   let peak = 0
   let kind: Plan['kind'] = 'ground'
@@ -187,7 +206,8 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
       const k = fielders.findIndex((f) => f.id === w.fielderId)
       if (k >= 0) { const fw = fielderWorld(fielders[k].x, fielders[k].y, fielders[k].spot); end = { x: fw.x, y: 1.2, z: fw.z }; catcher = k }
       kind = 'air'
-      peak = Math.min(11, 1 + Math.hypot(end.x - meet.x, end.z - meet.z) * 0.32)
+      // a catch can be a flat edge taken low or a skier: the height comes from the ball and how far it went
+      peak = Math.min(12, 0.8 + Math.hypot(end.x - meet.x, end.z - meet.z) * 0.17 + hash01(ev.seq * 4.7) * 4)
       if (k === 0) kind = 'keeper'
     }
   } else if (wide) {
@@ -197,7 +217,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     keeperDive = { dir: lineX > 0 ? 1 : -1, at: 0, miss: false }
   } else if (bye) {
     // the ball beats the bat and the keeper, and runs away behind them
-    end = { x: lineX * 1.6 + (lineX >= 0 ? 2 : -2), y: 0.1, z: 15 }
+    end = byeFour ? { x: (lineX >= 0 ? 1 : -1) * 6, y: 0.1, z: 15.4 } : { x: lineX * 1.6 + (lineX >= 0 ? 2 : -2), y: 0.1, z: 15 }
     kind = 'ground'
     keeperDive = { dir: lineX >= 0 ? 1 : -1, at: 0, miss: true }
     swing = false
@@ -205,14 +225,15 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     // it hits the batsman's pad or body and rolls off to the leg side
     hurt = true
     swing = false
-    end = { x: stanceX > 0 ? 7 : -7, y: 0.1, z: 7 }
+    end = byeFour ? { x: stanceX > 0 ? 33 : -33, y: 0.1, z: 7 } : { x: stanceX > 0 ? 7 : -7, y: 0.1, z: 7 }
     kind = 'ground'
   } else {
     end = { x: end.x, y: 0, z: end.z }
     const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
-    if (six) { peak = 14 + dist * 0.12; kind = 'air'; end.y = 0 }
-    else if (ev.shot?.loft && dist > 14) { peak = Math.min(9, dist * 0.22); kind = 'air' }
-    else kind = 'ground'
+    end.y = 0
+    const el = elevation(ev, dist)
+    peak = el.peak
+    kind = el.kind
     // a ball that is not scored off is either played and missed (it goes through to the keeper) or kept out by the bat
     if (ev.runsBat === 0 && ev.legal && hash01(ev.seq * 2.3) > 0.5) { end = { x: meet.x * 0.5, y: 1, z: 8.5 }; kind = 'keeper'; catcher = 0 }
   }
@@ -221,9 +242,10 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     let best = 1e9
     fielders.forEach((f, i) => { if (i === 0) return; const fw = fielderWorld(f.x, f.y, f.spot); const d = Math.hypot(fw.x - end.x, fw.z - end.z); if (d < best) { best = d; chaser = i } })
   }
-  const runs = runOut ? runOut.legs : !w && !boundary && !wide ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
+  const runs = runOut ? runOut.legs : !w && !boundary && !wide && !byeFour ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
   const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
-  const tFlight = six ? 2 : Math.max(0.7, Math.min(1.6, 0.6 + dist / 42))
+  // a six hangs in the air for as long as its height asks for
+  const tFlight = six ? Math.min(2.6, 1.5 + peak / 22) : Math.max(0.7, Math.min(1.6, 0.6 + dist / 42))
   // after the bat the ball goes towards the bowler's end: show it from behind the batsman, where it travels away from the camera
   const behind = !!runOut || kind === 'stumps' || kind === 'keeper' || kind === 'pad' || end.z > -6
   // the batsmen need time to run every run: the clip lasts until they have made them
@@ -244,6 +266,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   else if (noball) signal = { kind: 'noball', at: 0.95 + 0.12, who: 1 }
   else if (six) signal = { kind: 'six', at: t2 + 0.6, who: 2 }
   else if (ev.boundary === 4) signal = { kind: 'four', at: t3 - 0.2, who: 2 }
+  else if (byeFour) signal = { kind: 'four', at: t3 - 0.2, who: 2 }
   else if (bye) signal = { kind: 'bye', at: t2 + 0.4, who: 1 }
   else if (legbye) signal = { kind: 'legbye', at: t2 + 0.4, who: 2 }
   if (keeperDive) keeperDive.at = bye ? t2 - 0.05 : t2 + 0.1
@@ -254,7 +277,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - 10 }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
-    signal, hurt, keeperDive, chaserDive: ev.boundary === 4 && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -394,6 +417,8 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   const raise = plan.celebrateAt !== null && plan.celebrateAt !== undefined ? clamp01((t - plan.celebrateAt) / 0.3) : 0
   const dives = new Map<number, { k: number; dir: number }>()
   if (plan.keeperDive) { const d = plan.keeperDive; const k = clamp01((t - d.at) / 0.4) * (1 - clamp01((t - d.at - 1.1) / 0.5)); if (k > 0) dives.set(0, { k, dir: d.dir }) }
+  // a low catch is a dive; a high one is taken standing
+  if (plan.catcher > 0 && plan.kind === 'air' && plan.peak < 3.4) { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1 }) }
   if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) dives.set(plan.chaser, { k, dir: Math.sign(plan.end.x - fielderAt(plan.chaser).x) || 1 }) }
   const react = plan.react && t >= plan.react.at && t < plan.react.at + 1.1 ? { text: plan.react.text, who: plan.react.who } : null
   const joy = plan.boundary || plan.wicketFlies || plan.catcher >= 0 ? clamp01((t - (plan.runOut ? hitAt : t3)) / 0.5) : 0

@@ -19,6 +19,17 @@ const STUB = { seq: 1, runsBat: 0, boundary: null, tags: [], wicket: null, extra
 const HEIGHT = 120
 const WIDTH = 60
 
+/** What the TV score bug shows: the score, the two batsmen, the bowler and, in a chase, what is needed. */
+export interface ScoreBug {
+  team: string
+  runs: number
+  wickets: number
+  balls: number
+  batters: { name: string; runs: number; balls: number; strike: boolean }[]
+  bowler: { name: string; figures: string } | null
+  need: string | null
+}
+
 type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper'
 
 function Figure({ player, team, look, shirt, arm, bat, armL, armR }: { player?: Player; team?: Team; look: Look; shirt?: string; arm?: React.Ref<HTMLDivElement>; bat?: React.Ref<HTMLDivElement>; armL?: React.Ref<HTMLDivElement>; armR?: React.Ref<HTMLDivElement> }) {
@@ -28,6 +39,8 @@ function Figure({ player, team, look, shirt, arm, bat, armL, armR }: { player?: 
   const pads = look === 'striker' || look === 'nonstriker' || look === 'keeper'
   return (
     <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
+      {/* the shadow on the grass */}
+      <div className="absolute rounded-full" style={{ left: 6, top: 110, width: 48, height: 12, background: 'rgba(0,0,0,0.32)' }} />
       <div className="absolute rounded-full" style={{ left: 18, top: 86, width: 10, height: 32, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
       <div className="absolute rounded-full" style={{ left: 32, top: 86, width: 10, height: 32, background: pads ? '#f1f5f9' : ump ? '#0f172a' : '#e2e8f0', border: '1px solid #00000040' }} />
       <div className="absolute" style={{ left: 15, top: 52, width: 30, height: 38, borderRadius: 10, background: shirt ?? primary, border: `2px solid ${second}` }} />
@@ -63,7 +76,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK }: {
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug }: {
+  /** The score bug's figures, from the match as it stands. */
+  scoreBug?: ScoreBug | null
   /** The home ground's look (time of day, stands, crowd, weather). */
   look?: StadiumLook
   event: BallEvent | null
@@ -142,7 +157,13 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       if (f.ball) { trail.push(f.ball); if (trail.length > 14) trail.shift() } else trail.length = 0
       // when rain has stopped play (or the day is washed out) the covers are on and nobody is on the field
       const covers = L.look.covers || (L.event === null && L.look.rain === 2)
-      drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, covers, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      // a four or a six: the picture punches in and shakes for a moment; the crowd is on its feet for boundaries and wickets
+      const tHit = L.plan.tRun + L.plan.tDeliver
+      const punch = L.plan.boundary ? Math.max(0, 1 - (t - tHit) / 0.4) : 0
+      const cheerAt = L.plan.boundary ? tHit + 0.6 : L.plan.exitAt
+      const cheer = cheerAt !== null && cheerAt !== undefined && t >= cheerAt && (L.plan.boundary || !!L.plan.wicketFlies || L.plan.catcher >= 0) ? Math.min(1, (t - cheerAt) / 0.3) * (1 - Math.min(1, Math.max(0, (t - cheerAt - 1.6) / 0.6))) : 0
+      if (punch > 0) { c.yaw += Math.sin(t * 70) * 0.006 * punch; c.pitch += Math.cos(t * 83) * 0.004 * punch; c.hfov *= 1 - 0.05 * punch }
+      drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, cheer, covers, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 
@@ -193,7 +214,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const w = f.moving.get(i) ?? L.rest[i]
         const caught = L.plan.catcher === i
         const dv = f.dives.get(i)
-        place(`f${i}`, { x: w.x, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0), z: w.z }, { rot: dv ? dv.dir * dv.k * 78 : 0 })
+        const running = f.moving.has(i) && f.phase === 'flight' && !dv
+        place(`f${i}`, { x: w.x, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: w.z }, { rot: dv ? dv.dir * dv.k * 78 : 0 })
       })
       // the ball, and its shadow
       const ball = nodes.current.get('ball'), shadow = nodes.current.get('shadow')
@@ -293,12 +315,21 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {/* a quick white flash when the picture cuts to the other camera */}
       <div key={cutKey} className="pointer-events-none absolute inset-0 z-[6000] bg-white" style={{ animation: cutKey ? 'bcast-cut 0.28s ease-out forwards' : undefined, opacity: 0 }} />
       {(look.covers || (event === null && look.rain === 2)) && <div className="pointer-events-none absolute inset-x-0 top-10 z-[6001] text-center"><span className="rounded bg-black/75 px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200 ring-1 ring-sky-300/40">{look.weather === 'washout' ? 'Washed out: no play today' : 'Rain stops play: covers on'}</span></div>}
-      {/* the TV score bug */}
-      {event && (
-        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] flex items-stretch overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
-          <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{battingTeam.short}</span>
-          <span className="px-1.5 py-0.5 font-display text-sm leading-none tabular-nums">{event.score.runs}/{event.score.wickets}</span>
-          <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor(event.score.legalBalls / 6)}.{event.score.legalBalls % 6} ov</span>
+      {/* the TV score bug: the score and overs, the two batsmen and the bowler, and in a chase what is needed */}
+      {(scoreBug || event) && (
+        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
+          <div className="flex items-stretch">
+            <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{scoreBug?.team ?? battingTeam.short}</span>
+            <span className="px-1.5 py-0.5 font-display text-sm leading-none tabular-nums">{scoreBug?.runs ?? event?.score.runs}/{scoreBug?.wickets ?? event?.score.wickets}</span>
+            <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor((scoreBug?.balls ?? event?.score.legalBalls ?? 0) / 6)}.{(scoreBug?.balls ?? event?.score.legalBalls ?? 0) % 6} ov</span>
+            {scoreBug?.need && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-amber-300">{scoreBug.need}</span>}
+          </div>
+          {scoreBug && scoreBug.batters.length > 0 && (
+            <div className="border-t border-white/15 px-1.5 py-0.5 text-[9px] leading-tight text-slate-200 sm:text-[10px]">
+              {scoreBug.batters.map((b) => <span key={b.name} className="mr-2 whitespace-nowrap"><b className={b.strike ? 'text-amber-300' : 'text-slate-200'}>{b.name.split(' ')[0]}{b.strike ? '*' : ''}</b> {b.runs}<span className="text-slate-400"> ({b.balls})</span></span>)}
+              {scoreBug.bowler && <span className="whitespace-nowrap text-sky-300">· {scoreBug.bowler.name.split(' ')[0]} {scoreBug.bowler.figures}</span>}
+            </div>
+          )}
         </div>
       )}
       <span className="pointer-events-none absolute bottom-1.5 right-2 z-[6001] rounded bg-black/60 px-1.5 text-[10px] font-extrabold tracking-widest text-slate-200">{tag}</span>

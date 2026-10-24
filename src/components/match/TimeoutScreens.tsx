@@ -167,11 +167,6 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
                 <div className="text-[10px] font-bold text-amber-200/90">Over {Math.floor(reel.scores[clip].balls / 6)}.{reel.scores[clip].balls % 6}</div>
               </div>
             )}
-            {/* which match this is from, and how it ended */}
-            <div className="pointer-events-none absolute right-1.5 top-1.5 z-30 max-w-[58%] rounded bg-black/75 px-1.5 py-0.5 text-right leading-tight">
-              <div className="truncate text-[10px] font-bold text-white">Highlight from {reel.versus.split(' · ')[0]}</div>
-              {reel.result && <div className="truncate text-[9px] font-semibold text-amber-300">{reel.result}</div>}
-            </div>
             <motion.div key={`cap${clip}`} className="pointer-events-none absolute bottom-1.5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-0.5 font-display text-lg leading-none tracking-wide text-amber-300 ring-1 ring-amber-300/60" initial={{ opacity: 0, scale: 1.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}>{captionOf(reel.balls[clip])}</motion.div>
             <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-30 max-w-[42%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{reel.player.name} <span className="text-amber-300">{reel.headline}</span></div>
           </div>

@@ -7,11 +7,14 @@ import type { MatchFormat } from '../types'
  * its own random stream (so the rest of the match rolls exactly as before). A side that is up against the wall challenges even when it probably
  * knows the umpire got it right, for the hope of a miracle.
  */
+/** How often a bye or a leg bye is four (the ball runs away to the rope) instead of a single. */
+export const BYE_FOUR = 0.08
+
 export const REVIEWS_PER_INNINGS: Record<MatchFormat, number> = { t20: 2, odi: 4, test: 6 }
 
 /** How often the on-field decision was wrong, so a review can change it. */
-export const WRONG_OUT = 0.14 // a batsman given out who was not
-export const MISSED_OUT = 0.14 // a close not-out that was in fact out (of the close calls the fielding side takes upstairs)
+export const WRONG_OUT = 0.5 // a batsman given out who was not: a challenge turns it round half the time
+export const MISSED_OUT = 0.5 // a close not-out that was in fact out: a challenge turns it round half the time
 /** Of legal dot balls, how many are close enough for the fielding side to think about a review (fewer in the longer formats, which have many more balls to an innings; tuned by simulation so wickets and runs hardly move). */
 export const CLOSE_CALL: Record<MatchFormat, number> = { t20: 0.04, odi: 0.015, test: 0.0075 }
 

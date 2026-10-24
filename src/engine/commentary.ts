@@ -39,8 +39,8 @@ function plainCommentary(ev: BallEvent, n: Names): string {
   }
   if (ev.extraType === 'wide') return pick([`Wide. ${b} strays down the leg side.`, `Wide ball, too far outside off.`], q)
   if (ev.extraType === 'noball') return `No ball! ${b} oversteps. Free hit coming up.`
-  if (ev.extraType === 'bye') return `Byes. It beats everyone and they scamper a run.`
-  if (ev.extraType === 'legbye') return `Leg byes. Off the pad and away for a run.`
+  if (ev.extraType === 'bye') return ev.extraRuns >= 4 ? pick([`FOUR BYES! It beats everyone and races away to the rope.`, `FOUR byes! The keeper has no chance, it is gone to the fence.`], q) : `Byes. It beats everyone and they scamper a run.`
+  if (ev.extraType === 'legbye') return ev.extraRuns >= 4 ? pick([`FOUR LEG BYES! Off the pad and it runs all the way to the boundary.`, `FOUR leg byes! Off the body and away, nobody could stop it.`], q) : `Leg byes. Off the pad and away for a run.`
   switch (ev.runsBat) {
     case 0: return pick([`${b} to ${s}, no run. Solid defence.`, `${s} swings and misses!`, `Dot ball. ${b} is building the pressure.`, `${s} plays it back to the bowler.`, `Good length, ${s} can't get it away.`], q)
     case 1: return pick([`${s} works it away for a single.`, `Nudged into the gap, one run.`, `${s} dabs it down for a quick single.`], q)

@@ -5,7 +5,7 @@ import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, parRunsPerOver, REF,
 } from './model'
-import { REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
+import { BYE_FOUR, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
 import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
 import { sixDistance } from './shots'
@@ -471,7 +471,8 @@ export class Match {
       }
       if (cat === BYE || cat === LEGBYE) {
         extraType = cat === BYE ? 'bye' : 'legbye'
-        extraRuns = 1
+        // now and then it races away to the rope: four byes (or leg byes). A separate random stream, so nothing else in the match shifts.
+        extraRuns = new Rng((this.seed ^ Math.imul(this.seq + 1, 0x27d4eb2f) ^ 0xb7e1) >>> 0).chance(BYE_FOUR) ? 4 : 1
       } else if (cat === WICKET) {
         dismissal = this.makeDismissal(inn, striker, bowler, bowlXI, bowlingSideIdx, bowlType, noBall || wasFreeHit)
       } else {

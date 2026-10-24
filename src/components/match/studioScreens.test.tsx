@@ -3,12 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { ambientCaption, captionVariants, type CaptionKind } from '../../season/captions'
-import { boxChat, type Pundit } from '../../season/studio'
+import { boxChat } from '../../season/studio'
 import { CommentaryBox } from './CommentaryBox'
 import { StudioShow } from './StudioShow'
 
 const [A, B] = [BUILT_IN_TEAMS[2], BUILT_IN_TEAMS[9]]
-const pool: Pundit[] = BUILT_IN_TEAMS.flatMap((t) => t.players.slice(0, 3).map((player) => ({ player, team: t })))
 
 describe('captions, the commentary box and the studio show', () => {
   it('every caption reads as a sentence about the screen, with the names filled in', () => {
@@ -40,7 +39,7 @@ describe('captions, the commentary box and the studio show', () => {
   it('the studio show sets the stage: the show name, the three people and the ticker', () => {
     const m = new Match({ teamA: A, teamB: B, format: 't20', seed: 8 })
     m.playMatch()
-    const html = renderToString(<StudioShow match={m} kind="end" pool={pool} seed={8} onDone={() => undefined} />)
+    const html = renderToString(<StudioShow match={m} kind="end" seed={8} onDone={() => undefined} />)
     expect(html).toContain('Post-Match Show')
     expect(html).toContain('FCS')
     expect(html).toContain(m.result!.text)

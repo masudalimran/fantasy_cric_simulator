@@ -2,7 +2,7 @@ import { computeAwards } from '../engine/awards'
 import type { Match } from '../engine/match'
 import { parRunsPerOver } from '../engine/model'
 import type { BatterLine, BowlerLine } from '../engine/types'
-import type { Player, Team } from '../types'
+import { PRESENTERS, type Presenter } from '../data/presenters'
 import type { PlayerForm } from './stats'
 import { gradeBat, gradeBowl, type Grade } from './grade'
 
@@ -28,8 +28,8 @@ export type Clip =
   | { kind: 'stat'; innings: number; playerId: string; as: 'bat' | 'bowl'; grade: Grade }
 
 export interface Beat { who: 0 | 1 | 2; text: string; mood: Mood; clip?: Clip }
-export interface Pundit { player: Player; team: Team }
-export interface Cast { player: Player; team: Team; persona: Persona }
+/** Who is on the desk: one of the show's own presenters (see data/presenters.ts), and the voice she plays. */
+export interface Cast { presenter: Presenter; persona: Persona }
 export interface Script { cast: [Cast, Cast, Cast]; beats: Beat[]; title: string }
 
 const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
@@ -160,24 +160,21 @@ const BOWL_FOLLOW: string[] = ['And here is the wicket that started it.', 'Watch
 
 const MOOD_OF: Record<Grade, Mood> = { worse: 'worried', bad: 'serious', average: 'thoughtful', good: 'proud', exceptional: 'excited' }
 
-export function buildScript(match: Match, kind: ShowKind, seed: number, pool: Pundit[], extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }): Script {
+export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }): Script {
   const rng = new Seeded(seed ^ hash(`${match.seed}|${kind}|${match.innings.length}`))
   const { pick } = pickers(rng)
-  // the cast: three people from teams that are not playing, with a voice each
-  const outsiders = pool.filter((p) => !match.sides.some((s) => s.team.id === p.team.id))
-  const pickedCast: Pundit[] = []
-  const order = [...(outsiders.length >= 3 ? outsiders : pool)]
+  // the cast: three of the show's presenters (a different three from one match to the next), with a voice each
+  const order = [...PRESENTERS]
   for (let i = order.length - 1; i > 0; i--) { const j = rng.int(i + 1); [order[i], order[j]] = [order[j], order[i]] }
-  for (const p of order) { if (!pickedCast.some((c) => c.team.id === p.team.id) && pickedCast.length < 3) pickedCast.push(p) }
-  for (const p of order) { if (pickedCast.length < 3 && !pickedCast.includes(p)) pickedCast.push(p) }
+  const pickedCast = order.slice(0, 3)
   const personas: Persona[] = ['analyst', 'firebrand', 'veteran', 'jester', 'tactician']
   for (let i = personas.length - 1; i > 0; i--) { const j = rng.int(i + 1); [personas[i], personas[j]] = [personas[j], personas[i]] }
   const cast = [
-    { ...pickedCast[0], persona: 'host' as Persona },
-    { ...pickedCast[1], persona: personas[0] },
-    { ...pickedCast[2], persona: personas[1] },
+    { presenter: pickedCast[0], persona: 'host' as Persona },
+    { presenter: pickedCast[1], persona: personas[0] },
+    { presenter: pickedCast[2], persona: personas[1] },
   ] as [Cast, Cast, Cast]
-  const name = (i: 0 | 1 | 2) => first(cast[i].player.name)
+  const name = (i: 0 | 1 | 2) => first(cast[i].presenter.name)
   const beats: Beat[] = []
   const say = (who: 0 | 1 | 2, text: string, mood: Mood, clip?: Clip) => { beats.push({ who, text: text.replace(/\s+/g, ' ').trim(), mood, clip }) }
   const pn = (id: string) => first(match.player(id).name)

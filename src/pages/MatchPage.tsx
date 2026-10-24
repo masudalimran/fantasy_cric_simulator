@@ -931,6 +931,16 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const bowlSide = match.bowlingSide(inn)
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
+  // the broadcast's score bug: the score, the two batsmen, the bowler and what a chase needs
+  const bugBat = (id: string) => { const line = inn.batters.find((b) => b.id === id); return line ? { name: match.player(id).name, runs: line.runs, balls: line.balls, strike: id === inn.strikerId } : null }
+  const bugBowlerId = inn.bowlerId ?? lastHere?.bowlerId ?? null
+  const bugBowl = bugBowlerId ? inn.bowlers.get(bugBowlerId) : undefined
+  const scoreBug = {
+    team: batSide.team.short, runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls,
+    batters: [bugBat(inn.strikerId), bugBat(inn.nonStrikerId)].filter((b): b is NonNullable<ReturnType<typeof bugBat>> => !!b),
+    bowler: bugBowlerId && bugBowl ? { name: match.player(bugBowlerId).name, figures: `${bugBowl.wickets}/${bugBowl.runs}` } : null,
+    need: inn.target !== null && inn.target - inn.runs > 0 ? `Need ${inn.target - inn.runs} off ${match.maxOvers * 6 - inn.legalBalls}` : null,
+  }
   // a free hit: the ball about to be bowled ('next') or the one just bowled, whose outcome is on the field ('ball')
   const freeHitState: 'next' | 'ball' | null = match.isOver ? null : inn.freeHit ? 'next' : lastHere?.freeHit ? 'ball' : null
   const striker = match.player(inn.strikerId)
@@ -1051,7 +1061,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>
         {studio && !moment && (
           <StudioShow
-            key={`${studio}-${match.innings.length}-${match.clock?.day ?? 0}`} match={match} kind={studio} pool={studioPool} seed={match.seed}
+            key={`${studio}-${match.innings.length}-${match.clock?.day ?? 0}`} match={match} kind={studio} seed={match.seed}
             extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage, form: season ? (id: string) => formBefore(season, id, fixture.id, history) : undefined } : undefined}
             onDone={() => { const k = studio; setStudio(null); if (k === 'end') showUpgrades() }}
           />
@@ -1073,7 +1083,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} {...aimProps}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -1102,7 +1112,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} {...aimProps}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -1148,7 +1158,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />

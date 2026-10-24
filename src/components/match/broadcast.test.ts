@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
+import { elevation, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 
 const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
@@ -71,5 +71,23 @@ describe('the broadcast view plan', () => {
     expect(bat!.x).toBeGreaterThan(200)
     // a point behind the camera is not drawn
     expect(project(r, { x: 0, y: 0, z: -60 })).toBeNull()
+  })
+
+  it('the ball climbs higher the further a six goes, and fours are a mix of drives along the ground and lofted shots', () => {
+    const six = (seq: number, distance: number) => elevation({ seq, boundary: 6, distance, intent: 1, runsBat: 6, shot: undefined }, distance)
+    let near = 0, far = 0
+    for (let s = 1; s <= 60; s++) { near += six(s, 65).peak; far += six(s, 130).peak }
+    expect(far / 60).toBeGreaterThan(near / 60 + 5)
+    for (let s = 1; s <= 60; s++) { expect(six(s, 65).kind).toBe('air'); expect(six(s, 200).peak).toBeLessThan(40) }
+    const four = (seq: number, intent: number) => elevation({ seq, boundary: 4, distance: undefined, intent, runsBat: 4, shot: undefined }, 60)
+    const kinds = new Set<string>(), peaks = new Set<number>()
+    for (let s = 1; s <= 80; s++) { const e = four(s, 1); kinds.add(e.kind); peaks.add(Math.round(e.peak)) }
+    expect(kinds).toEqual(new Set(['ground', 'air']))
+    expect(peaks.size).toBeGreaterThan(3)
+    // an attacking batsman lofts more often than a cautious one
+    const aerial = (intent: number) => Array.from({ length: 200 }, (_, i) => four(i + 1, intent)).filter((e) => e.kind === 'air').length
+    expect(aerial(2)).toBeGreaterThan(aerial(-1))
+    // a shot the person chose to loft is in the air
+    expect(elevation({ seq: 5, boundary: 4, distance: undefined, intent: 0, runsBat: 4, shot: { angle: 0, loft: true } }, 60).kind).toBe('air')
   })
 })

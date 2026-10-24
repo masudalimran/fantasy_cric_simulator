@@ -237,8 +237,8 @@ export function ExtraScreen({ info }: { info: ExtraInfo }) {
       )}
 
       <motion.div className="absolute inset-x-0 top-[17%] z-40 text-center" initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 260, damping: 15 }}>
-        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(36, Math.min(w * 0.12, 82)), WebkitTextStroke: `2px ${st.stroke}`, paintOrder: 'stroke fill', textShadow: `0 0 28px ${st.color}99` }}>{st.title}</div>
-        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{runs > 0 ? `+${runs} ${runs === 1 ? 'run' : 'runs'} to the total. ` : ''}{st.sub}</div>
+        <div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(36, Math.min(w * 0.12, 82)), WebkitTextStroke: `2px ${st.stroke}`, paintOrder: 'stroke fill', textShadow: `0 0 28px ${st.color}99` }}>{runs >= 4 && kind !== 'wide' ? (kind === 'bye' ? 'FOUR BYES!' : 'FOUR LEG BYES!') : st.title}</div>
+        <div className="mt-0.5 text-sm font-semibold text-slate-100" style={{ textShadow: '0 1px 4px #000' }}>{runs > 0 ? `+${runs} ${runs === 1 ? 'run' : 'runs'} to the total. ` : ''}{runs >= 4 && kind !== 'wide' ? 'It races away to the rope.' : st.sub}</div>
       </motion.div>
     </div>
   )

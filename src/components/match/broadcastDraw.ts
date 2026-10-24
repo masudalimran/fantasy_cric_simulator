@@ -15,8 +15,10 @@ export interface Scene {
   pitch: PitchKind
   /** The home ground's look: stands, boards, crowd, time of day and weather. */
   look: StadiumLook
-  /** Seconds into the clip, so the rain falls. */
+  /** Seconds into the clip, so the rain falls and the crowd jumps. */
   tick: number
+  /** 0 to 1: how much the crowd is on its feet (a boundary, a wicket). */
+  cheer: number
   /** The covers are on the pitch (rain stopped play, or a washed-out day). */
   covers: boolean
   /** 0 to 1: how far the batsman's stumps have been knocked over. */
@@ -72,7 +74,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     const size = Math.max(1.2, (r.F * 0.2) / p.d)
     ctx.fillStyle = palette[c.c % palette.length]
     ctx.globalAlpha = 0.8
-    ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size * 1.3)
+    const jump = sc.cheer > 0 ? Math.abs(Math.sin(sc.tick * 14 + c.c)) * sc.cheer * size * 1.8 : 0
+    ctx.fillRect(p.x - size / 2, p.y - size / 2 - jump, size, size * 1.3)
   }
   ctx.globalAlpha = 1
 

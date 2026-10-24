@@ -4,13 +4,12 @@ import { sfx } from '../../audio/sfx'
 import type { Match } from '../../engine/match'
 import { eventAngle } from '../../engine/shots'
 import { ballSpeed } from '../../engine/speed'
-import { genderOf } from '../../data/gender'
 import { cancelSpeech, setCastGenders, setVoiceMode, speak, useVoiceMode, voiceSupported } from '../../audio/voice'
 import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
-import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type Pundit, type ShowKind } from '../../season/studio'
+import { PresenterAvatar } from '../PresenterAvatar'
+import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type ShowKind } from '../../season/studio'
 import type { PlayerForm } from '../../season/stats'
-import type { Player, Team } from '../../types'
-import { PlayerAvatar, accentOf } from '../ui'
+import { PlayerAvatar } from '../ui'
 import { FourScreen } from './EventScreens'
 import { MilestoneScreen } from './MilestoneScreen'
 import { SixReplay } from './SixReplay'
@@ -103,14 +102,14 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
 /** One person at the desk: a portrait that comes forward and moves when he talks, and dims when he does not. */
 function Anchor({ cast, active, mood, big }: { cast: Cast; active: boolean; mood: Mood; big?: boolean }) {
   const size = big ? 78 : 64
-  const accent = accentOf(cast.team)
+  const accent = cast.presenter.accent
   return (
     <motion.div className="relative flex w-1/3 flex-col items-center" animate={{ scale: active ? 1.12 : 0.92, opacity: active ? 1 : 0.55, y: active ? -6 : 0 }} transition={{ type: 'spring', stiffness: 220, damping: 20 }}>
       <motion.div animate={active ? (MOVE[mood] as never) : {}} className="rounded-full leading-[0]" style={{ boxShadow: active ? `0 0 0 3px ${accent}, 0 0 28px ${accent}aa` : `0 0 0 2px ${accent}66` }}>
-        <PlayerAvatar player={cast.player} team={cast.team} size={size} />
+        <PresenterAvatar presenter={cast.presenter} size={size} />
       </motion.div>
       <div className="relative z-10 -mt-2 w-[104%] overflow-hidden rounded-md border border-white/15 bg-black/80 px-1 py-0.5 text-center shadow-lg">
-        <div className="truncate text-[11px] font-extrabold leading-tight text-white">{cast.player.name}</div>
+        <div className="truncate text-[11px] font-extrabold leading-tight text-white">{cast.presenter.name}</div>
         <div className="truncate text-[9px] font-bold uppercase leading-tight tracking-wider" style={{ color: accent }}>{ROLE[cast.persona]}</div>
       </div>
     </motion.div>
@@ -121,8 +120,8 @@ function Anchor({ cast, active, mood, big }: { cast: Cast; active: boolean; mood
  * The studio show: a host and two experts at a desk, in front of a big screen that plays the moments they talk about. It runs between the
  * innings, at stumps in a Test and after the match. Tap to move on a line; Skip to leave.
  */
-export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: Match; kind: ShowKind; pool: Pundit[]; seed: number; extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }; onDone: () => void }) {
-  const script = useMemo(() => buildScript(match, kind, seed, pool, extra), [match, kind, seed, pool, extra])
+export function StudioShow({ match, kind, seed, extra, onDone }: { match: Match; kind: ShowKind; seed: number; extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }; onDone: () => void }) {
+  const script = useMemo(() => buildScript(match, kind, seed, extra), [match, kind, seed, extra])
   const [stage, setStage] = useState<'intro' | 'show' | 'outro'>('intro')
   const [i, setI] = useState(0)
   const beat: Beat = script.beats[Math.min(i, script.beats.length - 1)]
@@ -138,7 +137,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   const [voiceFailed, setVoiceFailed] = useState(false)
   const voiced = talking && !voiceFailed
   // a man speaks in a man's voice and a woman in a woman's: tell the voices who is on the desk
-  useEffect(() => { setCastGenders({ host: genderOf(script.cast[0].player), exp1: genderOf(script.cast[1].player), exp2: genderOf(script.cast[2].player) }); return () => setCastGenders({}) }, [script])
+  useEffect(() => { setCastGenders({ host: 'f', exp1: 'f', exp2: 'f' }); return () => setCastGenders({}) }, [script])
 
   useEffect(() => { sfx.whoosh(); const t = window.setTimeout(() => { setStage('show'); sfx.applause(1.6) }, 2200); return () => window.clearTimeout(t) }, [])
   // a name strap the first time each person talks
@@ -178,7 +177,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
   })
 
   const speaker = script.cast[beat.who]
-  const accent = accentOf(speaker.team)
+  const accent = speaker.presenter.accent
   const ticker = useMemo(() => {
     const scores = match.innings.map((x) => `${match.sides[x.battingSide].team.short} ${x.runs}/${x.wickets} (${Math.floor(x.legalBalls / 6)}.${x.legalBalls % 6})`).join('   ·   ')
     return `${scores}   ·   ${match.result?.text ?? script.title}   ·   ${extra?.competition ?? 'Fantasy Cric Sim'}   ·   `
@@ -220,8 +219,8 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
         <AnimatePresence>
           {strap !== null && stage === 'show' && (
             <motion.div key={`strap${strap}`} className="absolute bottom-2 left-2 z-[65] flex items-center overflow-hidden rounded bg-black/85 ring-1 ring-white/20" initial={{ x: -140, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -140, opacity: 0 }}>
-              <span className="h-full w-1.5 self-stretch" style={{ background: accentOf(script.cast[strap].team) }} />
-              <span className="px-2 py-1 leading-tight"><span className="block text-xs font-extrabold text-white">{script.cast[strap].player.name}</span><span className="block text-[9px] font-bold uppercase tracking-wider text-slate-300">{ROLE[script.cast[strap].persona]}</span></span>
+              <span className="h-full w-1.5 self-stretch" style={{ background: script.cast[strap].presenter.accent }} />
+              <span className="px-2 py-1 leading-tight"><span className="block text-xs font-extrabold text-white">{script.cast[strap].presenter.name}</span><span className="block text-[9px] font-bold uppercase tracking-wider text-slate-300">{ROLE[script.cast[strap].persona]}</span></span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -238,7 +237,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
               initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8 }} transition={{ type: 'spring', stiffness: 320, damping: 26 }}
             >
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-sm font-extrabold" style={{ color: accent }}>{first(speaker.player.name)}</span>
+                <span className="text-sm font-extrabold" style={{ color: accent }}>{first(speaker.presenter.name)}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{ROLE[speaker.persona]}</span>
                 <motion.span className="ml-auto text-xl" animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 0.9, repeat: Infinity }} aria-hidden>{MOOD_EMOJI[beat.mood]}</motion.span>
               </div>
@@ -276,7 +275,7 @@ export function StudioShow({ match, kind, pool, seed, extra, onDone }: { match: 
               <motion.div className="mt-2 text-sm font-bold uppercase tracking-[0.3em] text-sky-300" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>{stage === 'intro' ? (extra?.competition ?? 'Live from the studio') : 'See you next time'}</motion.div>
               {stage === 'intro' && (
                 <motion.div className="mt-5 flex items-center justify-center gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-                  {script.cast.map((c) => <PlayerAvatar key={c.player.id} player={c.player as Player} team={c.team as Team} size={46} />)}
+                  {script.cast.map((c) => <PresenterAvatar key={c.presenter.id} presenter={c.presenter} size={46} />)}
                 </motion.div>
               )}
             </div>
