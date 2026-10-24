@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -287,7 +287,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           const pe = project(r, { x: L.plan.end.x, y: 0, z: L.plan.end.z })
           if (pe) {
             const ratio = Math.max(1, 0.4 / Math.max(0.01, (r.F * 1.8) / pe.d / HEIGHT))
-            px += (L.plan.end.x - Math.sign(dv.dx) * 2.8 * ratio - px) * dv.k
+            px += (L.plan.end.x - Math.sign(dv.dx) * (1.8 + diveGapMetres(L.plan) / 1.4) * ratio - px) * dv.k
             pz += (L.plan.end.z - pz) * dv.k
           }
         }
@@ -296,8 +296,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const sfp = clamp01((t - t2c) / pl.tFlight)
         const thrower = pl.runOut ? pl.catcher === i : pl.chaser === i
         const takeAt = t3c
-        const catchK = (caught && !dv && !(pl.runOut) && (pl.kind === 'air' || pl.kind === 'keeper') ? clamp01((t - (takeAt - 0.32)) / 0.22) : 0) * (1 - clamp01((t - takeAt - 0.7) / 0.35))
-        const stopK = thrower && !pl.boundary && !pl.six && !dv && pl.kind === 'ground' ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
+        const nearCatch = thrower && !!pl.fellShort ? clamp01((t - (t3c - 0.4)) / 0.22) * (1 - clamp01((t - t3c) / 0.18)) : 0
+        const catchK = Math.max(nearCatch, (caught && !dv && !(pl.runOut) && (pl.kind === 'air' || pl.kind === 'keeper') ? clamp01((t - (takeAt - 0.32)) / 0.22) : 0) * (1 - clamp01((t - takeAt - 0.7) / 0.35)))
+        const stopK = thrower && !pl.boundary && !pl.six && !dv && (pl.kind === 'ground' || !!pl.fellShort) ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
         const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
         rigs.current.get(`f${i}`)?.apply(fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0 }))

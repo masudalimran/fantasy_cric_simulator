@@ -28,6 +28,7 @@ import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/cap
 import { boxChat } from '../season/studio'
 import { isBigSix, moveFor } from '../data/moves'
 import { moveArtFor } from '../data/moveArt'
+import { almostCaught } from '../components/match/almost'
 import { nearMiss } from '../components/match/nearMiss'
 import { batHitsBall, clipNow, contactAt } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
@@ -36,7 +37,7 @@ import { catchCause, catchContact, fourContact, sixContact } from '../engine/con
 import { shotText } from '../components/match/AimPads'
 import { cheerVariantFor } from '../components/match/CheerScreen'
 import type { ReplayBase } from '../components/match/ReplayFrame'
-import { EXTRA_CAST_SECONDS, FOUR_SECONDS, MISS_CAST_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
+import { ALMOST_CAST_SECONDS, EXTRA_CAST_SECONDS, FOUR_SECONDS, MISS_CAST_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { wicketCard } from '../season/wicketCards'
 import { CATCH_SECONDS } from '../components/match/CatchScreen'
 import { matchBefore } from '../engine/asOf'
@@ -516,6 +517,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         if (close) {
           const striker = match.player(lastEv.strikerId), bowlerNow = match.player(lastEv.bowlerId)
           enqueueMoment({ key: lastEv.seq + 0.45, kind: 'misscast', player: striker, team: batT, title: close.kind === 'stumps' ? 'SO CLOSE!' : 'BEATEN!', lines: [], delay, ms: Math.round(MISS_CAST_SECONDS * 1000 * rate), missCast: { replay: replayBase(lastEv), miss: close, batsman: striker, bowler: bowlerNow, batTeam: batT, rate } })
+        }
+        // a lofted shot that dropped just in front of a fielder: so nearly a catch
+        const almost = prefs.nearmiss ? almostCaught(lastEv, replayBase(lastEv).fielders, match.player(lastEv.strikerId).hand === 'L', match.player(lastEv.bowlerId)) : null
+        if (almost) {
+          const striker = match.player(lastEv.strikerId)
+          enqueueMoment({ key: lastEv.seq + 0.46, kind: 'almostcast', player: striker, team: batT, title: 'SO NEARLY!', lines: [], delay, ms: Math.round(ALMOST_CAST_SECONDS * 1000 * rate), almostCast: { replay: replayBase(lastEv), almost, batsman: striker, batTeam: batT, bowlTeam: bowlS.team, rate } })
         }
         if (prefs.extras && lastEv.tags.includes('maiden')) {
           const ln = innNow.bowlers.get(lastEv.bowlerId)

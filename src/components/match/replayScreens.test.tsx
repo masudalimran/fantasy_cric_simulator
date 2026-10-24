@@ -6,7 +6,10 @@ import { Match } from '../../engine/match'
 import { DEFAULT_LOOK } from '../../engine/stadium'
 import { wicketCard } from '../../season/wicketCards'
 import { fieldPlan } from './fieldSets'
-import { ExtraCast, FourCast, MissCast, WicketCast } from './ReplayScreens'
+import { AlmostCast, ExtraCast, FourCast, MissCast, WicketCast } from './ReplayScreens'
+import { almostCaught } from './almost'
+import { fielderWorld, planBall } from './broadcast'
+import { endPoint } from './Stage'
 import { nearMiss, stumpGap, type Miss } from './nearMiss'
 import { placeFielders } from './Stage'
 import type { ReplayBase } from './ReplayFrame'
@@ -79,5 +82,40 @@ describe('the broadcast-style screens', () => {
     }
     expect(stumpsN).toBeGreaterThan(0)
     expect(batN).toBeGreaterThan(0)
+  })
+
+  it('a lofted shot that is not a catch falls in front of the fielder, and the nearest ones get a so-nearly screen', () => {
+    let fell = 0, almosts = 0
+    const kinds = new Set<string>()
+    for (let seed = 1; seed <= 12; seed++) {
+      const mm = new Match({ teamA: A, teamB: B, format: 't20', seed })
+      mm.playMatch()
+      for (const e of mm.innings.flatMap((i) => i.log)) {
+        const base = baseFor(mm, e)
+        const left = mm.player(e.strikerId).hand === 'L'
+        const plan = planBall(e, base.fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(e, base.fielders), left)
+        if (plan.chaseKind) kinds.add(plan.chaseKind)
+        if (plan.fellShort) {
+          fell++
+          const f = fielderWorld(base.fielders[plan.chaser].x, base.fielders[plan.chaser].y, base.fielders[plan.chaser].spot)
+          // it lands between the bat and the fielder, about as far in front of him as it says
+          expect(Math.hypot(plan.end.x - f.x, plan.end.z - f.z)).toBeCloseTo(plan.fellShort.gap, 1)
+          expect(Math.hypot(plan.end.x - plan.meet.x, plan.end.z - plan.meet.z)).toBeLessThan(Math.hypot(f.x - plan.meet.x, f.z - plan.meet.z))
+        }
+        const a = almostCaught(e, base.fielders, left, mm.player(e.bowlerId))
+        if (a) { almosts++; expect(a.gap).toBeLessThanOrEqual(1.8) }
+      }
+    }
+    expect(fell).toBeGreaterThan(5)
+    expect(almosts).toBeGreaterThan(0)
+    expect([...kinds].sort()).toEqual(['between', 'close', 'gap'])
+  })
+  it('the so-nearly screen says how far in front of him it fell', () => {
+    const ev = all.find((e) => e.legal && !e.wicket && !e.extraType && e.runsBat >= 1)!
+    const base = baseFor(m, ev)
+    const html = clean(renderToString(<AlmostCast info={{ replay: base, almost: { gap: 1.4, fielder: base.fielders[3].player, distance: 41, hang: 2.1, runs: 2 }, batsman: m.player(ev.strikerId), batTeam: A, bowlTeam: B, rate: 1 }} />))
+    expect(html).toContain('SO NEARLY!')
+    expect(html).toContain('fell 1.4 m in front of')
+    expect(html).toContain('41 m')
   })
 })

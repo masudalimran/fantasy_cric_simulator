@@ -8,6 +8,7 @@ import { PlayerAvatar, accentOf } from '../ui'
 import { BatContact, ContactMeters } from './ContactPanel'
 import { replayCamFor } from './broadcast'
 import { BALL_R, STUMP_HALF, STUMP_HEIGHT, type Miss } from './nearMiss'
+import type { AlmostCaught } from './almost'
 import { ReplayFrame, type ReplayBase } from './ReplayFrame'
 import { useWidth } from './ReviewScreens'
 
@@ -205,6 +206,61 @@ export function MissCast({ info }: { info: MissCastInfo }) {
             <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 28 : 40, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 14px #f59e0b' }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>{title}</motion.div>
             <motion.div className="text-xs font-extrabold leading-tight text-amber-300 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>{line}</motion.div>
             <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{sub}</motion.div>
+          </div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+// ---- Almost caught: the lofted shot that fell just in front of a fielder -----------------------------------------------------------
+
+export interface AlmostCastInfo {
+  replay: ReplayBase
+  almost: AlmostCaught
+  batsman: Player
+  batTeam: Team
+  bowlTeam: Team
+  rate: number
+}
+export const ALMOST_CAST_SECONDS = 6
+
+/** The ball's flight from the side: up and down in front of the fielder who is stretching for it, and the gap marked. */
+function FallShort({ gap, w, fielder, team }: { gap: number; w: number; fielder: Player; team: Team }) {
+  const px = gap * 18
+  const fx = 104
+  return (
+    <svg viewBox="0 0 130 80" width={w} className="shrink-0" aria-hidden>
+      <line x1="4" y1="64" x2="126" y2="64" stroke="#4ade80" strokeWidth="1.2" opacity="0.7" />
+      <motion.path d={`M8 64 Q ${(8 + fx - px) / 2} -14 ${fx - px} 64`} fill="none" stroke="#fde68a" strokeWidth="1.6" strokeDasharray="3 2.5" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 1.3, duration: 1.0 }} />
+      <motion.circle r="3.4" fill="#dc2626" stroke="#fecaca" strokeWidth="0.8" initial={{ cx: fx - px, cy: 20, opacity: 0 }} animate={{ cx: fx - px, cy: 61, opacity: 1 }} transition={{ delay: 2.2, duration: 0.35 }} />
+      <foreignObject x={fx - 11} y="18" width="22" height="22"><div className="overflow-hidden rounded-full" style={{ width: 22, height: 22, boxShadow: `0 0 0 2px ${accentOf(team)}` }}><PlayerAvatar player={fielder} team={team} size={22} /></div></foreignObject>
+      <line x1={fx} y1="40" x2={fx} y2="64" stroke="#e2e8f0" strokeWidth="3.2" strokeLinecap="round" />
+      <line x1={fx} y1="44" x2={fx - 14} y2="34" stroke="#e2e8f0" strokeWidth="2.4" strokeLinecap="round" />
+      <motion.line x1={fx - px + 3.4} y1="72" x2={fx} y2="72" stroke="#fbbf24" strokeWidth="1.2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.7 }} />
+      <motion.text x={fx - px / 2} y="79" textAnchor="middle" fontSize="8" fontWeight="800" fill="#fbbf24" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.8 }}>{gap.toFixed(1)} m</motion.text>
+    </svg>
+  )
+}
+
+/** "So nearly": a lofted shot played again from above and, under it, how far in front of the fielder it fell. */
+export function AlmostCast({ info }: { info: AlmostCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => sfx.aww(0.6), 2400 * r); return () => window.clearTimeout(t) }, [r])
+  const a = info.almost
+  const compact = w < 520
+  const first = a.fielder.name.split(' ')[0]
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="So nearly caught">
+      <ReplayFrame base={info.replay} rate={1.4 * r} share={0.56} cam={replayCamFor('catch', info.replay.event.seq)} tag="So nearly" />
+      <Bottom from={0.56}>
+        <div className="flex h-full items-center gap-3 px-3">
+          <FallShort gap={a.gap} w={compact ? 118 : 150} fielder={a.fielder} team={info.bowlTeam} />
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 26 : 38, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 14px #f59e0b' }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>SO NEARLY!</motion.div>
+            <motion.div className="text-xs font-extrabold leading-tight text-amber-300 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>It fell {a.gap.toFixed(1)} m in front of {first}</motion.div>
+            <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{info.batsman.name} lofted it {a.distance} m and it hung for {a.hang} s before dropping just short: {a.runs} {a.runs === 1 ? 'run' : 'runs'}.</motion.div>
           </div>
         </div>
       </Bottom>

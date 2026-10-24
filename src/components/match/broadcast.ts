@@ -173,6 +173,10 @@ export interface Plan {
   /** The keeper dives for a wide or a bye (and whether he gets there), a fielder dives at the rope for a four. */
   keeperDive: { dir: number; at: number; miss: boolean } | null
   chaserDive: boolean
+  /** How the chase of a four goes: nobody near it (the ball is in the gap), a dive that is well short, or a dive that just misses it. */
+  chaseKind: 'gap' | 'between' | 'close' | null
+  /** A lofted shot that drops in front of the fielder (and he has to field it on the bounce): how far in front of him it lands, in metres. */
+  fellShort: { gap: number } | null
   /** The out batsman walks off after the wicket; and when a fifty or hundred is reached he raises his bat. */
   exitAt: number | null
   celebrateAt: number | null
@@ -333,6 +337,20 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     let best = 1e9
     fielders.forEach((f, i) => { if (i === 0) return; const fw = fielderWorld(f.x, f.y, f.spot); const d = Math.hypot(fw.x - end.x, fw.z - end.z); if (d < best) { best = d; chaser = i } })
   }
+  // a four is sometimes in the gap with nobody near it, sometimes a fielder dives and is well short, sometimes he all but stops it
+  const h4 = hash01(ev.seq * 6.1)
+  const chaseKind: Plan['chaseKind'] = (ev.boundary === 4 || byeFour) && chaser >= 0 ? (h4 < 0.4 ? 'gap' : h4 < 0.7 ? 'between' : 'close') : null
+  // a lofted shot that is not a catch fell in front of the nearest fielder, a little way short of him
+  let fellShort: Plan['fellShort'] = null
+  if (kind === 'air' && !w && !boundary && !six && ev.runsBat > 0 && chaser >= 0) {
+    const fw = fielderWorld(fielders[chaser].x, fielders[chaser].y, fielders[chaser].spot)
+    if (Math.hypot(fw.x - end.x, fw.z - end.z) < 20) {
+      const gap = 0.8 + hash01(ev.seq * 8.3) * 3.2
+      const ux = meet.x - fw.x, uz = meet.z - fw.z, ul = Math.hypot(ux, uz) || 1
+      end = { x: fw.x + (ux / ul) * gap, y: 0, z: fw.z + (uz / ul) * gap }
+      fellShort = { gap }
+    }
+  }
   const runs = runOut ? runOut.legs : !w && !boundary && !wide && !byeFour ? (ev.runsBat > 0 ? ev.runsBat : ev.extraType === 'bye' || ev.extraType === 'legbye' ? ev.extraRuns : 0) : 0
   const dist = Math.hypot(end.x - meet.x, end.z - meet.z)
   // a six hangs in the air for as long as its height asks for
@@ -378,7 +396,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
-    signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, chaserDive: chaseKind === 'between' || chaseKind === 'close', chaseKind, fellShort, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -421,15 +439,18 @@ export interface Frame {
   phase: 'run' | 'deliver' | 'flight' | 'hold'
 }
 
+/** How far beyond his fingertips the ball goes when a fielder dives at a four: a metre or so when he all but stops it, well short when he does not (in body metres). */
+export const diveGapMetres = (plan: { chaseKind?: Plan['chaseKind'] }) => (plan.chaseKind === 'between' ? 3.6 : 1.4)
+
 /**
  * A fielder diving to stop a four falls sideways towards the ball's line from the side he ran from, so the whole of him is clear of the ball and his fingertips
  * end up a good way short of where it goes.
  */
-export function diveSpot(plan: Pick<Plan, 'meet' | 'end'>, from: V3): { spot: V3; dx: number; dz: number } {
+export function diveSpot(plan: Pick<Plan, 'meet' | 'end'> & { chaseKind?: Plan['chaseKind'] }, from: V3): { spot: V3; dx: number; dz: number } {
   // across the picture (the camera looks along the pitch or back down it), so the gap is plain to see on screen
   const sgn = from.x >= plan.end.x ? 1 : -1
   // the body reaches about 2.2 m from where he leaves the ground, and the picture sets him back 1.45 m from the place he is at; the ball passes 1.4 m beyond his fingertips
-  const gap = 2.2 + 1.4 - 1.45
+  const gap = 2.2 + diveGapMetres(plan) - 1.45
   return { spot: { x: plan.end.x + sgn * gap, y: 0, z: plan.end.z }, dx: -sgn, dz: 0 }
 }
 
@@ -482,7 +503,8 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (plan.chaser >= 0) {
     const a = fielderAt(plan.chaser)
     const target = plan.chaserDive ? diveSpot(plan, a).spot : { x: plan.end.x, y: 0, z: plan.end.z }
-    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive ? 1 : plan.boundary ? 0.8 : 0.9)))
+    // in the gap he gives chase but nowhere near it
+    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive ? 1 : plan.chaseKind === 'gap' ? 0.4 : plan.boundary ? 0.8 : 0.9)))
   }
   // where the camera looks
   const b = ball ?? bowlerPos
