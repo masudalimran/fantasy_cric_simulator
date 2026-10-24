@@ -49,7 +49,8 @@ describe('the studio show script', () => {
     m.playMatch()
     const end = inStats('end')
     expect(end.length).toBeGreaterThan(0)
-    for (const b of end) expect(b.clip?.kind === 'stat' && b.clip.innings).toBe(m.innings.length - 1)
+    // (after a match with a winner the show covers both sides, so both innings)
+    for (const b of end) expect(b.clip?.kind === 'stat' && b.clip.innings).toBeLessThan(m.innings.length)
   })
 
   it('puts the show\'s own presenters on the desk (never players), a different three from match to match', () => {
@@ -89,19 +90,28 @@ describe('the studio show script', () => {
     for (const kind of ['innings', 'stumps', 'end'] as const) expect(buildScript(t, kind, 5).beats.length).toBeGreaterThanOrEqual(8)
   })
 
-  it('brings the season form of a player who had a very good or very bad game', () => {
-    const m = play(11)
-    const s = buildScript(m, 'end', 11, { form: () => ({ bat: { innings: 5, runs: 120, average: 24, sr: 130, recent: ['10', '30*'] }, bowl: { matches: 5, wickets: 4, economy: 8, recent: ['1/30'] } }) })
-    expect(s.beats.some((b) => b.clip?.kind === 'card' && b.clip.title === 'FORM GUIDE')).toBe(true)
-  })
-
-  it('the form guide also covers earlier years of the career', () => {
-    const m = play(11)
-    const past = { years: 2, bat: { innings: 30, runs: 900, average: 31, high: 104, fifties: 5, hundreds: 1 }, bowl: { matches: 20, wickets: 25, economy: 7.4, bestW: 4, bestR: 22 } }
-    const s = buildScript(m, 'end', 11, { form: () => ({ past }) })
-    const cards = s.beats.filter((b) => b.clip?.kind === 'card' && b.clip.title === 'FORM GUIDE')
-    expect(cards.length).toBeGreaterThan(0)
-    expect(cards.some((b) => b.clip?.kind === 'card' && b.clip.lines.some((l) => l.startsWith('Earlier years')))).toBe(true)
+  it('after a match with a winner the show is about the winners, then the side that lost', () => {
+    let seen = 0
+    for (let seed = 1; seed <= 25; seed++) {
+      const m = play(seed)
+      if (m.result?.winnerSide == null) continue
+      const s = buildScript(m, 'end', seed)
+      expect(s.beats.some((b) => b.clip?.kind === 'card' && b.clip.title === 'FORM GUIDE')).toBe(false)
+      const win = s.beats.findIndex((b) => b.clip?.kind === 'card' && b.clip.title === 'THE WINNERS')
+      const lose = s.beats.findIndex((b) => b.clip?.kind === 'card' && b.clip.title === 'THE LOSERS')
+      expect(win).toBeGreaterThanOrEqual(0)
+      expect(lose).toBeGreaterThan(win)
+      const winners = m.sides[m.result.winnerSide].team
+      const inWin = s.beats.slice(win + 1, lose).filter((b) => b.clip?.kind === 'stat')
+      const inLose = s.beats.slice(lose + 1).filter((b) => b.clip?.kind === 'stat')
+      // a winner is praised for what he did for the win; a loser is either "tried but could not carry the team" or "one of the reasons his team lost"
+      for (const b of inWin) expect(b.text).toMatch(/great impact on winning the game/)
+      for (const b of inLose) expect(b.text).toMatch(/could not carry his team|not enough to carry his team|one of the reasons his (team|side) lost/i)
+      // the players named for the winners really are on the winning side
+      for (const b of inWin) if (b.clip?.kind === 'stat') expect(winners.players.some((p) => p.id === (b.clip as { playerId: string }).playerId) || m.sides[m.result.winnerSide].xi.some((p) => p.id === (b.clip as { playerId: string }).playerId)).toBe(true)
+      seen++
+    }
+    expect(seen).toBeGreaterThan(10)
   })
 
   it('quiet performances are wrapped up in short group lines, so the show stays short', () => {

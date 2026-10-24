@@ -9,7 +9,6 @@ import { cancelSpeech, setCastGenders, setVoiceMode, speak, useVoiceMode, voiceS
 import { GRADE_COLOR, GRADE_LABEL } from '../../season/grade'
 import { PresenterAvatar } from '../PresenterAvatar'
 import { buildScript, type Beat, type Cast, type Clip, type Mood, type Persona, type ShowKind } from '../../season/studio'
-import type { PlayerForm } from '../../season/stats'
 import { PlayerAvatar } from '../ui'
 import { FourScreen } from './EventScreens'
 import { MilestoneScreen } from './MilestoneScreen'
@@ -186,7 +185,7 @@ function Anchor({ cast, active, mood, big }: { cast: Cast; active: boolean; mood
  * The studio show: a host and two experts at a desk, in front of a big screen that plays the moments they talk about. It runs between the
  * innings, at stumps in a Test and after the match. Tap to move on a line; Skip to leave.
  */
-export function StudioShow({ match, kind, seed, extra, onDone }: { match: Match; kind: ShowKind; seed: number; extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }; onDone: () => void }) {
+export function StudioShow({ match, kind, seed, extra, onDone }: { match: Match; kind: ShowKind; seed: number; extra?: { competition?: string; stage?: string }; onDone: () => void }) {
   const script = useMemo(() => buildScript(match, kind, seed, extra), [match, kind, seed, extra])
   const [stage, setStage] = useState<'intro' | 'show' | 'outro'>('intro')
   const [i, setI] = useState(0)

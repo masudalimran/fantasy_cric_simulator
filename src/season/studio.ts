@@ -3,7 +3,6 @@ import type { Match } from '../engine/match'
 import { parRunsPerOver } from '../engine/model'
 import type { BatterLine, BowlerLine } from '../engine/types'
 import { PRESENTERS, type Presenter } from '../data/presenters'
-import type { PlayerForm } from './stats'
 import { gradeBat, gradeBowl, type Grade } from './grade'
 
 /**
@@ -160,9 +159,34 @@ const BOWL_SAY: Record<Grade, string[]> = {
 }
 const BOWL_FOLLOW: string[] = ['And here is the wicket that started it.', 'Watch this one: the breakthrough he gave his side.', 'Here is the replay of the big wicket.']
 
+// ---- The end-of-match show: the winners, then the side that lost -------------------------------------------------------------------
+
+const WIN_INTRO = ['Let us start with the winners: {team}. {result}', 'First, the team that took the game: {team}. {result}', '{team} are the winners tonight. {result} Who made the difference?']
+const LOSE_INTRO = ['And now the other side, {team}, who came up short.', 'Then {team}, who could not get over the line.', 'A tough one for {team}. Let us see how it went for them.']
+const WIN_SAY = [
+  '{n}: {line}. That had a great impact on winning the game.',
+  '{n} had a great impact on winning the game: {line}.',
+  '{line} from {n}, and it made a great impact on winning the game.',
+  'Look at {n}: {line}. A great impact on winning the game.',
+  '{n}, {line}. This is a player who had a great impact on winning the game.',
+]
+const LOSE_GOOD_SAY = [
+  '{n}: {line}. He tried, but he could not carry his team.',
+  '{n} did his bit, {line}, but could not carry his team.',
+  'A brave effort from {n}, {line}. He tried, but could not carry his team.',
+  '{line} from {n}. He tried, but it was not enough to carry his team.',
+]
+const LOSE_BAD_SAY = [
+  '{n}: {line}. He was one of the reasons his team lost.',
+  'Not a day {n} will remember: {line}. One of the reasons his team lost.',
+  '{line} from {n}, and that was one of the reasons his side lost.',
+  '{n}, {line}. He was one of the reasons his team lost.',
+]
+const GRADE_RANK: Record<Grade, number> = { exceptional: 4, good: 3, average: 2, bad: 1, worse: 0 }
+
 const MOOD_OF: Record<Grade, Mood> = { worse: 'worried', bad: 'serious', average: 'thoughtful', good: 'proud', exceptional: 'excited' }
 
-export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: { competition?: string; stage?: string; form?: (playerId: string) => PlayerForm | null }): Script {
+export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: { competition?: string; stage?: string }): Script {
   const rng = new Seeded(seed ^ hash(`${match.seed}|${kind}|${match.innings.length}`))
   const { pick } = pickers(rng)
   // the cast: three of the show's presenters (a different three from one match to the next), with a voice each
@@ -182,30 +206,6 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
   const pn = (id: string) => first(match.player(id).name)
   const par = parRunsPerOver(match.format, 'middle')
 
-  /** For a very good or very bad game: how it compares with his season so far and his earlier years in the career. */
-  const formBeat = (w: 1 | 2, id: string, as: 'bat' | 'bowl', g: Grade, today: string) => {
-    const f = extra?.form?.(id)
-    if (!f) return
-    const good = g === 'exceptional'
-    const lines = [match.player(id).name]
-    const bits: string[] = []
-    if (as === 'bat') {
-      const se = f.bat && f.bat.innings >= 2 ? f.bat : null
-      const pa = f.past?.bat
-      if (se) { lines.push(`This year: ${se.runs} runs in ${se.innings} innings, avg ${se.average !== null ? se.average.toFixed(1) : '-'}`); lines.push(`Last scores: ${se.recent.join('  ')}`); bits.push(`this season he has ${se.runs} runs${se.average !== null ? ` at ${se.average.toFixed(1)}` : ''}, with ${se.recent.join(', ')} his last scores`) }
-      if (pa) { lines.push(`Earlier years: ${pa.runs} runs, avg ${pa.average !== null ? pa.average.toFixed(1) : '-'}, best ${pa.high}`); bits.push(`over ${f.past!.years} earlier ${f.past!.years === 1 ? 'year' : 'years'} he has ${pa.runs} runs${pa.hundreds + pa.fifties ? `, ${pa.hundreds} hundreds and ${pa.fifties} fifties` : ''}`) }
-    } else {
-      const se = f.bowl && f.bowl.matches >= 2 ? f.bowl : null
-      const pa = f.past?.bowl
-      if (se) { lines.push(`This year: ${se.wickets} wickets in ${se.matches} matches${se.economy !== null ? `, econ ${se.economy.toFixed(1)}` : ''}`); lines.push(`Recent: ${se.recent.join('  ')}`); bits.push(`this season he has ${se.wickets} wickets, his recent figures ${se.recent.join(', ')}`) }
-      if (pa) { lines.push(`Earlier years: ${pa.wickets} wickets, best ${pa.bestW}/${pa.bestR}`); bits.push(`across ${f.past!.years} earlier ${f.past!.years === 1 ? 'year' : 'years'} he took ${pa.wickets} wickets`) }
-    }
-    if (!bits.length) return
-    lines.push(`Today: ${today}`)
-    const name = first(match.player(id).name)
-    say(w, `${good ? `For the record, ${name}'s day was a big step up:` : `That is unusual for ${name}:`} ${bits.join('; ')}. ${good ? 'Well above his usual.' : 'A blip, surely.'}`, 'thoughtful', { kind: 'card', title: 'FORM GUIDE', lines })
-  }
-
   // which innings to go through: the one just finished, or (after the match) all of them
   const last = kind === 'end' ? match.innings.length - 1 : Math.max(0, match.current.done || kind === 'stumps' ? match.current.index : match.current.index - 1)
   // the show covers the innings that has just been played: the first at the break, the last one after the match
@@ -222,7 +222,41 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
   const who = (): 1 | 2 => ((turn++ % 2) + 1) as 1 | 2
   const other = (w: 1 | 2): 1 | 2 => (w === 1 ? 2 : 1)
 
-  for (const ii of indices) {
+  // after a match with a winner the show is about the two sides: who did well for the winners, then who did well and who did badly for the side that lost
+  const decided = kind === 'end' && match.result?.winnerSide != null
+  if (decided) {
+    const winSide = match.result!.winnerSide as 0 | 1
+    const fmt = match.format === 'test' ? 'test' : match.format === 'odi' ? 'odi' : 't20'
+    type Perf = { id: string; as: 'bat' | 'bowl'; ii: number; g: Grade; line: string; weight: number }
+    const perfsOf = (side: 0 | 1): Perf[] => {
+      const out: Perf[] = []
+      match.innings.forEach((inn, ii) => {
+        if (inn.battingSide === side) {
+          inn.batters.forEach((b, pos) => {
+            if (!(b.balls > 0 || b.runs > 0 || b.dismissal)) return
+            out.push({ id: b.id, as: 'bat', ii, g: gradeBat({ runs: b.runs, balls: b.balls, out: !!b.dismissal }, { format: fmt, position: pos, role: match.player(b.id).role }), line: `${b.runs}${b.dismissal ? '' : '*'} off ${b.balls}`, weight: b.runs })
+          })
+        } else {
+          for (const l of inn.bowlers.values()) {
+            if (l.legalBalls <= 0) continue
+            out.push({ id: l.id, as: 'bowl', ii, g: gradeBowl({ wickets: l.wickets, runs: l.runs, balls: l.legalBalls }, { format: fmt, par }), line: `${l.wickets}/${l.runs} from ${oversOf(l.legalBalls)} overs`, weight: l.wickets * 25 - l.runs / 2 })
+          }
+        }
+      })
+      return out
+    }
+    const best = (a: Perf, b: Perf) => GRADE_RANK[b.g] - GRADE_RANK[a.g] || b.weight - a.weight
+    for (const [side, winners] of [[winSide, true], [(1 - winSide) as 0 | 1, false]] as const) {
+      const team = match.sides[side].team
+      say(0, fill(pick(winners ? WIN_INTRO : LOSE_INTRO), { team: team.name, result: winners ? (match.result?.text ?? '') : '' }), winners ? 'proud' : 'serious', { kind: 'card', title: winners ? 'THE WINNERS' : 'THE LOSERS', lines: [team.name, match.result?.text ?? ''] })
+      const perfs = perfsOf(side)
+      const good = perfs.filter((p) => p.g === 'good' || p.g === 'exceptional').sort(best).slice(0, winners ? 4 : 3)
+      const bad = winners ? [] : perfs.filter((p) => p.g === 'bad' || p.g === 'worse').sort((a, b) => best(b, a)).slice(0, 3)
+      if (!good.length && !bad.length) say(0, `Nobody really stood out for ${team.name} on the day.`, 'thoughtful')
+      for (const p of good) say(who(), fill(pick(winners ? WIN_SAY : LOSE_GOOD_SAY), { n: pn(p.id), line: p.line }), p.g === 'exceptional' ? 'excited' : winners ? 'proud' : 'thoughtful', { kind: 'stat', innings: p.ii, playerId: p.id, as: p.as, grade: p.g })
+      for (const p of bad) say(who(), fill(pick(LOSE_BAD_SAY), { n: pn(p.id), line: p.line }), 'serious', { kind: 'stat', innings: p.ii, playerId: p.id, as: p.as, grade: p.g })
+    }
+  } else for (const ii of indices) {
     const inn = match.innings[ii]
     const batTeam = teamOf(ii)
     const bowlTeam = match.sides[1 - inn.battingSide].team
@@ -260,7 +294,6 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
       let text = fill(pick(BAT_SAY[g]), { n: pn(b.id), line })
       if (g === 'worse' && b.runs === 0 && b.dismissal) text = fill(pick(['{n} out for a duck. A really disappointing game.', 'A golden memory this is not: {n} gets a duck. Disappointing.', 'Nothing at all for {n}, out for nought. A very disappointing game.']), { n: pn(b.id) })
       say(w, text, MOOD_OF[g], { kind: 'stat', innings: ii, playerId: b.id, as: 'bat', grade: g })
-      if (g === 'worse' || g === 'exceptional') formBeat(other(w), b.id, 'bat', g, `${b.runs}${b.dismissal ? '' : '*'} (${b.balls})`)
       if (g === 'good' || g === 'exceptional') {
         const big = g === 'exceptional' && b.runs >= 50
         say(other(w), `${pick(BAT_FOLLOW[g])} ${b.fours} ${b.fours === 1 ? 'four' : 'fours'} and ${b.sixes} ${b.sixes === 1 ? 'six' : 'sixes'}.`, g === 'exceptional' ? 'excited' : 'proud', big ? { kind: 'milestone', innings: ii, playerId: b.id } : { kind: 'wagon', innings: ii, batsmanId: b.id })
@@ -285,7 +318,6 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
       const w = who()
       const line = `${l.wickets}/${l.runs} from ${oversOf(l.legalBalls)} overs${l.maidens ? `, ${l.maidens} ${l.maidens === 1 ? 'maiden' : 'maidens'}` : ''}`
       say(w, fill(pick(BOWL_SAY[g]), { n: pn(l.id), line }), MOOD_OF[g], { kind: 'stat', innings: ii, playerId: l.id, as: 'bowl', grade: g })
-      if (g === 'exceptional' || g === 'worse') formBeat(other(w), l.id, 'bowl', g, `${l.wickets}/${l.runs}`)
       if ((g === 'good' || g === 'exceptional') && l.wickets > 0) {
         const wk = inn.log.find((e) => e.wicket && e.bowlerId === l.id && e.wicket.kind !== 'run out')
         if (wk?.wicket) say(other(w), `${pick(BOWL_FOLLOW)} ${pn(wk.wicket.playerId)} is out, ${wk.wicket.kind}.`, g === 'exceptional' ? 'excited' : 'proud', { kind: 'wicket', seq: wk.seq })

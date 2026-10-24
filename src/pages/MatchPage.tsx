@@ -16,7 +16,7 @@ import { getAnimPrefs, getBroadcastView, setManualPlay, useManualPlay, useSwipeA
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
-import { average, bowlAverage, collect, economy, formBefore, strikeRate as seasonSR } from '../season/stats'
+import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
@@ -933,12 +933,20 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   // Auto-play: one ball at a time at the chosen speed, but linger on the moments that matter
   // (wickets, boundaries, milestones) so the celebration, banner and sound have time to land.
+  // (the timer must not be restarted by every redraw of the page: it would never fire if something keeps redrawing, so the effect calls the newest `act` through a ref)
+  const actRef = useRef(act)
+  actRef.current = act
+  const lastStep = useRef(0)
+  const [kick, setKick] = useState(0)
   useEffect(() => {
     if (!auto || phase !== 'play' || match.isOver) return
     let timer = 0
     const step = () => {
+      lastStep.current = Date.now()
       // wait while a wicket, milestone or introduction is on screen
       if (holdRef.current) { setAuto(0); return } // between innings nothing plays by itself
+      // a screen that has stayed up long after its time (its timer was lost) is closed, or auto-play would wait for it for ever
+      if (current.current && busyUntil.current !== Infinity && Date.now() > busyUntil.current + 4000) { dismissMoment(); timer = window.setTimeout(step, 120); return }
       // never play on while a screen is up or still waiting its turn (a ball played now would cut the rest short)
       if (current.current || queue.current.length > 0) { timer = window.setTimeout(step, 120); return }
       const wait = busyUntil.current - Date.now()
@@ -949,7 +957,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       const clipLeft = getBroadcastView() ? clipNow.until - Date.now() : 0
       if (clipLeft > 0) { timer = window.setTimeout(step, Math.min(clipLeft, 300)); return }
       const innings = match.current.index
-      act({ t: 'ball' })
+      actRef.current({ t: 'ball' })
       if (match.isOver) return
       // stop where the options say to (wicket, boundary, end of an innings)
       const ev = match.events[match.events.length - 1]
@@ -957,9 +965,19 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if ((match.current.index !== innings && st.innings) || (ev?.wicket && st.wickets) || (ev?.boundary && st.boundaries)) { setAuto(0); return }
       timer = window.setTimeout(step, delayAfter(match.events[match.events.length - 1], auto))
     }
+    lastStep.current = Date.now()
     timer = window.setTimeout(step, 1300 / auto)
     return () => window.clearTimeout(timer)
-  }, [auto, phase, match, act])
+  }, [auto, phase, match, kick, dismissMoment])
+  // a safety net: if auto-play is on and nothing has been tried for a long while (a lost timer), start it again
+  useEffect(() => {
+    if (!auto || phase !== 'play' || match.isOver) return
+    const id = window.setInterval(() => {
+      if (holdRef.current) return
+      if (Date.now() - lastStep.current > 9000) { lastStep.current = Date.now(); setKick((k) => k + 1) }
+    }, 2000)
+    return () => window.clearInterval(id)
+  }, [auto, phase, match])
   useEffect(() => () => { window.clearTimeout(voiceTimer.current); cancelSpeech() }, [])
   // the commentary is on by default: the first time a match is played, ask the phone's owner before the game speaks
   useEffect(() => {
@@ -1183,7 +1201,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         {studio && !moment && (
           <StudioShow
             key={`${studio}-${match.innings.length}-${match.clock?.day ?? 0}`} match={match} kind={studio} seed={match.seed}
-            extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage, form: season ? (id: string) => formBefore(season, id, fixture.id, history) : undefined } : undefined}
+            extra={fixture ? { competition: compNameOf(fixture), stage: fixture.stage } : undefined}
             onDone={() => { const k = studio; setStudio(null); if (k === 'end') showUpgrades() }}
           />
         )}
