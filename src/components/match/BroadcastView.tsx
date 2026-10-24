@@ -9,6 +9,7 @@ import { approach, clipNow, replayCamera, warpTime, withReplaySlow, type ReplayC
 import { useCaptions } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
+import { firstName } from './format'
 import { endPoint, type Placed } from './Stage'
 
 /**
@@ -259,20 +260,22 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           shadow.style.zIndex = '1'
         } else { ball.style.display = 'none'; shadow.style.display = 'none' }
       }
-      // name tags for the people in the action
+      // name plates for the people in the action, just above their heads
       const tagOf = (key: string, world: V3) => {
         const node = nodes.current.get(key)
         if (!node) return
         const p = project(r, world)
         if (!p || p.x < 10 || p.x > W - 10 || p.y < 10 || p.y > H) { node.style.display = 'none'; return }
+        const headTop = p.y - HEIGHT * Math.max(0.4, (r.F * 1.8) / p.d / HEIGHT)
+        if (headTop < 12) { node.style.display = 'none'; return }
         node.style.display = 'block'
-        node.style.transform = `translate3d(${p.x.toFixed(1)}px,${(p.y + 3).toFixed(1)}px,0) translate(-50%,0)`
+        node.style.transform = `translate3d(${p.x.toFixed(1)}px,${(headTop - 2).toFixed(1)}px,0) translate(-50%,-100%)`
       }
       tagOf('tagStriker', { x: ra.x, y: 0, z: ra.z })
       const rn = nodes.current.get('tagReact')
       if (rn) {
         const who = f.react?.who
-        const at: V3 | null = !who ? null : who === 'striker' ? { x: ra.x, y: 2.5, z: ra.z } : who === 'bowler' ? { x: f.bowler.x, y: 2.5, z: f.bowler.z } : { x: (f.moving.get(0) ?? L.rest[0])?.x ?? 0, y: 2.4, z: (f.moving.get(0) ?? L.rest[0])?.z ?? 8 }
+        const at: V3 | null = !who ? null : who === 'striker' ? { x: ra.x, y: 3.1, z: ra.z } : who === 'bowler' ? { x: f.bowler.x, y: 3.1, z: f.bowler.z } : { x: (f.moving.get(0) ?? L.rest[0])?.x ?? 0, y: 3.0, z: (f.moving.get(0) ?? L.rest[0])?.z ?? 8 }
         const pp = at ? project(r, at) : null
         if (pp && pp.x > 20 && pp.x < W - 20 && pp.y > 10) { rn.style.display = 'block'; rn.textContent = f.react!.text; rn.style.transform = `translate3d(${pp.x.toFixed(1)}px,${pp.y.toFixed(1)}px,0) translate(-50%,-100%)` } else rn.style.display = 'none'
       }
@@ -337,9 +340,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {replay && <div className="pointer-events-none absolute inset-0 z-[5500]" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.10), rgba(2,6,23,0.18))', boxShadow: 'inset 0 0 0 2px rgba(56,189,248,0.55), inset 0 0 40px rgba(2,6,23,0.55)' }} />}
       <div ref={setNode('tagSlow')} className="pointer-events-none absolute bottom-8 right-2 z-[6001] hidden rounded bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
-      {[['tagStriker', striker.name, accentOf(battingTeam)], ['tagBowler', bowler.name, accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
+      {[['tagStriker', firstName(striker.name), accentOf(battingTeam)], ['tagBowler', firstName(bowler.name), accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
         <div key={k} ref={setNode(k)} className="pointer-events-none absolute left-0 top-0 z-[5000] hidden whitespace-nowrap rounded bg-black/75 px-1.5 text-[10px] font-bold text-white" style={{ borderBottom: `2px solid ${col}` }}>
-          {k === 'tagField' ? (event && plan.catcher >= 0 ? fielders[plan.catcher]?.player.name : plan.chaser >= 0 ? fielders[plan.chaser]?.player.name : '') : name}
+          {k === 'tagField' ? firstName(event && plan.catcher >= 0 ? (fielders[plan.catcher]?.player.name ?? '') : plan.chaser >= 0 ? (fielders[plan.chaser]?.player.name ?? '') : '') : name}
         </div>
       ))}
       {/* a quick white flash when the picture cuts to the other camera */}
