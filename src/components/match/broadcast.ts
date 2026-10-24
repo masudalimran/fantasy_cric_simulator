@@ -176,7 +176,7 @@ export interface Plan {
   /** The keeper dives for a wide or a bye (and whether he gets there), a fielder dives at the rope for a four. */
   keeperDive: { dir: number; at: number; miss: boolean } | null
   chaserDive: boolean
-  /** How the chase of a four goes: nobody near it (the ball is in the gap), a dive that is well short, or a dive that just misses it. */
+  /** How the chase of a four goes: nobody near it (the ball is in the gap), a fielder who chases it to the rope without diving, or one so close that he dives and just misses it. */
   chaseKind: 'gap' | 'between' | 'close' | null
   /** A lofted shot that drops in front of the fielder (and he has to field it on the bounce): how far in front of him it lands, in metres. */
   fellShort: { gap: number } | null
@@ -352,9 +352,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     let best = 1e9
     fielders.forEach((f, i) => { if (i === 0) return; const fw = fielderWorld(f.x, f.y, f.spot); const d = Math.hypot(fw.x - end.x, fw.z - end.z); if (d < best) { best = d; chaser = i } })
   }
-  // a four is sometimes in the gap with nobody near it, sometimes a fielder dives and is well short, sometimes he all but stops it
+  // a four is mostly in the gap with nobody near it or chased to the rope, and only about one in five has a fielder close enough to dive for it
   const h4 = hash01(ev.seq * 6.1)
-  const chaseKind: Plan['chaseKind'] = (ev.boundary === 4 || byeFour) && chaser >= 0 ? (h4 < 0.4 ? 'gap' : h4 < 0.7 ? 'between' : 'close') : null
+  const chaseKind: Plan['chaseKind'] = (ev.boundary === 4 || byeFour) && chaser >= 0 ? (h4 < 0.5 ? 'gap' : h4 < 0.8 ? 'between' : 'close') : null
   // a lofted shot that is not a catch fell in front of the nearest fielder, a little way short of him
   let fellShort: Plan['fellShort'] = null
   if (kind === 'air' && !w && !boundary && !six && ev.runsBat > 0 && chaser >= 0) {
@@ -411,7 +411,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
-    signal, hurt, keeperDive, chaserDive: chaseKind === 'between' || chaseKind === 'close', chaseKind, fellShort, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, chaserDive: chaseKind === 'close', chaseKind, fellShort, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -519,7 +519,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     const a = fielderAt(plan.chaser)
     const target = plan.chaserDive ? diveSpot(plan, a).spot : { x: plan.end.x, y: 0, z: plan.end.z }
     // in the gap he gives chase but nowhere near it
-    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive ? 1 : plan.chaseKind === 'gap' ? 0.4 : plan.boundary ? 0.8 : 0.9)))
+    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive ? 1 : plan.chaseKind === 'gap' ? 0.4 : plan.chaseKind === 'between' ? 0.7 : plan.boundary ? 0.8 : 0.9)))
   }
   // where the camera looks
   const b = ball ?? bowlerPos

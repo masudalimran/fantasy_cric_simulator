@@ -1,15 +1,25 @@
 /**
  * Where a scoring shot went. The engine decides runs, not directions, so the direction is a stable
- * pseudo-random pick from the ball number (mostly in front of the bat, occasionally behind it).
+ * pseudo-random pick from the ball number (all round the ground, most often in front of the bat).
  * The field view and the wagon wheel both use this, so they always agree.
  */
 const frac = (n: number) => n - Math.floor(n)
 
+/**
+ * How often a scoring shot goes to each part of the field (centred on straight, cover, point, third man, behind, fine leg, square leg and midwicket, in
+ * degrees clockwise from straight): all round the ground, with the straight and the cover and midwicket zones the busiest and the way behind the least.
+ */
+const ZONES: [number, number][] = [[0, 18], [45, 18], [90, 13], [135, 8], [180, 4], [-135, 8], [-90, 13], [-45, 18]]
+const ZONE_TOTAL = ZONES.reduce((n, z) => n + z[1], 0)
+
 /** Angle in radians in screen coordinates (y down): straight back down the ground is -PI/2. */
 export function shotAngle(seq: number): number {
-  const u = frac(seq * 0.6180339887)
-  const v = frac(seq * 0.3819660113 + 0.5)
-  return v > 0.88 ? Math.PI * (0.1 + 0.8 * u) : -Math.PI * (0.05 + 0.9 * u)
+  const pick = frac(seq * 0.6180339887) * ZONE_TOTAL
+  let acc = 0, centre = 0
+  for (const [c, w] of ZONES) { acc += w; if (pick < acc) { centre = c; break } }
+  // a spread of up to 40 degrees either side of the middle of the zone, mostly near it (three numbers averaged)
+  const spread = ((frac(seq * 0.3819660113 + 0.5) + frac(seq * 0.7548776662 + 0.31) + frac(seq * 0.5698402910 + 0.77)) / 3 - 0.5) * 2 * 40
+  return -Math.PI / 2 + ((centre + spread) * Math.PI) / 180
 }
 
 /** Degrees clockwise from straight (0 = back over the bowler's head, + = off side for a right-hander). */

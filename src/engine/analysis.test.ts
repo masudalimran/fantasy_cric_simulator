@@ -68,7 +68,12 @@ describe('match analysis', () => {
     // most shots go in front of the bat
     let front = 0
     for (let i = 0; i < 1000; i++) if (Math.abs(degreesFromStraight(shotAngle(i))) <= 100) front++
-    expect(front).toBeGreaterThan(780)
+    expect(front).toBeGreaterThan(600)
+    // and every part of the ground gets its share (none is empty, none is crowded)
+    const zones = new Array(8).fill(0)
+    for (let i = 1; i <= 4000; i++) zones[sectorIndex(degreesFromStraight(shotAngle(i)))]++
+    for (const n of zones) { expect(n).toBeGreaterThan(4000 * 0.025); expect(n).toBeLessThan(4000 * 0.3) }
+    expect(zones[4]).toBeLessThan(zones[0])
   })
 })
 
