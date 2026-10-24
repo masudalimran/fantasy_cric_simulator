@@ -7,6 +7,7 @@ import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE
 import { paths } from '../routes'
 import { daysBetween, formatDate } from '../season/dates'
 import { assignPhysio, injuriesOf, PHYSIOS, physioOf, releasePhysio, SEVERITY_COLOR, type Injury } from '../season/injuries'
+import { BoostCard } from './season/BoostCard'
 import { ATTR_LABEL, playerChangeLog, ratingRows, sessionTeam } from '../season/progression'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
 import { usePlayerForm, useTeamMap } from './season/shared'
@@ -307,6 +308,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
       </div>
 
       {session && <div className="mb-6 max-w-xl"><CoachCard teamId={team.id} /></div>}
+      {session && <div className="mb-6 max-w-xl"><BoostCard /></div>}
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[3fr_2fr]">
         <section>

@@ -28,6 +28,7 @@ import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/cap
 import { boxChat } from '../season/studio'
 import { isBigSix, moveFor } from '../data/moves'
 import { moveArtFor } from '../data/moveArt'
+import { BOOST_MULT, boostSummary } from '../season/boost'
 import { almostCaught } from '../components/match/almost'
 import { nearMiss } from '../components/match/nearMiss'
 import { batHitsBall, clipNow, contactAt } from '../components/match/broadcast'
@@ -126,7 +127,7 @@ function loadStops(): AutoStops {
 }
 
 function buildFromLive(live: LiveMatch): Match {
-  const m = new Match({ teamA: live.teamA, teamB: live.teamB, format: live.format, seed: live.seed, tossDecision: live.tossChoice, career: live.myTeamId ? { myTeamId: live.myTeamId, difficulty: live.difficulty ?? 'normal' } : undefined })
+  const m = new Match({ teamA: live.teamA, teamB: live.teamB, format: live.format, seed: live.seed, tossDecision: live.tossChoice, career: live.myTeamId ? { myTeamId: live.myTeamId, difficulty: live.difficulty ?? 'normal', boost: live.boost ? BOOST_MULT : undefined } : undefined })
   for (const a of live.actions) applyAction(m, a) // replays everything the player did, so we land exactly where they left off
   return m
 }
@@ -135,11 +136,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [, force] = useReducer((x: number) => x + 1, 0)
   // Built once per match from its saved actions; later actions are applied live and logged.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const match = useMemo(() => buildFromLive(live), [live.id, live.tossChoice, live.squadVersion])
+  const match = useMemo(() => buildFromLive(live), [live.id, live.tossChoice, live.squadVersion, live.boost])
   const liveAct = useStore((s) => s.liveAct)
   const setLivePhase = useStore((s) => s.setLivePhase)
   const setTossChoice = useStore((s) => s.setTossChoice)
   const setTossed = useStore((s) => s.setTossed)
+  const setLiveBoost = useStore((s) => s.setLiveBoost)
+  const session = useStore(selectSession)
   const setLiveSquad = useStore((s) => s.setLiveSquad)
   const ensureStartXI = useStore((s) => s.ensureStartXI)
   useEffect(() => { if (!live.startXI) ensureStartXI() }, [live.startXI, ensureStartXI])
@@ -1032,7 +1035,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       />
     )
   }
-  if (phase === 'toss') return <CoinToss sides={match.sides} toss={match.toss} pitch={match.pitch} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
+  const boostInfo = boostSummary([...(session?.history ?? []), ...(session ? [session.season] : [])], session?.boost, session?.season.difficulty)
+  if (phase === 'toss') return <CoinToss boost={match.mySide !== null && !live.replay && boostInfo.allowed ? { available: boostInfo.available, on: !!live.boost, onChange: setLiveBoost } : undefined} sides={match.sides} toss={match.toss} pitch={match.pitch} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
 
   // between the innings the screen stays on the first innings until you press Next innings
   const holding = holdNow

@@ -25,7 +25,7 @@ export interface MatchOptions {
   /** What the toss winner chooses, when a person (not the computer) makes the call. The coin is unaffected. */
   tossDecision?: 'bat' | 'bowl'
   /** Career mode: this is the player's team, and this is how hard the computer plays against it. */
-  career?: { myTeamId: string | null; difficulty: Difficulty }
+  career?: { myTeamId: string | null; difficulty: Difficulty; /** A boost token is in use: every rating of your side is multiplied by this (see season/boost.ts). */ boost?: number }
 }
 
 interface Form { bat: number; bowl: number }
@@ -61,11 +61,15 @@ export class Match {
   /** The side the player manages (null = the player manages both, as in a friendly). */
   readonly mySide: 0 | 1 | null
   readonly difficulty: Difficulty | null
+  /** The side of yours that has a boost token in use, or null. */
+  get boostedSide(): 0 | 1 | null { return this.mySide !== null && this.boostMult[this.mySide] > 1 ? this.mySide : null }
   /** The computer's side in career mode; null when neither team is the player's. */
   private cpuSide: 0 | 1 | null = null
   /** True in career/session matches, where any side that isn't yours is run by the computer. */
   private careerOn = false
   private bonus: [number, number] = [0, 0]
+  /** A boost token multiplies every rating of a side (1 = none). */
+  private boostMult: [number, number] = [1, 1]
   private blunder = 0
 
   /** A Test: where the match is on the five-day clock (null in the limited-overs formats). */
@@ -110,6 +114,7 @@ export class Match {
       this.bonus[this.cpuSide] = d.boost
       this.bonus[this.mySide] = d.help
       this.blunder = d.blunder
+      if (opts.career.boost && opts.career.boost > 1) this.boostMult[this.mySide] = opts.career.boost
     }
     this.toss = this.doToss(opts.toss, opts.tossDecision)
     const batsFirst = this.toss.decision === 'bat' ? this.toss.winnerSide : ((1 - this.toss.winnerSide) as 0 | 1)
@@ -439,9 +444,9 @@ export class Match {
       format, phase, intent, style: BOWL_STYLE_VALUE[this.bowlStyle[bowlingSideIdx] ?? 'normal'], pitch: this.pitch, inningsIndex: inn.index, freeHit: inn.freeHit,
       forfeit: this.forfeitSide === battingSideIdx ? 'bat' : this.forfeitSide === bowlingSideIdx ? 'bowl' : undefined,
       ballsFaced: strikerLine.balls,
-      fieldingAvg: this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx],
-      bat: effectiveBat(striker, { phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx] }),
-      bowl: effectiveBowl(bowler, { phase, pitch: this.pitch, inningsIndex: this.clock ? (this.clock.day >= 3 ? 1 : 0) : (inn.index as 0 | 1), fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx] }),
+      fieldingAvg: (this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx]) * this.boostMult[bowlingSideIdx],
+      bat: effectiveBat(striker, { phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx], mult: this.boostMult[battingSideIdx] }),
+      bowl: effectiveBowl(bowler, { phase, pitch: this.pitch, inningsIndex: this.clock ? (this.clock.day >= 3 ? 1 : 0) : (inn.index as 0 | 1), fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx], mult: this.boostMult[bowlingSideIdx] }),
     })
 
     // ---- Roll the delivery

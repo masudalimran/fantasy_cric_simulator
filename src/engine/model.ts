@@ -66,6 +66,8 @@ export interface BatContext {
   form: number
   /** Rating points added for this side (difficulty). */
   bonus?: number
+  /** A boost token: every rating of this side is multiplied by this (1.5). */
+  mult?: number
 }
 
 export function effectiveBat(p: Player, c: BatContext): EffBat {
@@ -86,7 +88,8 @@ export function effectiveBat(p: Player, c: BatContext): EffBat {
     else temp -= 5
   }
   const f = c.form + (c.bonus ?? 0)
-  return { tech: tech + f, power: power + f, temp: temp + f * 0.5, run: run + f * 0.4 }
+  const m = c.mult ?? 1
+  return { tech: (tech + f) * m, power: (power + f) * m, temp: (temp + f * 0.5) * m, run: (run + f * 0.4) * m }
 }
 
 export interface BowlContext {
@@ -97,6 +100,8 @@ export interface BowlContext {
   form: number
   /** Rating points added for this side (difficulty). */
   bonus?: number
+  /** A boost token: every rating of this side is multiplied by this (1.5). */
+  mult?: number
 }
 
 export function effectiveBowl(p: Player, c: BowlContext): EffBowl {
@@ -110,7 +115,8 @@ export function effectiveBowl(p: Player, c: BowlContext): EffBowl {
   if (has('death-specialist') && c.phase === 'death') { acc += 7 }
   vari += isPaceType(w.type) ? c.pitch.pace * 5 : c.pitch.spin * 5 * (c.inningsIndex === 1 ? 1.4 : 1)
   const b = c.bonus ?? 0
-  return { acc: acc - c.fatigue + c.form * 0.8 + b, vari: vari - c.fatigue * 0.6 + c.form + b }
+  const m = c.mult ?? 1
+  return { acc: (acc - c.fatigue + c.form * 0.8 + b) * m, vari: (vari - c.fatigue * 0.6 + c.form + b) * m }
 }
 
 export const PART_TIME = { type: 'medium' as BowlType, accuracy: 36, variation: 32, stamina: 50 }

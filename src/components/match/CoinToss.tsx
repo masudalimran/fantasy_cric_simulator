@@ -11,6 +11,7 @@ import { sfx } from '../../audio/sfx'
 import { useIsMobile } from '../../hooks'
 import { TipBanner } from '../TipBanner'
 import { SquadDialog } from './SquadDialog'
+import { BoostSwitch } from '../season/BoostCard'
 
 /** A gold coin that spins six times and lands on the right face. */
 function Coin({ result, flipping, size }: { result: 'heads' | 'tails'; flipping: boolean; size: number }) {
@@ -126,7 +127,7 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
  * bar along the bottom: tap it, it spins, the toss is decided (and, if you won it, you choose to bat or bowl),
  * and then play begins.
  */
-export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel, mySide = null, tossed = false, onTossed, startXI, editable = [false, false], careerSquad = false, onSaveSquad, pitch }: {
+export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel, mySide = null, tossed = false, onTossed, startXI, editable = [false, false], careerSquad = false, onSaveSquad, pitch, boost }: {
   sides: [Side, Side]; toss: TossResult; onStart: () => void
   /** The pitch for this match: a report is shown once the coin has landed. */
   pitch?: Pitch
@@ -149,6 +150,8 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
   /** Squad changes are kept for the career (true) or only for this match. */
   careerSquad?: boolean
   onSaveSquad?: (side: 0 | 1, order: string[], captainId: string, keeperId: string | undefined) => void
+  /** Your boost token for this match: how many you have, whether it is in use, and the switch (not shown when you have none and it is off). */
+  boost?: { available: number; on: boolean; onChange: (on: boolean) => void }
 }) {
   const [editing, setEditing] = useState<0 | 1 | null>(null)
   const [stage, setStage] = useState<'idle' | 'flipping' | 'done'>(tossed ? 'done' : 'idle')
@@ -184,9 +187,11 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
         <>
           <p className="text-sm text-slate-300"><span className="font-semibold text-white">{caller.name}</span> call <span className="font-semibold uppercase text-amber-300">{toss.call}</span>.</p>
           <p className="font-display text-2xl leading-tight tracking-wide text-amber-300">Tap the coin to toss</p>
+          {boost && (boost.available > 0 || boost.on) && !tossed && <div className="mt-1.5"><BoostSwitch compact on={boost.on} onChange={boost.onChange} available={boost.available} /></div>}
         </>
       )}
       {stage === 'flipping' && <p className="text-lg text-slate-300">Flipping…</p>}
+      {stage !== 'idle' && boost?.on && <p className="mt-0.5 inline-block rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-extrabold text-black">⚡ BOOST ON: your team is 50% better</p>}
       {stage === 'done' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <p className="text-sm text-slate-300">It's <span className="font-bold uppercase text-amber-300">{toss.coin}</span>.</p>

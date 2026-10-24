@@ -12,6 +12,7 @@ import { recordResult } from '../season/results'
 import { appendAction, type Action } from '../engine/replay'
 import type { Difficulty } from '../engine/types'
 import type { RawSummary, Season, SeasonReview } from '../season/types'
+import { boostSummary, type BoostState } from '../season/boost'
 import type { MatchFormat, Team } from '../types'
 
 export interface SessionFile {
@@ -24,6 +25,8 @@ export interface SessionFile {
   reviews: SeasonReview[]
   /** Every finished season in full (tournaments, results, ratings), oldest first, so past years can be looked back on. */
   history?: Season[]
+  /** Boost tokens: how many have been spent, and whether one is armed for the next match (older careers have none saved). */
+  boost?: BoostState
 }
 
 /** The match being played right now. It's saved as its seed, squads and the actions taken so far. */
@@ -55,6 +58,8 @@ export interface LiveMatch {
   squadVersion?: number
   /** Who was in each side's XI when the toss screen first opened, so squad changes can be shown as in and out. */
   startXI?: [string[], string[]]
+  /** A boost token is in use for your side in this match (it is spent when the coin is flipped). */
+  boost?: boolean
   actions: Action[]
   finished: boolean
 }
@@ -94,6 +99,10 @@ interface State {
   setLivePhase: (phase: 'toss' | 'play') => void
   setTossChoice: (c: 'bat' | 'bowl') => void
   setTossed: () => void
+  /** Arms (or disarms) a boost token for your next match in the open career. */
+  armBoost: (on: boolean) => void
+  /** Uses (or does not use) a boost token in the match on the toss screen (only before the coin is flipped). */
+  setLiveBoost: (on: boolean) => void
   /** For a match that was started before squad changes were tracked: take the XIs as they are now as the starting point. */
   ensureStartXI: () => void
   /** Changes one side's XI, batting order, captain and keeper for the match about to start (only before the toss). */
@@ -187,6 +196,9 @@ export const useStore = create<State>()(
           difficulty: fixtureId && season ? (season.difficulty ?? 'normal') : 'normal',
           replay: !!(fixtureId && season?.results[fixtureId]), phase: 'toss', actions: [], finished: false,
         }
+        // a token armed from the squad screen goes into the next match of yours
+        const ses = selectSession(get())
+        if (ses && live.myTeamId && !live.replay && boostSummary([...(ses.history ?? []), ses.season], ses.boost, ses.season.difficulty).armed) live.boost = true
         set({ liveMatch: live })
       },
       liveAct: (a) => set((st) => (st.liveMatch ? { liveMatch: { ...st.liveMatch, actions: appendAction(st.liveMatch.actions, a) } } : st)),
@@ -203,7 +215,40 @@ export const useStore = create<State>()(
           return { liveMatch: { ...live, [key]: { ...team, players: [...ordered, ...rest], captainId, keeperId }, squadVersion: (live.squadVersion ?? 0) + 1 } }
         }),
       ensureStartXI: () => set((st) => (st.liveMatch && !st.liveMatch.startXI ? { liveMatch: { ...st.liveMatch, startXI: [st.liveMatch.teamA.players.slice(0, 11).map((p) => p.id), st.liveMatch.teamB.players.slice(0, 11).map((p) => p.id)] } } : st)),
-      setTossed: () => set((st) => (st.liveMatch && !st.liveMatch.tossed ? { liveMatch: { ...st.liveMatch, tossed: true } } : st)),
+      setTossed: () =>
+        set((st) => {
+          const live = st.liveMatch
+          if (!live || live.tossed) return st
+          // the coin is flipped: a boost token in use is spent
+          const spend = !!live.boost && !live.replay
+          return {
+            liveMatch: { ...live, tossed: true },
+            sessions: spend ? st.sessions.map((x) => (x.id === (live.sessionId ?? st.activeSessionId) ? { ...x, boost: { used: (x.boost?.used ?? 0) + 1, armed: false } } : x)) : st.sessions,
+          }
+        }),
+      armBoost: (on) =>
+        set((st) => ({
+          sessions: st.sessions.map((x) => {
+            if (x.id !== st.activeSessionId) return x
+            const b = boostSummary([...(x.history ?? []), x.season], x.boost, x.season.difficulty)
+            if (on && b.available <= 0) return x
+            return { ...x, boost: { used: x.boost?.used ?? 0, armed: on } }
+          }),
+        })),
+      setLiveBoost: (on) =>
+        set((st) => {
+          const live = st.liveMatch
+          if (!live || live.tossed || live.actions.length > 0 || !live.myTeamId || live.replay) return st
+          const sid = live.sessionId ?? st.activeSessionId
+          const ses = st.sessions.find((x) => x.id === sid)
+          if (!ses) return st
+          const b = boostSummary([...(ses.history ?? []), ses.season], ses.boost, ses.season.difficulty)
+          if (on && b.available <= 0) return st
+          return {
+            liveMatch: { ...live, boost: on },
+            sessions: st.sessions.map((x) => (x.id === sid ? { ...x, boost: { used: x.boost?.used ?? 0, armed: on } } : x)),
+          }
+        }),
       setTossChoice: (c) => set((st) => (st.liveMatch && st.liveMatch.actions.length === 0 ? { liveMatch: { ...st.liveMatch, tossChoice: c } } : st)),
       finishLive: () => set((st) => (st.liveMatch && !st.liveMatch.finished ? { liveMatch: { ...st.liveMatch, finished: true } } : st)),
       discardLive: () => set({ liveMatch: null }),
