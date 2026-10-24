@@ -68,7 +68,7 @@ function Figure({ player, team, look, shirt, arm, bat, armL, armR }: { player?: 
 function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number; rate: number }) {
   const [on, setOn] = useState(false)
   useEffect(() => {
-    const k = Math.max(0.3, rate)
+    const k = Math.max(0.15, rate)
     const a = window.setTimeout(() => setOn(true), (at * 1000) / k)
     const b = window.setTimeout(() => setOn(false), ((at + dur) * 1000) / k)
     return () => { window.clearTimeout(a); window.clearTimeout(b) }
@@ -82,7 +82,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0, replay }: {
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate: rateProp = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0, replay, fitSeconds }: {
+  /** Play the clip so that it finishes in this many seconds, whatever its length (every ball of a highlight reel is shown to the end). */
+  fitSeconds?: number
   /** Set when this is a replay inside an animation screen: it uses another camera and plays with slow motion around the shot, so it looks different from the live picture. */
   replay?: { cam: ReplayCam; slowMo?: boolean } | null
   /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
@@ -121,11 +123,12 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
     const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler))
     // (a replay inside an animation screen must not touch the clock the live clip keeps)
-    if (event && !replay) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.3, rate)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
+    if (event && !replay && !fitSeconds) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.15, rateProp)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
   const plan: Plan = useMemo(() => (replay?.slowMo ? withReplaySlow(plan0) : plan0), [plan0, replay?.slowMo])
+  const rate = fitSeconds ? Math.max(0.2, Math.min(3, fitSeconds / plan.realTotal)) : rateProp
   const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
@@ -305,7 +308,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const dt = Math.min(0.05, (now - prev) / 1000)
         prev = now
         // (a nick's slow motion makes the clip last longer than its own seconds)
-        const real = (now - t0) / 1000 / Math.max(0.3, live.current.rate)
+        const real = (now - t0) / 1000 / Math.max(0.15, live.current.rate)
         const lp = live.current.plan
         paint(Math.min(warpTime(lp, real), lp.total), dt, false)
         if (real < lp.realTotal) raf = requestAnimationFrame(tick)
@@ -316,7 +319,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     const ro = new ResizeObserver(() => paint(lastT.current, 0.016, true))
     ro.observe(el)
     return () => { stopped = true; cancelAnimationFrame(raf); ro.disconnect() }
-  }, [event?.seq, striker.id])
+  }, [event?.seq]) // (not the striker: when the ball's result is shown the batsman at the crease may change, and that must not start the clip again)
 
   const L = live.current
   void L
@@ -338,7 +341,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {/* the speed gun: the speed of the ball just after it is let go */}
       {event && <SpeedGun key={event.seq} kmh={plan.speed} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
       {captionsOn && caption && event && (
-        <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.3, rate), duration: 3.4 / Math.max(0.3, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
+        <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.15, rate), duration: 3.4 / Math.max(0.15, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}
       {replay && <div className="pointer-events-none absolute inset-0 z-[5500]" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.10), rgba(2,6,23,0.18))', boxShadow: 'inset 0 0 0 2px rgba(56,189,248,0.55), inset 0 0 40px rgba(2,6,23,0.55)' }} />}
       <div ref={setNode('tagSlow')} className="pointer-events-none absolute bottom-8 right-2 z-[6001] hidden rounded bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>

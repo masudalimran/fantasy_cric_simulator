@@ -265,7 +265,8 @@ export function RunOutReview({ info }: { info: RunOutInfo }) {
     const ts = [window.setTimeout(() => sfx.howzat(), 100), window.setTimeout(() => sfx.thinking(), 1300 * r), window.setTimeout(() => (safe ? sfx.decisionNotOut() : sfx.decisionOut()), 4200 * r)]
     return () => ts.forEach(clearTimeout)
   }, [r, safe])
-  const gap = Math.min(30, 4 + cm * 0.38) // the gap drawn between the bat and the line, in picture units
+  // the bat and the line: when he is out the bat is still short of the crease (to the right of the line, away from the stumps); when he is safe it is grounded inside the crease (to the left of the line, between the line and the stumps)
+  const gap = safe ? -Math.min(9, 2 + cm * 0.1) : Math.min(30, 4 + cm * 0.38)
   return (
     <div ref={box} className="absolute inset-0" aria-label="Run out decision">
       <TvFrame title="Third umpire">
@@ -292,8 +293,8 @@ export function RunOutReview({ info }: { info: RunOutInfo }) {
             <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.0 * r }}>
               <line x1="20" x2={20 + gap} y1="31" y2="31" stroke={safe ? '#34d399' : '#f87171'} strokeWidth="1" />
               <line x1="20" x2="20" y1="28.5" y2="33.5" stroke="#f87171" strokeWidth="1" />
-              <line x1={20 + gap} x2={20 + gap} y1="28.5" y2="33.5" stroke="#f87171" strokeWidth="1" />
-              <text x={20 + gap / 2} y="38" fontSize="4.2" fontWeight="800" textAnchor="middle" fill="#fca5a5">{cm} cm</text>
+              <line x1={20 + gap} x2={20 + gap} y1="28.5" y2="33.5" stroke={safe ? '#34d399' : '#f87171'} strokeWidth="1" />
+              <text x={20 + gap / 2} y="38" fontSize="4.2" fontWeight="800" textAnchor="middle" fill={safe ? '#6ee7b7' : '#fca5a5'}>{safe ? `in by ${cm} cm` : `${cm} cm`}</text>
             </motion.g>
           </svg>
         </motion.div>

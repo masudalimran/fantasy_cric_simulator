@@ -36,6 +36,7 @@ import type { ReplayBase } from '../components/match/ReplayFrame'
 import { EXTRA_CAST_SECONDS, FOUR_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { wicketCard } from '../season/wicketCards'
 import { CATCH_SECONDS } from '../components/match/CatchScreen'
+import { matchBefore } from '../engine/asOf'
 import { stadiumLook } from '../engine/stadium'
 import { challengeTalk } from '../season/challenge'
 import { TIMEOUT_INTRO_SECONDS } from '../components/match/TimeoutIntro'
@@ -173,6 +174,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const noteTimer = useRef<number | undefined>(undefined)
   const motmTimer = useRef<number | undefined>(undefined)
   const [note, setNote] = useState<StageNote | null>(null)
+  // The first ball whose outcome the screen must not show yet: the engine has played it, but its animations are still going, so the scoreboard, scorecard and commentary read the match as it was before it.
+  const [revealHold, setRevealHold] = useState<number | null>(null)
   const [motmOpen, setMotmOpen] = useState(false)
   const [upgradesOpen, setUpgradesOpen] = useState(false)
   const [winOpen, setWinOpen] = useState(false)
@@ -336,6 +339,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   // the live commentary: said aloud when the voices are on in "full" mode
   const voiceTimer = useRef(0)
+  const pendingOutcome = useRef<(() => void)[]>([])
+  const flushOutcome = useCallback(() => { const run = pendingOutcome.current; pendingOutcome.current = []; run.forEach((fn) => fn()) }, [])
   const boxLines = useRef<string[] | null>(null)
   /** An appeal turned down on the field: the ball tracking or sound graph shows why, or the third umpire clears the batsman of a run out. */
   const turnedDownMoments = (ev: BallEvent, rate: number, delay: number) => {
@@ -382,6 +387,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const announceEvents = useCallback(
     (events: BallEvent[]) => {
       force()
+      // while a ball is being shown on the broadcast picture the display holds back its result until the animations are done
+      const holding = events.length === 1 && getBroadcastView()
+      flushOutcome()
+      setRevealHold(holding ? events[0].seq : null)
+      // celebrations (sounds, confetti, banners) wait for the result to be shown, so they never give the ball away
+      const later = (fn: () => void) => { if (holding) pendingOutcome.current.push(fn); else fn() }
       if (getVoiceMode() === 'full' && !match.isOver && events.length > 0 && events.length <= 12) {
         const ev = events[events.length - 1]
         window.clearTimeout(voiceTimer.current)
@@ -391,11 +402,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const lines = liveLines(ev, names)
         const rf = autoRef.current === 4 ? 0.5 : autoRef.current === 2 ? 0.75 : 1
         // in the broadcast view the commentator speaks once the ball has been hit
-        voiceTimer.current = window.setTimeout(() => {
-          const extra = boxLines.current
-          boxLines.current = null
-          void speakLines([...lines, ...(extra ?? []).map((text, i) => ({ text, role: (i % 2 ? 'colour' : 'pbp') as 'pbp' | 'colour' }))])
-        }, getBroadcastView() ? 1500 * rf : 350)
+        const speak = () => {
+          voiceTimer.current = window.setTimeout(() => {
+            const extra = boxLines.current
+            boxLines.current = null
+            void speakLines([...lines, ...(extra ?? []).map((text, i) => ({ text, role: (i % 2 ? 'colour' : 'pbp') as 'pbp' | 'colour' }))])
+          }, holding ? 250 : getBroadcastView() ? 1500 * rf : 350)
+        }
+        later(speak)
       }
       // Sound for the last delivery (or the final result). The crowd "awws" at wickets and roars at boundaries.
       const lastEv = events[events.length - 1]
@@ -409,18 +423,20 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       if (match.isOver) {
         // the celebration (or defeat) screen has its own sound
       } else if (lastEv && events.length <= 12) {
-        if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) haptic([30, 80, 30, 60, 90]) // the fist bump
-        else if (lastEv.wicket) haptic([60, 40, 90])
-        else if (lastEv.boundary === 6) haptic([20, 30, 20])
-        else if (lastEv.boundary === 4) haptic(18)
-        if (lastEv.tags.includes('hat-trick')) sfx.hatTrick()
-        else if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) sfx.fistBump()
-        else if (lastEv.tags.includes('five-wickets')) sfx.milestone()
-        else if (lastEv.wicket) sfx.wicket()
-        else if (lastEv.boundary === 6) sfx.six()
-        else if (lastEv.boundary === 4) sfx.four()
-        else if (lastEv.extraType === 'noball') sfx.noBall()
-        else sfx.hit(lastEv.runsBat >= 2 ? 0.55 : 0.25)
+        later(() => {
+          if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) haptic([30, 80, 30, 60, 90]) // the fist bump
+          else if (lastEv.wicket) haptic([60, 40, 90])
+          else if (lastEv.boundary === 6) haptic([20, 30, 20])
+          else if (lastEv.boundary === 4) haptic(18)
+          if (lastEv.tags.includes('hat-trick')) sfx.hatTrick()
+          else if (lastEv.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')) sfx.fistBump()
+          else if (lastEv.tags.includes('five-wickets')) sfx.milestone()
+          else if (lastEv.wicket) sfx.wicket()
+          else if (lastEv.boundary === 6) sfx.six()
+          else if (lastEv.boundary === 4) sfx.four()
+          else if (lastEv.extraType === 'noball') sfx.noBall()
+          else sfx.hit(lastEv.runsBat >= 2 ? 0.55 : 0.25)
+        })
       }
       if (match.isOver) {
         // The match is over: the last ball's own screens (a six, a wicket, a hundred) play first, then the whole screen becomes a celebration.
@@ -497,7 +513,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const mark = Math.floor(lastEv.score.runs / 50) * 50
         if (mark >= 100 && before < mark && lastEv.score.runs >= mark) {
           const t = match.sides[match.innings[lastEv.innings].battingSide].team
-          showNote({ key: lastEv.seq + 0.3, tone: 'milestone', title: `${mark} UP`, sub: `${t.name} ${lastEv.score.runs}/${lastEv.score.wickets} in ${Math.floor(lastEv.score.legalBalls / 6)}.${lastEv.score.legalBalls % 6} overs` })
+          later(() => showNote({ key: lastEv.seq + 0.3, tone: 'milestone', title: `${mark} UP`, sub: `${t.name} ${lastEv.score.runs}/${lastEv.score.wickets} in ${Math.floor(lastEv.score.legalBalls / 6)}.${lastEv.score.legalBalls % 6} overs` }))
         }
       }
       // single-ball extras: a stand of 50, 100..., and the odd review of a not-out
@@ -552,7 +568,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const overWkts = thisOver.filter((e) => e.wicket).length
           const teamMark = Math.floor(lastEv.score.runs / 50) * 50
           const teamBanner = teamMark >= 100 && lastEv.score.runs - lastEv.total < teamMark
-          if (!teamBanner && (overRuns >= 12 || overWkts >= 2)) showNote({ small: true, key: lastEv.seq + 0.2, tone: overWkts >= 2 ? 'wicket' : overRuns >= 18 ? 'six' : 'four', title: `Over ${done}: ${overRuns} ${overRuns === 1 ? 'run' : 'runs'}`, sub: `${match.player(lastEv.bowlerId).name}${overWkts ? ` · ${overWkts} ${overWkts === 1 ? 'wicket' : 'wickets'}` : ''}` })
+          if (!teamBanner && (overRuns >= 12 || overWkts >= 2)) later(() => showNote({ small: true, key: lastEv.seq + 0.2, tone: overWkts >= 2 ? 'wicket' : overRuns >= 18 ? 'six' : 'four', title: `Over ${done}: ${overRuns} ${overRuns === 1 ? 'run' : 'runs'}`, sub: `${match.player(lastEv.bowlerId).name}${overWkts ? ` · ${overWkts} ${overWkts === 1 ? 'wicket' : 'wickets'}` : ''}` }))
         }
       }
       // the strategic timeout: a TV screen for 30 seconds at set points in each innings (after the over is complete and nothing else is on)
@@ -817,14 +833,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             }
           }
         } else if (milestone && outLine) {
-          showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` }) // hat-trick or a five-wicket haul
+          later(() => showNote({ key: notable.seq, tone: 'milestone', title: tagLabel[milestone], sub: `${match.player(notable.bowlerId).name}` })) // hat-trick or a five-wicket haul
         }
         void who
       }
-      if (milestone) showFx({ key: notable.seq, kind: 'milestone', text: milestone === 'hat-trick' || milestone === 'five-wickets' ? tagLabel[milestone] : '', colors })
-      else if (notable.wicket) showFx({ key: notable.seq, kind: 'wicket', text: '', colors })
-      else if (notable.boundary === 6) showFx({ key: notable.seq, kind: 'six', text: 'SIX!', colors })
-      else showFx({ key: notable.seq, kind: 'four', text: 'FOUR!', colors })
+      if (milestone) later(() => showFx({ key: notable.seq, kind: 'milestone', text: milestone === 'hat-trick' || milestone === 'five-wickets' ? tagLabel[milestone] : '', colors }))
+      else if (notable.wicket) later(() => showFx({ key: notable.seq, kind: 'wicket', text: '', colors }))
+      else if (notable.boundary === 6) later(() => showFx({ key: notable.seq, kind: 'six', text: 'SIX!', colors }))
+      else later(() => showFx({ key: notable.seq, kind: 'four', text: 'FOUR!', colors }))
       timeoutMoment()
       cheerMoment()
       finalMoments()
@@ -875,6 +891,17 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     if (auto && !wasAuto.current) dismissMoment()
     wasAuto.current = auto
   }, [auto, dismissMoment])
+
+  // the result of the ball is shown once its clip and every screen for it have played (or when somebody moves on)
+  useEffect(() => {
+    if (revealHold === null) return
+    const started = Date.now()
+    const id = window.setInterval(() => {
+      const waiting = current.current || queue.current.length > 0 || (getBroadcastView() && clipNow.until > Date.now())
+      if (!waiting || Date.now() - started > 20000) { setRevealHold(null); flushOutcome() }
+    }, 120)
+    return () => window.clearInterval(id)
+  }, [revealHold, flushOutcome])
 
   // Auto-play: one ball at a time at the chosen speed, but linger on the moments that matter
   // (wickets, boundaries, milestones) so the celebration, banner and sound have time to land.
@@ -974,8 +1001,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     else if (match.awaiting === null) setBreakOpen(false)
   }
   match.hold = holding ? (match.format === 'test' ? (match.awaiting ? match.current.index : Math.max(0, match.current.index - 1)) : 0) : null
-  const inn = match.shown
-  const batSide = match.battingSide(inn)
+  // what the screen shows: the match as it stood before the ball that is still being shown (see revealHold)
+  const view = revealHold === null ? match : matchBefore(match, revealHold)
+  const inn = view.shown
+  const batSide = view.battingSide(inn)
   // lining up a shot or a delivery: only for the side(s) a person is running, never for the computer's
   const batIdx = inn.battingSide
   const watching = !!live.myTeamId && match.mySide === null
@@ -988,7 +1017,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     aimDelivery: userBowls ? match.deliveryAim[(1 - batIdx) as 0 | 1] : null,
     onSwipe: swipeOn && userBats ? (a: { angle: number; loft: boolean }) => { haptic(8); act({ t: 'shot', side: batIdx, v: a }); if (manual) act({ t: 'ball' }) } : undefined,
   }
-  const bowlSide = match.bowlingSide(inn)
+  const bowlSide = view.bowlingSide(inn)
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
   // the broadcast's score bug: the score, the two batsmen, the bowler and what a chase needs
@@ -1006,12 +1035,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     need: inn.target !== null && inn.target - inn.runs > 0 ? `Need ${inn.target - inn.runs} off ${match.maxOvers * 6 - inn.legalBalls}` : null,
   }
   // a free hit: the ball about to be bowled ('next') or the one just bowled, whose outcome is on the field ('ball')
-  const freeHitState: 'next' | 'ball' | null = match.isOver ? null : inn.freeHit ? 'next' : lastHere?.freeHit ? 'ball' : null
-  const striker = match.player(inn.strikerId)
-  const nonStriker = match.player(inn.nonStrikerId)
+  const freeHitState: 'next' | 'ball' | null = view.isOver ? null : inn.freeHit ? 'next' : lastHere?.freeHit ? 'ball' : null
+  const striker = view.player(inn.strikerId)
+  const nonStriker = view.player(inn.nonStrikerId)
   const bowlerId = inn.bowlerId ?? inn.prevBowlerId ?? bowlSide.xi.find((p) => p.bowling)?.id ?? bowlSide.xi[0].id
   const bowler = match.player(bowlerId)
-  const displayOver = inn.legalBalls % 6 === 0 && inn.legalBalls > 0 && inn.bowlerId !== null && !inn.log.some((e) => e.over === match.over) ? match.over - 1 : match.over
+  const displayOver = inn.legalBalls % 6 === 0 && inn.legalBalls > 0 && inn.bowlerId !== null && !inn.log.some((e) => e.over === view.over) ? view.over - 1 : view.over
   const overEvents = inn.log.filter((e) => e.over === displayOver)
   // the field for this stage of the game (scenery only: the engine never reads it)
   noMirrorRef.current = userBats && (manual || swipeOn)
@@ -1027,12 +1056,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       .flatMap((u) => { const e = playerIndex.get(u.playerId); return e ? [{ player: e.player, team: e.team, before: u.before, after: u.after }] : [] })
   })()
   // chasing in the last two overs: what is needed
-  const chase = inn.target !== null && !match.isOver && match.format !== 'test' ? { need: inn.target - inn.runs, balls: FORMATS[match.format].overs * 6 - inn.legalBalls, wickets: 10 - inn.wickets } : null
+  const chase = inn.target !== null && !view.isOver && match.format !== 'test' ? { need: inn.target - inn.runs, balls: FORMATS[match.format].overs * 6 - inn.legalBalls, wickets: 10 - inn.wickets } : null
   const plan = fieldPlan({
     format: match.format, over: displayOver, maxOvers: FORMATS[match.format].overs, runs: inn.runs, legalBalls: inn.legalBalls, target: inn.target,
     freeHit: freeHitState !== null, bowlType: bowler.bowling?.type ?? null, hand: striker.hand, noMirror: noMirrorRef.current,
   })
-  const inningsBreak = match.format !== 'test' && inn.index === 1 && inn.legalBalls === 0 && !match.isOver
+  const inningsBreak = match.format !== 'test' && inn.index === 1 && inn.legalBalls === 0 && !view.isOver
   const cfg = FORMATS[match.format]
   const pom = awards?.motm ?? null
   // a final your team has won: the long tournament celebration plays after the winners' screen
@@ -1056,7 +1085,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   })
   const compNameOf = (f: NonNullable<typeof fixture>) => { const c = season?.competitions.find((x) => x.id === f.competitionId); return c ? competitionName(c, teamMap) : '' }
   const showUpgrades = () => { if (upgrades.length > 0 && !upgradesSeen.current) { upgradesSeen.current = true; window.setTimeout(() => setUpgradesOpen(true), 250) } }
-  const resultCard = match.isOver && match.result ? (
+  const resultCard = view.isOver && match.result ? (
 <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-fuchsia-500/10 p-5 text-center">
           <div className="font-display text-4xl tracking-wide text-amber-300">{match.result.text}</div>
           {pom && (
@@ -1118,7 +1147,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{match.awaiting === 'followon' && !moment && <FollowOnPrompt match={match} onChoose={(enforce) => act({ t: 'followon', enforce })} />}</AnimatePresence>
       <ControlsSheet match={match} act={act} auto={auto} setAuto={setAuto} open={controlsOpen && !finished} setOpen={setControlsOpen} mySide={match.mySide} spectating={!!live.myTeamId && match.mySide === null} stops={stops} setStops={setStops} hideDock={mobile} holdLabel={holding ? holdText : undefined} onHold={resume} manual={manual} setManual={setManualPlay} />
       {/* the last ball's own screens (the field is gone by then) play over a dark backdrop before the celebration */}
-      <AnimatePresence>{match.isOver && moment && !winOpen && <motion.div key="finalmoment" className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="relative aspect-[16/10] w-full max-w-3xl"><AnimatePresence><MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} /></AnimatePresence></div></motion.div>}</AnimatePresence>
+      <AnimatePresence>{match.isOver && view.isOver && moment && !winOpen && <motion.div key="finalmoment" className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="relative aspect-[16/10] w-full max-w-3xl"><AnimatePresence><MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} /></AnimatePresence></div></motion.div>}</AnimatePresence>
       <AnimatePresence>{winOpen && <WinCelebration match={match} mySide={match.mySide} final={finalName} onContinue={() => { setWinOpen(false); if (champComp) { setVictoryOpen(true); return } if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} />}</AnimatePresence>
       <AnimatePresence>{victoryOpen && champComp && season && (() => { const c = campaignOf(season, champComp, season.myTeamId as string); const mine = match.sides.find((x) => x.team.id === season.myTeamId); const team = mine?.team; if (!team) return null; return <TournamentVictory key="victory" info={{ team, runnerUp: c.runnerUpId ? teamMap.get(c.runnerUpId) ?? null : null, tournament: competitionName(champComp, teamMap), resultText: c.resultText || (match.result?.text ?? ''), played: c.played, won: c.won, players: [...(mine?.xi ?? [])].sort((a, b) => (b.id === team.captainId ? 1 : 0) - (a.id === team.captainId ? 1 : 0)), variant: variantOf(champComp.id) }} onDone={() => { setVictoryOpen(false); markSeen(`champ:${sessionId}:${season.year}:${champComp.id}`); if (awards) { window.clearTimeout(motmTimer.current); motmTimer.current = window.setTimeout(() => setMotmOpen(true), 250) } }} /> })()}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && <MotmOverlay match={match} awards={awards} onClose={() => { setMotmOpen(false); if (getAnimPrefs().studio && !studioEnded.current) { studioEnded.current = true; setStudio('end') } else showUpgrades() }} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
@@ -1138,14 +1167,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   if (mobile && landscape) {
     // a phone held sideways: the field on the left, everything else beside it
     return (
-      <PlayerCardProvider match={match} career={!!live.fixtureId}>
+      <PlayerCardProvider match={view} career={!!live.fixtureId}>
         {overlays}
         <div className="fixed inset-0 z-30 flex bg-ink" data-scroll-lock style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)' }}>
           <div className="flex min-w-0 flex-[1.3] flex-col">
-            <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-            {match.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : showBreak ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">{match.awaiting === 'day' ? 'Stumps' : 'Innings break'}</b>{match.awaiting === 'day' ? 'Play is over for the day. Press Next day to go on.' : 'Look the innings over, then press Next innings.'}</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
+            <MobileScoreboard match={view} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
+            {view.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : showBreak ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">{match.awaiting === 'day' ? 'Stumps' : 'Innings break'}</b>{match.awaiting === 'day' ? 'Play is over for the day. Press Next day to go on.' : 'Look the innings over, then press Next innings.'}</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
-                <Stage
+                <Stage held={revealHold !== null}
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
                   battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} wear={pitchWear} scoreBug={scoreBug} caption={caption} {...aimProps}
                 />
@@ -1154,10 +1183,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             </div>}
           </div>
           <div className="flex min-w-0 flex-1 flex-col border-l border-line" style={{ paddingTop: 'var(--sat)' }}>
-            {!match.isOver && !showBreak && <MobileNowPlaying match={match} displayOver={displayOver} />}
+            {!view.isOver && !showBreak && <MobileNowPlaying match={view} displayOver={displayOver} />}
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
-              {!match.isOver && resultCard}
-              <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
+              {!view.isOver && resultCard}
+              <Commentary match={view} tab={tab} setTab={setTab} controls={controlsNode} />
             </div>
             {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? holdText.toUpperCase() : undefined} onBall={() => (holding ? resume() : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
           </div>
@@ -1168,23 +1197,23 @@ function LiveMatch({ live }: { live: LiveMatch }) {
 
   if (mobile) {
     return (
-      <PlayerCardProvider match={match} career={!!live.fixtureId}>
+      <PlayerCardProvider match={view} career={!!live.fixtureId}>
         {overlays}
         <div className="fixed inset-0 z-30 flex flex-col bg-ink" data-scroll-lock>
-          <MobileScoreboard match={match} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
-          {!match.isOver && !showBreak && <div className="relative shrink-0">
+          <MobileScoreboard match={view} you={match.mySide} difficulty={match.difficulty} onBack={leave} backLabel={fixture ? 'Back to the calendar' : 'Back to Play'} />
+          {!view.isOver && !showBreak && <div className="relative shrink-0">
             <div className="px-2 pb-1 pt-2">
-              <Stage
+              <Stage held={revealHold !== null}
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
                 battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} wear={pitchWear} scoreBug={scoreBug} caption={caption} {...aimProps}
               />
             </div>
-            <MobileNowPlaying match={match} displayOver={displayOver} />
+            <MobileNowPlaying match={view} displayOver={displayOver} />
             <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
           </div>}
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-2 py-2">
             {resultCard}
-            <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
+            <Commentary match={view} tab={tab} setTab={setTab} controls={controlsNode} />
           </div>
           {!finished && (!manual || holding) && <MobileDock holdLabel={holding ? holdText.toUpperCase() : undefined} onBall={() => (holding ? resume() : act({ t: 'ball' }))} auto={auto} setAuto={setAuto} onControls={() => setControlsOpen(true)} over={finished} />}
         </div>
@@ -1193,10 +1222,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   }
 
   return (
-    <PlayerCardProvider match={match} career={!!live.fixtureId}>
+    <PlayerCardProvider match={view} career={!!live.fixtureId}>
     <div className="space-y-4">
       {overlays}
-      <Scoreboard match={match} you={match.mySide} difficulty={match.difficulty} />
+      <Scoreboard match={view} you={match.mySide} difficulty={match.difficulty} />
 
       {fixture && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-panel px-4 py-2 text-sm text-slate-200">
@@ -1220,16 +1249,16 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         ) : (
         <div className="space-y-3 xl:sticky xl:top-3 xl:self-start">
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
-            <Stage
+            <Stage held={revealHold !== null}
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
               battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} wear={pitchWear} scoreBug={scoreBug} caption={caption} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
-          <NowPlaying match={match} displayOver={displayOver} />
+          <NowPlaying match={view} displayOver={displayOver} />
         </div>
         )}
         <div className="space-y-4">
-          <Commentary match={match} tab={tab} setTab={setTab} controls={controlsNode} />
+          <Commentary match={view} tab={tab} setTab={setTab} controls={controlsNode} />
         </div>
       </div>
     </div>

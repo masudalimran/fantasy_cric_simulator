@@ -297,8 +297,12 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1, look, scoreBug, caption, wear,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1, look, scoreBug, caption, wear, fitSeconds, held,
 }: {
+  /** Play the ball's clip so that it finishes in exactly this many seconds (the timeout's highlight reel: every ball is shown to the end). */
+  fitSeconds?: number
+  /** the result of this ball is still being kept from the screen: no flash or shake yet */
+  held?: boolean
   /** How worn the pitch is (0 to 1), for the broadcast view. */
   wear?: number
   /** The commentary line of the ball just played, written on the broadcast picture. */
@@ -355,13 +359,13 @@ export function Stage({
   const strikerJoy = event && (event.boundary || milestone) ? seq + 1 : 0
   const bowlerJoy = event?.wicket && event.wicket.kind !== 'run out' ? seq + 1 : 0
   const stumpsHit = !!event?.wicket && ['bowled', 'lbw', 'hit wicket', 'stumped'].includes(event.wicket.kind)
-  const flash = event?.boundary === 6 ? '#e879f9' : event?.wicket ? '#ef4444' : event?.boundary === 4 ? '#38bdf8' : milestone ? '#fbbf24' : null
+  const flash = held ? null : event?.boundary === 6 ? '#e879f9' : event?.wicket ? '#ef4444' : event?.boundary === 4 ? '#38bdf8' : milestone ? '#fbbf24' : null
 
   return (
     <motion.div
       ref={box}
-      key={wicket && event ? `w${event.seq}` : 'stage'}
-      animate={wicket ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
+      key={wicket && !held && event ? `w${event.seq}` : 'stage'}
+      animate={wicket && !held ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
       transition={{ duration: 0.45 }}
       className={`relative aspect-[16/10] w-full overflow-hidden rounded-2xl border bg-[#070b14] ${freeHit ? 'border-2 border-red-500' : 'border-line'}`}
       style={{ ...(onSwipe ? { touchAction: 'none' } : {}), ...(freeHit ? { boxShadow: freeHit === 'next' ? '0 0 0 2px #ef444466, 0 0 28px #ef444488' : '0 0 0 2px #ef444488, 0 0 34px #ef4444aa' } : {}) }}
@@ -379,7 +383,7 @@ export function Stage({
         onSwipe({ angle: Math.atan2((dy / rect.height) * H, (dx / rect.width) * W), loft: len > rect.width * 0.3 })
       } : undefined}
     >
-      {broadcast && <BroadcastView event={event} striker={striker} nonStriker={nonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} look={look} scoreBug={scoreBug} caption={caption} wear={wear} />}
+      {broadcast && <BroadcastView event={event} striker={striker} nonStriker={nonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} look={look} scoreBug={scoreBug} caption={caption} wear={wear} fitSeconds={fitSeconds} />}
       {!broadcast && (
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
         <Ground battingColor={battingTeam.colors.primary} pitch={pitch} />

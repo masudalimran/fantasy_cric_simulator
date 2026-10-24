@@ -131,10 +131,12 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
     return () => window.clearInterval(id)
   }, [])
   const reel = info.reel
-  const reelSecs = reel && reel.balls.length ? Math.round((seconds * 2) / 3) : 0
+  // each ball of the reel plays out in full before the next starts, so there are only as many as fit in the time (about two seconds each)
+  const reelBalls = reel ? reel.balls.slice(0, 9) : []
+  const reelSecs = reel && reelBalls.length ? Math.round((seconds * 2) / 3) : 0
   const inReel = !!reel && elapsed < reelSecs
-  const clipDwell = reel ? reelSecs / Math.max(1, reel.balls.length) : 1
-  const clip = reel ? Math.min(reel.balls.length - 1, Math.floor(elapsed / clipDwell)) : 0
+  const clipDwell = reel ? reelSecs / Math.max(1, reelBalls.length) : 1
+  const clip = reel ? Math.min(reelBalls.length - 1, Math.floor(elapsed / clipDwell)) : 0
   const rest = Math.max(1, seconds - reelSecs)
   const dwell = rest / Math.max(1, channels.length)
   const idx = Math.min(channels.length - 1, Math.max(0, Math.floor((elapsed - reelSecs) / dwell)))
@@ -156,7 +158,7 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black" aria-label="Highlight reel">
             <div className="relative h-full" style={{ aspectRatio: '16 / 10' }}>
               <Stage
-                event={reel.balls[clip]} overEvents={[]} striker={reel.striker} nonStriker={reel.nonStriker} bowler={reel.bowler}
+                event={reelBalls[clip]} fitSeconds={clipDwell - 0.12} overEvents={[]} striker={reel.striker} nonStriker={reel.nonStriker} bowler={reel.bowler}
                 battingTeam={reel.battingTeam} bowlingTeam={reel.bowlingTeam} fielders={reel.fielders}
               />
             </div>
@@ -167,7 +169,7 @@ export function TimeoutScreen({ info }: { info: TimeoutInfo }) {
                 <div className="text-[10px] font-bold text-amber-200/90">Over {Math.floor(reel.scores[clip].balls / 6)}.{reel.scores[clip].balls % 6}</div>
               </div>
             )}
-            <motion.div key={`cap${clip}`} className="pointer-events-none absolute bottom-1.5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-0.5 font-display text-lg leading-none tracking-wide text-amber-300 ring-1 ring-amber-300/60" initial={{ opacity: 0, scale: 1.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}>{captionOf(reel.balls[clip])}</motion.div>
+            <motion.div key={`cap${clip}`} className="pointer-events-none absolute bottom-1.5 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-3 py-0.5 font-display text-lg leading-none tracking-wide text-amber-300 ring-1 ring-amber-300/60" initial={{ opacity: 0, scale: 1.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 15 }}>{captionOf(reelBalls[clip])}</motion.div>
             <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-30 max-w-[42%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{reel.player.name} <span className="text-amber-300">{reel.headline}</span></div>
           </div>
         )}

@@ -42,6 +42,7 @@ A personal, non-commercial cricket simulator with anime and video-game character
 - **The pitch has a toss edge, and it is a deliberate balance change**: ±20% in the first innings and ∓10% in the second, from `pitchLean` (not in Tests or super overs). It is mean-neutral (symmetric) and checked by `scripts/pitchsim.ts`; the computer reads the pitch when it wins the toss. Do not remove or retune it without being asked. The pitch report screen shows the same advice.
 - The field view from above changes by stage of the game (`fieldSets.ts`), scenery only. Every match already has a hidden pitch (`engine/pitchInfo.ts` puts it into words and tints the field).
 - **Page smoke tests are missing**: unit tests run without a browser, so a crash in a screen (the Controls black screen) can slip through. Open the match page and Controls by hand after changing them.
+- Result spoilers: while a ball's animations play, the display reads `matchBefore(match, seq)` (`engine/asOf.ts`) and celebratory effects are queued until the hold releases. Never show a ball's result before its clip and screens finish.
 
 ## Backlog (agreed, not planned yet)
 Achievements and goals; Hall of Fame / retirement; commentary line variety; difficulty-scaled purses; an automated page smoke test; instant replay in the broadcast view; subtitles for the commentary; a lighter broadcast quality setting for slow phones.
