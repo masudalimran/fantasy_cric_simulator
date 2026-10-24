@@ -5,6 +5,7 @@ import { challengeTalk } from '../../season/challenge'
 import { trackFor } from '../../season/moments'
 import { ChallengeScreen, challengeSeconds } from './ChallengeScreen'
 import { ReviewScreen } from './ReviewScreens'
+import { TIMEOUT_INTRO_SECONDS, TimeoutIntroScreen } from './TimeoutIntro'
 
 const [A, B] = [BUILT_IN_TEAMS[2], BUILT_IN_TEAMS[9]]
 const [p1, p2, p3, p4, p5] = [A.players[0], A.players[1], B.players[0], B.players[1], B.players[2]]
@@ -35,5 +36,15 @@ describe('the challenge screens', () => {
     expect(stands).toContain('Challenge lost')
     const flat = renderToString(<ReviewScreen info={{ ...base, by: 'field', kind: 'edge', out: false, finalOut: false, overturned: false, left: 1, total: 2, track: trackFor(6, false) }} />)
     expect(flat).toContain('No spike')
+  })
+})
+
+describe('the strategic timeout signal', () => {
+  it('shows the umpire, the banner and the score at the break', () => {
+    const html = renderToString(<TimeoutIntroScreen info={{ headline: 'After 7 overs: 54/2', teamNames: [A.name, B.name], rate: 1 }} />)
+    expect(html).toContain('STRATEGIC TIMEOUT')
+    expect(html).toContain('After 7 overs: 54/2')
+    expect(html).toContain(A.name)
+    expect(TIMEOUT_INTRO_SECONDS).toBeGreaterThan(2.5)
   })
 })

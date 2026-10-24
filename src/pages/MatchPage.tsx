@@ -30,6 +30,7 @@ import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
 import { stadiumLook } from '../engine/stadium'
 import { challengeTalk } from '../season/challenge'
+import { TIMEOUT_INTRO_SECONDS } from '../components/match/TimeoutIntro'
 import { challengeSeconds } from '../components/match/ChallengeScreen'
 import { wideSide } from '../engine/wide'
 import { askVoice, cancelSpeech, getVoiceConsent, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
@@ -580,7 +581,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           { tag: 'Tactics board', title: `${pitch.icon} ${pitch.label}`, lines: [pitch.tip, need !== null && need > 0 ? `${bt.short} need ${need} off ${left} balls` : `${bt.short} are looking for a big finish`] },
           { tag: 'Did you know?', title: 'A few numbers', lines: [`${btSide.team.short}'s XI averages ${teamStrength({ ...btSide.team, players: btSide.xi })}, ${wt.team.short}'s ${teamStrength({ ...wt.team, players: wt.xi })}`, longest > 0 ? `The longest six so far went ${longest} m` : `No six has been hit yet`, `${dots} of ${innE.legalBalls} balls have been dots (${innE.legalBalls ? Math.round((dots / innE.legalBalls) * 100) : 0}%)`] },
         ]
-        enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 600, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1, reel } })
+        // first the umpire stops play and signals the timeout, so it is plain that one has begun
+        enqueueMoment({ key: lastEv.seq + 0.88, kind: 'timeoutintro', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 500, ms: Math.round(TIMEOUT_INTRO_SECONDS * 1000 * (autoRef.current === 4 ? 0.55 : autoRef.current === 2 ? 0.75 : 1)), timeoutIntro: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], rate: autoRef.current === 4 ? 0.55 : autoRef.current === 2 ? 0.75 : 1 } })
+        enqueueMoment({ key: lastEv.seq + 0.9, kind: 'timeout', player: match.player(lastEv.bowlerId), team: wt.team, title: 'STRATEGIC TIMEOUT', lines: [], delay: 200, ms: seconds * 1000, timeout: { headline: `After ${done} overs: ${innE.runs}/${innE.wickets}`, teamNames: [bt.name, wt.team.name], channels, seconds, rate: 1, reel } })
       }
       // screens that only break up the game, now and then: the cheerleaders, the stands, a huddle, fireworks after a boundary or a wicket,
       // and at the end of some overs the wave, the fan cam, the commentators or a blimp (never two within 30 balls)
