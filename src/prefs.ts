@@ -70,6 +70,22 @@ export function useBroadcastView(): boolean {
   return useSyncExternalStore((cb) => { bcastListeners.add(cb); return () => { bcastListeners.delete(cb) } }, () => bcast, () => true)
 }
 
+// ---- Captions: the commentary line on the broadcast picture ------------------------------------------------
+const CAPTION_KEY = 'fcs.captions'
+const captionListeners = new Set<() => void>()
+let captions = (() => { try { return localStorage.getItem(CAPTION_KEY) !== '0' } catch { return true } })()
+
+export function setCaptions(on: boolean) {
+  captions = on
+  try { localStorage.setItem(CAPTION_KEY, on ? '1' : '0') } catch { /* just not remembered */ }
+  captionListeners.forEach((l) => l())
+}
+
+/** Whether the commentary line of each ball is written along the top of the broadcast picture (on by default). */
+export function useCaptions(): boolean {
+  return useSyncExternalStore((cb) => { captionListeners.add(cb); return () => { captionListeners.delete(cb) } }, () => captions, () => true)
+}
+
 // ---- Play manually: no auto-play, the controls take its place --------------------------------------------------
 const MANUAL_KEY = 'fcs.manual'
 const manualListeners = new Set<() => void>()

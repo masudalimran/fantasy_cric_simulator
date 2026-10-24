@@ -9,6 +9,7 @@ import { CheerScreen, type CheerInfo } from './CheerScreen'
 import { DuckScreen, HatTrickScreen, HaulScreen, type DuckInfo, type HatTrickInfo, type HaulInfo } from './BowlerScreens'
 import { MilestoneScreen, type FistInfo } from './MilestoneScreen'
 import { ChallengeScreen, type ChallengeInfo } from './ChallengeScreen'
+import { ChallengeResultScreen, type ChallengeResultInfo } from './ChallengeResult'
 import { TimeoutIntroScreen, type TimeoutIntroInfo } from './TimeoutIntro'
 import { ReviewScreen, RunOutReview, type ReviewInfo, type RunOutInfo } from './ReviewScreens'
 import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInfo } from './TimeoutScreens'
@@ -24,7 +25,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -38,6 +39,8 @@ export interface Moment {
   review?: ReviewInfo
   /** The huddle before a challenge. */
   challenge?: ChallengeInfo
+  /** A successful challenge: the decision flips and the winners celebrate. */
+  challengeWon?: ChallengeResultInfo
   /** The umpire's signal that starts a strategic timeout. */
   timeoutIntro?: TimeoutIntroInfo
   runout?: RunOutInfo
@@ -161,12 +164,13 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  if ((moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
+  if ((moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
     return (
       <motion.div
         data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
         initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}
       >
+        {moment.kind === 'challengewon' && moment.challengeWon && <ChallengeResultScreen info={moment.challengeWon} />}
         {moment.kind === 'timeoutintro' && moment.timeoutIntro && <TimeoutIntroScreen info={moment.timeoutIntro} />}
         {moment.kind === 'challenge' && moment.challenge && <ChallengeScreen info={moment.challenge} />}
         {moment.kind === 'review' && moment.review && <ReviewScreen info={moment.review} />}

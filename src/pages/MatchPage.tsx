@@ -28,10 +28,12 @@ import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/cap
 import { boxChat } from '../season/studio'
 import { clipNow } from '../components/match/broadcast'
 import { ballSpeed } from '../engine/speed'
+import { commentary } from '../engine/commentary'
 import { stadiumLook } from '../engine/stadium'
 import { challengeTalk } from '../season/challenge'
 import { TIMEOUT_INTRO_SECONDS } from '../components/match/TimeoutIntro'
 import { challengeSeconds } from '../components/match/ChallengeScreen'
+import { CHALLENGE_RESULT_SECONDS } from '../components/match/ChallengeResult'
 import { wideSide } from '../engine/wide'
 import { askVoice, cancelSpeech, getVoiceConsent, getVoiceMode, speakLines, voiceBusy } from '../audio/voice'
 import { liveLines } from '../season/liveVoice'
@@ -346,6 +348,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     const side = r.by === 'bowl' ? bowlS.team : batS.team
     enqueueMoment({ key: ev.seq + 0.28, kind: 'challenge', player: r.by === 'bowl' ? cap : striker, team: side, title: 'CHALLENGE', lines: [], delay, ms: Math.round(challengeSeconds(talk.lines) * 1000 * rate), challenge: { by: r.by, kind: r.kind, desperate: r.desperate, left: leftBefore, total: r.total, people: talk.people.map((role) => ({ role, player: who[role], team: side })), lines: talk.lines, rate } })
     enqueueMoment({ key: ev.seq + 0.3, kind: 'review', player: striker, team: batS.team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((r.kind === 'edge' ? 12200 : 8200) * rate), review: { by: r.by === 'bat' ? 'bat' : 'field', kind: r.kind === 'edge' ? 'edge' : 'track', batsman: striker, batTeam: batS.team, bowler, bowlTeam: bowlS.team, out: r.originalOut, finalOut: r.finalOut, overturned: r.overturned, left: r.left, total: r.total, track: trackFor(ev.seq, r.finalOut), rate } })
+    // a successful challenge gets its own moment: the decision flips and the winners celebrate
+    if (r.overturned) {
+      const winnersSide = r.by === 'bowl' ? bowlS.team : batS.team
+      const winners = (r.by === 'bowl' ? [bowler, cap, keeperP] : [striker, partner]).map((player) => ({ player, team: winnersSide }))
+      enqueueMoment({ key: ev.seq + 0.31, kind: 'challengewon', player: striker, team: winnersSide, title: 'CHALLENGE SUCCESSFUL', lines: [], delay: 200, ms: Math.round(CHALLENGE_RESULT_SECONDS * 1000 * rate), challengeWon: { by: r.by, batsman: striker, batTeam: batS.team, winners, left: r.left, total: r.total, rate } })
+    }
   }
   const announceEvents = useCallback(
     (events: BallEvent[]) => {
@@ -935,6 +943,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const bugBat = (id: string) => { const line = inn.batters.find((b) => b.id === id); return line ? { name: match.player(id).name, runs: line.runs, balls: line.balls, strike: id === inn.strikerId } : null }
   const bugBowlerId = inn.bowlerId ?? lastHere?.bowlerId ?? null
   const bugBowl = bugBowlerId ? inn.bowlers.get(bugBowlerId) : undefined
+  const caption = lastHere ? commentary(lastHere, { striker: match.player(lastHere.strikerId).name, bowler: match.player(lastHere.bowlerId).name, out: lastHere.wicket ? match.player(lastHere.wicket.playerId).name : undefined, fielder: lastHere.wicket?.fielderId ? match.player(lastHere.wicket.fielderId).name : undefined }) : null
   const scoreBug = {
     team: batSide.team.short, runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls,
     batters: [bugBat(inn.strikerId), bugBat(inn.nonStrikerId)].filter((b): b is NonNullable<ReturnType<typeof bugBat>> => !!b),
@@ -1083,7 +1092,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage
                   event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} {...aimProps}
+                  battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} caption={caption} {...aimProps}
                 />
               </div>
               <AnimatePresence>{moment && <MomentOverlay key={moment.key} moment={moment} onDismiss={dismissMoment} />}</AnimatePresence>
@@ -1112,7 +1121,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             <div className="px-2 pb-1 pt-2">
               <Stage
                 event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} {...aimProps}
+                battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} caption={caption} {...aimProps}
               />
             </div>
             <MobileNowPlaying match={match} displayOver={displayOver} />
@@ -1158,7 +1167,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage
               event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
-              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
+              battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} scoreBug={scoreBug} caption={caption} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
           <NowPlaying match={match} displayOver={displayOver} />

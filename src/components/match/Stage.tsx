@@ -297,8 +297,10 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1, look, scoreBug,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1, look, scoreBug, caption,
 }: {
+  /** The commentary line of the ball just played, written on the broadcast picture. */
+  caption?: string | null
   /** The TV score bug's figures for the broadcast view. */
   scoreBug?: ScoreBug | null
   /** The home ground's look for the broadcast view (time of day, stands, crowd, weather). */
@@ -375,7 +377,7 @@ export function Stage({
         onSwipe({ angle: Math.atan2((dy / rect.height) * H, (dx / rect.width) * W), loft: len > rect.width * 0.3 })
       } : undefined}
     >
-      {broadcast && <BroadcastView event={event} striker={striker} nonStriker={nonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} look={look} scoreBug={scoreBug} />}
+      {broadcast && <BroadcastView event={event} striker={striker} nonStriker={nonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} look={look} scoreBug={scoreBug} caption={caption} />}
       {!broadcast && (
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
         <Ground battingColor={battingTeam.colors.primary} pitch={pitch} />

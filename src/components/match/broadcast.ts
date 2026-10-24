@@ -270,12 +270,13 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   else if (bye) signal = { kind: 'bye', at: t2 + 0.4, who: 1 }
   else if (legbye) signal = { kind: 'legbye', at: t2 + 0.4, who: 2 }
   if (keeperDive) keeperDive.at = bye ? t2 - 0.05 : t2 + 0.1
-  const react: Plan['react'] = legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
+  const appeal = w && (w.kind === 'lbw' || (kind === 'keeper' && w.kind === 'caught'))
+  const react: Plan['react'] = appeal ? { text: 'Howzat!', at: t2 + 0.15, who: 'bowler' } : legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
     : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   return {
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
-    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - 10 }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
+    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
   }

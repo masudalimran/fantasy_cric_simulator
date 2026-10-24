@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import type { BallEvent } from '../../engine/types'
@@ -5,6 +6,7 @@ import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { approach, clipNow, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { useCaptions } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
 import { endPoint, type Placed } from './Stage'
@@ -15,6 +17,7 @@ import { endPoint, type Placed } from './Stage'
  * come into view as it follows the ball. It only draws the ball that the engine has already played, so it never changes a result.
  */
 
+const lerp3v = (a: V3, b: V3, t: number): V3 => { const k = t * t * (3 - 2 * t); return { x: a.x + (b.x - a.x) * k, y: 0, z: a.z + (b.z - a.z) * k } }
 const STUB = { seq: 1, runsBat: 0, boundary: null, tags: [], wicket: null, extraType: null, delivery: null } as unknown as BallEvent
 const HEIGHT = 120
 const WIDTH = 60
@@ -76,7 +79,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug }: {
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption }: {
+  /** The commentary line of this ball, written along the top once the bat has met it. */
+  caption?: string | null
   /** The score bug's figures, from the match as it stands. */
   scoreBug?: ScoreBug | null
   /** The home ground's look (time of day, stands, crowd, weather). */
@@ -99,6 +104,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const [tag, setTag] = useState<'CAM 1' | 'CAM 2'>('CAM 1')
   const [cutKey, setCutKey] = useState(0)
   const fire = !!event?.freeHit && !!event.boundary
+  const captionsOn = useCaptions()
+  // where each fielder stood at the end of the last clip, so the field can change between balls with the fielders walking to their new places
+  const lastRest = useRef(new Map<string, V3>())
 
   // the plan for this ball
   const plan: Plan = useMemo(() => {
@@ -125,6 +133,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     let prev = t0
     let stopped = false
     const trail: V3[] = []
+    const walkFrom = new Map(lastRest.current)
+    lastRest.current = new Map(live.current.fielders.map((fd, i) => [fd.player.id, live.current.rest[i]]))
 
     const paint = (t: number, dt: number, snap: boolean) => {
       const L = live.current
@@ -211,7 +221,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       }
       // fielders: where they stand, or where they have run to
       L.fielders.forEach((_, i) => {
-        const w = f.moving.get(i) ?? L.rest[i]
+        const from = walkFrom.get(L.fielders[i].player.id)
+        const walk = from && t < 1.1 ? lerp3v(from, L.rest[i], Math.min(1, t / 1.0)) : L.rest[i]
+        const w = f.moving.get(i) ?? walk
         const caught = L.plan.catcher === i
         const dv = f.dives.get(i)
         const running = f.moving.has(i) && f.phase === 'flight' && !dv
@@ -306,6 +318,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}
       {event && <SpeedGun key={event.seq} kmh={plan.speed} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
+      {captionsOn && caption && event && (
+        <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.3, rate), duration: 3.4 / Math.max(0.3, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
+      )}
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
       {[['tagStriker', striker.name, accentOf(battingTeam)], ['tagBowler', bowler.name, accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
         <div key={k} ref={setNode(k)} className="pointer-events-none absolute left-0 top-0 z-[5000] hidden whitespace-nowrap rounded bg-black/75 px-1.5 text-[10px] font-bold text-white" style={{ borderBottom: `2px solid ${col}` }}>

@@ -4,6 +4,7 @@ import { BUILT_IN_TEAMS } from '../../data/teams'
 import { challengeTalk } from '../../season/challenge'
 import { trackFor } from '../../season/moments'
 import { ChallengeScreen, challengeSeconds } from './ChallengeScreen'
+import { ChallengeResultScreen, CHALLENGE_RESULT_SECONDS } from './ChallengeResult'
 import { ReviewScreen } from './ReviewScreens'
 import { TIMEOUT_INTRO_SECONDS, TimeoutIntroScreen } from './TimeoutIntro'
 
@@ -46,5 +47,19 @@ describe('the strategic timeout signal', () => {
     expect(html).toContain('After 7 overs: 54/2')
     expect(html).toContain(A.name)
     expect(TIMEOUT_INTRO_SECONDS).toBeGreaterThan(2.5)
+  })
+})
+
+describe('a successful challenge', () => {
+  it('flips the decision and says the challenge was kept, for both sides', () => {
+    const bat = renderToString(<ChallengeResultScreen info={{ by: 'bat', batsman: p1, batTeam: A, winners: [{ player: p1, team: A }, { player: p2, team: A }], left: 2, total: 2, rate: 1 }} />).replace(/<!-- -->/g, '')
+    expect(bat).toContain('Challenge successful')
+    expect(bat).toContain(`${p1.name} survives`)
+    expect(bat).toContain('overturned')
+    expect(bat).toContain('2 of 2 left')
+    const bowl = renderToString(<ChallengeResultScreen info={{ by: 'bowl', batsman: p1, batTeam: A, winners: [{ player: p3, team: B }], left: 1, total: 2, rate: 1 }} />).replace(/<!-- -->/g, '')
+    expect(bowl).toContain(`${p1.name} has to go`)
+    expect(bowl).toContain('1 of 2 left')
+    expect(CHALLENGE_RESULT_SECONDS).toBeGreaterThan(3)
   })
 })
