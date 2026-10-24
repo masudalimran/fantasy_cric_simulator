@@ -26,6 +26,8 @@ export type Clip =
   | { kind: 'milestone'; innings: number; playerId: string }
   /** A player's figures for the innings, with the grade the show gave him. */
   | { kind: 'stat'; innings: number; playerId: string; as: 'bat' | 'bowl'; grade: Grade }
+  /** The whole scorecard of the innings (the batting side's or the bowling side's), shown before the players on it are talked about one by one. */
+  | { kind: 'scorecard'; innings: number; as: 'bat' | 'bowl' }
 
 export interface Beat { who: 0 | 1 | 2; text: string; mood: Mood; clip?: Clip }
 /** Who is on the desk: one of the show's own presenters (see data/presenters.ts), and the voice she plays. */
@@ -225,8 +227,8 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
     const batTeam = teamOf(ii)
     const bowlTeam = match.sides[1 - inn.battingSide].team
     const fmt = match.format === 'test' ? 'test' : match.format === 'odi' ? 'odi' : 't20'
-    if (ii > 0) say(0, `Let us look back at ${batTeam.name}'s innings: ${inn.runs}/${inn.wickets}. We will start with the batsmen, from the top.`, 'serious', { kind: 'worm', innings: ii })
-    else say(0, `Let us go through ${batTeam.name}'s innings, ${inn.runs}/${inn.wickets}, starting with the batsmen from the top of the order.`, 'serious', { kind: 'worm', innings: ii })
+    if (ii > 0) say(0, `Let us look back at ${batTeam.name}'s innings: ${inn.runs}/${inn.wickets}. We will start with the batsmen, from the top.`, 'serious', { kind: 'scorecard', innings: ii, as: 'bat' })
+    else say(0, `Let us go through ${batTeam.name}'s innings, ${inn.runs}/${inn.wickets}, starting with the batsmen from the top of the order.`, 'serious', { kind: 'scorecard', innings: ii, as: 'bat' })
 
     // ---- the batsmen, top to bottom
     const batted = inn.batters.map((b, pos) => ({ b, pos })).filter(({ b }) => b.balls > 0 || b.runs > 0 || b.dismissal)
@@ -267,7 +269,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
 
     // ---- the bowlers of the other side
     const bowlers: BowlerLine[] = [...inn.bowlers.values()].filter((l) => l.legalBalls > 0)
-    if (bowlers.length) say(0, `Now to the bowlers. ${bowlTeam.name} used ${bowlers.length} of them.`, 'serious', { kind: 'manhattan', innings: ii })
+    if (bowlers.length) say(0, `Now to the bowlers. ${bowlTeam.name} used ${bowlers.length} of them.`, 'serious', { kind: 'scorecard', innings: ii, as: 'bowl' })
     const bowlRows = bowlers.map((l) => ({ l, g: gradeBowl({ wickets: l.wickets, runs: l.runs, balls: l.legalBalls }, { format: fmt, par }) }))
     for (let k = 0; k < bowlRows.length; k++) {
       const { l, g } = bowlRows[k]

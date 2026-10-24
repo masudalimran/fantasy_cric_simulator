@@ -5,7 +5,7 @@ import { Match } from '../../engine/match'
 import { ambientCaption, captionVariants, type CaptionKind } from '../../season/captions'
 import { boxChat } from '../../season/studio'
 import { CommentaryBox } from './CommentaryBox'
-import { StudioShow } from './StudioShow'
+import { ScoreRows, StudioShow } from './StudioShow'
 
 const [A, B] = [BUILT_IN_TEAMS[2], BUILT_IN_TEAMS[9]]
 
@@ -43,5 +43,21 @@ describe('captions, the commentary box and the studio show', () => {
     expect(html).toContain('Post-Match Show')
     expect(html).toContain('FCS')
     expect(html).toContain(m.result!.text)
+  })
+})
+
+describe('the scorecard on the studio screen', () => {
+  it('lists the players, and blurs everyone but the one being talked about', () => {
+    const m = new Match({ teamA: A, teamB: B, format: 't20', seed: 5 })
+    m.playMatch()
+    const inn = m.innings[0]
+    const focus = inn.batters.find((b) => b.balls > 0)!.id
+    const clear = renderToString(<ScoreRows match={m} innings={0} as="bat" />).replace(/<!-- -->/g, '')
+    for (const b of inn.batters.filter((x) => x.balls > 0).slice(0, 3)) expect(clear).toContain(m.player(b.id).name)
+    expect(clear).not.toContain('text-shadow')
+    const soft = renderToString(<ScoreRows match={m} innings={0} as="bat" focus={focus} blurred />)
+    expect(soft).toContain('text-shadow')
+    expect(soft).toContain('color:transparent')
+    expect(renderToString(<ScoreRows match={m} innings={0} as="bowl" />)).toContain('econ')
   })
 })

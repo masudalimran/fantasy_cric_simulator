@@ -62,6 +62,18 @@ describe('the studio show script', () => {
     expect(seen.size).toBeGreaterThanOrEqual(8)
   })
 
+  it('shows the whole scorecard of the batting side before the batsmen and of the bowling side before the bowlers', () => {
+    const m = play(4)
+    const s = buildScript(m, 'innings', 4, undefined)
+    const cards = s.beats.filter((b) => b.clip?.kind === 'scorecard')
+    expect(cards.map((b) => (b.clip as { as: string }).as)).toEqual(['bat', 'bowl'])
+    // each comes before the players it covers
+    const firstBat = s.beats.findIndex((b) => b.clip?.kind === 'stat' && b.clip.as === 'bat')
+    const firstBowl = s.beats.findIndex((b) => b.clip?.kind === 'stat' && b.clip.as === 'bowl')
+    expect(s.beats.indexOf(cards[0])).toBeLessThan(firstBat)
+    expect(s.beats.indexOf(cards[1])).toBeLessThan(firstBowl)
+  })
+
   it('does not read alike: different matches give different words, and no line repeats inside one show', () => {
     const texts = new Set<string>()
     for (let seed = 1; seed <= 30; seed++) for (const b of buildScript(play(seed), seed % 2 ? 'innings' : 'end', seed).beats) texts.add(b.text)

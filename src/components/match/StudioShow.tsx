@@ -20,7 +20,7 @@ import { WicketReplay } from './WicketReplay'
 const MOOD_EMOJI: Record<Mood, string> = { excited: '🔥', serious: '🧐', laugh: '😂', shocked: '😱', thoughtful: '🤔', proud: '👏', sarcastic: '😏', worried: '😬' }
 const MOOD_COLOR: Record<Mood, string> = { excited: '#fb923c', serious: '#94a3b8', laugh: '#facc15', shocked: '#f472b6', thoughtful: '#60a5fa', proud: '#34d399', sarcastic: '#c084fc', worried: '#f87171' }
 const ROLE: Record<Persona, string> = { host: 'Host', analyst: 'The Analyst', firebrand: 'The Firebrand', veteran: 'The Veteran', jester: 'The Joker', tactician: 'The Tactician' }
-const CLIP_TAG: Record<Clip['kind'], string> = { card: 'Studio graphics', worm: 'The worm', manhattan: 'Over by over', scoring: 'How the runs came', wagon: 'Wagon wheel', six: 'Instant replay · six', four: 'Instant replay · four', wicket: 'Instant replay · wicket', milestone: 'Milestone moment', stat: 'Player stats' }
+const CLIP_TAG: Record<Clip['kind'], string> = { card: 'Studio graphics', worm: 'The worm', manhattan: 'Over by over', scoring: 'How the runs came', wagon: 'Wagon wheel', six: 'Instant replay · six', four: 'Instant replay · four', wicket: 'Instant replay · wicket', milestone: 'Milestone moment', stat: 'Player stats', scorecard: 'Scorecard' }
 
 /** How a person on the desk moves while he talks, by mood. */
 const MOVE: Record<Mood, object> = {
@@ -32,6 +32,68 @@ const MOVE: Record<Mood, object> = {
   thoughtful: { rotate: [0, -3, 0, 2, 0], transition: { duration: 2.4, repeat: Infinity } },
   sarcastic: { rotate: [0, 5, 5, 0], x: [0, 3, 3, 0], transition: { duration: 1.6, repeat: Infinity } },
   worried: { x: [0, -2, 2, -2, 0], transition: { duration: 0.6, repeat: Infinity, repeatDelay: 0.8 } },
+}
+
+/** The players on an innings' scorecard, in order: the batsmen who batted, or the bowlers who bowled. */
+function cardRows(match: Match, innings: number, as: 'bat' | 'bowl') {
+  const i = match.innings[Math.min(innings, match.innings.length - 1)]
+  return as === 'bat'
+    ? i.batters.filter((b) => b.balls > 0 || b.runs > 0 || b.dismissal).map((b) => ({ id: b.id, left: `${b.runs}${b.dismissal ? '' : '*'}`, right: `${b.balls} balls · SR ${b.balls ? Math.round((b.runs / b.balls) * 100) : 0}` }))
+    : [...i.bowlers.values()].filter((l) => l.legalBalls > 0).map((l) => ({ id: l.id, left: `${l.wickets}/${l.runs}`, right: `${Math.floor(l.legalBalls / 6)}.${l.legalBalls % 6} ov · econ ${((l.runs / l.legalBalls) * 6).toFixed(1)}` }))
+}
+
+/**
+ * The innings' scorecard on the big screen. With a `focus` the rest of the players are blurred (their lines turn to a soft glow, with no costly blur
+ * filter) and the one being talked about is lit.
+ */
+export function ScoreRows({ match, innings, as, focus, blurred }: { match: Match; innings: number; as: 'bat' | 'bowl'; focus?: string; blurred?: boolean }) {
+  const i = match.innings[Math.min(innings, match.innings.length - 1)]
+  const team = as === 'bat' ? match.sides[i.battingSide].team : match.sides[1 - i.battingSide].team
+  const rows = cardRows(match, innings, as)
+  return (
+    <div className="absolute inset-0 flex flex-col bg-[radial-gradient(ellipse_at_center,#14305e,#070b14_80%)] px-2 pb-1.5 pt-8">
+      <div className="mb-1 flex items-baseline justify-between px-1 text-white">
+        <span className="font-display text-lg leading-none tracking-wide">{team.short} {as === 'bat' ? 'batting' : 'bowling'}</span>
+        <span className="text-[11px] font-bold text-amber-300">{as === 'bat' ? `${i.runs}/${i.wickets} · ${Math.floor(i.legalBalls / 6)}.${i.legalBalls % 6} ov` : `${i.wickets} wickets · ${i.runs} runs`}</span>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col justify-between">
+        {rows.map((r) => {
+          const on = r.id === focus
+          const soft = !!blurred && !on
+          return (
+            <div key={r.id} className="flex items-center gap-1.5 rounded px-1 text-[10px] leading-none transition-all duration-500 sm:text-[11px]" style={{ flex: 1, maxHeight: 24, background: on ? 'rgba(251,191,36,0.22)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #fbbf24' : undefined, opacity: soft ? 0.7 : 1, color: soft ? 'transparent' : on ? '#fef3c7' : '#e2e8f0', textShadow: soft ? '0 0 7px rgba(226,232,240,0.85)' : undefined }}>
+              <PlayerAvatar player={match.player(r.id)} team={team} size={16} />
+              <span className="min-w-0 flex-1 truncate font-bold">{match.player(r.id).name}</span>
+              <span className="font-extrabold tabular-nums">{r.left}</span>
+              <span className="hidden w-[38%] truncate text-right opacity-80 sm:block" style={{ color: soft ? 'transparent' : '#94a3b8' }}>{r.right}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Before a player is talked about the scorecard shows, everyone else blurs, and the card of the player grows out of his own line, so the screen
+ * moves from the scorecard to him smoothly.
+ */
+function Spotlight({ match, innings, as, playerId, children }: { match: Match; innings: number; as: 'bat' | 'bowl'; playerId: string; children: React.ReactNode }) {
+  const [stage, setStage] = useState(0)
+  useEffect(() => {
+    const a = window.setTimeout(() => setStage(1), 500)
+    const b = window.setTimeout(() => setStage(2), 1350)
+    return () => { window.clearTimeout(a); window.clearTimeout(b) }
+  }, [])
+  const rows = cardRows(match, innings, as)
+  const at = Math.max(0, rows.findIndex((r) => r.id === playerId))
+  const y = rows.length ? ((at + 0.5) / rows.length) * 82 + 14 : 50
+  return (
+    <div className="absolute inset-0">
+      <motion.div className="absolute inset-0" animate={{ opacity: stage >= 2 ? 0 : 1 }} transition={{ duration: 0.4 }}><ScoreRows match={match} innings={innings} as={as} focus={playerId} blurred={stage >= 1} /></motion.div>
+      <motion.div className="absolute inset-0" style={{ transformOrigin: `50% ${y}%` }} initial={{ opacity: 0, scale: 0.18 }} animate={stage >= 2 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.18 }} transition={{ duration: 0.5, ease: 'easeOut' }}>{children}</motion.div>
+    </div>
+  )
 }
 
 /** What is on the studio's big screen: a moment of the match, or a stats graphic, built from the match itself. */
@@ -68,6 +130,7 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
       const out = match.innings[ev.innings].batters.find((b) => b.id === ev.wicket!.playerId)
       return <WicketReplay info={{ kind: ev.wicket.kind, batsman: match.player(ev.wicket.playerId), bowler: match.player(ev.bowlerId), fielder: ev.wicket.fielderId ? match.player(ev.wicket.fielderId) : null, batTeam: evTeams.bat, bowlTeam: evTeams.bowl, rate: 1, score: out ? `${out.runs} (${out.balls})` : '' }} />
     }
+    case 'scorecard': return <ScoreRows match={match} innings={clip.innings} as={clip.as} />
     case 'stat': {
       const p = match.player(clip.playerId)
       const team = clip.as === 'bat' ? side(clip.innings) : match.sides[1 - match.innings[Math.min(clip.innings, match.innings.length - 1)].battingSide].team
@@ -81,6 +144,7 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
         if (l) { big = `${l.wickets}/${l.runs}`; small = `${Math.floor(l.legalBalls / 6)}.${l.legalBalls % 6} ov · ${l.maidens} maidens · econ ${l.legalBalls ? ((l.runs / l.legalBalls) * 6).toFixed(1) : '0.0'}`; const mine = inn(clip.innings).log.filter((e) => e.bowlerId === clip.playerId); if (mine.length) { const top = Math.max(...mine.map((e) => ballSpeed(e, p))); fastest = `Fastest ${top} km/h` } }
       }
       return (
+        <Spotlight match={match} innings={clip.innings} as={clip.as} playerId={clip.playerId}>
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[radial-gradient(ellipse_at_center,#1e3a8a,#070b14_75%)] px-4 pt-6 text-center">
           <PlayerAvatar player={p} team={team} size={52} profile />
           <div className="text-sm font-bold text-white">{p.name}</div>
@@ -89,6 +153,7 @@ function Wall({ clip, match }: { clip: Clip; match: Match }) {
           {fastest && <div className="text-[11px] font-bold text-sky-300">{fastest}</div>}
           <div className="mt-0.5 rounded-full px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-black" style={{ background: col }}>{GRADE_LABEL[clip.grade]} {clip.as === 'bat' ? 'batting' : 'bowling'}</div>
         </div>
+        </Spotlight>
       )
     }
     case 'milestone': {
