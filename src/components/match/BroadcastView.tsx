@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, clipNow, warpTime, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, clipNow, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -81,7 +81,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0 }: {
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0, replay }: {
+  /** Set when this is a replay inside an animation screen: it uses another camera and plays with slow motion around the shot, so it looks different from the live picture. */
+  replay?: { cam: ReplayCam; slowMo?: boolean } | null
   /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
   wear?: number
   /** The commentary line of this ball, written along the top once the bat has met it. */
@@ -105,7 +107,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const batRef = useRef<HTMLDivElement | null>(null)
   const umpArms = useRef<Record<string, HTMLDivElement | null>>({})
   const setNode = (k: string) => (el: HTMLElement | null) => { nodes.current.set(k, el) }
-  const [tag, setTag] = useState<'CAM 1' | 'CAM 2'>('CAM 1')
+  const [tag, setTag] = useState<string>('CAM 1')
   const [cutKey, setCutKey] = useState(0)
   const fire = !!event?.freeHit && !!event.boundary
   const captionsOn = useCaptions()
@@ -113,18 +115,21 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const lastRest = useRef(new Map<string, V3>())
 
   // the plan for this ball
-  const plan: Plan = useMemo(() => {
+  const plan0: Plan = useMemo(() => {
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
     const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler))
-    if (event) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.3, rate)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
+    // (a replay inside an animation screen must not touch the clock the live clip keeps)
+    if (event && !replay) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.3, rate)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
+  const plan: Plan = useMemo(() => (replay?.slowMo ? withReplaySlow(plan0) : plan0), [plan0, replay?.slowMo])
+  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
-  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear })
-  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear }
+  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam })
+  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam }
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
@@ -151,13 +156,14 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const f = frameAt(L.plan, t, (i) => L.rest[i] ?? { x: 0, y: 0, z: 0 })
       // the camera: cut when the ball goes back down the ground, otherwise turn and zoom after the ball
-      const wantReverse = f.reverse
-      const base = wantReverse ? camReverse : camWide
+      // (a replay keeps to its own camera and never cuts to the reverse one)
+      const wantReverse = L.replayCam ? false : f.reverse
+      const base = L.replayCam ? L.replayCam.cam : wantReverse ? camReverse : camWide
       if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; setTag(wantReverse ? 'CAM 2' : 'CAM 1'); setCutKey((k) => k + 1) }
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : f.aim
-      const hfovAt = covers0 ? 0.8 : f.hfov
+      const hfovAt = covers0 ? 0.8 : L.replayCam && !f.slowmo ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
       const goal = lookAt(base.p, aimAt)
       const c = cam.current
       c.p = base.p
@@ -280,9 +286,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
 
     // each new ball starts at the run-up: back on the wide camera
     reverseNow.current = false
-    setTag('CAM 1')
     const live0 = live.current
-    cam.current = { ...camWide, p: { ...camWide.p } }
+    setTag(live0.replayCam ? live0.replayCam.label.toUpperCase() : 'CAM 1')
+    const startCam = live0.replayCam ? live0.replayCam.cam : camWide
+    cam.current = { ...startCam, p: { ...startCam.p } }
     const first = live0.event === null
     if (first) {
       paint(0, 0.016, true)
@@ -327,6 +334,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {captionsOn && caption && event && (
         <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.3, rate), duration: 3.4 / Math.max(0.3, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}
+      {replay && <div className="pointer-events-none absolute inset-0 z-[5500]" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.10), rgba(2,6,23,0.18))', boxShadow: 'inset 0 0 0 2px rgba(56,189,248,0.55), inset 0 0 40px rgba(2,6,23,0.55)' }} />}
       <div ref={setNode('tagSlow')} className="pointer-events-none absolute bottom-8 right-2 z-[6001] hidden rounded bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
       {[['tagStriker', striker.name, accentOf(battingTeam)], ['tagBowler', bowler.name, accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (

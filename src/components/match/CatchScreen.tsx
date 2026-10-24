@@ -8,6 +8,7 @@ import type { BallEvent } from '../../engine/types'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BroadcastView } from './BroadcastView'
+import { replayCamera, replayCamFor } from './broadcast'
 import { BatContact, ContactMeters } from './ContactPanel'
 import { useWidth } from './ReviewScreens'
 import type { Placed } from './Stage'
@@ -55,8 +56,8 @@ export function CatchScreen({ info }: { info: CatchInfo }) {
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Caught">
       {/* the ball again, from the TV camera, a little slower */}
       <div className="absolute inset-x-0 top-0 h-[52%] overflow-hidden">
-        <BroadcastView event={info.event} striker={info.batsman} nonStriker={info.nonStriker} bowler={info.bowler} battingTeam={info.batTeam} bowlingTeam={info.bowlTeam} fielders={info.fielders} pitch={info.pitch} look={info.look} rate={1.25 * r} />
-        <div className="pointer-events-none absolute left-2 top-2 z-[7000] flex items-center gap-1.5 rounded bg-sky-500 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-white"><span className="h-2 w-2 animate-pulse rounded-full bg-red-300" />Replay</div>
+        <BroadcastView event={info.event} striker={info.batsman} nonStriker={info.nonStriker} bowler={info.bowler} battingTeam={info.batTeam} bowlingTeam={info.bowlTeam} fielders={info.fielders} pitch={info.pitch} look={info.look} rate={1.6 * r} replay={{ cam: replayCamFor('catch', info.event.seq), slowMo: true }} />
+        <div className="pointer-events-none absolute left-2 top-2 z-[7000] flex items-center gap-1.5 rounded bg-sky-500 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-white"><span className="h-2 w-2 animate-pulse rounded-full bg-red-300" />Replay · {replayCamera(replayCamFor('catch', info.event.seq), info.event.seq).label}</div>
         <div className="pointer-events-none absolute right-2 top-2 z-[7000] rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
       </div>
 

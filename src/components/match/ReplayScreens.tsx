@@ -6,6 +6,7 @@ import type { WicketCard } from '../../season/wicketCards'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BatContact, ContactMeters } from './ContactPanel'
+import { replayCamFor } from './broadcast'
 import { ReplayFrame, type ReplayBase } from './ReplayFrame'
 import { useWidth } from './ReviewScreens'
 
@@ -39,7 +40,7 @@ export function FourCast({ info }: { info: FourCastInfo }) {
   const how = c.quality >= 0.8 ? 'Middled it' : c.quality >= 0.55 ? 'Well timed' : 'Found the gap'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Four">
-      <ReplayFrame base={info.replay} rate={1.1 * r} />
+      <ReplayFrame base={info.replay} rate={1.5 * r} cam={replayCamFor('four', info.replay.event.seq)} />
       <Bottom>
         <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3">
           <motion.div className="shrink-0 self-center" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r }}><BatContact contact={c} height={compact ? 84 : 118} delay={1.7} rate={r} /></motion.div>
@@ -65,6 +66,8 @@ export interface WicketCastInfo {
   card: WicketCard
   batsman: Player
   batTeam: Team
+  /** What kind of wicket it was (for the camera the replay uses). */
+  kind: 'bowled' | 'lbw' | 'stumped' | 'hit wicket' | 'run out'
   /** "34 (21)". */
   score: string
   /** How it reads on the scorecard: "b Dio Brando", "lbw b ...". */
@@ -81,7 +84,7 @@ export function WicketCast({ info }: { info: WicketCastInfo }) {
   const compact = w < 520
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={info.card.title}>
-      <ReplayFrame base={info.replay} rate={1.2 * r} />
+      <ReplayFrame base={info.replay} rate={1.6 * r} cam={replayCamFor(info.kind, info.replay.event.seq)} />
       <Bottom>
         <div className="flex h-full flex-col justify-center gap-1.5 px-3 py-1.5">
           <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
@@ -122,7 +125,7 @@ export function ExtraCast({ info }: { info: ExtraCastInfo }) {
   const [box, w] = useWidth()
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={info.title}>
-      <ReplayFrame base={info.replay} rate={0.95 * r} share={0.7} />
+      <ReplayFrame base={info.replay} rate={1.2 * r} share={0.7} cam={replayCamFor('extra', info.replay.event.seq)} />
       <Bottom from={0.7}>
         <div className="flex h-full items-center justify-center gap-3 px-3">
           <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(26, Math.min(w * 0.085, 52)), WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: `0 0 22px ${info.color}aa`, color: info.color }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>{info.title}</motion.div>

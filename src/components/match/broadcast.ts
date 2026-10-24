@@ -37,6 +37,34 @@ const NON_STRIKER_X = -3.2
 const BAT_END_Z = 0.35
 const BOWL_END_Z = BOWL_Z + 0.7
 
+/**
+ * The cameras a replay can use instead of the live one, so a replay does not look like the live picture shown again: from the side (square leg), from
+ * high above the pitch, or from down at the stumps. Each stays where it is and turns to follow the ball, like the live cameras.
+ */
+export type ReplayCam = 'side' | 'high' | 'stump'
+export function replayCamera(kind: ReplayCam, seq: number): { cam: Cam; minHfov: number; label: string } {
+  const deg = Math.PI / 180
+  if (kind === 'high') return { cam: { p: { x: 0.01, y: 36, z: -10 }, yaw: 0, pitch: 1.2, hfov: 60 * deg }, minHfov: 58 * deg, label: 'Spider cam' }
+  if (kind === 'stump') return { cam: { p: { x: -0.08, y: 0.55, z: 1.4 }, yaw: Math.PI, pitch: 0.02, hfov: 38 * deg }, minHfov: 32 * deg, label: 'Stump cam' }
+  const dir = hash01(seq * 7.7) < 0.5 ? -1 : 1
+  return { cam: { p: { x: dir * 34, y: 4.5, z: -9 }, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0.1, hfov: 34 * deg }, minHfov: 30 * deg, label: 'Side-on' }
+}
+/** Which camera a replay of this kind of moment uses, a stable pick from the ball number (the stump cam only for the ways of being bowled out). */
+export function replayCamFor(kind: 'four' | 'six' | 'bowled' | 'lbw' | 'stumped' | 'hit wicket' | 'run out' | 'catch' | 'extra', seq: number): ReplayCam {
+  const h = hash01(seq * 3.9)
+  if (kind === 'bowled' || kind === 'lbw' || kind === 'hit wicket') return h < 0.6 ? 'stump' : 'side'
+  if (kind === 'stumped') return 'side'
+  if (kind === 'run out' || kind === 'catch') return h < 0.5 ? 'high' : 'side'
+  if (kind === 'extra') return 'side'
+  return h < 0.5 ? 'side' : 'high'
+}
+/** The same clip with a stretch of slow motion around the moment the bat meets the ball (unless the clip already has one). */
+export function withReplaySlow(plan: Plan): Plan {
+  if (plan.slow) return plan
+  const slow = { at: plan.tRun + plan.tDeliver - 0.22, len: 0.75, factor: 0.35 }
+  return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
+}
+
 export const camWide: Cam = { p: { x: 0, y: 7, z: -43 }, yaw: 0, pitch: 0.12, hfov: (46 * Math.PI) / 180 }
 export const camReverse: Cam = { p: { x: 0, y: 7, z: 13.5 }, yaw: Math.PI, pitch: 0.12, hfov: (40 * Math.PI) / 180 }
 

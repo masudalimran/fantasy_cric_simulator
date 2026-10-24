@@ -772,7 +772,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const keeperP = match.keeperOf(bowlIdx) ? match.player(match.keeperOf(bowlIdx)!) : null
             show({
               key: notable.seq + 0.5, kind: 'wicketcast', player: match.player(outLine.id), team, title: 'WICKET', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(WICKET_CAST_SECONDS * 1000 * rate),
-              wicketCast: { replay: replayBase(notable), card: wicketCard(w.kind, notable.seq, { bowlerName: bowlerP.name, bowlerType: bowlerP.bowling?.type, kmh: ballSpeed(notable, bowlerP), keeperName: keeperP?.name, fielderName: fielderP?.name }), batsman: match.player(outLine.id), batTeam: team, score: `${outLine.runs} (${outLine.balls})`, how: outLines[0], rate },
+              wicketCast: { replay: replayBase(notable), kind: w.kind, card: wicketCard(w.kind, notable.seq, { bowlerName: bowlerP.name, bowlerType: bowlerP.bowling?.type, kmh: ballSpeed(notable, bowlerP), keeperName: keeperP?.name, fielderName: fielderP?.name }), batsman: match.player(outLine.id), batTeam: team, score: `${outLine.runs} (${outLine.balls})`, how: outLines[0], rate },
             })
           } else if (wantReplay) show({
             key: notable.seq + 0.5, kind: 'replay', player: match.player(outLine.id), team, title: 'WICKET REPLAY', lines: [], delay: Math.round(delay * 0.6), ms: Math.round((ropeCatch ? 9200 : 6300) * rate),

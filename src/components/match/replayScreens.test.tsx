@@ -35,7 +35,7 @@ describe('the broadcast-style screens', () => {
   it('a wicket replays the ball with a headline, three facts and a sentence', () => {
     const ev = all.find((e) => e.wicket?.kind === 'bowled')!
     const card = wicketCard('bowled', ev.seq, { bowlerName: m.player(ev.bowlerId).name, bowlerType: 'fast', kmh: 139 })
-    const html = clean(renderToString(<WicketCast info={{ replay: baseFor(m, ev), card, batsman: m.player(ev.wicket!.playerId), batTeam: A, score: '12 (9)', how: 'b Someone', rate: 1 }} />))
+    const html = clean(renderToString(<WicketCast info={{ replay: baseFor(m, ev), card, batsman: m.player(ev.wicket!.playerId), batTeam: A, kind: 'bowled', score: '12 (9)', how: 'b Someone', rate: 1 }} />))
     expect(html).toContain('BOWLED!')
     expect(html).toContain('139 km/h')
     expect(html).toContain('12 (9)')

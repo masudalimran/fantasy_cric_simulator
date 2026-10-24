@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { elevation, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
+import { elevation, replayCamera, replayCamFor, withReplaySlow, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 
 const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
@@ -164,5 +164,39 @@ describe('the broadcast view plan', () => {
       }
     }
     expect(seen).toBeGreaterThan(0)
+  })
+
+  it('a replay uses another camera and slows down around the shot, so it does not look like the live picture again', () => {
+    const live = camWide.p
+    for (const kind of ['side', 'high', 'stump'] as const) {
+      const c = replayCamera(kind, 7)
+      // somewhere else from the live camera, and turned towards the pitch from there
+      expect(Math.hypot(c.cam.p.x - live.x, c.cam.p.y - live.y, c.cam.p.z - live.z)).toBeGreaterThan(8)
+      const look = lookAt(c.cam.p, { x: 0, y: 0.5, z: -8 })
+      expect(Number.isFinite(look.yaw) && Number.isFinite(look.pitch)).toBe(true)
+      expect(c.label.length).toBeGreaterThan(3)
+      expect(c.minHfov).toBeGreaterThan(0.4)
+    }
+    // the side-on camera is on one side or the other by ball
+    const sides = new Set<number>()
+    for (let s = 1; s <= 30; s++) sides.add(Math.sign(replayCamera('side', s).cam.p.x))
+    expect(sides.size).toBe(2)
+    // the kind of replay decides the camera: the stump cam only for the ways of being bowled out
+    for (let s = 1; s <= 40; s++) { expect(replayCamFor('four', s)).not.toBe('stump'); expect(replayCamFor('stumped', s)).toBe('side') }
+    const cams = new Set<string>()
+    for (let s = 1; s <= 40; s++) cams.add(replayCamFor('bowled', s))
+    expect(cams.has('stump')).toBe(true)
+    // slow motion is added around the bat meeting the ball, and makes the clip longer
+    const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed: 4 })
+    m.playMatch()
+    const ev = m.innings[0].log.find((e) => e.boundary === 4)!
+    const bowlSide = m.sides[1 - m.innings[0].battingSide]
+    const plan0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: m.player(ev.strikerId).hand })
+    const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
+    const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), false)
+    const slow = withReplaySlow(plan)
+    expect(slow.slow).not.toBeNull()
+    expect(slow.realTotal).toBeGreaterThan(plan.total + 1)
+    expect(withReplaySlow(slow)).toBe(slow)
   })
 })
