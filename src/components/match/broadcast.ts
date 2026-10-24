@@ -127,6 +127,10 @@ export interface Plan {
   celebrateAt: number | null
   /** How fast the ball was bowled (km/h). */
   speed: number
+  /** A nick: the moment of the bat is played again in slow motion, close up. `at` and `len` are in clip seconds; `factor` is how slow (0.3 is a third of the speed). */
+  slow: { at: number; len: number; factor: number } | null
+  /** The clip's length in real seconds: `total` plus the extra time the slow motion takes. */
+  realTotal: number
   /** A word that pops up over somebody's head, and when. */
   react: { text: string; at: number; who: 'striker' | 'bowler' | 'keeper' } | null
 }
@@ -260,6 +264,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   // a fifty or a hundred: he raises his bat once the ball is done
   const milestone = !w && ev.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')
   if (milestone) tHold = Math.max(tHold, runs * RUN_SECONDS + 1.3 - tFlight, 1.3)
+  // a nick (a catch behind or a thin edge to the slips) is shown again, close up and in slow motion
+  const nick = !!w && w.kind === 'caught' && (kind === 'keeper' || (peak < 3 && Math.hypot(end.x - meet.x, end.z - meet.z) < 14))
+  const slow: Plan['slow'] = nick ? { at: t2 - 0.14, len: 0.5, factor: 0.3 } : null
   let signal: Plan['signal'] = null
   if (w) signal = { kind: 'out', at: (wicketAt ?? t3) + (w.kind === 'lbw' ? 0.7 : 0.15), who: 1 }
   else if (wide) signal = { kind: 'wide', at: t2 + 0.35, who: 1 }
@@ -275,7 +282,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   return {
-    tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
+    tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, slow, realTotal: 0.95 + tDeliver + tFlight + tHold + (slow ? slow.len / slow.factor - slow.len : 0), runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     signal, hurt, keeperDive, chaserDive: (ev.boundary === 4 || byeFour) && chaser >= 0, exitAt: wicketAt, celebrateAt: milestone ? react?.at ?? null : null, react,
@@ -312,6 +319,10 @@ export interface Frame {
   dives: Map<number, { k: number; dir: number }>
   /** A word over somebody's head right now. */
   react: { text: string; who: 'striker' | 'bowler' | 'keeper' } | null
+  /** The slow-motion close-up of a nick is on. */
+  slowmo: boolean
+  /** A boundary: where round the rope the ball went (an angle), what to write on the boards there, and how bright they are (0 to 1). */
+  board: { a: number; text: string; k: number } | null
   /** Hop for joy (0 to 1) of whoever just took a wicket or hit a boundary. */
   joy: number
   phase: 'run' | 'deliver' | 'flight' | 'hold'
@@ -379,6 +390,18 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     if (plan.runOut) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(lerp3(aim, b, 0.5), { x: 0, y: 0.8, z: -9 }, 0.55 * k + 0.2); hfov = Math.max(hfov, lerp(24, 40, k) * deg) }
     else if (plan.runs > 0) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(aim, { x: 0, y: 0.8, z: -9 }, k * 0.8); hfov = Math.max(hfov, lerp(22, 36, k) * deg) }
   }
+  // a nick in slow motion: right up close on the bat and ball
+  const slowmo = !!plan.slow && t >= plan.slow.at && t <= plan.slow.at + plan.slow.len
+  if (slowmo) { aim = { x: plan.meet.x, y: 0.85, z: plan.meet.z + 0.2 }; hfov = 9 * deg }
+  // a fifty or hundred: once he has run his runs the picture goes in close on the batsman raising his bat, then tilts up to the sky
+  if (plan.celebrateAt !== null && plan.celebrateAt !== undefined && t >= plan.celebrateAt - 0.15) {
+    const atStrikerEnd = plan.runs % 2 === 0
+    const head: V3 = { x: atStrikerEnd ? plan.stanceX : NON_STRIKER_X, y: 1.5, z: atStrikerEnd ? BAT_END_Z : BOWL_END_Z }
+    const k = ease((t - (plan.celebrateAt - 0.15)) / 0.5)
+    const sky = ease((t - plan.celebrateAt - 0.7) / 0.6)
+    aim = lerp3(aim, { x: head.x, y: head.y + 1.6 * sky, z: head.z }, k)
+    hfov = lerp(hfov, (10 + 8 * sky) * deg, k)
+  }
   // running between the wickets: each run is a leg; they cross in the middle, and after an odd number they have swapped ends
   let runners: Frame['runners'] = null
   let striker: Frame['striker'] = null
@@ -422,14 +445,30 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (plan.catcher > 0 && plan.kind === 'air' && plan.peak < 3.4) { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1 }) }
   if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) dives.set(plan.chaser, { k, dir: Math.sign(plan.end.x - fielderAt(plan.chaser).x) || 1 }) }
   const react = plan.react && t >= plan.react.at && t < plan.react.at + 1.1 ? { text: plan.react.text, who: plan.react.who } : null
+  // the boards at the boundary light up with FOUR or SIX where the ball went
+  let board: Frame['board'] = null
+  if (plan.boundary && t >= t3 - 0.15) {
+    const k = clamp01((t - (t3 - 0.15)) / 0.2) * (1 - clamp01((t - t3 - 1.4) / 0.5))
+    if (k > 0) board = { a: Math.atan2((plan.end.z - ROPE.cz) / ROPE.rz, (plan.end.x - ROPE.cx) / ROPE.rx), text: plan.six ? 'SIX' : 'FOUR', k }
+  }
   const joy = plan.boundary || plan.wicketFlies || plan.catcher >= 0 ? clamp01((t - (plan.runOut ? hitAt : t3)) / 0.5) : 0
-  return { signal, hurt, raise, dives, react, runners, striker, stumpsBowl, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2, aim, hfov, moving, joy, phase }
+  return { slowmo, board, signal, hurt, raise, dives, react, runners, striker, stumpsBowl, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2 && !(plan.celebrateAt !== null && plan.celebrateAt !== undefined && t >= plan.celebrateAt - 0.15), aim, hfov, moving, joy, phase }
 }
 
 /** The camera turned to look at a point, from where it stands. */
 export function lookAt(from: V3, aim: V3): { yaw: number; pitch: number } {
   const dx = aim.x - from.x, dz = aim.z - from.z, dy = from.y - aim.y
   return { yaw: Math.atan2(dx, dz), pitch: Math.atan2(dy, Math.hypot(dx, dz)) }
+}
+
+/** From real seconds into the clip to clip seconds: a nick's slow-motion window takes longer to play than it lasts. */
+export function warpTime(plan: Pick<Plan, 'slow'>, real: number): number {
+  const s = plan.slow
+  if (!s) return real
+  if (real <= s.at) return real
+  const inside = (real - s.at) * s.factor
+  if (inside <= s.len) return s.at + inside
+  return s.at + s.len + (real - s.at - s.len / s.factor)
 }
 
 /** Moves an angle towards another by the shortest way. */

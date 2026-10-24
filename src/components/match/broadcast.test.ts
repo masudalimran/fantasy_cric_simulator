@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { elevation, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
+import { elevation, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 
 const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
@@ -89,5 +89,80 @@ describe('the broadcast view plan', () => {
     expect(aerial(2)).toBeGreaterThan(aerial(-1))
     // a shot the person chose to loft is in the air
     expect(elevation({ seq: 5, boundary: 4, distance: undefined, intent: 0, runsBat: 4, shot: { angle: 0, loft: true } }, 60).kind).toBe('air')
+  })
+
+  it('a nick is replayed in slow motion, which makes the clip last longer; the warped time is steady and ends where the clip ends', () => {
+    let nicks = 0
+    for (let seed = 1; seed <= 40; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      m.playMatch()
+      for (const inn of m.innings) {
+        const bowlSide = m.sides[1 - inn.battingSide]
+        for (const ev of inn.log) {
+          const striker = m.player(ev.strikerId)
+          const plan0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
+          expect(plan.realTotal).toBeGreaterThanOrEqual(plan.total)
+          expect(warpTime(plan, 0)).toBe(0)
+          expect(warpTime(plan, plan.realTotal)).toBeCloseTo(plan.total, 5)
+          let prev = -1
+          for (let r = 0; r <= plan.realTotal; r += 0.1) { const t = warpTime(plan, r); expect(t).toBeGreaterThanOrEqual(prev); prev = t }
+          if (plan.slow) { nicks++; expect(plan.realTotal).toBeGreaterThan(plan.total + 0.8); expect(ev.wicket?.kind).toBe('caught') }
+        }
+      }
+    }
+    expect(nicks).toBeGreaterThan(3)
+  })
+
+  it('after a fifty or hundred the camera goes in close on the batsman and tilts up', () => {
+    let found = 0
+    for (let seed = 1; seed <= 60 && found < 3; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      m.playMatch()
+      for (const inn of m.innings) {
+        const bowlSide = m.sides[1 - inn.battingSide]
+        for (const ev of inn.log) {
+          if (!ev.tags.some((t) => t === 'fifty' || t === 'hundred') || ev.wicket) continue
+          const striker = m.player(ev.strikerId)
+          const plan0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
+          if (plan.celebrateAt === null) continue
+          found++
+          const rest = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
+          const f = frameAt(plan, Math.min(plan.total, plan.celebrateAt + 1.5), (i) => rest[i])
+          expect(f.hfov).toBeLessThan(0.35)
+          expect(f.aim.y).toBeGreaterThan(1.4)
+          expect(f.raise).toBeGreaterThan(0.9)
+        }
+      }
+    }
+    expect(found).toBeGreaterThan(0)
+  })
+
+  it('the boards light up for a boundary, at the angle round the rope where the ball went', () => {
+    let seen = 0
+    for (let seed = 1; seed <= 20 && seen < 5; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      m.playMatch()
+      for (const inn of m.innings) {
+        const bowlSide = m.sides[1 - inn.battingSide]
+        for (const ev of inn.log) {
+          if (!ev.boundary) continue
+          const striker = m.player(ev.strikerId)
+          const plan0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
+          const rest = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
+          const f = frameAt(plan, plan.tRun + plan.tDeliver + plan.tFlight + 0.5, (i) => rest[i])
+          expect(f.board?.text).toBe(ev.boundary === 6 ? 'SIX' : 'FOUR')
+          expect(f.board!.k).toBeGreaterThan(0.5)
+          expect(Math.abs(f.board!.a)).toBeLessThanOrEqual(Math.PI)
+          seen++
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(0)
   })
 })

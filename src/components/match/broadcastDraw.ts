@@ -19,6 +19,10 @@ export interface Scene {
   tick: number
   /** 0 to 1: how much the crowd is on its feet (a boundary, a wicket). */
   cheer: number
+  /** How worn the pitch is (0 to 1): footmarks and rough patches build up. */
+  wear: number
+  /** A boundary: the boards where the ball went light up with FOUR or SIX. */
+  board: { a: number; text: string; k: number } | null
   /** The covers are on the pitch (rain stopped play, or a washed-out day). */
   covers: boolean
   /** 0 to 1: how far the batsman's stumps have been knocked over. */
@@ -64,7 +68,10 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     const slope = projectPoly(r, [ringPoint(s.a0, 1.03, 0.9), ringPoint(s.a1, 1.03, 0.9), ringPoint(s.a1, 1.34, 12), ringPoint(s.a0, 1.34, 12)])
     fillPoly(ctx, slope, shade(s.i % 2 ? L.stand[0] : L.stand[1], lift))
     const board = projectPoly(r, [ringPoint(s.a0, 1.03, 0), ringPoint(s.a1, 1.03, 0), ringPoint(s.a1, 1.03, 0.9), ringPoint(s.a0, 1.03, 0.9)])
-    fillPoly(ctx, board, s.i % 3 === 0 ? '#e5e7eb' : s.i % 2 ? L.board[0] : L.board[1])
+    // the boards where the ball crossed the rope flash bright
+    let flash = 0
+    if (sc.board) { const mid = (s.a0 + s.a1) / 2; let d = Math.abs(mid - sc.board.a) % (Math.PI * 2); if (d > Math.PI) d = Math.PI * 2 - d; flash = d < 0.55 ? (1 - d / 0.55) * sc.board.k * (0.65 + 0.35 * Math.sin(sc.tick * 18)) : 0 }
+    fillPoly(ctx, board, flash > 0.05 ? `rgba(${255},${Math.round(215 + 40 * flash)},${Math.round(60 + 160 * flash)},${0.55 + 0.45 * flash})` : s.i % 3 === 0 ? '#e5e7eb' : s.i % 2 ? L.board[0] : L.board[1])
   }
   const palette = [...L.crowd, '#0f172a']
   for (const c of CROWD) {
@@ -96,6 +103,16 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     }
     ctx.restore()
   }
+  // the word on the boards where the ball went
+  if (sc.board && sc.board.k > 0.2) {
+    const p = project(r, ringPoint(sc.board.a, 1.12, 3.2))
+    if (p) {
+      const px = Math.max(12, Math.min(46, (r.F * 1.5) / p.d))
+      ctx.save(); ctx.font = `900 ${px}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.lineWidth = Math.max(2, px / 7); ctx.strokeStyle = '#05070d'; ctx.strokeText(sc.board.text, p.x, p.y)
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(1, sc.board.k + 0.2)})`; ctx.fillText(sc.board.text, p.x, p.y); ctx.restore()
+    }
+  }
   // floodlights: a glow on each of four towers when the lights are on
   if (L.lights) {
     for (let k = 0; k < 4; k++) {
@@ -117,8 +134,31 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   if (rope.length > 2) { ctx.beginPath(); ctx.moveTo(rope[0].x, rope[0].y); for (let i = 1; i < rope.length; i++) ctx.lineTo(rope[i].x, rope[i].y); ctx.closePath(); ctx.stroke() }
   ctx.globalAlpha = 1
 
+  // wet grass: a sheen on the outfield and a few puddles
+  if (L.rain > 0 && gp.length > 2) {
+    ctx.save()
+    ctx.beginPath(); ctx.moveTo(gp[0].x, gp[0].y); for (let i = 1; i < gp.length; i++) ctx.lineTo(gp[i].x, gp[i].y); ctx.closePath(); ctx.clip()
+    for (let k = -8; k <= 8; k++) fillPoly(ctx, projectPoly(r, [{ x: k * 6, y: 0, z: -80 }, { x: k * 6 + 2.2, y: 0, z: -80 }, { x: k * 6 + 2.2, y: 0, z: 60 }, { x: k * 6, y: 0, z: 60 }]), `rgba(220,235,255,${0.05 * L.rain})`)
+    for (let i = 0; i < 7; i++) {
+      const c = projectPoly(r, Array.from({ length: 10 }, (_, j) => ({ x: -34 + hash01(i * 3.7) * 68 + Math.cos((j / 10) * Math.PI * 2) * (2.6 + hash01(i) * 2), y: 0, z: -34 + hash01(i * 5.9) * 52 + Math.sin((j / 10) * Math.PI * 2) * 1.4 })))
+      fillPoly(ctx, c, 'rgba(186,215,245,0.22)')
+    }
+    ctx.restore()
+  }
   // the pitch strip, with its creases
   fillPoly(ctx, projectPoly(r, [{ x: -1.53, y: 0, z: BOWL_Z - 2 }, { x: 1.53, y: 0, z: BOWL_Z - 2 }, { x: 1.53, y: 0, z: 2 }, { x: -1.53, y: 0, z: 2 }]), colors.strip[1])
+  // wear: footmarks and rough patches where the bowlers land, more of them as the match goes on (a Test builds it up over five days)
+  if (sc.wear > 0.03) {
+    const n = Math.floor(sc.wear * 16)
+    for (let i = 0; i < n; i++) {
+      const bowlEnd = i % 2 === 0
+      const cx = (hash01(i * 2.9) - 0.5) * 2.3
+      const cz = bowlEnd ? BOWL_Z + 1.4 + hash01(i * 4.1) * 1.8 : -2.8 - hash01(i * 6.3) * 6
+      const w = 0.28 + hash01(i * 1.3) * 0.34
+      const patch = projectPoly(r, Array.from({ length: 8 }, (_, j) => ({ x: cx + Math.cos((j / 8) * Math.PI * 2) * w, y: 0.01, z: cz + Math.sin((j / 8) * Math.PI * 2) * w * 1.7 })))
+      fillPoly(ctx, patch, i % 3 === 0 ? 'rgba(255,240,200,0.20)' : 'rgba(90,60,30,0.28)')
+    }
+  }
   const line = (a: V3, b: V3, w: number, col: string) => {
     const pa = project(r, a), pb = project(r, b)
     if (!pa || !pb) return

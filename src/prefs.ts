@@ -73,7 +73,7 @@ export function useBroadcastView(): boolean {
 // ---- Captions: the commentary line on the broadcast picture ------------------------------------------------
 const CAPTION_KEY = 'fcs.captions'
 const captionListeners = new Set<() => void>()
-let captions = (() => { try { return localStorage.getItem(CAPTION_KEY) !== '0' } catch { return true } })()
+let captions = (() => { try { return localStorage.getItem(CAPTION_KEY) === '1' } catch { return false } })()
 
 export function setCaptions(on: boolean) {
   captions = on
@@ -81,9 +81,9 @@ export function setCaptions(on: boolean) {
   captionListeners.forEach((l) => l())
 }
 
-/** Whether the commentary line of each ball is written along the top of the broadcast picture (on by default). */
+/** Whether the commentary line of each ball is written along the top of the broadcast picture (off by default). */
 export function useCaptions(): boolean {
-  return useSyncExternalStore((cb) => { captionListeners.add(cb); return () => { captionListeners.delete(cb) } }, () => captions, () => true)
+  return useSyncExternalStore((cb) => { captionListeners.add(cb); return () => { captionListeners.delete(cb) } }, () => captions, () => false)
 }
 
 // ---- Play manually: no auto-play, the controls take its place --------------------------------------------------

@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, clipNow, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, clipNow, warpTime, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -31,6 +31,8 @@ export interface ScoreBug {
   batters: { name: string; runs: number; balls: number; strike: boolean }[]
   bowler: { name: string; figures: string } | null
   need: string | null
+  /** The speed of the last ball, km/h. */
+  lastKmh?: number | null
 }
 
 type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper'
@@ -79,7 +81,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   )
 }
 
-export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption }: {
+export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0 }: {
+  /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
+  wear?: number
   /** The commentary line of this ball, written along the top once the bat has met it. */
   caption?: string | null
   /** The score bug's figures, from the match as it stands. */
@@ -113,14 +117,14 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
     const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler))
-    if (event) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.total * 1000) / Math.max(0.3, rate)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
+    if (event) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.3, rate)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
-  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look })
-  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look }
+  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear })
+  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear }
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
@@ -173,7 +177,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const cheerAt = L.plan.boundary ? tHit + 0.6 : L.plan.exitAt
       const cheer = cheerAt !== null && cheerAt !== undefined && t >= cheerAt && (L.plan.boundary || !!L.plan.wicketFlies || L.plan.catcher >= 0) ? Math.min(1, (t - cheerAt) / 0.3) * (1 - Math.min(1, Math.max(0, (t - cheerAt - 1.6) / 0.6))) : 0
       if (punch > 0) { c.yaw += Math.sin(t * 70) * 0.006 * punch; c.pitch += Math.cos(t * 83) * 0.004 * punch; c.hfov *= 1 - 0.05 * punch }
-      drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, cheer, covers, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      drawScene(ctx, c, W, H, { pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 
@@ -270,6 +274,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       tagOf('tagBowler', { x: f.bowler.x, y: 0, z: f.bowler.z })
       const ci = L.plan.catcher >= 0 ? L.plan.catcher : L.plan.chaser
       if (ci >= 0 && (f.phase === 'flight' || f.phase === 'hold')) { const w = f.moving.get(ci) ?? L.rest[ci]; tagOf('tagField', { x: w.x, y: 0, z: w.z }) } else { const n = nodes.current.get('tagField'); if (n) n.style.display = 'none' }
+      const slowTag = nodes.current.get('tagSlow')
+      if (slowTag) slowTag.style.display = f.slowmo ? 'block' : 'none'
       lastT.current = t
     }
 
@@ -286,10 +292,11 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         if (stopped) return
         const dt = Math.min(0.05, (now - prev) / 1000)
         prev = now
-        const t = (now - t0) / 1000 / Math.max(0.3, live.current.rate)
-        const end = live.current.plan.total
-        paint(Math.min(t, end), dt, false)
-        if (t < end) raf = requestAnimationFrame(tick)
+        // (a nick's slow motion makes the clip last longer than its own seconds)
+        const real = (now - t0) / 1000 / Math.max(0.3, live.current.rate)
+        const lp = live.current.plan
+        paint(Math.min(warpTime(lp, real), lp.total), dt, false)
+        if (real < lp.realTotal) raf = requestAnimationFrame(tick)
       }
       paint(0, 0.016, true)
       raf = requestAnimationFrame(tick)
@@ -321,6 +328,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {captionsOn && caption && event && (
         <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.3, rate), duration: 3.4 / Math.max(0.3, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}
+      <div ref={setNode('tagSlow')} className="pointer-events-none absolute bottom-8 right-2 z-[6001] hidden rounded bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
       {[['tagStriker', striker.name, accentOf(battingTeam)], ['tagBowler', bowler.name, accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
         <div key={k} ref={setNode(k)} className="pointer-events-none absolute left-0 top-0 z-[5000] hidden whitespace-nowrap rounded bg-black/75 px-1.5 text-[10px] font-bold text-white" style={{ borderBottom: `2px solid ${col}` }}>
@@ -337,6 +345,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{scoreBug?.team ?? battingTeam.short}</span>
             <span className="px-1.5 py-0.5 font-display text-sm leading-none tabular-nums">{scoreBug?.runs ?? event?.score.runs}/{scoreBug?.wickets ?? event?.score.wickets}</span>
             <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor((scoreBug?.balls ?? event?.score.legalBalls ?? 0) / 6)}.{(scoreBug?.balls ?? event?.score.legalBalls ?? 0) % 6} ov</span>
+            {scoreBug?.lastKmh ? <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-sky-300">{scoreBug.lastKmh} km/h</span> : null}
             {scoreBug?.need && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-amber-300">{scoreBug.need}</span>}
           </div>
           {scoreBug && scoreBug.batters.length > 0 && (

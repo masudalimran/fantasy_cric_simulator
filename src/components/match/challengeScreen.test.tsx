@@ -5,6 +5,7 @@ import { challengeTalk } from '../../season/challenge'
 import { trackFor } from '../../season/moments'
 import { ChallengeScreen, challengeSeconds } from './ChallengeScreen'
 import { ChallengeResultScreen, CHALLENGE_RESULT_SECONDS } from './ChallengeResult'
+import { RAIN_DELAY_SECONDS, RainDelayScreen } from './RainDelay'
 import { ReviewScreen } from './ReviewScreens'
 import { TIMEOUT_INTRO_SECONDS, TimeoutIntroScreen } from './TimeoutIntro'
 
@@ -61,5 +62,18 @@ describe('a successful challenge', () => {
     expect(bowl).toContain(`${p1.name} has to go`)
     expect(bowl).toContain('1 of 2 left')
     expect(CHALLENGE_RESULT_SECONDS).toBeGreaterThan(3)
+  })
+})
+
+describe('rain stops play', () => {
+  it('says what stopped play and how many overs the day loses', () => {
+    const rain = renderToString(<RainDelayScreen info={{ weather: 'rain', lost: 21, day: 3, rate: 1 }} />).replace(/<!-- -->/g, '')
+    expect(rain).toContain('RAIN STOPS PLAY')
+    expect(rain).toContain('21 overs lost')
+    expect(rain).toContain('Day 3')
+    const light = renderToString(<RainDelayScreen info={{ weather: 'bad light', lost: 1, day: 2, rate: 1 }} />).replace(/<!-- -->/g, '')
+    expect(light).toContain('BAD LIGHT')
+    expect(light).toContain('1 over lost')
+    expect(RAIN_DELAY_SECONDS).toBeGreaterThan(4)
   })
 })
