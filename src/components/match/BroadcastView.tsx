@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, clipNow, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -237,7 +237,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const caught = L.plan.catcher === i
         const dv = f.dives.get(i)
         const running = f.moving.has(i) && f.phase === 'flight' && !dv
-        place(`f${i}`, { x: w.x, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: w.z }, { rot: dv ? dv.dir * dv.k * 78 : 0 })
+        // a diver falls head first towards the ball: the feet are where he left the ground, so the body is set back along the way he came and the hands reach the ball
+        const dn = dv ? Math.hypot(dv.dx, dv.dz) || 1 : 1
+        const back = dv ? 1.45 * dv.k : 0
+        place(`f${i}`, { x: w.x - (dv ? (dv.dx / dn) * back : 0), y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: w.z - (dv ? (dv.dz / dn) * back : 0) }, { rot: dv ? screenSide(dv, c.yaw) * dv.k * 78 : 0 })
       })
       // the ball, and its shadow
       const ball = nodes.current.get('ball'), shadow = nodes.current.get('shadow')

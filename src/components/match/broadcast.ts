@@ -345,7 +345,7 @@ export interface Frame {
   hurt: number
   raise: number
   /** Fielders who are diving, by index (the keeper is 0): how far down (0 to 1) and to which side. */
-  dives: Map<number, { k: number; dir: number }>
+  dives: Map<number, { k: number; dir: number; /** Which way the ball is from the diver on the ground (world metres), so the picture can drop him towards it whichever way the camera looks. */ dx: number; dz: number }>
   /** A word over somebody's head right now. */
   react: { text: string; who: 'striker' | 'bowler' | 'keeper' } | null
   /** The slow-motion close-up of a nick is on. */
@@ -468,11 +468,11 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   const signal = plan.signal && t >= plan.signal.at ? { kind: plan.signal.kind, k: clamp01((t - plan.signal.at) / 0.3), who: plan.signal.who } : null
   const hurt = plan.hurt ? clamp01((t - t2) / 0.2) * (1 - clamp01((t - t2 - 1.0) / 0.6)) : 0
   const raise = plan.celebrateAt !== null && plan.celebrateAt !== undefined ? clamp01((t - plan.celebrateAt) / 0.3) : 0
-  const dives = new Map<number, { k: number; dir: number }>()
-  if (plan.keeperDive) { const d = plan.keeperDive; const k = clamp01((t - d.at) / 0.4) * (1 - clamp01((t - d.at - 1.1) / 0.5)); if (k > 0) dives.set(0, { k, dir: d.dir }) }
+  const dives = new Map<number, { k: number; dir: number; dx: number; dz: number }>()
+  if (plan.keeperDive) { const d = plan.keeperDive; const k = clamp01((t - d.at) / 0.4) * (1 - clamp01((t - d.at - 1.1) / 0.5)); if (k > 0) dives.set(0, { k, dir: d.dir, dx: d.dir, dz: 0 }) }
   // a low catch is a dive; a high one is taken standing
-  if (plan.catcher > 0 && plan.kind === 'air' && plan.peak < 3.4) { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1 }) }
-  if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) dives.set(plan.chaser, { k, dir: Math.sign(plan.end.x - fielderAt(plan.chaser).x) || 1 }) }
+  if (plan.catcher > 0 && plan.kind === 'air' && plan.peak < 3.4) { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1, dx: plan.end.x - fielderAt(plan.catcher).x, dz: plan.end.z - fielderAt(plan.catcher).z }) }
+  if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) dives.set(plan.chaser, { k, dir: Math.sign(plan.end.x - fielderAt(plan.chaser).x) || 1, dx: plan.end.x - fielderAt(plan.chaser).x, dz: plan.end.z - fielderAt(plan.chaser).z }) }
   const react = plan.react && t >= plan.react.at && t < plan.react.at + 1.1 ? { text: plan.react.text, who: plan.react.who } : null
   // the boards at the boundary light up with FOUR or SIX where the ball went
   let board: Frame['board'] = null
@@ -499,6 +499,9 @@ export function warpTime(plan: Pick<Plan, 'slow'>, real: number): number {
   if (inside <= s.len) return s.at + inside
   return s.at + s.len + (real - s.at - s.len / s.factor)
 }
+
+/** Which way a diver falls on the screen (+1 to the right, -1 to the left): towards the ball, whichever way the camera is looking (its yaw). */
+export const screenSide = (dv: { dx: number; dz: number; dir: number }, yaw: number): number => Math.sign(dv.dx * Math.cos(yaw) - dv.dz * Math.sin(yaw)) || dv.dir
 
 /** Moves an angle towards another by the shortest way. */
 export function approach(a: number, b: number, k: number): number {

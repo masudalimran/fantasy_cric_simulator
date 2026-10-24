@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { elevation, replayCamera, replayCamFor, withReplaySlow, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
+import { screenSide, elevation, replayCamera, replayCamFor, withReplaySlow, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 
 const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
@@ -198,5 +198,32 @@ describe('the broadcast view plan', () => {
     expect(slow.slow).not.toBeNull()
     expect(slow.realTotal).toBeGreaterThan(plan.total + 1)
     expect(withReplaySlow(slow)).toBe(slow)
+  })
+
+  it('a diver drops towards the ball on the screen, whichever camera is looking', () => {
+    // the ball is to the right of the diver (world +x): from the live camera (looking down the pitch) he falls right; from the reverse camera, left
+    const dv = { dx: 4, dz: 0, dir: 1 }
+    expect(screenSide(dv, 0)).toBe(1)
+    expect(screenSide(dv, Math.PI)).toBe(-1)
+    // from the side camera the same ball is towards or away from the camera: left or right on the screen
+    expect(Math.abs(screenSide({ dx: 0, dz: 5, dir: 1 }, Math.PI / 2))).toBe(1)
+    expect(screenSide({ dx: 0, dz: 5, dir: 1 }, Math.PI / 2)).toBe(-screenSide({ dx: 0, dz: 5, dir: 1 }, -Math.PI / 2))
+    expect(screenSide({ dx: 0, dz: 0, dir: -1 }, 0)).toBe(-1)
+    // and the dives the clip makes carry where the ball is
+    for (let seed = 1; seed <= 20; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      m.playMatch()
+      for (const inn of m.innings) {
+        const bowlSide = m.sides[1 - inn.battingSide]
+        for (const ev of inn.log) {
+          if (ev.extraType !== 'wide' && ev.boundary !== 4) continue
+          const plan0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: m.player(ev.strikerId).hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), false)
+          const rest = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
+          for (let t = 0; t <= plan.total; t += 0.1) for (const d of frameAt(plan, t, (i) => rest[i]).dives.values()) { expect(Number.isFinite(d.dx) && Number.isFinite(d.dz)).toBe(true); expect(Math.abs(d.dx) + Math.abs(d.dz) + Math.abs(d.dir)).toBeGreaterThan(0) }
+        }
+      }
+    }
   })
 })
