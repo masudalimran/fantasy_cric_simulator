@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { Match } from '../engine/match'
-import { useStore } from '../store/useStore'
+import { hasMatchInProgress, useStore } from '../store/useStore'
 import { BOOST_EVERY, BOOST_MULT, boostAllowed, boostSummary, careerWins } from './boost'
 import type { Season } from './types'
 
-const wins = (my: string, n: number, other = 0) => ({
+const wins = (my: string, n: number, other = 0, tag = 'w') => ({
   myTeamId: my,
-  results: { ...Object.fromEntries(Array.from({ length: n }, (_, i) => [`w${i}`, { fixtureId: `w${i}`, winnerId: my }])), ...Object.fromEntries(Array.from({ length: other }, (_, i) => [`l${i}`, { fixtureId: `l${i}`, winnerId: 'someone-else' }])) },
+  results: { ...Object.fromEntries(Array.from({ length: n }, (_, i) => [`${tag}${i}`, { fixtureId: `${tag}${i}`, winnerId: my }])), ...Object.fromEntries(Array.from({ length: other }, (_, i) => [`l${i}`, { fixtureId: `l${i}`, winnerId: 'someone-else' }])) },
 }) as unknown as Season
 
 describe('boost tokens', () => {
@@ -50,7 +50,7 @@ describe('using a boost token', () => {
   it('is armed from the squad screen, can be changed on the toss screen and is spent only when the coin is flipped', () => {
     const my = BUILT_IN_TEAMS[0]
     const id = useStore.getState().createSession({ name: 'B', year: 2026, teams: BUILT_IN_TEAMS, seed: 3, myTeamId: my.id, difficulty: 'normal' })
-    const give = (n: number) => useStore.setState((st) => ({ sessions: st.sessions.map((x) => (x.id === id ? { ...x, season: { ...x.season, results: { ...x.season.results, ...wins(my.id, n).results } } } : x)) }))
+    const give = (n: number, tag = 'w') => useStore.setState((st) => ({ sessions: st.sessions.map((x) => (x.id === id ? { ...x, season: { ...x.season, results: { ...x.season.results, ...wins(my.id, n, 0, tag).results } } } : x)) }))
     const sum = () => { const s = useStore.getState().sessions.find((x) => x.id === id)!; return boostSummary([...(s.history ?? []), s.season], s.boost, s.season.difficulty) }
     // no tokens yet: nothing can be armed
     useStore.getState().armBoost(true)
@@ -59,6 +59,9 @@ describe('using a boost token', () => {
     expect(sum().available).toBe(1)
     useStore.getState().armBoost(true)
     expect(sum().armed).toBe(true)
+    useStore.getState().armBoost(false)
+    expect(sum().armed).toBe(false)
+    useStore.getState().armBoost(true)
     const fx = useStore.getState().sessions.find((x) => x.id === id)!.season.fixtures.find((f) => f.homeId === my.id || f.awayId === my.id)!
     const teamOf = (tid: string) => BUILT_IN_TEAMS.find((t) => t.id === tid)!
     useStore.getState().startLive({ format: 't20', teamA: teamOf(fx.homeId!), teamB: teamOf(fx.awayId!), seed: 5, fixtureId: fx.id, url: '/match/x' })
@@ -77,6 +80,17 @@ describe('using a boost token', () => {
     // after the coin the choice is locked
     useStore.getState().setLiveBoost(false)
     expect(useStore.getState().liveMatch?.boost).toBe(true)
+    // while your team is in a match a boost cannot be armed or disarmed from the squad screen
+    expect(hasMatchInProgress(useStore.getState())).toBe(true)
+    useStore.getState().armBoost(false)
+    expect(sum().armed).toBe(false) // (it was spent at the toss; nothing to change)
+    give(5, 'more')
+    expect(sum().available).toBe(1)
+    useStore.getState().armBoost(true)
+    expect(sum().armed).toBe(false)
     useStore.getState().discardLive()
+    expect(hasMatchInProgress(useStore.getState())).toBe(false)
+    useStore.getState().armBoost(true)
+    expect(sum().armed).toBe(true)
   })
 })

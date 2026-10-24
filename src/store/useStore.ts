@@ -227,7 +227,7 @@ export const useStore = create<State>()(
           }
         }),
       armBoost: (on) =>
-        set((st) => ({
+        set((st) => (hasMatchInProgress(st) ? st : {
           sessions: st.sessions.map((x) => {
             if (x.id !== st.activeSessionId) return x
             const b = boostSummary([...(x.history ?? []), x.season], x.boost, x.season.difficulty)
@@ -330,6 +330,9 @@ export function useViewedSeason(): { season: Season | null; year: number | null;
   const years = session ? [...(session.history ?? []).map((h) => h.year), session.season.year] : []
   return { season: past ?? current, year: (past ?? current)?.year ?? null, isCurrent: !past, years }
 }
+
+/** True while your team is in a match (the toss screen, or play, or a result not yet closed): a boost cannot be armed from the squad screen then. */
+export const hasMatchInProgress = (s: { liveMatch: LiveMatch | null }): boolean => !!s.liveMatch && !!s.liveMatch.myTeamId && !s.liveMatch.finished
 
 export const selectSession = (s: { sessions: SessionFile[]; activeSessionId: string | null }): SessionFile | null =>
   s.sessions.find((x) => x.id === s.activeSessionId) ?? null
