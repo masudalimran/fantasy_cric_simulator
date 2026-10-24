@@ -171,4 +171,23 @@ describe('the bodies drawn in the broadcast view', () => {
     }
     expect(done).toBeGreaterThan(0)
   })
+
+  it('a catch behind that is turned down or overturned still goes through to the keeper', () => {
+    const mm = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed: 4 })
+    mm.playMatch()
+    const inn = mm.innings[0]
+    const bowlSide = mm.sides[1 - inn.battingSide]
+    const ev = inn.log.find((e) => !e.wicket && !e.extraType && e.runsBat === 0 && e.legal)!
+    const striker = mm.player(ev.strikerId)
+    const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+    const fielders = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+    const plan = (e: typeof ev) => planBall(e, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(e, fielders), striker.hand === 'L')
+    const review = { by: 'bowl' as const, kind: 'edge' as const, originalOut: true, finalOut: false, overturned: true, desperate: false, left: 1, total: 2 }
+    for (const e of [{ ...ev, review }, { ...ev, appeal: { kind: 'edge' as const, out: false } }]) {
+      const p = plan(e)
+      expect(p.kind).toBe('keeper')
+      expect(p.catcher).toBe(0)
+      expect(batHitsBall(e)).toBe(false)
+    }
+  })
 })

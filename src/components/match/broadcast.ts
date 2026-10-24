@@ -233,8 +233,10 @@ export const missHeight = (ev: Pick<BallEvent, 'seq' | 'delivery'>) => {
 export const beatenDot = (ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'wicket' | 'extraType'>) => !ev.wicket && !ev.extraType && ev.runsBat === 0 && ev.legal && hash01(ev.seq * 2.3) > 0.5
 
 /** Whether the bat really met the ball (the sound of the bat is only heard then): not on a wide, a bye, a leg bye, a miss, or a ball that bowled, trapped or stumped him. */
-export function batHitsBall(ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'wicket' | 'extraType' | 'boundary'>): boolean {
+export function batHitsBall(ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'wicket' | 'extraType' | 'boundary'> & Partial<Pick<BallEvent, 'review' | 'appeal'>>): boolean {
   if (ev.extraType === 'wide' || ev.extraType === 'bye' || ev.extraType === 'legbye') return false
+  // (no touch, no sound: a catch behind that was turned down, or overturned, never met the bat)
+  if (!ev.wicket && (ev.review?.kind === 'edge' || ev.appeal?.kind === 'edge')) return false
   if (ev.wicket) return ev.wicket.kind === 'caught' || ev.wicket.kind === 'caught and bowled' || ev.wicket.kind === 'run out'
   return ev.runsBat > 0 || ev.boundary > 0 || !beatenDot(ev)
 }
@@ -334,6 +336,16 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     kind = el.kind
     // a ball that is not scored off is either played and missed (it goes through to the keeper) or kept out by the bat
     if (beatenDot(ev)) { end = { x: meet.x * 0.5, y: 1, z: 8.5 }; kind = 'keeper'; catcher = 0 } else if (ev.runsBat === 0 && kind === 'ground') swing = true // kept out with a defensive push
+  }
+  // an appeal for a catch behind that was turned down (or overturned on review) still has to look like a catch: the ball goes through to the keeper's gloves
+  const edgeAppeal = !w && !wide && !bye && !legbye && ev.runsBat === 0 && (ev.review?.kind === 'edge' || ev.appeal?.kind === 'edge') && fielders.length > 0
+  if (edgeAppeal) {
+    const kw = fielderWorld(fielders[0].x, fielders[0].y, fielders[0].spot)
+    end = { x: kw.x, y: 1.0, z: kw.z }
+    kind = 'keeper'
+    catcher = 0
+    peak = 0
+    swing = false
   }
   // the nearest fielder (not the keeper) runs towards where the ball is going
   if (!w && !wide && !six && (ev.runsBat > 0 || bye || legbye) && kind !== 'keeper') {
