@@ -67,12 +67,13 @@ const BOWL_END_Z = BOWL_Z + 0.7
  * high above the pitch, or from down at the stumps. Each stays where it is and turns to follow the ball, like the live cameras.
  */
 export type ReplayCam = 'side' | 'high' | 'stump'
-export function replayCamera(kind: ReplayCam, seq: number): { cam: Cam; minHfov: number; label: string; /** Stay wide even in the slow-motion moment (no close-up). */ keepWide?: boolean } {
+export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): { cam: Cam; minHfov: number; label: string; /** Stay wide even in the slow-motion moment (no close-up). */ keepWide?: boolean; /** Looks straight down and moves with the ball (its own way up, set to match the live picture), instead of turning on the spot. */ overhead?: boolean } {
   const deg = Math.PI / 180
-  if (kind === 'high') return { cam: { p: { x: 0.01, y: 46, z: -10 }, yaw: 0, pitch: 1.2, hfov: 70 * deg }, minHfov: 68 * deg, label: 'Spider cam', keepWide: true }
+  if (kind === 'high') return { cam: { p: { x: 0.01, y: 46, z: -10 }, yaw: 0, pitch: 1.2, hfov: 70 * deg }, minHfov: 68 * deg, label: 'Spider cam', keepWide: true, overhead: true }
   // (well back behind the stumps and zoomed right out, so the stumps, the batsman and the ball can all be seen)
   if (kind === 'stump') return { cam: { p: { x: -1.4, y: 1.0, z: 4.2 }, yaw: Math.PI, pitch: 0.05, hfov: 56 * deg }, minHfov: 54 * deg, label: 'Stump cam', keepWide: true }
-  const dir = hash01(seq * 7.7) < 0.5 ? -1 : 1
+  // (the side-on camera stands on the side the ball went to, so it is clear which way the shot went)
+  const dir = shotSide ?? (hash01(seq * 7.7) < 0.5 ? -1 : 1)
   return { cam: { p: { x: dir * 34, y: 4.5, z: -9 }, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0.1, hfov: 34 * deg }, minHfov: 30 * deg, label: 'Side-on' }
 }
 /** Which camera a replay of this kind of moment uses, a stable pick from the ball number (the stump cam only for the ways of being bowled out). */

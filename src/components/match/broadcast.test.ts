@@ -226,4 +226,11 @@ describe('the broadcast view plan', () => {
       }
     }
   })
+
+  it('the side-on replay camera stands on the side the ball went to, and the spider cam flies with the ball the live way up', () => {
+    expect(replayCamera('side', 3, 1).cam.p.x).toBeGreaterThan(0)
+    expect(replayCamera('side', 3, -1).cam.p.x).toBeLessThan(0)
+    expect(replayCamera('high', 3).overhead).toBe(true)
+    expect(replayCamera('side', 3).overhead).toBeFalsy()
+  })
 })

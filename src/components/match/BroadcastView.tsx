@@ -132,7 +132,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
   const plan: Plan = useMemo(() => (replay?.slowMo ? withReplaySlow(plan0) : plan0), [plan0, replay?.slowMo])
   const rate = fitSeconds ? Math.max(0.2, Math.min(3, fitSeconds / plan.realTotal)) : rateProp
-  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
+  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (Math.sign(plan0.end.x - plan0.meet.x) || undefined) as 1 | -1 | undefined) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
+  void 0 // eslint-disable-line react-hooks/exhaustive-deps
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
   // a team's (or a star's) signature move on a six, a strong four or a wicket (not in the timeout reel)
@@ -179,9 +180,17 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : f.aim
       const hfovAt = covers0 ? 0.8 : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
-      const goal = lookAt(base.p, aimAt)
       const c = cam.current
-      c.p = base.p
+      let goal = lookAt(base.p, aimAt)
+      if (L.replayCam?.overhead) {
+        // the spider cam: looks down the same way up as the live picture (CAM 2 for a shot back down the ground, CAM 1 otherwise) and flies along with the ball, so the shot goes the same way on the screen
+        const yaw = L.plan.reverse ? Math.PI : 0
+        const reach = 40 / Math.tan(1.35)
+        const target = { x: aimAt.x, y: 40, z: aimAt.z + (L.plan.reverse ? reach : -reach) }
+        const k = snap ? 1 : 1 - Math.exp(-dt * 3.5)
+        c.p = { x: c.p.x + (target.x - c.p.x) * k, y: target.y, z: c.p.z + (target.z - c.p.z) * k }
+        goal = { yaw, pitch: 1.35 }
+      } else c.p = base.p
       if (snap) { c.yaw = goal.yaw; c.pitch = goal.pitch; c.hfov = hfovAt } else {
         const k = 1 - Math.exp(-dt * (f.phase === 'flight' ? 7 : 4.5))
         c.yaw = approach(c.yaw, goal.yaw, k); c.pitch = approach(c.pitch, goal.pitch, k); c.hfov += (hfovAt - c.hfov) * k
