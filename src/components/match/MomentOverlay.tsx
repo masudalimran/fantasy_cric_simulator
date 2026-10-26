@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
-import { ExtraScreen, FourScreen, MaidenScreen, NoBallScreen, type ExtraInfo, type FourInfo, type MaidenInfo, type NoBallInfo } from './EventScreens'
+import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { AmbientScreen, type AmbientInfo } from './AmbientScreens'
 import { CheerScreen, type CheerInfo } from './CheerScreen'
@@ -12,7 +12,7 @@ import { ChallengeScreen, type ChallengeInfo } from './ChallengeScreen'
 import { ChallengeResultScreen, type ChallengeResultInfo } from './ChallengeResult'
 import { RainDelayScreen, type RainDelayInfo } from './RainDelay'
 import { CatchScreen, type CatchInfo } from './CatchScreen'
-import { AlmostCast, ExtraCast, FourCast, MissCast, WicketCast, type AlmostCastInfo, type ExtraCastInfo, type FourCastInfo, type MissCastInfo, type WicketCastInfo } from './ReplayScreens'
+import { AlmostCast, ExtraCast, FourCast, MissCast, NoBallCast, SixCast, WicketCast, type AlmostCastInfo, type NoBallCastInfo, type SixCastInfo, type ExtraCastInfo, type FourCastInfo, type MissCastInfo, type WicketCastInfo } from './ReplayScreens'
 import { TimeoutIntroScreen, type TimeoutIntroInfo } from './TimeoutIntro'
 import { ReviewScreen, RunOutReview, type ReviewInfo, type RunOutInfo } from './ReviewScreens'
 import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInfo } from './TimeoutScreens'
@@ -50,6 +50,9 @@ export interface Moment {
   missCast?: MissCastInfo
   /** A lofted shot that fell just short of a fielder. */
   almostCast?: AlmostCastInfo
+  /** A six and a no ball, the broadcast way: replays with slow motion. */
+  sixCast?: SixCastInfo
+  noballCast?: NoBallCastInfo
   /** A catch: the ball again from the TV camera and where it met the bat. */
   catchInfo?: CatchInfo
   /** Rain or bad light stops play in a Test. */
@@ -71,7 +74,6 @@ export interface Moment {
   cheer?: CheerInfo
   ambient?: AmbientInfo
   /** The bowler's front foot over the line, shown before the free hit. */
-  noball?: NoBallInfo
   /** What the commentary box says about the screen, on a bar along the bottom (the crowd, the cheerleaders, the stats desk...). */
   caption?: string
   haul?: HaulInfo
@@ -141,13 +143,6 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  if (moment.kind === 'noball' && moment.noball) {
-    return (
-      <motion.div data-moment="noball" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl" initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.2, delay: 0 } }} transition={{ duration: 0.2, delay: moment.delay / 1000 }}>
-        <NoBallScreen info={moment.noball} />
-      </motion.div>
-    )
-  }
   if (moment.kind === 'ambient' && moment.ambient) {
     return (
       <motion.div data-moment="ambient" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl" initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25, delay: 0 } }} transition={{ duration: 0.25, delay: moment.delay / 1000 }}>
@@ -179,7 +174,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  if ((moment.kind === 'fourcast' && moment.fourCast) || (moment.kind === 'wicketcast' && moment.wicketCast) || (moment.kind === 'extracast' && moment.extraCast) || (moment.kind === 'misscast' && moment.missCast) || (moment.kind === 'almostcast' && moment.almostCast) || (moment.kind === 'catch' && moment.catchInfo) || (moment.kind === 'raindelay' && moment.rainDelay) || (moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
+  if ((moment.kind === 'fourcast' && moment.fourCast) || (moment.kind === 'wicketcast' && moment.wicketCast) || (moment.kind === 'extracast' && moment.extraCast) || (moment.kind === 'misscast' && moment.missCast) || (moment.kind === 'almostcast' && moment.almostCast) || (moment.kind === 'six' && moment.sixCast) || (moment.kind === 'noball' && moment.noballCast) || (moment.kind === 'catch' && moment.catchInfo) || (moment.kind === 'raindelay' && moment.rainDelay) || (moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
     return (
       <motion.div
         data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
@@ -190,6 +185,8 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         {moment.kind === 'extracast' && moment.extraCast && <ExtraCast info={moment.extraCast} />}
         {moment.kind === 'misscast' && moment.missCast && <MissCast info={moment.missCast} />}
         {moment.kind === 'almostcast' && moment.almostCast && <AlmostCast info={moment.almostCast} />}
+        {moment.kind === 'six' && moment.sixCast && <SixCast info={moment.sixCast} />}
+        {moment.kind === 'noball' && moment.noballCast && <NoBallCast info={moment.noballCast} />}
         {moment.kind === 'catch' && moment.catchInfo && <CatchScreen info={moment.catchInfo} />}
         {moment.kind === 'raindelay' && moment.rainDelay && <RainDelayScreen info={moment.rainDelay} />}
         {moment.kind === 'challengewon' && moment.challengeWon && <ChallengeResultScreen info={moment.challengeWon} />}

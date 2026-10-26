@@ -6,9 +6,10 @@ import { Match } from '../../engine/match'
 import { DEFAULT_LOOK } from '../../engine/stadium'
 import { wicketCard } from '../../season/wicketCards'
 import { fieldPlan } from './fieldSets'
-import { AlmostCast, ExtraCast, FourCast, MissCast, WicketCast } from './ReplayScreens'
+import { AlmostCast, ExtraCast, FourCast, MissCast, NoBallCast, SixCast, WicketCast } from './ReplayScreens'
 import { almostCaught } from './almost'
-import { fielderWorld, planBall } from './broadcast'
+import { BOWL_Z, fielderWorld, planBall, replayCamFor, replayCamera, withFootSlow } from './broadcast'
+import { sixContact } from '../../engine/contact'
 import { WIDE_LINE_M, wideCm } from '../../engine/wide'
 import { overstepCm } from '../../season/moments'
 import { endPoint } from './Stage'
@@ -143,5 +144,38 @@ describe('the broadcast-style screens', () => {
       const html = clean(renderToString(<ExtraCast info={{ replay: baseFor(m, ev), title: 'WIDE!', sub: 'x', color: '#fbbf24', wide: { side: 'off', hand: 'R', cm }, rate: 1 }} />))
       expect(html).toContain(`>${cm} cm<`)
     }
+  })
+
+  it('a wide is replayed from the spider cam, a no ball from the front-foot cam', () => {
+    for (let seed = 1; seed <= 30; seed++) { expect(replayCamFor('wide', seed)).toBe('high'); expect(replayCamFor('noball', seed)).toBe('foot') }
+    const foot = replayCamera('foot', 3)
+    expect(foot.focus).toBeTruthy()
+    expect(foot.cam.p.y).toBeLessThan(1) // low down by the crease
+    expect(foot.cam.hfov).toBeLessThan(0.8) // close in
+  })
+
+  it('a no ball bowler lands over the popping crease by the distance the screen gives', () => {
+    const nb = all.find((e) => e.extraType === 'noball')
+    const ev = nb ?? { ...all.find((e) => e.legal && !e.wicket && !e.extraType)!, extraType: 'noball' as const, legal: false }
+    const base = baseFor(m, ev)
+    const plan = planBall(ev, base.fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, base.fielders), false)
+    const cm = overstepCm(ev.seq)
+    expect(plan.runTo.z).toBeCloseTo(BOWL_Z + 1.22 + cm / 100 + 0.16, 5)
+    expect(plan.runTo.z).toBeGreaterThan(BOWL_Z + 1.22) // over the line
+    const slow = withFootSlow(plan)
+    expect(slow.slow!.at).toBeLessThan(plan.tRun) // slow motion as the foot lands, before the ball is let go
+    const html = clean(renderToString(<NoBallCast info={{ replay: base, bowler: m.player(ev.bowlerId), bowlTeam: B, cm, rate: 1 }} />))
+    expect(html).toContain('NO BALL!')
+    expect(html).toContain(`${cm} cm`)
+    expect(html).toContain('Front foot')
+  })
+
+  it('a six is a slow-motion replay with the distance, like a four', () => {
+    const ev = all.find((e) => e.boundary === 6 && e.distance)!
+    const html = clean(renderToString(<SixCast info={{ replay: baseFor(m, ev), batsman: m.player(ev.strikerId), team: A, distance: ev.distance!, rate: 1, contact: sixContact(ev, 70) }} />))
+    expect(html).toContain('SIX!')
+    expect(html).toContain('metres')
+    expect(html).toContain('Replay')
+    expect(html).toContain('Bat speed')
   })
 })

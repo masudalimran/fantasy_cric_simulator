@@ -9,6 +9,7 @@ import type { BallEvent } from '../../engine/types'
  */
 import { WIDE_LINE_M, wideCm, wideDirection, wideSide } from '../../engine/wide'
 import { classifyShot, type ShotStyle } from './bodyPose'
+import { overstepCm } from '../../season/moments'
 
 export interface V3 { x: number; y: number; z: number }
 export interface Cam { p: V3; yaw: number; pitch: number; hfov: number }
@@ -81,9 +82,11 @@ const BOWL_END_Z = BOWL_Z + 0.7
  * The cameras a replay can use instead of the live one, so a replay does not look like the live picture shown again: from the side (square leg), from
  * high above the pitch, or from down at the stumps. Each stays where it is and turns to follow the ball, like the live cameras.
  */
-export type ReplayCam = 'side' | 'high' | 'stump'
-export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): { cam: Cam; minHfov: number; label: string; /** Stay wide even in the slow-motion moment (no close-up). */ keepWide?: boolean; /** Looks straight down and moves with the ball (its own way up, set to match the live picture), instead of turning on the spot. */ overhead?: boolean } {
+export type ReplayCam = 'side' | 'high' | 'stump' | 'foot'
+export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): { cam: Cam; minHfov: number; label: string; /** Stay wide even in the slow-motion moment (no close-up). */ keepWide?: boolean; /** Looks straight down and moves with the ball (its own way up, set to match the live picture), instead of turning on the spot. */ overhead?: boolean; /** Keeps looking at this spot instead of following the ball (the front-foot camera). */ focus?: V3 } {
   const deg = Math.PI / 180
+  // the front-foot camera: low down at the side of the bowler's crease, close in on where his front foot lands, with the popping crease across the picture
+  if (kind === 'foot') return { cam: { p: { x: 3.8, y: 0.6, z: BOWL_Z - 3.6 }, yaw: 0, pitch: 0.1, hfov: 40 * deg }, minHfov: 36 * deg, label: 'Front-foot cam', keepWide: true, focus: { x: 0.4, y: 0.5, z: BOWL_Z + 1.2 } }
   if (kind === 'high') return { cam: { p: { x: 0.01, y: 46, z: -10 }, yaw: 0, pitch: 1.2, hfov: 70 * deg }, minHfov: 68 * deg, label: 'Spider cam', keepWide: true, overhead: true }
   // (well back behind the stumps and zoomed right out, so the stumps, the batsman and the ball can all be seen)
   if (kind === 'stump') return { cam: { p: { x: -1.4, y: 1.0, z: 4.2 }, yaw: Math.PI, pitch: 0.05, hfov: 56 * deg }, minHfov: 54 * deg, label: 'Stump cam', keepWide: true }
@@ -92,18 +95,28 @@ export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): {
   return { cam: { p: { x: dir * 34, y: 4.5, z: -9 }, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0.1, hfov: 34 * deg }, minHfov: 30 * deg, label: 'Side-on' }
 }
 /** Which camera a replay of this kind of moment uses, a stable pick from the ball number (the stump cam only for the ways of being bowled out). */
-export function replayCamFor(kind: 'four' | 'six' | 'bowled' | 'lbw' | 'stumped' | 'hit wicket' | 'run out' | 'catch' | 'extra', seq: number): ReplayCam {
+export function replayCamFor(kind: 'four' | 'six' | 'bowled' | 'lbw' | 'stumped' | 'hit wicket' | 'run out' | 'catch' | 'extra' | 'wide' | 'noball', seq: number): ReplayCam {
   const h = hash01(seq * 3.9)
   if (kind === 'bowled' || kind === 'lbw' || kind === 'hit wicket') return h < 0.6 ? 'stump' : 'side'
   if (kind === 'stumped') return 'side'
   if (kind === 'run out' || kind === 'catch') return h < 0.5 ? 'high' : 'side'
   if (kind === 'extra') return 'side'
+  // a wide is seen from above, where it is plain how far outside the line it went; a no ball from the front-foot camera
+  if (kind === 'wide') return 'high'
+  if (kind === 'noball') return 'foot'
   return h < 0.5 ? 'side' : 'high'
 }
 /** The same clip with a stretch of slow motion around the moment the bat meets the ball (unless the clip already has one). */
-export function withReplaySlow(plan: Plan): Plan {
+export function withReplaySlow(plan: Plan, deep = false): Plan {
   if (plan.slow) return plan
-  const slow = { at: plan.tRun + plan.tDeliver - 0.22, len: 0.75, factor: 0.35 }
+  // a four or a six is shown deeper into slow motion: from just before the bat meets the ball until the ball has left the bat
+  const slow = deep ? { at: plan.tRun + plan.tDeliver - 0.32, len: 1.0, factor: 0.25 } : { at: plan.tRun + plan.tDeliver - 0.22, len: 0.75, factor: 0.35 }
+  return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
+}
+
+/** The no-ball replay: slow motion as the front foot lands (just before the ball is let go), so the foot and the line can be seen. */
+export function withFootSlow(plan: Plan): Plan {
+  const slow = { at: plan.tRun - 0.4, len: 0.6, factor: 0.25 }
   return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
 }
 
@@ -196,6 +209,8 @@ export interface Plan {
   chaseKind: 'gap' | 'between' | 'close' | null
   /** A lofted shot that drops in front of the fielder (and he has to field it on the bounce): how far in front of him it lands, in metres. */
   fellShort: { gap: number } | null
+  /** Where a fielder chasing a four ends up: well to the side of the ball's line, so it is plain he never had a chance of stopping it. */
+  chaseTo: V3 | null
   /** The out batsman walks off after the wicket; and when a fifty or hundred is reached he raises his bat. */
   exitAt: number | null
   celebrateAt: number | null
@@ -371,6 +386,35 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   // a four is mostly in the gap with nobody near it or chased to the rope, and only about one in five has a fielder close enough to dive for it
   const h4 = hash01(ev.seq * 6.1)
   const chaseKind: Plan['chaseKind'] = (ev.boundary === 4 || byeFour) && chaser >= 0 ? (h4 < 0.5 ? 'gap' : h4 < 0.8 ? 'between' : 'close') : null
+  // a fielder who gives chase to a four is never on the ball's line: he is one of those standing well to the side of it, and he stays well to the side
+  let chaseTo: V3 | null = null
+  if ((ev.boundary === 4 || byeFour) && chaser >= 0 && (chaseKind === 'gap' || chaseKind === 'between')) {
+    const L = Math.hypot(end.x - meet.x, end.z - meet.z) || 1
+    const ux = (end.x - meet.x) / L, uz = (end.z - meet.z) / L
+    const geom = (i: number) => {
+      const fw = fielderWorld(fielders[i].x, fielders[i].y, fielders[i].spot)
+      const t = Math.max(0, Math.min(L, (fw.x - meet.x) * ux + (fw.z - meet.z) * uz))
+      const cx = meet.x + ux * t, cz = meet.z + uz * t
+      return { fw, t, dp: Math.hypot(fw.x - cx, fw.z - cz), toEnd: Math.hypot(fw.x - end.x, fw.z - end.z) }
+    }
+    let pick = -1
+    let far = -1
+    fielders.forEach((_, i) => {
+      if (i === 0) return
+      const g = geom(i)
+      if (g.dp >= 14 && (pick < 0 || g.toEnd < geom(pick).toEnd)) pick = i
+      if (far < 0 || g.dp > geom(far).dp) far = i
+    })
+    chaser = pick >= 0 ? pick : far
+    const g = geom(chaser)
+    // he runs along towards the rope but keeps his distance from the line (at least 9 m when it is in the gap, 7 m when he chases it all the way, and over half the distance he started from it)
+    const keep = Math.max(chaseKind === 'gap' ? 9 : 7, g.dp * (chaseKind === 'gap' ? 0.6 : 0.5))
+    const aim = { x: meet.x + ux * Math.min(L, g.t + 10), z: meet.z + uz * Math.min(L, g.t + 10) }
+    const dx = aim.x - g.fw.x, dz = aim.z - g.fw.z
+    // (his distance from the line shrinks evenly along his run, so stopping when it is down to `keep` leaves him exactly that far from it)
+    const k = Math.max(0, 1 - keep / Math.max(g.dp, 0.01))
+    chaseTo = { x: g.fw.x + dx * k, y: 0, z: g.fw.z + dz * k }
+  }
   // a lofted shot that is not a catch fell in front of the nearest fielder, a little way short of him
   let fellShort: Plan['fellShort'] = null
   if (kind === 'air' && !w && !boundary && !six && ev.runsBat > 0 && chaser >= 0) {
@@ -424,10 +468,10 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   return {
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, slow, realTotal: 0.95 + tDeliver + tFlight + tHold + (slow ? slow.len / slow.factor - slow.len : 0), runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
-    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.9 : BOWL_Z - 0.7 },
+    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.22 + overstepCm(ev.seq) / 100 + 0.16 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
-    signal, hurt, keeperDive, chaserDive: chaseKind === 'close', chaseKind, fellShort, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -533,9 +577,9 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (plan.catcher >= 0) { const a = fielderAt(plan.catcher); moving.set(plan.catcher, lerp3(a, { x: plan.end.x, y: 0, z: plan.end.z }, ease(sf * 1.15))) }
   if (plan.chaser >= 0) {
     const a = fielderAt(plan.chaser)
-    const target = plan.chaserDive ? diveSpot(plan, a).spot : { x: plan.end.x, y: 0, z: plan.end.z }
-    // in the gap he gives chase but nowhere near it
-    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive ? 1 : plan.chaseKind === 'gap' ? 0.4 : plan.chaseKind === 'between' ? 0.7 : plan.boundary ? 0.8 : 0.9)))
+    const target = plan.chaserDive ? diveSpot(plan, a).spot : plan.chaseTo ?? { x: plan.end.x, y: 0, z: plan.end.z }
+    // a four: he chases it, but from well to the side of its line
+    moving.set(plan.chaser, lerp3(a, target, ease(sf) * (plan.chaserDive || plan.chaseTo ? 1 : plan.boundary ? 0.8 : 0.9)))
   }
   // where the camera looks
   const b = ball ?? bowlerPos

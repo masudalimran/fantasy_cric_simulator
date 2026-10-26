@@ -5,10 +5,12 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, BAT_END_Z, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, BAT_END_Z, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
-import { drawScene } from './broadcastDraw'
+import { drawScene, type Scene } from './broadcastDraw'
+import { WIDE_LINE_M } from '../../engine/wide'
+import { overstepCm } from '../../season/moments'
 import type { MoveDraw } from './moveFx'
 import { moveForBall, type MoveShow } from '../../data/moves'
 import { getAnimPrefs } from '../../prefs'
@@ -90,7 +92,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   /** Play the clip so that it finishes in this many seconds, whatever its length (every ball of a highlight reel is shown to the end). */
   fitSeconds?: number
   /** Set when this is a replay inside an animation screen: it uses another camera and plays with slow motion around the shot, so it looks different from the live picture. */
-  replay?: { cam: ReplayCam; slowMo?: boolean } | null
+  replay?: { cam: ReplayCam; slowMo?: boolean; /** Deeper slow motion (a four or a six). */ deep?: boolean } | null
   /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
   wear?: number
   /** The commentary line of this ball, written along the top once the bat has met it. */
@@ -131,7 +133,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
-  const plan: Plan = useMemo(() => (replay?.slowMo ? withReplaySlow(plan0) : plan0), [plan0, replay?.slowMo])
+  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep])
   const rate = fitSeconds ? Math.max(0.2, Math.min(3, fitSeconds / plan.realTotal)) : rateProp
   const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (Math.sign(plan0.end.x - plan0.meet.x) || undefined) as 1 | -1 | undefined) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
   void 0 // eslint-disable-line react-hooks/exhaustive-deps
@@ -179,8 +181,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; setTag(wantReverse ? 'CAM 2' : 'CAM 1'); setCutKey((k) => k + 1) }
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
-      const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : f.aim
-      const hfovAt = covers0 ? 0.8 : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
+      const focus = L.replayCam?.focus
+      const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : focus ?? f.aim
+      const hfovAt = covers0 ? 0.8 : focus ? L.replayCam!.cam.hfov : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
       const c = cam.current
       let goal = lookAt(base.p, aimAt)
       if (L.replayCam?.overhead) {
@@ -218,7 +221,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           moveDraw = { style: sh.move.style, c1: sh.move.c1, c2: sh.move.c2, k: kk, life, size: sh.size, from: sh.by === 'bat' ? L.plan.meet : (f.ball ?? L.plan.end), path: movePath, ball: f.ball, seed: L.event.seq }
         }
       }
-      drawScene(ctx, c, W, H, { move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      const marks: Scene['marks'] = {}
+      if (L.replayCam && L.event?.extraType === 'wide') marks.wideLine = WIDE_LINE_M
+      if (L.replayCam?.focus && L.event?.extraType === 'noball') marks.crease = { z: BOWL_Z + 1.22, over: overstepCm(L.event.seq) / 100 }
+      drawScene(ctx, c, W, H, { marks, move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(c, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 

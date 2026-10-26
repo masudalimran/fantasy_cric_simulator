@@ -35,6 +35,8 @@ export interface Scene {
   style: 'plain' | 'fire' | 'ice'
   /** A signature move going on (a six off the bat, a bowler's wicket). */
   move?: MoveDraw | null
+  /** TV graphics on the ground for a replay: the wide line, or the popping crease with how far over the front foot landed. */
+  marks?: { wideLine?: number; crease?: { z: number; over: number } }
 }
 
 const fillPoly = (ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], fill: string) => {
@@ -189,6 +191,20 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     dashed(arc(BOWL_Z, -1))
     const side = (x: number) => { const pts: V3[] = []; for (let i = 0; i <= 20; i++) pts.push({ x, y: 0, z: BOWL_Z + (i / 20) * (0 - BOWL_Z) }); dashed(pts) }
     side(R); side(-R)
+  }
+  // replay graphics: a wide line along the pitch (orange) either side of the stumps, or the popping crease lit up with the distance the front foot is over it
+  if (sc.marks?.wideLine) {
+    for (const x of [-sc.marks.wideLine, sc.marks.wideLine]) { line({ x, y: 0.01, z: BOWL_Z - 2 }, { x, y: 0.01, z: 6 }, 0.1, 'rgba(251,146,60,0.9)'); line({ x, y: 0.01, z: -1.22 }, { x, y: 0.01, z: 1.2 }, 0.28, 'rgba(251,146,60,0.45)') }
+  }
+  if (sc.marks?.crease) {
+    const z = sc.marks.crease.z
+    line({ x: -2.2, y: 0.01, z }, { x: 2.2, y: 0.01, z }, 0.09, '#fb7185')
+    const a = project(r, { x: 1.3, y: 0.01, z }), b = project(r, { x: 1.3, y: 0.01, z: z + sc.marks.crease.over })
+    if (a && b) {
+      ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
+      ctx.fillStyle = '#fef9c3'; ctx.font = `800 ${Math.max(11, Math.round(r.W / 28))}px system-ui, sans-serif`; ctx.textAlign = 'left'
+      ctx.fillText(`${Math.round(sc.marks.crease.over * 100)} cm over`, Math.max(6, Math.min(r.W - 90, b.x + 8)), b.y - 6)
+    }
   }
   // the ball's trail
   if (sc.trail.length > 1) {

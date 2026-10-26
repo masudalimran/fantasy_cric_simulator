@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { FreeHitScreen } from './FreeHitScreen'
-import { ExtraScreen, FourScreen, MaidenScreen, NoBallScreen } from './EventScreens'
+import { ExtraScreen, FourScreen, MaidenScreen } from './EventScreens'
 import { DuckScreen, HatTrickScreen, HaulScreen } from './BowlerScreens'
 import { SeriesAward } from '../season/SeriesAward'
 import { ReviewScreen, RunOutReview } from './ReviewScreens'
@@ -27,7 +27,6 @@ describe('animation screens', () => {
       const html = renderToString(<FourScreen info={{ batsman: p, batTeam: A, bowlTeam: B, angle: 0.5, chasers: [q, k, p].slice(0, n).map((pl, i) => ({ player: { ...pl, name: `${pl.name.split(' ')[0]} Longsurname${i}` }, x: 100 + i * 8, y: 40 + i * 8 })), rate: 1 }} />)
       expect(html.replace(/alt="[^"]*"/g, '')).not.toContain('Longsurname') // (the portraits' alt text keeps the full name)
     }
-    expect(renderToString(<NoBallScreen info={{ bowler: q, bowlTeam: B, cm: 9, rate: 1 }} />)).toContain('NO BALL!')
     expect(renderToString(<ExtraScreen info={{ kind: 'wide', runs: 1, bowler: q, bowlTeam: B, batsman: p, batTeam: A, keeper: k, rate: 1 }} />)).toContain('WIDE LINE')
     expect(renderToString(<MaidenScreen info={{ bowler: q, bowlTeam: B, overs: '(2.0 overs, 5 runs, 1 wickets)', rate: 1 }} />)).toContain('MAIDEN!')
     expect(renderToString(<FreeHitScreen info={{ bowler: q, bowlTeam: B, batsman: p, batTeam: A, rate: 1 }} />)).toContain('FREE HIT!')

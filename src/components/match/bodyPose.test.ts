@@ -195,7 +195,7 @@ describe('the bodies drawn in the broadcast view', () => {
   })
 
   it('a four ends on the rope, whichever way it went', () => {
-    let fours = 0
+    let fours = 0, chased = 0
     for (let seed = 1; seed <= 10; seed++) {
       const mm = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
       mm.playMatch()
@@ -209,11 +209,20 @@ describe('the bodies drawn in the broadcast view', () => {
           const share = Math.hypot((plan.end.x - ROPE.cx) / ROPE.rx, (plan.end.z - ROPE.cz) / ROPE.rz)
           expect(share).toBeGreaterThan(0.97)
           expect(share).toBeLessThan(1.05)
+          // a fielder who chases it never gets near the line the ball took
+          if (plan.chaseTo) {
+            const L = Math.hypot(plan.end.x - plan.meet.x, plan.end.z - plan.meet.z)
+            const ux = (plan.end.x - plan.meet.x) / L, uz = (plan.end.z - plan.meet.z) / L
+            const t = Math.max(0, Math.min(L, (plan.chaseTo.x - plan.meet.x) * ux + (plan.chaseTo.z - plan.meet.z) * uz))
+            expect(Math.hypot(plan.chaseTo.x - (plan.meet.x + ux * t), plan.chaseTo.z - (plan.meet.z + uz * t))).toBeGreaterThan(6.9)
+            chased++
+          }
           fours++
         }
       }
     }
     expect(fours).toBeGreaterThan(20)
+    expect(chased).toBeGreaterThan(10)
   })
 
   it('every built-in team has a heritage stance, and a team that is not known gets the plain one', () => {

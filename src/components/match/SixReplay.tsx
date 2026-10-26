@@ -26,7 +26,7 @@ export interface SixInfo {
 }
 
 /** Counts up to a number as the ball flies. */
-function Counter({ to, delay, dur }: { to: number; delay: number; dur: number }) {
+export function Counter({ to, delay, dur }: { to: number; delay: number; dur: number }) {
   const [n, setN] = useState(0)
   useEffect(() => {
     let raf = 0

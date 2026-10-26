@@ -7,6 +7,8 @@ import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BatContact, ContactMeters } from './ContactPanel'
 import { replayCamFor } from './broadcast'
+import { Counter, type SixInfo } from './SixReplay'
+import { MoveCutIn } from './MoveCutIn'
 import { BALL_R, STUMP_HALF, STUMP_HEIGHT, type Miss } from './nearMiss'
 import type { AlmostCaught } from './almost'
 import { wideDirection } from '../../engine/wide'
@@ -43,7 +45,7 @@ export function FourCast({ info }: { info: FourCastInfo }) {
   const how = c.quality >= 0.8 ? 'Middled it' : c.quality >= 0.55 ? 'Well timed' : 'Found the gap'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Four">
-      <ReplayFrame base={info.replay} rate={1.5 * r} cam={replayCamFor('four', info.replay.event.seq)} />
+      <ReplayFrame base={info.replay} rate={1.5 * r} deep cam={replayCamFor('four', info.replay.event.seq)} />
       <Bottom>
         <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3">
           <motion.div className="shrink-0 self-center" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r }}><BatContact contact={c} height={compact ? 84 : 118} delay={1.7} rate={r} /></motion.div>
@@ -153,7 +155,7 @@ export function ExtraCast({ info }: { info: ExtraCastInfo }) {
   const [box, w] = useWidth()
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={info.title}>
-      <ReplayFrame base={info.replay} rate={1.2 * r} share={0.7} cam={replayCamFor('extra', info.replay.event.seq)} />
+      <ReplayFrame base={info.replay} rate={1.2 * r} share={0.7} cam={info.wide ? replayCamFor('wide', info.replay.event.seq) : replayCamFor('extra', info.replay.event.seq)} />
       <Bottom from={0.7}>
         <div className="flex h-full items-center justify-center gap-3 px-3">
           {info.wide && <WideGap wide={info.wide} w={Math.max(96, Math.min(w * 0.3, 150))} />}
@@ -289,6 +291,78 @@ export function AlmostCast({ info }: { info: AlmostCastInfo }) {
             <motion.div className="text-xs font-extrabold leading-tight text-amber-300 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>It fell {a.gap.toFixed(1)} m in front of {first}</motion.div>
             <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{info.batsman.name} lofted it {a.distance} m and it hung for {a.hang} s before dropping just short: {a.runs} {a.runs === 1 ? 'run' : 'runs'}.</motion.div>
           </div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+// ---- A six ----------------------------------------------------------------------------------------------------------------------
+
+export interface SixCastInfo extends SixInfo {
+  replay: ReplayBase
+}
+export const SIX_CAST_SECONDS = 8.8
+
+/** A six, the broadcast way: the ball played again in slow motion from the bat to the crowd, and under it the distance, where the ball met the bat and the timing. */
+export function SixCast({ info }: { info: SixCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => sfx.six(), 1900 * r); return () => window.clearTimeout(t) }, [r])
+  const monster = info.distance >= 150
+  const compact = w < 520
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={`Six, ${info.distance} metres`}>
+      <ReplayFrame base={info.replay} rate={1.5 * r} deep cam={replayCamFor('six', info.replay.event.seq)} />
+      <Bottom>
+        <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3">
+          {info.contact && <motion.div className="shrink-0 self-center" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r }}><BatContact contact={info.contact} height={compact ? 84 : 118} delay={1.7} rate={r} /></motion.div>}
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
+              <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.team)}` }}><PlayerAvatar player={info.batsman} team={info.team} size={compact ? 28 : 36} /></span>
+              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold text-slate-300">{info.longest ? 'His longest six yet' : monster ? 'Out of the ground' : 'Over the rope'}</div></div>
+              <motion.div className="ml-auto shrink-0 font-display text-2xl leading-none tracking-wide text-white sm:text-3xl" style={{ WebkitTextStroke: '1.5px #701a75', paintOrder: 'stroke fill', textShadow: info.fire ? '0 0 20px #f97316' : '0 0 20px #e879f9' }} initial={{ scale: 2.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.3 * r, type: 'spring', stiffness: 260, damping: 15 }}>SIX!</motion.div>
+            </motion.div>
+            <motion.div className="font-display leading-none tracking-wide text-amber-300" style={{ fontSize: compact ? 30 : 40 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 * r }}>
+              <Counter to={info.distance} delay={1.0 * r} dur={2.2 * r} /><span className="ml-1 text-[0.45em] text-amber-200">metres</span>
+            </motion.div>
+            {info.contact && <ContactMeters contact={info.contact} delay={1.8} rate={r} compact />}
+          </div>
+        </div>
+      </Bottom>
+      {info.move && <MoveCutIn move={info.move} batsman={info.batsman} team={info.team} rate={r} />}
+    </div>
+  )
+}
+
+// ---- A no ball: how far over the line --------------------------------------------------------------------------------------------
+
+export interface NoBallCastInfo {
+  replay: ReplayBase
+  bowler: Player
+  bowlTeam: Team
+  /** How far over the popping crease the front foot landed, in centimetres. */
+  cm: number
+  rate: number
+}
+export const NO_BALL_CAST_SECONDS = 5.6
+
+/** A no ball, the broadcast way: the front-foot camera in slow motion as the foot lands over the line, with the distance marked on the ground. */
+export function NoBallCast({ info }: { info: NoBallCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => sfx.noBall(), 1500 * r); return () => window.clearTimeout(t) }, [r])
+  const compact = w < 520
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="No ball">
+      <ReplayFrame base={info.replay} rate={1.2 * r} share={0.66} cam={replayCamFor('noball', info.replay.event.seq)} tag="Front foot" />
+      <Bottom from={0.66}>
+        <div className="flex h-full items-center justify-center gap-3 px-3">
+          <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.bowlTeam)}` }}><PlayerAvatar player={info.bowler} team={info.bowlTeam} size={compact ? 34 : 44} /></span>
+          <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 34 : 48, WebkitTextStroke: '2px #7f1d1d', paintOrder: 'stroke fill', textShadow: '0 0 24px #ef4444aa' }} initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.2 * r, type: 'spring', stiffness: 260, damping: 15 }}>NO BALL!</motion.div>
+          <motion.div className="min-w-0 text-xs font-semibold leading-snug text-slate-100 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 * r }}>
+            <b className="text-amber-300">{info.bowler.name.split(' ')[0]}</b> overstepped by <b className="text-rose-300">{info.cm} cm</b>.<br />+1 run and a free hit next.
+          </motion.div>
         </div>
       </Bottom>
     </div>
