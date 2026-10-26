@@ -15,7 +15,8 @@ import { getAnimPrefs } from '../../prefs'
 import { firstName } from './format'
 import { endPoint, type Placed } from './Stage'
 import { Body, type Kit, type Rig } from './Body'
-import { batsmanPose, bowlerPose, clamp01, fielderPose, nonStrikerPose, umpirePose } from './bodyPose'
+import { batsmanPose, bowlerPose, breathe, clamp01, fielderPose, nonStrikerPose, umpirePose } from './bodyPose'
+import { flavorOfTeam } from '../../data/flavors'
 
 /**
  * The broadcast view: the match as it looks on TV. The camera stands behind the bowler, zooms in as he runs up, follows the ball after the bat,
@@ -261,8 +262,10 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const lh = L.striker.hand === 'L'
       const ms = move('striker', f.striker ?? ra), mn = move('nonstriker', rb), mb = move('bowler', f.bowler)
       const strikerOut = out && (!pl.runOut || pl.runOut.outIsStriker)
-      rigs.current.get('striker')?.apply(batsmanPose({ style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut }), lh)
-      rigs.current.get('nonstriker')?.apply(nonStrikerPose({ t, t1: pl.tRun, speed: mn.v, cyc: mn.cyc, bat: true, walkOff: out && !!pl.runOut && !pl.runOut.outIsStriker }), L.nonStriker?.hand === 'L')
+      const tq = Math.floor(t * 12) / 12 // (a person at rest moves a dozen times a second, no more)
+      const sp = batsmanPose({ flavor: flavorOfTeam(L.battingTeam.id), style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut })
+      rigs.current.get('striker')?.apply(f.batSwing === 0 && ms.v === 0 && !strikerOut ? breathe(sp, tq, 1) : sp, lh)
+      { const np = nonStrikerPose({ t, t1: pl.tRun, speed: mn.v, cyc: mn.cyc, bat: true, walkOff: out && !!pl.runOut && !pl.runOut.outIsStriker }); rigs.current.get('nonstriker')?.apply(mn.v === 0 ? breathe(np, tq, 2) : np, L.nonStriker?.hand === 'L') }
       rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' && !pl.reviewed }))
       // the umpires' arms
       for (const who of [1, 2] as const) {
@@ -279,7 +282,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           else if (sg.kind === 'notout') { la = 22 * k; ra2 = -22 * k }
           else la = 38 * k
         }
-        rigs.current.get(`umpire${who}`)?.apply(umpirePose(la, ra2))
+        rigs.current.get(`umpire${who}`)?.apply(sg ? umpirePose(la, ra2) : breathe(umpirePose(la, ra2), tq, 3 + who, 0.6))
       }
       // fielders: where they stand, or where they have run to
       L.fielders.forEach((_, i) => {
@@ -312,7 +315,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const stopK = thrower && !pl.boundary && !pl.six && !dv && (pl.kind === 'ground' || !!pl.fellShort) ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
         const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
-        rigs.current.get(`f${i}`)?.apply(fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0 }))
+        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0 })
+        rigs.current.get(`f${i}`)?.apply(mf.v === 0 && !dv && catchK === 0 && stopK === 0 && throwK === 0 ? breathe(fp, tq, 5 + i) : fp)
       })
       // the ball, and its shadow
       const ball = nodes.current.get('ball'), shadow = nodes.current.get('shadow')
@@ -346,6 +350,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           ball.style.width = ball.style.height = `${sz.toFixed(1)}px`
           let bx = hand && held > 0 ? bp.x + (hand.x - bp.x) * held : bp.x, by = hand && held > 0 ? bp.y + (hand.y - bp.y) * held : bp.y
           // the bat meets the ball: for a moment the ball is exactly on the blade, wherever the shot has put it (the ball is drawn at a fixed spot in the world, the bat is where the pose has swung it)
+          let hitAt: { x: number; y: number } | null = null
           if (ev && batHitsBall(ev)) {
             const an = anchors.get('striker'), bt = rigs.current.get('striker')?.bat()
             const wC = t < t2c ? clamp01((t - (t2c - 0.2)) / 0.2) : clamp01(1 - (t - t2c) / 0.26)
@@ -353,10 +358,24 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
               const lx = (bt.x - 30) * an.s, ly = (bt.y - 120) * an.s, a = (an.rot * Math.PI) / 180
               const sx = an.x + lx * Math.cos(a) - ly * Math.sin(a), sy = an.y + lx * Math.sin(a) + ly * Math.cos(a)
               bx += (sx - bx) * wC; by += (sy - by) * wC
+              hitAt = { x: sx, y: sy }
               if (wC > 0.4) shadow.style.display = 'none'
             }
           }
           ball.style.transform = `translate3d(${(bx - sz / 2).toFixed(1)}px,${(by - sz / 2).toFixed(1)}px,0)`
+          // a flash where the bat meets the ball (bigger for a bigger shot)
+          const imp = nodes.current.get('impact')
+          if (imp) {
+            const since = t - t2c
+            if (hitAt && since >= -0.02 && since < 0.2) {
+              const k = clamp01((since + 0.02) / 0.22)
+              const size = (ev?.boundary ? 74 : 46) * (0.5 + k) * Math.min(1.4, Math.max(0.7, (r.F * 1.8) / bp.d / 100))
+              imp.style.display = 'block'
+              imp.style.opacity = String(1 - k)
+              imp.style.width = imp.style.height = `${size.toFixed(0)}px`
+              imp.style.transform = `translate3d(${(hitAt.x - size / 2).toFixed(1)}px,${(hitAt.y - size / 2).toFixed(1)}px,0)`
+            } else imp.style.display = 'none'
+          }
           ball.style.zIndex = '4000'
           shadow.style.display = held >= 1 ? 'none' : 'block'
           shadow.style.width = `${(sz * 1.3).toFixed(1)}px`
@@ -448,6 +467,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('bowler')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={bowler} team={bowlingTeam} look="bowler" rig={setRig('bowler')} /></div>
       <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire1')} /></div>
       <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire2')} /></div>
+      <div ref={setNode('impact')} className="pointer-events-none absolute left-0 top-0 z-[4001] hidden rounded-full" style={{ background: 'radial-gradient(circle, #ffffff 0%, #fde68a 28%, rgba(251,191,36,0.35) 52%, rgba(251,191,36,0) 70%)' }} />
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}

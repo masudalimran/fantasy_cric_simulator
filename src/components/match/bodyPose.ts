@@ -7,6 +7,8 @@
  * Angles are in degrees and 0 points straight down; a positive angle swings towards the left of the screen.
  */
 
+import type { Flavor } from '../../data/flavors'
+
 export interface P { x: number; y: number }
 
 export interface Pose {
@@ -123,7 +125,7 @@ export function solve(p: Pose): Skeleton {
 
 // ---- what kind of shot a ball got ------------------------------------------------------------------------------------------
 
-export type ShotStyle = 'defend' | 'drive' | 'cut' | 'pull' | 'flick' | 'sweep' | 'loft' | 'beaten' | 'leave'
+export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave'
 
 /**
  * Which shot the batsman plays, from where the ball went and how it was bowled. For show only: the same ball, the same result, whatever he is
@@ -141,10 +143,18 @@ export function classifyShot(c: { swing: boolean; wide: boolean; runsBat: number
   if (c.runsBat === 0 && dist < 12) return 'defend'
   if (c.boundary === 6) return short && c.side > 4 ? 'pull' : 'loft'
   const behind = c.ahead < -3
-  if (behind) return c.side > 3 && short ? 'pull' : c.side > 3 ? 'flick' : 'cut'
+  if (behind) {
+    // behind the wicket: a ramp over the keeper off a quick short ball, a scoop off a full one down the leg side, a reverse sweep off a spinner, otherwise a cut, a glance or a pull
+    if (c.air && short && c.speed >= 125 && c.side <= 6 && c.seq % 2 === 0) return 'ramp'
+    if (c.air && c.length > -3.2 && c.side > 3 && c.ahead < -8 && c.seq % 2 === 1) return 'scoop'
+    if (c.speed < 105 && c.side < -2 && c.seq % 3 === 0) return 'reverse'
+    return c.side > 3 && short ? 'pull' : c.side > 3 ? 'flick' : 'cut'
+  }
   if (c.side > 4) return short ? 'pull' : c.speed < 105 && !full && c.seq % 2 === 0 ? 'sweep' : 'flick'
   if (c.air && c.boundary === 4 && c.seq % 2 === 0) return 'loft'
   if (c.side < -9 && short) return 'cut'
+  // down the ground: a straight drive, upright, otherwise a drive through the off side
+  if (Math.abs(c.side) < 8 && c.ahead > 6) return 'straight'
   return 'drive'
 }
 
@@ -196,6 +206,26 @@ const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
     c: batPose({ x: 32, y: 105 }, 15, { x: 7, y: 27 }, -80, { x: 11, y: 117 }, { x: 47, y: 116 }, 5),
     f: batPose({ x: 32, y: 104 }, 14, { x: 15, y: 20 }, -122, { x: 11, y: 117 }, { x: 47, y: 116 }, 5),
   },
+  straight: {
+    b: LIFT,
+    c: batPose({ x: 29, y: 91 }, 6, { x: -7, y: 23 }, 12, { x: 19, y: 118 }, { x: 41, y: 115 }, 3),
+    f: batPose({ x: 30, y: 86 }, 2, { x: -2, y: -16 }, 198, { x: 22, y: 118 }, { x: 38, y: 111 }, -2),
+  },
+  reverse: {
+    b: batPose({ x: 30, y: 101 }, -2, { x: 6, y: 16 }, -58, { x: 15, y: 117 }, { x: 45, y: 114 }),
+    c: batPose({ x: 29, y: 104 }, -9, { x: -11, y: 26 }, 72, { x: 12, y: 117 }, { x: 46, y: 116 }, -4),
+    f: batPose({ x: 29, y: 103 }, -10, { x: -19, y: 19 }, 84, { x: 12, y: 117 }, { x: 46, y: 116 }, -5),
+  },
+  ramp: {
+    b: batPose({ x: 30, y: 89 }, -2, { x: -10, y: 2 }, 162, { x: 21, y: 117 }, { x: 39, y: 117 }),
+    c: batPose({ x: 31, y: 88 }, -12, { x: -12, y: -8 }, 118, { x: 21, y: 117 }, { x: 40, y: 114 }, -5),
+    f: batPose({ x: 31, y: 87 }, -14, { x: -16, y: -16 }, 98, { x: 22, y: 117 }, { x: 40, y: 112 }, -6),
+  },
+  scoop: {
+    b: batPose({ x: 30, y: 99 }, 3, { x: -5, y: 22 }, 22, { x: 17, y: 117 }, { x: 43, y: 115 }),
+    c: batPose({ x: 31, y: 101 }, -9, { x: -3, y: 27 }, 2, { x: 15, y: 117 }, { x: 45, y: 116 }, -5),
+    f: batPose({ x: 31, y: 98 }, -14, { x: 7, y: -4 }, -148, { x: 17, y: 117 }, { x: 45, y: 114 }, -7),
+  },
   beaten: {
     b: LIFT,
     c: batPose({ x: 29, y: 91 }, 9, { x: -12, y: 20 }, 34, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
@@ -208,7 +238,46 @@ const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
   },
 }
 
+/**
+ * How a team's heritage changes the way its batsmen stand, lift the bat, finish a big shot and celebrate (mixed over the ordinary shot, so a drive is
+ * still a drive): a swordsman holds the bat like a sword, a fighter plants his feet wide, a ninja crouches, a mage leans on the bat like a staff.
+ */
+interface FlavorSet { stance: Pose; lift: Pose; finish: Pose; joy: Pose }
+const FLAVORS: Record<Exclude<Flavor, 'plain'>, FlavorSet> = {
+  samurai: {
+    stance: batPose({ x: 30, y: 86.5 }, 0, { x: -3, y: 12 }, 168, { x: 22, y: 117 }, { x: 38, y: 117 }),
+    lift: batPose({ x: 30, y: 87 }, 0, { x: -4, y: -4 }, 186, { x: 22, y: 117 }, { x: 38, y: 117 }),
+    finish: batPose({ x: 30, y: 90 }, 6, { x: -10, y: 18 }, 52, { x: 18, y: 118 }, { x: 40, y: 114 }, 4),
+    joy: batPose({ x: 30, y: 87 }, 0, { x: 2, y: 20 }, 86, { x: 22, y: 117 }, { x: 38, y: 117 }, 6),
+  },
+  fighter: {
+    stance: batPose({ x: 30, y: 92 }, 4, { x: -9, y: 17 }, 34, { x: 16, y: 117 }, { x: 44, y: 117 }),
+    lift: batPose({ x: 30, y: 93 }, 3, { x: -12, y: 8 }, 150, { x: 15, y: 117 }, { x: 45, y: 117 }),
+    finish: { ...standing(), hip: { x: 30, y: 90 }, lean: -4, handR: { x: 16, y: -14 }, handL: { x: -15, y: 4 }, bat: 204, two: false, footL: { x: 17, y: 117 }, footR: { x: 43, y: 114 } },
+    joy: { ...standing(), hip: { x: 30, y: 92 }, lean: -6, head: { dx: 0, dy: 0, tilt: -9 }, handR: { x: 17, y: 24 }, handL: { x: -17, y: 24 }, bat: 24, two: false, footL: { x: 16, y: 117 }, footR: { x: 44, y: 117 } },
+  },
+  ninja: {
+    stance: batPose({ x: 30, y: 93 }, 8, { x: 6, y: 22 }, 148, { x: 20, y: 117 }, { x: 40, y: 117 }, 3),
+    lift: batPose({ x: 30, y: 94 }, 9, { x: 8, y: 14 }, 128, { x: 20, y: 117 }, { x: 40, y: 117 }, 3),
+    finish: batPose({ x: 30, y: 93 }, 10, { x: -14, y: 24 }, 28, { x: 16, y: 117 }, { x: 42, y: 115 }, 5),
+    joy: { ...standing(), hip: { x: 30, y: 90 }, lean: 2, handR: { x: 3, y: 6 }, handL: { x: -3, y: 6 }, bat: null, two: false, footL: { x: 24, y: 117 }, footR: { x: 36, y: 117 } },
+  },
+  mage: {
+    stance: { ...batPose({ x: 30, y: 85.5 }, 0, { x: -12, y: 16 }, 178, { x: 24, y: 117 }, { x: 36, y: 117 }), two: false, handL: { x: -12, y: 24 } },
+    lift: { ...batPose({ x: 30, y: 85.5 }, -1, { x: -12, y: 4 }, 180, { x: 24, y: 117 }, { x: 36, y: 117 }), two: false, handL: { x: -13, y: 14 } },
+    finish: { ...batPose({ x: 30, y: 86 }, -3, { x: 8, y: -22 }, 192, { x: 24, y: 117 }, { x: 36, y: 115 }, -4), two: false, handL: { x: -14, y: 12 } },
+    joy: { ...batPose({ x: 30, y: 85.5 }, 0, { x: 13, y: -24 }, 186, { x: 24, y: 117 }, { x: 36, y: 117 }, -5), two: false, handL: { x: -14, y: -20 } },
+  },
+  hero: {
+    stance: { ...batPose({ x: 30, y: 87 }, 2, { x: 4, y: 17 }, 56, { x: 22, y: 117 }, { x: 38, y: 117 }), two: false, handL: { x: -11, y: 22 } },
+    lift: { ...batPose({ x: 30, y: 88 }, 2, { x: 6, y: 8 }, 100, { x: 21, y: 117 }, { x: 39, y: 117 }), two: false, handL: { x: -12, y: 20 } },
+    finish: batPose({ x: 30, y: 88 }, 3, { x: -6, y: 10 }, 120, { x: 22, y: 117 }, { x: 38, y: 114 }, 2),
+    joy: { ...batPose({ x: 30, y: 86 }, 0, { x: 4, y: 14 }, 70, { x: 22, y: 117 }, { x: 38, y: 117 }), two: false, handL: { x: -15, y: 10 } },
+  },
+}
+
 export interface BatCtx {
+  flavor?: Flavor
   style: ShotStyle
   /** Seconds into the clip, when the bowler lets go of the ball, and when the ball reaches the bat. */
   t: number; t1: number; t2: number
@@ -226,9 +295,13 @@ export interface BatCtx {
 }
 
 export function batsmanPose(c: BatCtx): Pose {
-  const shot = SHOTS[c.style]
+  const base = SHOTS[c.style]
+  const fl = c.flavor && c.flavor !== 'plain' ? FLAVORS[c.flavor] : null
+  // the heritage mixes into the stance, the back-lift and the finish of a big shot; the contact stays the shot's own
+  const big = c.style === 'loft' || c.style === 'drive' || c.style === 'straight' || c.style === 'pull'
+  const shot = fl ? { b: mixPose(base.b, fl.lift, 0.5), c: base.c, f: big ? mixPose(base.f, fl.finish, 0.6) : base.f } : base
   const lift = ease((c.t - (c.t1 - 0.5)) / Math.max(0.2, c.t2 - 0.25 - (c.t1 - 0.5)))
-  let p = mixPose(STANCE, shot.b, lift)
+  let p = mixPose(fl ? fl.stance : STANCE, shot.b, lift)
   if (c.swing > 0) p = c.swing < 0.44 ? mixPose(shot.b, shot.c, ease(c.swing / 0.44)) : mixPose(shot.c, shot.f, ease((c.swing - 0.44) / 0.56))
   if (c.hurt > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 94 }, lean: 12, head: { dx: 0, dy: 3, tilt: 8 }, handL: { x: -6, y: 24 }, handR: { x: 8, y: 26 }, bat: 40, two: false, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 } }, c.hurt * 0.8)
   // once the shot is done he settles, bat by his foot, until he runs or the next ball comes
@@ -238,7 +311,7 @@ export function batsmanPose(c: BatCtx): Pose {
   if (c.raise > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 88 }, lean: -3, head: { dx: 0, dy: 0, tilt: -3 }, handR: { x: 15, y: -24 }, handL: { x: -13, y: -19 }, bat: 188, two: false }, ease(c.raise))
   if (c.joy > 0) {
     const hop = Math.sin(Math.PI * clamp01(c.joy * 3)) * (c.joy < 0.34 ? 1 : 0)
-    p = mixPose(p, { ...standing(), lean: 0, handR: { x: 14, y: -20 }, handL: { x: -14, y: -16 }, bat: 186, two: false }, ease(c.joy * 3) * 0.9)
+    p = mixPose(p, fl ? fl.joy : { ...standing(), lean: 0, handR: { x: 14, y: -20 }, handL: { x: -14, y: -16 }, bat: 186, two: false }, ease(c.joy * 3) * 0.9)
     p.hip = { ...p.hip, y: p.hip.y - hop * 4 }
   }
   return p
@@ -247,6 +320,22 @@ export function batsmanPose(c: BatCtx): Pose {
 /** One hand carries the bat, pointing down and a little forward. */
 function carryBat(p: Pose): Pose {
   return { ...p, handR: { x: 11, y: 22 }, handL: { x: -10, y: 24 }, bat: 14, two: false, lean: 0, hip: { x: 30, y: 85.5 }, footL: { x: 24, y: 117 }, footR: { x: 36, y: 117 } }
+}
+
+/**
+ * A person standing still is never quite still: he breathes, shifts his weight and nods a little. `t` is the time, `seed` makes each person different,
+ * `amp` is how much (0 for none).
+ */
+export function breathe(p: Pose, t: number, seed: number, amp = 1): Pose {
+  if (amp <= 0) return p
+  const a = Math.sin(t * 2.1 + seed * 1.7), b = Math.sin(t * 1.3 + seed * 2.9)
+  return {
+    ...p,
+    hip: { x: p.hip.x + b * 0.35 * amp, y: p.hip.y + a * 0.55 * amp },
+    head: { dx: p.head.dx, dy: p.head.dy - a * 0.3 * amp, tilt: p.head.tilt + b * 0.8 * amp },
+    handL: { x: p.handL.x, y: p.handL.y + a * 0.5 * amp },
+    handR: { x: p.handR.x, y: p.handR.y + a * 0.5 * amp },
+  }
 }
 
 /** Legs and arms going for a walk or a run: `speed` in metres a second, `cyc` the angle of the stride. */

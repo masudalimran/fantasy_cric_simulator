@@ -1,19 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
+import { ballSpeed } from '../../engine/speed'
 import { fieldPlan } from './fieldSets'
 import { batHitsBall, beatenDot, diveSpot, planBall, ROPE, ropeDistance, sixReach, standHeight } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
+import { flavorOfTeam, type Flavor } from '../../data/flavors'
 import { FORE, SHIN, THIGH, UPPER, batsmanPose, bowlerPose, classifyShot, fielderPose, mirrorPose, nonStrikerPose, solve, standing, umpirePose, type Pose, type ShotStyle } from './bodyPose'
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y)
-const STYLES: ShotStyle[] = ['defend', 'drive', 'cut', 'pull', 'flick', 'sweep', 'loft', 'beaten', 'leave']
+const STYLES: ShotStyle[] = ['defend', 'drive', 'straight', 'cut', 'pull', 'flick', 'sweep', 'reverse', 'ramp', 'scoop', 'loft', 'beaten', 'leave']
 const base = { t1: 1, t2: 1.5, hurt: 0, raise: 0, joy: 0, speed: 0, cyc: 0, walkOff: false }
 
 /** Every pose the game can draw, to check the bones keep their length. */
 function allPoses(): Pose[] {
   const out: Pose[] = [standing()]
   for (const style of STYLES) for (const swing of [0, 0.2, 0.44, 0.7, 1]) for (const t of [0.4, 1.2, 1.6, 2.4]) out.push(batsmanPose({ ...base, style, swing, t, t2: 1.5 }))
+  for (const flavor of ['samurai', 'fighter', 'ninja', 'mage', 'hero'] as Flavor[]) for (const style of STYLES) for (const swing of [0, 0.44, 1]) for (const joy of [0, 0.6]) out.push(batsmanPose({ ...base, flavor, style, swing, joy, t: swing ? 2 : 0.5, t2: 1.5 }))
   for (const t of [0.3, 0.7, 0.9, 1, 1.1, 1.5]) for (const arm of [0, 0.2, 0.5, 0.8, 1]) out.push(bowlerPose({ t, t1: 1, t2: 1.5, arm, speed: 5, cyc: t * 9, joy: 0.5, wicket: true }))
   for (const k of [0, 0.5, 1]) for (const keeper of [false, true]) out.push(fielderPose({ speed: 6, cyc: 2, ready: k, dive: k, catchK: k, joy: k, stop: k, throwK: k, keeper }))
   out.push(nonStrikerPose({ t: 0, t1: 1, speed: 5, cyc: 1, bat: true }), umpirePose(90, -90), umpirePose(0, -172), umpirePose(172, -172), batsmanPose({ ...base, style: 'drive', swing: 1, raise: 1, t: 5 }), batsmanPose({ ...base, style: 'drive', swing: 0, hurt: 1, t: 2 }))
@@ -211,5 +214,33 @@ describe('the bodies drawn in the broadcast view', () => {
       }
     }
     expect(fours).toBeGreaterThan(20)
+  })
+
+  it('every built-in team has a heritage stance, and a team that is not known gets the plain one', () => {
+    for (const t of BUILT_IN_TEAMS) expect(flavorOfTeam(t.id), t.id).not.toBe('plain')
+    expect(flavorOfTeam('my-own-team')).toBe('plain')
+    // the heritage changes how he stands, not how tall he is
+    const plain = solve(batsmanPose({ ...base, style: 'drive', swing: 0, t: 0.2 }))
+    const ninja = solve(batsmanPose({ ...base, flavor: 'ninja', style: 'drive', swing: 0, t: 0.2 }))
+    expect(ninja.head.y).toBeGreaterThan(plain.head.y)
+  })
+
+  it('a match plays every kind of shot over enough balls, including the unusual ones', () => {
+    const seen = new Set<string>()
+    for (let seed = 1; seed <= 40; seed++) {
+      const mm = new Match({ teamA: BUILT_IN_TEAMS[seed % 20], teamB: BUILT_IN_TEAMS[(seed * 7 + 3) % 20], format: 't20', seed })
+      mm.playMatch()
+      for (const inn of mm.innings) {
+        const bowlSide = mm.sides[1 - inn.battingSide]
+        for (const ev of inn.log) {
+          const striker = mm.player(ev.strikerId)
+          const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+          seen.add(planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L', ballSpeed(ev, mm.player(ev.bowlerId))).shot)
+        }
+      }
+    }
+    for (const style of ['straight', 'drive', 'cut', 'pull', 'flick', 'sweep', 'defend']) expect(seen.has(style), style).toBe(true)
+    expect(seen.size).toBeGreaterThanOrEqual(11)
   })
 })

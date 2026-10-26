@@ -46,5 +46,7 @@ A personal, non-commercial cricket simulator with anime and video-game character
 - **Page smoke tests are missing**: unit tests run without a browser, so a crash in a screen (the Controls black screen) can slip through. Open the match page and Controls by hand after changing them.
 - Result spoilers: while a ball's animations play, the display reads `matchBefore(match, seq)` (`engine/asOf.ts`) and celebratory effects are queued until the hold releases. Never show a ball's result before its clip and screens finish.
 
+- **Direction from the owner (October 2026)**: the broadcast view is a hit with friends. Before adding new features, keep improving it until it looks as close to a real TV match as possible: contact, boundaries, body movement, more shots, heritage-based shots and stances, camera work. Check every change on a phone-sized picture.
+
 ## Backlog (agreed, not planned yet)
 Achievements and goals; Hall of Fame / retirement; commentary line variety; difficulty-scaled purses; an automated page smoke test; instant replay in the broadcast view; subtitles for the commentary; a lighter broadcast quality setting for slow phones.
