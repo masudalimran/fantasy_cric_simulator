@@ -141,6 +141,30 @@ const TEAMS: Record<string, Row[]> = {
     ['haytham-kenway', 'GRAND MASTER!', 'rune', 'dark'], ['jacob-frye', 'KNUCKLE BLADE!', 'rush', 'brown'], ['basim-ibn-ishaq', 'ODIN\'S SIGHT!', 'pulse', 'violet'],
     ['desmond-miles', 'EAGLE VISION!', 'pulse', 'blue'],
   ],
+  zelda: [
+    ['link', 'MASTER SWORD BEAM!', 'beam', 'teal'], ['urbosa', 'THUNDERBLADE!', 'lightning', 'gold'], ['princess-zelda', 'LIGHT ARROW!', 'beam', 'gold'], ['ganondorf', 'DARK POWER!', 'pulse', 'purple'],
+    ['midna', 'TWILIGHT MAGIC!', 'rune', 'violet'], ['daruk', 'DARUK\'S PROTECTION!', 'pulse', 'brown'], ['impa', 'SHEIKAH ARTS!', 'slash', 'red'], ['revali', 'REVALI\'S GALE!', 'pulse', 'blue'],
+    ['mipha', 'MIPHA\'S GRACE!', 'sphere', 'ice'], ['fi', 'SKYWARD STRIKE!', 'beam', 'teal'], ['tingle', 'KOOLOO-LIMPAH!', 'pulse', 'pink'], ['sidon', 'ZORA TRIDENT!', 'beam', 'blue'],
+    ['tetra', 'PIRATE\'S CUTLASS!', 'slash', 'gold'], ['skull-kid', 'MAJORA\'S MASK!', 'rune', 'purple'], ['sheik', 'DEKU NUTS!', 'pulse', 'white'], ['navi', 'HEY! LISTEN!', 'sphere', 'ice'],
+  ],
+  masseffect: [
+    ['commander-shepard', 'RENEGADE PUNCH!', 'rush', 'blue'], ['thane-krios', 'BIOTIC STRIKE!', 'slash', 'violet'], ['miranda-lawson', 'WARP!', 'sphere', 'purple'], ['javik', 'PROTHEAN BLAST!', 'beam', 'fire'],
+    ['urdnot-wrex', 'KROGAN CHARGE!', 'rush', 'red'], ['liara-t-soni', 'SINGULARITY!', 'sphere', 'purple'], ['tali-zorah', 'COMBAT DRONE!', 'pulse', 'violet'], ['garrus-vakarian', 'CONCUSSIVE SHOT!', 'beam', 'blue'],
+    ['mordin-solus', 'INCINERATE!', 'flame', 'fire'], ['samara', 'BIOTIC SHOCKWAVE!', 'pulse', 'purple'], ['jeff-joker-moreau', 'NORMANDY FLYBY!', 'rush', 'silver'], ['jack', 'SHOCKWAVE!', 'pulse', 'red'],
+    ['grunt', 'KROGAN RAGE!', 'rush', 'red'], ['legion', 'GETH PULSE!', 'pulse', 'blue'], ['harbinger', 'REAPER BEAM!', 'beam', 'red'], ['kaidan-alenko', 'BIOTIC CHARGE!', 'rush', 'blue'],
+  ],
+  overwatch: [
+    ['tracer', 'PULSE BOMB!', 'sphere', 'blue'], ['soldier-76', 'TACTICAL VISOR!', 'beam', 'blue'], ['cassidy', 'DEADEYE!', 'beam', 'gold'], ['genji', 'DRAGONBLADE!', 'slash', 'green'],
+    ['doomfist', 'METEOR STRIKE!', 'pulse', 'fire'], ['d-va', 'SELF-DESTRUCT!', 'sphere', 'pink'], ['mercy', 'VALKYRIE!', 'beam', 'gold'], ['widowmaker', 'INFRA-SIGHT!', 'beam', 'purple'],
+    ['zenyatta', 'TRANSCENDENCE!', 'sphere', 'gold'], ['junkrat', 'RIP-TIRE!', 'flame', 'fire'], ['ana', 'NANO BOOST!', 'beam', 'teal'], ['reinhardt', 'EARTHSHATTER!', 'pulse', 'brown'],
+    ['reaper', 'DEATH BLOSSOM!', 'rush', 'dark'], ['winston', 'PRIMAL RAGE!', 'rush', 'blue'], ['hanzo', 'DRAGONSTRIKE!', 'beam', 'blue'], ['pharah', 'BARRAGE!', 'rush', 'fire'],
+  ],
+  halo: [
+    ['master-chief', 'SPARTAN CHARGE!', 'rush', 'green'], ['noble-six', 'LAST STAND!', 'slash', 'teal'], ['jameson-locke', 'HUNTER\'S STRIKE!', 'beam', 'blue'], ['the-arbiter', 'ENERGY SWORD LUNGE!', 'slash', 'teal'],
+    ['atriox', 'GRAVITY HAMMER!', 'pulse', 'red'], ['kat-b320', 'SPRINT BURST!', 'rush', 'blue'], ['cortana', 'RAMPANCY!', 'sphere', 'violet'], ['jun-a266', 'SNIPER SHOT!', 'beam', 'silver'],
+    ['edward-buck', 'ODST DROP!', 'rush', 'gold'], ['sergeant-johnson', 'WARTHOG RUN!', 'rush', 'green'], ['343-guilty-spark', 'MONITOR\'S BEAM!', 'beam', 'ice'], ['jorge-052', 'SPARTAN-II STAND!', 'pulse', 'silver'],
+    ['emile-a239', 'SKULL STRIKE!', 'slash', 'silver'], ['the-didact', 'FORERUNNER LIGHT!', 'beam', 'ice'], ['escharum', 'BRUTE SMASH!', 'pulse', 'brown'], ['veronica-dare', 'PROMETHEAN SHOT!', 'beam', 'violet'],
+  ],
 }
 
 export const PLAYER_MOVES: Record<string, Move> = Object.fromEntries(

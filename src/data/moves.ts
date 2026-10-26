@@ -129,7 +129,7 @@ export interface MoveShow {
   move: Move
   /** Who made it: the batsman off the bat, or the bowling side on a wicket. */
   by: 'bat' | 'bowl'
-  /** 1 is a six; smaller for a four. */
+  /** 1.4 for a six; smaller for a four. */
   size: number
 }
 
@@ -141,10 +141,10 @@ export function moveForBall(
   if (ev.wicket) {
     if (ev.wicket.kind === 'run out') return null
     const mv = moveFor(bowler.id, bowlingTeam)
-    return mv ? { move: mv, by: 'bowl', size: 0.8 } : null
+    return mv ? { move: mv, by: 'bowl', size: 0.9 } : null
   }
   if (ev.extraType === 'wide' || ev.extraType === 'bye' || ev.extraType === 'legbye') return null
-  if (ev.boundary === 6) { const mv = moveFor(striker.id, battingTeam); return mv ? { move: mv, by: 'bat', size: 1 } : null }
-  if (isStrongFour(ev)) { const mv = moveFor(striker.id, battingTeam); return mv ? { move: mv, by: 'bat', size: 0.6 } : null }
+  if (ev.boundary === 6) { const mv = moveFor(striker.id, battingTeam); return mv ? { move: mv, by: 'bat', size: 1.4 } : null }
+  if (isStrongFour(ev)) { const mv = moveFor(striker.id, battingTeam); return mv ? { move: mv, by: 'bat', size: 0.75 } : null }
   return null
 }

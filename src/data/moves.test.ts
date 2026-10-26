@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { camWide, prep, type V3 } from '../components/match/broadcast'
 import { drawMove, type MoveDraw } from '../components/match/moveFx'
-import { BUILT_IN_TEAMS } from './teams'
+import { BUILT_IN_TEAMS, LEGACY_TEAMS } from './teams'
 import { isBigSix, isStrongFour, moveFor, moveForBall, STAR_MOVES, TEAM_MOVES, type MoveStyle } from './moves'
 
 const STYLES: MoveStyle[] = ['beam', 'sphere', 'slash', 'lightning', 'flame', 'rune', 'rush', 'pulse']
@@ -9,7 +9,7 @@ const STYLES: MoveStyle[] = ['beam', 'sphere', 'slash', 'lightning', 'flame', 'r
 describe('signature moves', () => {
   it('every built-in team has a move, and every star is on a real team', () => {
     for (const t of BUILT_IN_TEAMS) expect(TEAM_MOVES[t.id], t.id).toBeTruthy()
-    const ids = new Set(BUILT_IN_TEAMS.flatMap((t) => t.players.map((p) => p.id)))
+    const ids = new Set([...BUILT_IN_TEAMS, ...LEGACY_TEAMS].flatMap((t) => t.players.map((p) => p.id)))
     for (const id of Object.keys(STAR_MOVES)) expect(ids.has(id), id).toBe(true)
     for (const mv of [...Object.values(TEAM_MOVES), ...Object.values(STAR_MOVES)]) {
       expect(STYLES).toContain(mv.style)
@@ -30,7 +30,7 @@ describe('signature moves', () => {
     const t = { id: 'naruto' }, b = { id: 'a-youth-bowler' }
     const call = (e: Partial<typeof ev>) => moveForBall({ ...ev, ...e } as never, { id: 'naruto-sasuke-uchiha' }, t, b, { id: 'bleach' })
     expect(call({ boundary: 6 })?.move.name).toBe('CHIDORI!')
-    expect(call({ boundary: 6 })?.size).toBe(1)
+    expect(call({ boundary: 6 })?.size).toBe(1.4)
     expect(call({})).toBeNull()
     expect(call({ extraType: 'wide', boundary: 4 })).toBeNull()
     expect(call({ wicket: { kind: 'bowled', playerId: 'x' } })?.by).toBe('bowl')

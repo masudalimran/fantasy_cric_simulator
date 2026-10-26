@@ -87,6 +87,22 @@ export function drawMove(ctx: CanvasRenderingContext2D, r: Prep, m: MoveDraw): v
     ring(pf.x, pf.y, rad * 0.7, 0.45, Math.max(1.5, 3 * (1 - kk)), m.c1, 0.8 * (1 - kk))
   }
 
+  // the ground cracks where the bat met the ball: dark fissures that glow in the move's colour, spreading from the spot
+  if (m.k < 1.0) {
+    const grow = clamp01(m.k / 0.25), fade = 1 - clamp01((m.k - 0.5) / 0.5)
+    for (let i = 0; i < 10; i++) {
+      const ang = (i / 10) * Math.PI * 2 + hash01(m.seed + i) * 0.5
+      const len = (1.4 + hash01(m.seed * 1.7 + i) * 3) * m.size * grow
+      const a0 = project(r, { x: m.from.x, y: 0, z: m.from.z }), a1 = project(r, { x: m.from.x + Math.cos(ang) * len, y: 0, z: m.from.z + Math.sin(ang) * len })
+      if (!a0 || !a1) continue
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.strokeStyle = `rgba(15,10,5,${0.7 * fade})`; ctx.lineWidth = Math.max(1.5, (0.14 * F) / a0.d)
+      ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); ctx.stroke()
+      comp(m.c1)
+      ctx.strokeStyle = rgba(m.c1, 0.6 * fade); ctx.lineWidth = Math.max(1, (0.07 * F) / a0.d)
+      ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); ctx.stroke()
+    }
+  }
   const dTip = tip?.d ?? pf?.d ?? 20
   const w = px(0.5 * m.size, dTip)
   const flick = 1 + 0.08 * Math.sin(m.k * 55)
@@ -219,6 +235,21 @@ export function drawMove(ctx: CanvasRenderingContext2D, r: Prep, m: MoveDraw): v
         glow(tip.x, tip.y, R * 1.8, m.c1, 0.55 * a)
       }
       break
+    }
+  }
+  // sparks and embers thrown off along the way, flickering
+  if (pts.length > 2) {
+    const frame = Math.floor(m.k * 24)
+    const count = Math.round(26 * m.size)
+    for (let i = 0; i < count; i++) {
+      const idx = Math.floor(hash01(m.seed + i * 3.1 + frame * 0.7) * pts.length)
+      const p = pts[Math.min(pts.length - 1, idx)]
+      const sx = p.x + (hash01(m.seed + i * 7.7 + frame) - 0.5) * px(2.4 * m.size, p.d)
+      const sy = p.y + (hash01(m.seed + i * 5.3 + frame * 1.3) - 0.5) * px(2.4 * m.size, p.d) - (m.k * 14)
+      const sz = Math.max(1.2, px(0.12 + hash01(m.seed + i) * 0.14, p.d))
+      comp(m.c2)
+      ctx.fillStyle = rgba(i % 3 === 0 ? '#ffffff' : m.c2, 0.85 * a * (1 - idx / (pts.length * 1.4)))
+      ctx.beginPath(); ctx.arc(sx, sy, sz, 0, Math.PI * 2); ctx.fill()
     }
   }
   ctx.restore()

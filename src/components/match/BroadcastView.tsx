@@ -377,7 +377,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             const since = t - t2c
             if (hitAt && since >= -0.02 && since < 0.2) {
               const k = clamp01((since + 0.02) / 0.22)
-              const size = (ev?.boundary ? 74 : 46) * (0.5 + k) * Math.min(1.4, Math.max(0.7, (r.F * 1.8) / bp.d / 100))
+              const size = (ev?.boundary === 6 ? 130 : ev?.boundary ? 84 : 46) * (0.5 + k) * Math.min(1.4, Math.max(0.7, (r.F * 1.8) / bp.d / 100))
               imp.style.display = 'block'
               imp.style.opacity = String(1 - k)
               imp.style.width = imp.style.height = `${size.toFixed(0)}px`
@@ -427,6 +427,36 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           moveTag.style.transform = `scale(${(0.6 + 0.5 * pop + 0.05 * Math.sin(moveDraw.k * 14)).toFixed(3)}) rotate(-3deg)`
         } else moveTag.style.display = 'none'
       }
+      // the whole picture reacts to a big move: a flash, rays rushing out from the middle, a coloured glow round the edges, a shake, and the aura of the one who made it surges
+      {
+        const fxF = nodes.current.get('fxFlash'), fxV = nodes.current.get('fxVig'), fxR = nodes.current.get('fxRays')
+        const root = box.current
+        if (moveDraw && sh && fxF && fxV && fxR) {
+          const kk = moveDraw.k, pw = Math.min(1.5, sh.size)
+          const flash = clamp01(1 - kk / 0.26) * 0.6 * Math.min(1, pw)
+          fxF.style.display = flash > 0.02 ? 'block' : 'none'
+          fxF.style.opacity = flash.toFixed(2)
+          fxF.style.background = `radial-gradient(circle at 50% 56%, #ffffff 0%, ${sh.move.c2} 22%, ${sh.move.c1}99 55%, transparent 85%)`
+          const rays = clamp01(1 - kk / 0.65) * 0.65 * Math.min(1, pw)
+          fxR.style.display = rays > 0.02 ? 'block' : 'none'
+          fxR.style.opacity = rays.toFixed(2)
+          fxR.style.background = `repeating-conic-gradient(from ${(kk * 50).toFixed(0)}deg at 50% 56%, transparent 0deg 5deg, ${sh.move.c2}cc 5deg 6.4deg)`
+          const vig = clamp01(kk / 0.2) * clamp01((moveDraw.life - kk) / 0.6) * 0.7 * Math.min(1, pw)
+          fxV.style.display = vig > 0.02 ? 'block' : 'none'
+          fxV.style.opacity = vig.toFixed(2)
+          fxV.style.boxShadow = `inset 0 0 ${Math.round(70 * pw)}px ${Math.round(24 * pw)}px ${sh.move.c1}`
+          if (root) root.style.transform = pw >= 0.9 && kk < 0.6 ? `translate(${(Math.sin(t * 95) * 7 * pw * (1 - kk / 0.6)).toFixed(1)}px, ${(Math.cos(t * 77) * 6 * pw * (1 - kk / 0.6)).toFixed(1)}px) scale(1.04)` : ''
+          const surge = clamp01(kk / 0.18) * (1 - clamp01((kk - 0.9) / 0.9)) * Math.min(1, pw)
+          rigs.current.get(sh.by === 'bat' ? 'striker' : 'bowler')?.surge(surge)
+        } else {
+          if (fxF) fxF.style.display = 'none'
+          if (fxV) fxV.style.display = 'none'
+          if (fxR) fxR.style.display = 'none'
+          if (root && root.style.transform) root.style.transform = ''
+          rigs.current.get('striker')?.surge(0)
+          rigs.current.get('bowler')?.surge(0)
+        }
+      }
       const slowTag = nodes.current.get('tagSlow')
       if (slowTag) slowTag.style.display = f.slowmo ? 'block' : 'none'
       lastT.current = t
@@ -475,6 +505,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('bowler')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={bowler} team={bowlingTeam} look="bowler" rig={setRig('bowler')} /></div>
       <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire1')} /></div>
       <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire2')} /></div>
+      <div ref={setNode('fxFlash')} className="pointer-events-none absolute inset-0 z-[4600] hidden" />
+      <div ref={setNode('fxRays')} className="pointer-events-none absolute inset-0 z-[4601] hidden" style={{ WebkitMaskImage: 'radial-gradient(circle at 50% 56%, transparent 18%, #000 60%)', maskImage: 'radial-gradient(circle at 50% 56%, transparent 18%, #000 60%)' }} />
+      <div ref={setNode('fxVig')} className="pointer-events-none absolute inset-0 z-[4602] hidden" />
       <div ref={setNode('impact')} className="pointer-events-none absolute left-0 top-0 z-[4001] hidden rounded-full" style={{ background: 'radial-gradient(circle, #ffffff 0%, #fde68a 28%, rgba(251,191,36,0.35) 52%, rgba(251,191,36,0) 70%)' }} />
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
