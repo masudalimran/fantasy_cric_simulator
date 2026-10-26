@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, BAT_END_Z, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -249,7 +249,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const ev = L.event
       // the two at the crease, the bowler, the keeper and the umpires
       const stance = L.striker.hand === 'L' ? -0.75 : 0.75
-      const ra = f.runners?.a ?? f.striker ?? { x: stance, y: ev?.boundary ? joyHop(f.joy) : 0, z: 0.35 }
+      const ra = f.runners?.a ?? f.striker ?? { x: stance, y: ev?.boundary ? joyHop(f.joy) : 0, z: BAT_END_Z }
       const rb = f.runners?.b ?? { x: -3.2, y: 0, z: -19.4 }
       place('striker', ra, { rot: -f.hurt * 24 })
       place('nonstriker', rb)

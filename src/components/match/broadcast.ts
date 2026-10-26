@@ -73,7 +73,8 @@ export function fielderWorld(x: number, y: number, spot: string): V3 {
 /** How long one run takes between the wickets. */
 export const RUN_SECONDS = 0.95
 const NON_STRIKER_X = -3.2
-const BAT_END_Z = 0.35
+/** The batsman stands just behind his popping crease (which is 1.22 m in front of the stumps), so he is in front of the stumps, between them and the bowler. */
+export const BAT_END_Z = -0.95
 const BOWL_END_Z = BOWL_Z + 0.7
 
 /**
@@ -273,7 +274,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bounce: V3 = { x: lineX * 0.8 + bowlerX * 0.2, y: 0, z: lenZ }
   const stanceX = leftHand ? -0.75 : 0.75
   const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket' || w.kind === 'lbw')
-  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : 0.85, z: -0.45 }
+  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : 0.85, z: toStumps || wide ? -0.45 : -1.25 }
   const six = ev.boundary === 6
   // four byes or four leg byes: the ball races to the rope with nobody running
   const byeFour = (ev.extraType === 'bye' || ev.extraType === 'legbye') && ev.extraRuns >= 4
@@ -586,7 +587,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     runners = u0 <= 0 ? null : { a: runner(0, 1, ua), b: runner(1, -1, ub) }
   } else if (plan.stepOut) {
     // stumped: he comes down the pitch and is beaten
-    striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, -1.7, ease((t - (t2 - 0.45)) / 0.5)) }
+    striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, -2.7, ease((t - (t2 - 0.45)) / 0.5)) }
   }
   // the out batsman walks off once the wicket has fallen
   if (plan.exitAt !== null && plan.exitAt !== undefined && t > plan.exitAt + 0.3) {
