@@ -29,6 +29,7 @@ import { boxChat } from '../season/studio'
 import { isBigSix, moveFor } from '../data/moves'
 import { BOOST_MULT, boostSummary } from '../season/boost'
 import { callName } from '../components/match/format'
+import { deliveryOf, deliveryScreen, isPoorLength, LENGTH_WORDS } from '../engine/delivery'
 import { almostCaught } from '../components/match/almost'
 import { nearMiss } from '../components/match/nearMiss'
 import { batHitsBall, clipNow, contactAt } from '../components/match/broadcast'
@@ -38,7 +39,7 @@ import { catchCause, catchContact, fourContact, sixContact } from '../engine/con
 import { shotText } from '../components/match/AimPads'
 import { cheerVariantFor } from '../components/match/CheerScreen'
 import type { ReplayBase } from '../components/match/ReplayFrame'
-import { ALMOST_CAST_SECONDS, EXTRA_CAST_SECONDS, FOUR_SECONDS, MISS_CAST_SECONDS, NO_BALL_CAST_SECONDS, SIX_CAST_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
+import { ALMOST_CAST_SECONDS, EXTRA_CAST_SECONDS, FOUR_SECONDS, DELIVERY_CAST_SECONDS, MISS_CAST_SECONDS, NO_BALL_CAST_SECONDS, SIX_CAST_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { wicketCard } from '../season/wicketCards'
 import { CATCH_SECONDS } from '../components/match/CatchScreen'
 import { matchBefore } from '../engine/asOf'
@@ -485,7 +486,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const innNb = match.innings[lastEv.innings]
         const bowlNb = match.sides[1 - innNb.battingSide].team
         const rateNb = spd === 4 ? 0.55 : spd === 2 ? 0.75 : 1
-        enqueueMoment({ key: lastEv.seq + 0.7, kind: 'noball', player: match.player(lastEv.bowlerId), team: bowlNb, title: 'NO BALL', lines: [], delay: spd === 4 ? 150 : spd === 2 ? 250 : 450, ms: Math.round(NO_BALL_CAST_SECONDS * 1000 * rateNb), noballCast: { replay: replayBase(lastEv), bowler: match.player(lastEv.bowlerId), bowlTeam: bowlNb, cm: overstepCm(lastEv.seq), rate: rateNb } })
+        const dvNb = deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' })
+        const nbDelay = spd === 4 ? 150 : spd === 2 ? 250 : 450
+        if (dvNb.noBallCause === 'beamer') {
+          // a ball above the waist: a replay of it from the side with how high it was
+          enqueueMoment({ key: lastEv.seq + 0.7, kind: 'deliverycast', player: match.player(lastEv.bowlerId), team: bowlNb, title: 'BEAMER', lines: [], delay: nbDelay, ms: Math.round(DELIVERY_CAST_SECONDS * 1000 * rateNb), deliveryCast: { replay: replayBase(lastEv), screen: 'beamer', dv: dvNb, kmh: ballSpeed(lastEv, match.player(lastEv.bowlerId)), batsman: match.player(lastEv.strikerId), bowler: match.player(lastEv.bowlerId), bowlTeam: bowlNb, left: match.player(lastEv.strikerId).hand === 'L', rate: rateNb } })
+        } else {
+          enqueueMoment({ key: lastEv.seq + 0.7, kind: 'noball', player: match.player(lastEv.bowlerId), team: bowlNb, title: 'NO BALL', lines: [], delay: nbDelay, ms: Math.round(NO_BALL_CAST_SECONDS * 1000 * rateNb), noballCast: { replay: replayBase(lastEv), bowler: match.player(lastEv.bowlerId), bowlTeam: bowlNb, cm: overstepCm(lastEv.seq), rate: rateNb } })
+        }
       }
       // (not when that ball ended the innings: the free hit would be shown against the next innings' batsman)
       if (lastEv?.extraType === 'noball' && getAnimPrefs().freeHit && !match.isOver && match.current.index === lastEv.innings) {
@@ -508,7 +516,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const bowlS = match.sides[1 - innNow.battingSide]
         if (prefs.four && lastEv.boundary === 4) {
           const ang = eventAngle(lastEv)
-          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'fourcast', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms: Math.round(FOUR_SECONDS * 1000 * rate), fourCast: { replay: replayBase(lastEv), contact: fourContact(lastEv, match.player(lastEv.strikerId).batting.power), shot: shotText({ angle: ang, loft: !!lastEv.shot?.loft }) ?? 'Along the ground', batsman: match.player(lastEv.strikerId), batTeam: batT, fire: lastEv.freeHit, rate } })
+          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'fourcast', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms: Math.round(FOUR_SECONDS * 1000 * rate), fourCast: { replay: replayBase(lastEv), contact: fourContact(lastEv, match.player(lastEv.strikerId).batting.power), shot: shotText({ angle: ang, loft: !!lastEv.shot?.loft }) ?? 'Along the ground', batsman: match.player(lastEv.strikerId), batTeam: batT, fire: lastEv.freeHit, poor: (() => { const d = deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' }); return isPoorLength(d) ? LENGTH_WORDS[d.length] : undefined })(), rate } })
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
           const nameOf = lastEv.extraType === 'wide' ? 'WIDE!' : lastEv.extraRuns >= 4 ? (lastEv.extraType === 'bye' ? 'FOUR BYES!' : 'FOUR LEG BYES!') : lastEv.extraType === 'bye' ? 'BYE!' : 'LEG BYE!'
@@ -526,6 +534,13 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         if (almost) {
           const striker = match.player(lastEv.strikerId)
           enqueueMoment({ key: lastEv.seq + 0.46, kind: 'almostcast', player: striker, team: batT, title: 'SO NEARLY!', lines: [], delay, ms: Math.round(ALMOST_CAST_SECONDS * 1000 * rate), almostCast: { replay: replayBase(lastEv), almost, batsman: striker, batTeam: batT, bowlTeam: bowlS.team, rate } })
+        }
+        // how the ball was bowled: a big swing or turn (with a compass), a good yorker that was kept out
+        const dvl = prefs.delivery ? deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' }) : null
+        const dscreen = dvl ? deliveryScreen(lastEv, dvl) : null
+        if (dvl && dscreen && dscreen !== 'beamer') {
+          const bowlerNow2 = match.player(lastEv.bowlerId)
+          enqueueMoment({ key: lastEv.seq + 0.48, kind: 'deliverycast', player: bowlerNow2, team: bowlS.team, title: dscreen.toUpperCase(), lines: [], delay, ms: Math.round(DELIVERY_CAST_SECONDS * 1000 * rate), deliveryCast: { replay: replayBase(lastEv), screen: dscreen, dv: dvl, kmh: ballSpeed(lastEv, bowlerNow2), batsman: match.player(lastEv.strikerId), bowler: bowlerNow2, bowlTeam: bowlS.team, left: match.player(lastEv.strikerId).hand === 'L', rate } })
         }
         if (prefs.extras && lastEv.tags.includes('maiden')) {
           const ln = innNow.bowlers.get(lastEv.bowlerId)
@@ -743,7 +758,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const hitter = match.player(notable.strikerId)
           const earlier = Math.max(0, ...inn.log.filter((e) => e.seq < notable.seq && e.strikerId === notable.strikerId && e.boundary === 6).map((e) => e.distance ?? 0), seasonStats?.bat.get(notable.strikerId)?.longSix ?? 0)
           const rate6 = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
-          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(SIX_CAST_SECONDS * 1000 * rate6), sixCast: { replay: replayBase(notable), batsman: hitter, team, distance: notable.distance, rate: rate6, contact: sixContact(notable, hitter.batting.power), longest: earlier > 0 && notable.distance > earlier, fire: notable.freeHit, move: getAnimPrefs().moves && isBigSix(notable) ? moveFor(hitter.id, team) ?? undefined : undefined } })
+          show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(SIX_CAST_SECONDS * 1000 * rate6), sixCast: { replay: replayBase(notable), poor: (() => { const d = deliveryOf(notable, match.player(notable.bowlerId), { overcast: stadium.weather === 'overcast' }); return isPoorLength(d) ? LENGTH_WORDS[d.length] : undefined })(), batsman: hitter, team, distance: notable.distance, rate: rate6, contact: sixContact(notable, hitter.batting.power), longest: earlier > 0 && notable.distance > earlier, fire: notable.freeHit, move: getAnimPrefs().moves && isBigSix(notable) ? moveFor(hitter.id, team) ?? undefined : undefined } })
         }
         if (battingMilestone && outLine) {
           // the two batsmen meet in the middle and bump fists, with the innings on it

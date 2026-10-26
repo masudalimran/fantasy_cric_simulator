@@ -10,6 +10,7 @@ import type { BallEvent } from '../../engine/types'
 import { WIDE_LINE_M, wideCm, wideDirection, wideSide } from '../../engine/wide'
 import { classifyShot, type ShotStyle } from './bodyPose'
 import { overstepCm } from '../../season/moments'
+import { deliveryOf, type DeliveryLook } from '../../engine/delivery'
 
 export interface V3 { x: number; y: number; z: number }
 export interface Cam { p: V3; yaw: number; pitch: number; hfov: number }
@@ -224,6 +225,11 @@ export interface Plan {
   react: { text: string; at: number; who: 'striker' | 'bowler' | 'keeper' } | null
   /** The shot the batsman is drawn playing (looks only). */
   shot: ShotStyle
+  /** How it was bowled (length, height, swing, turn), where the ball bounces as a share of its flight, and the sideways bow of a swing and the sideways kick of a turn in metres. */
+  delivery: DeliveryLook
+  bounceU: number
+  swingM: number
+  turnM: number
   /** A challenge decides this ball: the clip shows only what the umpire said on the field, nobody walks off and nobody celebrates until the review is done. */
   reviewed: boolean
 }
@@ -277,7 +283,7 @@ export const tDeliverFor = (speed: number) => Math.max(0.36, Math.min(0.85, 0.5 
 export const contactAt = (speed: number) => 0.95 + tDeliverFor(speed)
 
 /** Works out the clip for a ball. `end` is where the top-down field says the ball finished. */
-export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135, opts: { /** A run out goes upstairs to the third umpire, so the clip does not show the verdict. */ holdRunOut?: boolean } = {}): Plan {
+export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: number; y: number }, leftHand: boolean, speed = 135, opts: { /** A run out goes upstairs to the third umpire, so the clip does not show the verdict. */ holdRunOut?: boolean; /** The bowler (a seamer swings it, a spinner turns it) and whether it is overcast, for how the ball was bowled. */ bowler?: Parameters<typeof deliveryOf>[1]; overcast?: boolean } = {}): Plan {
   const w = ev.wicket
   const wide = ev.extraType === 'wide'
   const bowlerX = 0.5
@@ -285,11 +291,17 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const line = ev.delivery ? ev.delivery.line / 50 : (hash01(ev.seq * 3.1) - 0.5) * 0.9
   const lineX = wide ? wideDirection(wideSide(ev), leftHand ? 'L' : 'R', 'behind-bowler') * (WIDE_LINE_M + wideCm(ev.seq) / 100) : line * 1.1
   const release: V3 = { x: bowlerX, y: 2.05, z: BOWL_Z - 0.4 }
-  const lenZ = ev.delivery ? (ev.delivery.length === 'yorker' ? -1.2 : ev.delivery.length === 'full' ? -3.2 : ev.delivery.length === 'good' ? -6 : -9.5) : -3 - hash01(ev.seq * 1.7) * 6
-  const bounce: V3 = { x: lineX * 0.8 + bowlerX * 0.2, y: 0, z: lenZ }
+  // how it was bowled: where it pitched, how high it reached the batsman, and how far it swung or turned
+  const dv = deliveryOf(ev, opts.bowler, { overcast: opts.overcast })
+  const lenZ = dv.pitchZ ?? 0
   const stanceX = leftHand ? -0.75 : 0.75
   const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket' || w.kind === 'lbw')
-  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : 0.85, z: toStumps || wide ? -0.45 : -1.25 }
+  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : dv.height, z: toStumps || wide ? -0.45 : -1.25 }
+  // a ball that bounces turns a little off the pitch (so it pitches a little to the other side of where it meets the bat) and one that swings bows in the air
+  const turnM = dv.pitchZ === null ? 0 : Math.tan((dv.turn * Math.PI) / 180) * Math.abs(meet.z - dv.pitchZ)
+  const swingM = Math.tan((dv.swing * Math.PI) / 180) * 14
+  const bounce: V3 = { x: meet.x - turnM, y: 0, z: dv.pitchZ ?? meet.z }
+  const bounceU = dv.pitchZ === null ? 1 : Math.max(0.2, Math.min(0.995, (dv.pitchZ - release.z) / (meet.z - release.z)))
   const six = ev.boundary === 6
   // four byes or four leg byes: the ball races to the rope with nobody running
   const byeFour = (ev.extraType === 'bye' || ev.extraType === 'legbye') && ev.extraRuns >= 4
@@ -468,8 +480,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   return {
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, slow, realTotal: 0.95 + tDeliver + tFlight + tHold + (slow ? slow.len / slow.factor - slow.len : 0), runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
-    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball ? BOWL_Z + 1.22 + overstepCm(ev.seq) / 100 + 0.16 : BOWL_Z - 0.7 },
+    runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball && dv.noBallCause !== 'beamer' ? BOWL_Z + 1.22 + overstepCm(ev.seq) / 100 + 0.16 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
+    delivery: dv, bounceU, swingM, turnM,
     shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
     signal, hurt, keeperDive, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
@@ -543,10 +556,24 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (t >= t1 - 0.02) {
     if (t < t2) {
       const u = clamp01((t - t1) / plan.tDeliver)
-      const ub = 0.72
+      const ub = plan.bounceU
       const z = lerp(plan.release.z, plan.meet.z, u)
-      const x = lerp(plan.release.x, plan.meet.x, u)
-      const y = u < ub ? plan.release.y * (1 - (u / ub) ** 1.7) : plan.meet.y * Math.sin(((u - ub) / (1 - ub)) * (Math.PI / 2))
+      // swing: the ball bows to one side in the air and comes back to where it meets the bat; turn: it pitches to one side and kicks across to it
+      const bow = (f: number) => Math.sin(Math.PI * f) * (0.4 + 0.6 * f)
+      let x: number, y: number
+      if (ub >= 0.995) {
+        // no bounce at all (a full toss): it just comes down onto the bat
+        x = lerp(plan.release.x, plan.meet.x, u) + plan.swingM * bow(u)
+        y = plan.release.y + (plan.meet.y - plan.release.y) * Math.pow(u, 1.3)
+      } else if (u < ub) {
+        const f = u / ub
+        x = lerp(plan.release.x, plan.bounce.x, f) + plan.swingM * bow(f)
+        y = plan.release.y * (1 - f ** 1.7)
+      } else {
+        const f = (u - ub) / (1 - ub)
+        x = lerp(plan.bounce.x, plan.meet.x, f)
+        y = plan.meet.y * Math.sin(f * (Math.PI / 2))
+      }
       ball = { x, y: Math.max(0.05, y), z }
     } else {
       const s = clamp01((t - t2) / plan.tFlight)

@@ -94,7 +94,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   /** Play the clip so that it finishes in this many seconds, whatever its length (every ball of a highlight reel is shown to the end). */
   fitSeconds?: number
   /** Set when this is a replay inside an animation screen: it uses another camera and plays with slow motion around the shot, so it looks different from the live picture. */
-  replay?: { cam: ReplayCam; slowMo?: boolean; /** Deeper slow motion (a four or a six). */ deep?: boolean } | null
+  replay?: { cam: ReplayCam; slowMo?: boolean; /** Deeper slow motion (a four or a six). */ deep?: boolean; /** Draw the path the ball took in the air and off the pitch, against the straight line (swing and turn). */ trace?: boolean } | null
   /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
   wear?: number
   /** The commentary line of this ball, written along the top once the bat has met it. */
@@ -129,13 +129,22 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const plan0: Plan = useMemo(() => {
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
-    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler), { holdRunOut: getAnimPrefs().reviews })
+    const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler), { holdRunOut: getAnimPrefs().reviews, bowler, overcast: look.weather === 'overcast' })
     // (a replay inside an animation screen must not touch the clock the live clip keeps)
     if (event && !replay && !fitSeconds) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.15, rateProp)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
   const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep])
+  // the path of the delivery against the straight line, for the swing and turn replays
+  const trace = useMemo(() => {
+    if (!replay?.trace || !event) return null
+    const curve: V3[] = []
+    for (let tt = plan.tRun + 0.02; tt <= plan.tRun + plan.tDeliver; tt += 0.02) { const b = frameAt(plan, tt, () => ({ x: 0, y: 0, z: 0 })).ball; if (b) curve.push({ x: b.x, y: Math.max(0.02, b.y), z: b.z }) }
+    return { curve, straight: [{ ...plan.release, y: plan.release.y }, { x: plan.meet.x, y: plan.meet.y, z: plan.meet.z }] as [V3, V3] }
+  }, [plan, replay?.trace, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
+  const traceRef = useRef(trace)
+  traceRef.current = trace
   const rate = fitSeconds ? Math.max(0.2, Math.min(3, fitSeconds / plan.realTotal)) : rateProp
   const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (Math.sign(plan0.end.x - plan0.meet.x) || undefined) as 1 | -1 | undefined) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
   void 0 // eslint-disable-line react-hooks/exhaustive-deps
@@ -224,6 +233,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         }
       }
       const marks: Scene['marks'] = {}
+      if (traceRef.current) marks.trace = traceRef.current
       if (L.replayCam && L.event?.extraType === 'wide') marks.wideLine = WIDE_LINE_M
       if (L.replayCam?.focus && L.event?.extraType === 'noball') marks.crease = { z: BOWL_Z + 1.22, over: overstepCm(L.event.seq) / 100 }
       drawScene(ctx, c, W, H, { marks, move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })

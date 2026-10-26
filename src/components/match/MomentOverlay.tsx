@@ -12,7 +12,7 @@ import { ChallengeScreen, type ChallengeInfo } from './ChallengeScreen'
 import { ChallengeResultScreen, type ChallengeResultInfo } from './ChallengeResult'
 import { RainDelayScreen, type RainDelayInfo } from './RainDelay'
 import { CatchScreen, type CatchInfo } from './CatchScreen'
-import { AlmostCast, ExtraCast, FourCast, MissCast, NoBallCast, SixCast, WicketCast, type AlmostCastInfo, type NoBallCastInfo, type SixCastInfo, type ExtraCastInfo, type FourCastInfo, type MissCastInfo, type WicketCastInfo } from './ReplayScreens'
+import { AlmostCast, ExtraCast, FourCast, DeliveryCast, MissCast, NoBallCast, SixCast, WicketCast, type AlmostCastInfo, type DeliveryCastInfo, type NoBallCastInfo, type SixCastInfo, type ExtraCastInfo, type FourCastInfo, type MissCastInfo, type WicketCastInfo } from './ReplayScreens'
 import { TimeoutIntroScreen, type TimeoutIntroInfo } from './TimeoutIntro'
 import { ReviewScreen, RunOutReview, type ReviewInfo, type RunOutInfo } from './ReviewScreens'
 import { PartnershipScreen, TimeoutScreen, type PartnershipInfo, type TimeoutInfo } from './TimeoutScreens'
@@ -28,7 +28,7 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast' | 'misscast' | 'almostcast'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast' | 'misscast' | 'almostcast' | 'deliverycast'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
@@ -52,6 +52,8 @@ export interface Moment {
   almostCast?: AlmostCastInfo
   /** A six and a no ball, the broadcast way: replays with slow motion. */
   sixCast?: SixCastInfo
+  /** A big swing or turn, a good yorker or a beamer. */
+  deliveryCast?: DeliveryCastInfo
   noballCast?: NoBallCastInfo
   /** A catch: the ball again from the TV camera and where it met the bat. */
   catchInfo?: CatchInfo
@@ -174,7 +176,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  if ((moment.kind === 'fourcast' && moment.fourCast) || (moment.kind === 'wicketcast' && moment.wicketCast) || (moment.kind === 'extracast' && moment.extraCast) || (moment.kind === 'misscast' && moment.missCast) || (moment.kind === 'almostcast' && moment.almostCast) || (moment.kind === 'six' && moment.sixCast) || (moment.kind === 'noball' && moment.noballCast) || (moment.kind === 'catch' && moment.catchInfo) || (moment.kind === 'raindelay' && moment.rainDelay) || (moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
+  if ((moment.kind === 'fourcast' && moment.fourCast) || (moment.kind === 'wicketcast' && moment.wicketCast) || (moment.kind === 'extracast' && moment.extraCast) || (moment.kind === 'misscast' && moment.missCast) || (moment.kind === 'almostcast' && moment.almostCast) || (moment.kind === 'deliverycast' && moment.deliveryCast) || (moment.kind === 'six' && moment.sixCast) || (moment.kind === 'noball' && moment.noballCast) || (moment.kind === 'catch' && moment.catchInfo) || (moment.kind === 'raindelay' && moment.rainDelay) || (moment.kind === 'challengewon' && moment.challengeWon) || (moment.kind === 'timeoutintro' && moment.timeoutIntro) || (moment.kind === 'challenge' && moment.challenge) || (moment.kind === 'review' && moment.review) || (moment.kind === 'runout' && moment.runout) || (moment.kind === 'timeout' && moment.timeout) || (moment.kind === 'partnership' && moment.partnership)) {
     return (
       <motion.div
         data-moment={moment.kind} onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
@@ -185,6 +187,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         {moment.kind === 'extracast' && moment.extraCast && <ExtraCast info={moment.extraCast} />}
         {moment.kind === 'misscast' && moment.missCast && <MissCast info={moment.missCast} />}
         {moment.kind === 'almostcast' && moment.almostCast && <AlmostCast info={moment.almostCast} />}
+        {moment.kind === 'deliverycast' && moment.deliveryCast && <DeliveryCast info={moment.deliveryCast} />}
         {moment.kind === 'six' && moment.sixCast && <SixCast info={moment.sixCast} />}
         {moment.kind === 'noball' && moment.noballCast && <NoBallCast info={moment.noballCast} />}
         {moment.kind === 'catch' && moment.catchInfo && <CatchScreen info={moment.catchInfo} />}

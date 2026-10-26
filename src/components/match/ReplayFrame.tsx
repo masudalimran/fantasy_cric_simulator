@@ -23,10 +23,10 @@ export interface ReplayBase {
  * The top of the broadcast-style animation screens: the ball played again from the TV camera, with a REPLAY tag. `share` is how much of the screen the
  * picture takes (the rest is for the card under it). A `rate` above 1 plays it slower.
  */
-export function ReplayFrame({ base, rate = 1, share = 0.52, tag = 'Replay', cam, deep = false }: { base: ReplayBase; rate?: number; share?: number; tag?: string; /** The replay camera (a different angle from the live picture) and whether it slows down around the shot. */ cam: ReplayCam; /** Deeper slow motion (a four or a six). */ deep?: boolean }) {
+export function ReplayFrame({ base, rate = 1, share = 0.52, tag = 'Replay', cam, deep = false, trace = false }: { base: ReplayBase; rate?: number; share?: number; tag?: string; /** The replay camera (a different angle from the live picture) and whether it slows down around the shot. */ cam: ReplayCam; /** Deeper slow motion (a four or a six). */ deep?: boolean; /** Draw the path of the delivery against the straight line. */ trace?: boolean }) {
   return (
     <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: `${share * 100}%` }}>
-      <BroadcastView event={base.event} striker={base.striker} nonStriker={base.nonStriker} bowler={base.bowler} battingTeam={base.batTeam} bowlingTeam={base.bowlTeam} fielders={base.fielders} pitch={base.pitch} look={base.look} rate={rate} replay={{ cam, slowMo: true, deep }} />
+      <BroadcastView event={base.event} striker={base.striker} nonStriker={base.nonStriker} bowler={base.bowler} battingTeam={base.batTeam} bowlingTeam={base.bowlTeam} fielders={base.fielders} pitch={base.pitch} look={base.look} rate={rate} replay={{ cam, slowMo: true, deep, trace }} />
       <div className="pointer-events-none absolute left-2 top-2 z-[7000] flex items-center gap-1.5 rounded bg-sky-500 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-white"><span className="h-2 w-2 animate-pulse rounded-full bg-red-300" />{tag} · {replayCamera(cam, base.event.seq).label}</div>
       <div className="pointer-events-none absolute right-2 top-2 z-[7000] rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
     </div>

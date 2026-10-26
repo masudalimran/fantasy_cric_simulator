@@ -8,6 +8,7 @@ import { PlayerAvatar, accentOf } from '../ui'
 import { BatContact, ContactMeters } from './ContactPanel'
 import { replayCamFor } from './broadcast'
 import { Counter, type SixInfo } from './SixReplay'
+import { LENGTH_WORDS, type DeliveryLook } from '../../engine/delivery'
 import { MoveCutIn } from './MoveCutIn'
 import { BALL_R, STUMP_HALF, STUMP_HEIGHT, type Miss } from './nearMiss'
 import type { AlmostCaught } from './almost'
@@ -31,6 +32,8 @@ export interface FourCastInfo {
   batTeam: Team
   /** The ball was hit off a free hit. */
   fire?: boolean
+  /** A poor length it was hit off ("low full toss"), named on the screen. */
+  poor?: string
   rate: number
 }
 export const FOUR_SECONDS = 8.4
@@ -52,7 +55,7 @@ export function FourCast({ info }: { info: FourCastInfo }) {
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
             <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
               <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.batTeam)}` }}><PlayerAvatar player={info.batsman} team={info.batTeam} size={compact ? 28 : 36} /></span>
-              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold text-slate-300">{info.shot}</div></div>
+              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold text-slate-300">{info.shot}{info.poor ? ` · off a ${info.poor.toLowerCase()}` : ''}</div></div>
               <motion.div className="ml-auto shrink-0 font-display text-2xl leading-none tracking-wide text-white sm:text-3xl" style={{ WebkitTextStroke: '1.5px #0c4a6e', paintOrder: 'stroke fill', textShadow: info.fire ? '0 0 20px #f97316' : '0 0 20px #38bdf8aa' }} initial={{ scale: 2.2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.9 * r, type: 'spring', stiffness: 260, damping: 14 }}>FOUR!</motion.div>
             </motion.div>
             <ContactMeters contact={c} delay={1.8} rate={r} compact />
@@ -301,6 +304,8 @@ export function AlmostCast({ info }: { info: AlmostCastInfo }) {
 
 export interface SixCastInfo extends SixInfo {
   replay: ReplayBase
+  /** A poor length it was hit off, named on the screen. */
+  poor?: string
 }
 export const SIX_CAST_SECONDS = 8.8
 
@@ -320,7 +325,7 @@ export function SixCast({ info }: { info: SixCastInfo }) {
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
             <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
               <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.team)}` }}><PlayerAvatar player={info.batsman} team={info.team} size={compact ? 28 : 36} /></span>
-              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold text-slate-300">{info.longest ? 'His longest six yet' : monster ? 'Out of the ground' : 'Over the rope'}</div></div>
+              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold text-slate-300">{info.longest ? 'His longest six yet' : monster ? 'Out of the ground' : 'Over the rope'}{info.poor ? ` · off a ${info.poor.toLowerCase()}` : ''}</div></div>
               <motion.div className="ml-auto shrink-0 font-display text-2xl leading-none tracking-wide text-white sm:text-3xl" style={{ WebkitTextStroke: '1.5px #701a75', paintOrder: 'stroke fill', textShadow: info.fire ? '0 0 20px #f97316' : '0 0 20px #e879f9' }} initial={{ scale: 2.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.3 * r, type: 'spring', stiffness: 260, damping: 15 }}>SIX!</motion.div>
             </motion.div>
             <motion.div className="font-display leading-none tracking-wide text-amber-300" style={{ fontSize: compact ? 30 : 40 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 * r }}>
@@ -363,6 +368,104 @@ export function NoBallCast({ info }: { info: NoBallCastInfo }) {
           <motion.div className="min-w-0 text-xs font-semibold leading-snug text-slate-100 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 * r }}>
             <b className="text-amber-300">{info.bowler.name.split(' ')[0]}</b> overstepped by <b className="text-rose-300">{info.cm} cm</b>.<br />+1 run and a free hit next.
           </motion.div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+// ---- How the ball was bowled: swing, turn, a yorker, a beamer ---------------------------------------------------------------------
+
+export interface DeliveryCastInfo {
+  replay: ReplayBase
+  screen: 'beamer' | 'yorker' | 'swing' | 'turn'
+  dv: DeliveryLook
+  /** The speed of the ball, km/h. */
+  kmh: number
+  batsman: Player
+  bowler: Player
+  bowlTeam: Team
+  /** The batsman is left-handed (which way is "in" turns round). */
+  left: boolean
+  rate: number
+}
+export const DELIVERY_CAST_SECONDS = 6.8
+
+/** A compass for how far the ball moved: the straight line (dashed), the way it went and the angle between them in degrees. */
+function Compass({ deg, max, w, color }: { deg: number; max: number; w: number; color: string }) {
+  const R = 48, cx = 62, cy = 66
+  const span = 70 // the dial runs this many degrees either side of straight on the screen
+  const a = (Math.max(-max, Math.min(max, deg)) / max) * span
+  const at = (d: number, r = R) => ({ x: cx + r * Math.sin((d * Math.PI) / 180), y: cy - r * Math.cos((d * Math.PI) / 180) })
+  const n = at(a), e = at(0)
+  const ticks = Array.from({ length: 11 }, (_, i) => -span + (i * span) / 5)
+  return (
+    <svg viewBox="0 0 124 84" width={w} className="shrink-0" aria-hidden>
+      <path d={`M${at(-span).x} ${at(-span).y} A ${R} ${R} 0 0 1 ${at(span).x} ${at(span).y}`} fill="none" stroke="#334155" strokeWidth="5" strokeLinecap="round" />
+      {ticks.map((t, i) => <line key={t} x1={at(t, R - (i % 5 === 0 ? 9 : 5)).x} y1={at(t, R - (i % 5 === 0 ? 9 : 5)).y} x2={at(t, R + 1).x} y2={at(t, R + 1).y} stroke="#94a3b8" strokeWidth={i % 5 === 0 ? 1.6 : 0.9} />)}
+      <motion.path d={`M${cx} ${cy} L${e.x} ${e.y} A ${R} ${R} 0 0 ${a >= 0 ? 1 : 0} ${n.x} ${n.y} Z`} fill={color} opacity="0.35" initial={{ opacity: 0 }} animate={{ opacity: 0.35 }} transition={{ delay: 1.9 }} />
+      <line x1={cx} y1={cy} x2={e.x} y2={e.y} stroke="#f8fafc" strokeWidth="1.4" strokeDasharray="3 2.5" />
+      <motion.line x1={cx} y1={cy} x2={e.x} y2={e.y} stroke={color} strokeWidth="3" strokeLinecap="round" initial={{ x2: e.x, y2: e.y }} animate={{ x2: n.x, y2: n.y }} transition={{ delay: 1.6, duration: 0.9, type: 'spring', stiffness: 90, damping: 12 }} />
+      <circle cx={cx} cy={cy} r="3.4" fill="#f8fafc" />
+      <motion.text x={cx} y={cy + 15} textAnchor="middle" fontSize="15" fontWeight="800" fill="#fef3c7" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2 }}>{Math.abs(deg).toFixed(1)}°</motion.text>
+    </svg>
+  )
+}
+
+/** The ball's flight from the side: where it left the hand, where it pitched (marked on the ground, in metres from the stumps) and how high it reached the batsman. */
+function LengthSide({ dv, w }: { dv: DeliveryLook; w: number }) {
+  const X = (z: number) => 6 + ((z + 20.5) / 21) * 104
+  const Y = (h: number) => 70 - (h / 2.6) * 60
+  const pz = dv.pitchZ
+  const path = pz === null
+    ? `M${X(-20.1)} ${Y(2.05)} Q ${X(-8)} ${Y(1.6)} ${X(-1.2)} ${Y(dv.height)}`
+    : `M${X(-20.1)} ${Y(2.05)} Q ${X(pz - 2)} ${Y(0.5)} ${X(pz)} ${Y(0)} Q ${X(pz / 2 - 0.6)} ${Y(dv.height * 0.8)} ${X(-1.2)} ${Y(dv.height)}`
+  return (
+    <svg viewBox="0 0 120 84" width={w} className="shrink-0" aria-hidden>
+      <line x1="2" y1="70" x2="118" y2="70" stroke="#4ade80" strokeWidth="1.2" opacity="0.8" />
+      <line x1={X(-1.22)} y1="64" x2={X(-1.22)} y2="76" stroke="#f8fafc" strokeWidth="1" opacity="0.7" />
+      {[-1.6, 0, 1.6].map((o) => <line key={o} x1={X(0) + o} y1={Y(0.71)} x2={X(0) + o} y2="70" stroke="#f1e2b0" strokeWidth="1.5" strokeLinecap="round" />)}
+      {dv.height >= 1.7 && <line x1={X(-1.2) - 14} y1={Y(1.1)} x2={X(-1.2) + 14} y2={Y(1.1)} stroke="#fb7185" strokeWidth="1" strokeDasharray="3 2" />}
+      <motion.path d={path} fill="none" stroke="#fde68a" strokeWidth="1.6" strokeDasharray="3 2.5" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 1.3, duration: 1.1 }} />
+      {pz !== null && <motion.circle cx={X(pz)} cy={Y(0)} r="2.6" fill="#ef4444" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.9 }} />}
+      <motion.circle cx={X(-1.2)} cy={Y(dv.height)} r="2.8" fill="#fbbf24" stroke="#fff7ed" strokeWidth="0.8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.3 }} />
+      <motion.text x={pz === null ? X(-1.2) - 4 : X(pz)} y={pz === null ? Y(dv.height) - 7 : 82} textAnchor="middle" fontSize="7.5" fontWeight="800" fill="#fef3c7" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 }}>{pz === null ? `${dv.height.toFixed(1)} m high` : `${Math.abs(pz).toFixed(1)} m`}</motion.text>
+    </svg>
+  )
+}
+
+/** A delivery worth a second look: a big swing or turn (with a compass), a good yorker, or a beamer above the waist. */
+export function DeliveryCast({ info }: { info: DeliveryCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => (info.screen === 'beamer' ? sfx.noBall() : sfx.aww(0.5)), 2000 * r); return () => window.clearTimeout(t) }, [r, info.screen])
+  const { dv, screen } = info
+  const compact = w < 520
+  const deg = screen === 'turn' ? dv.turn : dv.swing
+  // "in" is towards the batsman's body (to his leg side), "away" towards the slips
+  const into = (deg > 0) !== info.left
+  const title = screen === 'beamer' ? 'BEAMER!' : screen === 'yorker' ? 'YORKER!' : screen === 'swing' ? 'SWING!' : 'TURN!'
+  const color = screen === 'beamer' ? '#ef4444' : screen === 'yorker' ? '#38bdf8' : screen === 'swing' ? '#fb923c' : '#a3e635'
+  const first = info.bowler.name.split(' ')[0]
+  const line = screen === 'beamer' ? `${dv.height.toFixed(1)} m high as it reached the batsman: above the waist, so a no ball.`
+    : screen === 'yorker' ? `Pitched ${Math.abs(dv.pitchZ ?? 0).toFixed(1)} m in front of the stumps, right at the toes · ${info.kmh} km/h`
+    : screen === 'swing' ? `${Math.abs(dv.swing).toFixed(1)}° of swing, ${into ? 'in towards the batsman' : 'away from the batsman'} · ${info.kmh} km/h`
+    : `${Math.abs(dv.turn).toFixed(1)}° of turn off the pitch, ${into ? 'in towards the batsman' : 'away from the batsman'} · ${info.kmh} km/h`
+  const sub = screen === 'beamer' ? `+1 run and a free hit next. ${first} will want that one back.`
+    : screen === 'yorker' ? `${info.batsman.name} just got his bat down in time.`
+    : screen === 'swing' ? `${first} is getting it to talk through the air.` : `${first} is getting it to bite and turn.`
+  const cam = screen === 'beamer' ? 'side' : screen === 'yorker' ? 'stump' : 'high'
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={title}>
+      <ReplayFrame base={info.replay} rate={1.3 * r} share={0.56} cam={cam} trace={screen === 'swing' || screen === 'turn'} tag={screen === 'swing' ? 'Swing' : screen === 'turn' ? 'Turn' : LENGTH_WORDS[dv.length]} />
+      <Bottom from={0.56}>
+        <div className="flex h-full items-center gap-3 px-3">
+          {screen === 'swing' || screen === 'turn' ? <Compass deg={deg} max={screen === 'swing' ? 5 : 12} w={compact ? 112 : 150} color={color} /> : <LengthSide dv={dv} w={compact ? 118 : 156} />}
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 28 : 40, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: `0 0 16px ${color}` }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>{title}</motion.div>
+            <motion.div className="text-xs font-extrabold leading-tight sm:text-sm" style={{ color }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.3 * r }}>{line}</motion.div>
+            <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.1 * r }}>{sub}</motion.div>
+          </div>
         </div>
       </Bottom>
     </div>

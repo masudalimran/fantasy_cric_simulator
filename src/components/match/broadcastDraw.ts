@@ -36,7 +36,7 @@ export interface Scene {
   /** A signature move going on (a six off the bat, a bowler's wicket). */
   move?: MoveDraw | null
   /** TV graphics on the ground for a replay: the wide line, or the popping crease with how far over the front foot landed. */
-  marks?: { wideLine?: number; crease?: { z: number; over: number } }
+  marks?: { wideLine?: number; crease?: { z: number; over: number }; /** The path the ball took in the air and off the pitch (orange), and the straight line it would have taken (white, dashed). */ trace?: { curve: V3[]; straight: [V3, V3] } }
 }
 
 const fillPoly = (ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], fill: string) => {
@@ -204,6 +204,21 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
       ctx.fillStyle = '#fef9c3'; ctx.font = `800 ${Math.max(11, Math.round(r.W / 28))}px system-ui, sans-serif`; ctx.textAlign = 'left'
       ctx.fillText(`${Math.round(sc.marks.crease.over * 100)} cm over`, Math.max(6, Math.min(r.W - 90, b.x + 8)), b.y - 6)
+    }
+  }
+  if (sc.marks?.trace) {
+    const tr = sc.marks.trace
+    const a = project(r, tr.straight[0]), b = project(r, tr.straight[1])
+    if (a && b) {
+      ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = 'rgba(248,250,252,0.85)'; ctx.lineWidth = 2
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.restore()
+    }
+    const pts = tr.curve.map((v) => project(r, v)).filter((p): p is NonNullable<typeof p> => !!p)
+    if (pts.length > 1) {
+      for (const [w, col] of [[7, 'rgba(251,146,60,0.35)'], [3.2, '#fb923c'], [1.4, '#fef3c7']] as const) {
+        ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke()
+      }
     }
   }
   // the ball's trail

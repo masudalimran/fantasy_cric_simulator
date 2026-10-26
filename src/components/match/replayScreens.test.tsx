@@ -10,6 +10,7 @@ import { AlmostCast, ExtraCast, FourCast, MissCast, NoBallCast, SixCast, WicketC
 import { almostCaught } from './almost'
 import { BOWL_Z, fielderWorld, planBall, replayCamFor, replayCamera, withFootSlow } from './broadcast'
 import { sixContact } from '../../engine/contact'
+import { deliveryOf } from '../../engine/delivery'
 import { WIDE_LINE_M, wideCm } from '../../engine/wide'
 import { overstepCm } from '../../season/moments'
 import { endPoint } from './Stage'
@@ -155,8 +156,10 @@ describe('the broadcast-style screens', () => {
   })
 
   it('a no ball bowler lands over the popping crease by the distance the screen gives', () => {
-    const nb = all.find((e) => e.extraType === 'noball')
-    const ev = nb ?? { ...all.find((e) => e.legal && !e.wicket && !e.extraType)!, extraType: 'noball' as const, legal: false }
+    // (a no ball is a front foot over the line most of the time, and now and then a beamer: pick one of the first kind)
+    const plain = all.find((e) => e.legal && !e.wicket && !e.extraType)!
+    let ev = { ...plain, extraType: 'noball' as const, legal: false }
+    for (let sq = plain.seq; deliveryOf(ev, null).noBallCause !== 'overstep'; sq++) ev = { ...ev, seq: sq + 1 }
     const base = baseFor(m, ev)
     const plan = planBall(ev, base.fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, base.fielders), false)
     const cm = overstepCm(ev.seq)

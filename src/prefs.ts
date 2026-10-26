@@ -120,14 +120,14 @@ export function useManualPlay(): boolean {
 
 // ---- Which match animations to show ---------------------------------------------------------------------------
 /** Each group of animation screens has its own switch; `animLevel` flips them all at once. */
-export interface AnimPrefs { wicket: boolean; six: boolean; four: boolean; milestone: boolean; freeHit: boolean; extras: boolean; reviews: boolean; timeout: boolean; intro: boolean; drama: boolean; cheer: boolean; studio: boolean; wicketcam: boolean; nearmiss: boolean; moves: boolean }
-const ANIM_ALL: AnimPrefs = { wicket: true, six: true, four: true, milestone: true, freeHit: true, extras: true, reviews: true, timeout: true, intro: true, drama: true, cheer: true, studio: true, wicketcam: true, nearmiss: true, moves: true }
+export interface AnimPrefs { wicket: boolean; six: boolean; four: boolean; milestone: boolean; freeHit: boolean; extras: boolean; reviews: boolean; timeout: boolean; intro: boolean; drama: boolean; cheer: boolean; studio: boolean; wicketcam: boolean; nearmiss: boolean; moves: boolean; delivery: boolean }
+const ANIM_ALL: AnimPrefs = { wicket: true, six: true, four: true, milestone: true, freeHit: true, extras: true, reviews: true, timeout: true, intro: true, drama: true, cheer: true, studio: true, wicketcam: true, nearmiss: true, moves: true, delivery: true }
 /** Full: every screen. Light: only the big three (wickets, sixes, fifties and hundreds). Off: none. */
 export type AnimLevel = 'full' | 'light' | 'off'
 const ANIM_LEVELS: Record<AnimLevel, AnimPrefs> = {
   full: ANIM_ALL,
-  light: { wicket: true, six: true, four: false, milestone: true, freeHit: false, extras: false, reviews: false, timeout: false, intro: false, drama: false, cheer: false, studio: false, wicketcam: false, nearmiss: false, moves: true },
-  off: { wicket: false, six: false, four: false, milestone: false, freeHit: false, extras: false, reviews: false, timeout: false, intro: false, drama: false, cheer: false, studio: false, wicketcam: false, nearmiss: false, moves: false },
+  light: { wicket: true, six: true, four: false, milestone: true, freeHit: false, extras: false, reviews: false, timeout: false, intro: false, drama: false, cheer: false, studio: false, wicketcam: false, nearmiss: false, moves: true, delivery: false },
+  off: { wicket: false, six: false, four: false, milestone: false, freeHit: false, extras: false, reviews: false, timeout: false, intro: false, drama: false, cheer: false, studio: false, wicketcam: false, nearmiss: false, moves: false, delivery: false },
 }
 const ANIM_KEY = 'fcs.anim'
 const animListeners = new Set<() => void>()
