@@ -3,6 +3,7 @@ import type { Match } from '../engine/match'
 import { parRunsPerOver } from '../engine/model'
 import type { BatterLine, BowlerLine } from '../engine/types'
 import { PRESENTERS, type Presenter } from '../data/presenters'
+import { CALL_NAMES } from '../data/callNames'
 import { gradeBat, gradeBowl, type Grade } from './grade'
 
 /**
@@ -203,7 +204,7 @@ export function buildScript(match: Match, kind: ShowKind, seed: number, extra?: 
   const name = (i: 0 | 1 | 2) => first(cast[i].presenter.name)
   const beats: Beat[] = []
   const say = (who: 0 | 1 | 2, text: string, mood: Mood, clip?: Clip) => { beats.push({ who, text: text.replace(/\s+/g, ' ').trim(), mood, clip }) }
-  const pn = (id: string) => first(match.player(id).name)
+  const pn = (id: string) => CALL_NAMES[id] ?? first(match.player(id).name)
   const par = parRunsPerOver(match.format, 'middle')
 
   // which innings to go through: the one just finished, or (after the match) all of them

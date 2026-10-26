@@ -28,6 +28,7 @@ import { ambientCaption, type CaptionCtx, type CaptionKind } from '../season/cap
 import { boxChat } from '../season/studio'
 import { isBigSix, moveFor } from '../data/moves'
 import { BOOST_MULT, boostSummary } from '../season/boost'
+import { callName } from '../components/match/format'
 import { almostCaught } from '../components/match/almost'
 import { nearMiss } from '../components/match/nearMiss'
 import { batHitsBall, clipNow, contactAt } from '../components/match/broadcast'
@@ -1070,7 +1071,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
   // the broadcast's score bug: the score, the two batsmen, the bowler and what a chase needs
-  const bugBat = (id: string) => { const line = inn.batters.find((b) => b.id === id); return line ? { name: match.player(id).name, runs: line.runs, balls: line.balls, strike: id === inn.strikerId } : null }
+  const bugBat = (id: string) => { const line = inn.batters.find((b) => b.id === id); return line ? { name: callName(match.player(id)), runs: line.runs, balls: line.balls, strike: id === inn.strikerId } : null }
   const bugBowlerId = inn.bowlerId ?? lastHere?.bowlerId ?? null
   const bugBowl = bugBowlerId ? inn.bowlers.get(bugBowlerId) : undefined
   const caption = lastHere ? commentary(lastHere, { striker: match.player(lastHere.strikerId).name, bowler: match.player(lastHere.bowlerId).name, out: lastHere.wicket ? match.player(lastHere.wicket.playerId).name : undefined, fielder: lastHere.wicket?.fielderId ? match.player(lastHere.wicket.fielderId).name : undefined }) : null
@@ -1079,7 +1080,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const scoreBug = {
     team: batSide.team.short, runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls,
     batters: [bugBat(inn.strikerId), bugBat(inn.nonStrikerId)].filter((b): b is NonNullable<ReturnType<typeof bugBat>> => !!b),
-    bowler: bugBowlerId && bugBowl ? { name: match.player(bugBowlerId).name, figures: `${bugBowl.wickets}/${bugBowl.runs}` } : null,
+    bowler: bugBowlerId && bugBowl ? { name: callName(match.player(bugBowlerId)), figures: `${bugBowl.wickets}/${bugBowl.runs}` } : null,
     lastKmh: lastHere ? ballSpeed(lastHere, match.player(lastHere.bowlerId)) : null,
     need: inn.target !== null && inn.target - inn.runs > 0 ? `Need ${inn.target - inn.runs} off ${match.maxOvers * 6 - inn.legalBalls}` : null,
   }

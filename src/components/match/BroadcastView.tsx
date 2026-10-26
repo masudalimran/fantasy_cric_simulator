@@ -14,7 +14,7 @@ import { overstepCm } from '../../season/moments'
 import type { MoveDraw } from './moveFx'
 import { moveForBall, type MoveShow } from '../../data/moves'
 import { getAnimPrefs } from '../../prefs'
-import { firstName } from './format'
+import { callName } from './format'
 import { endPoint, type Placed } from './Stage'
 import { Body, type Kit, type Rig } from './Body'
 import { batsmanPose, bowlerPose, breathe, clamp01, fielderPose, nonStrikerPose, umpirePose } from './bodyPose'
@@ -487,9 +487,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('tagMove')} className="pointer-events-none absolute inset-x-0 top-[16%] z-[5002] hidden whitespace-nowrap text-center font-display text-3xl uppercase leading-none tracking-wider sm:text-5xl" style={{ paintOrder: 'stroke fill' }} />
       <div ref={setNode('tagSlow')} className="pointer-events-none absolute bottom-8 right-2 z-[6001] hidden rounded bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">Slow motion</div>
       <div ref={setNode('tagReact')} className="pointer-events-none absolute left-0 top-0 z-[5001] hidden whitespace-nowrap rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-black shadow-lg" />
-      {[['tagStriker', firstName(striker.name), accentOf(battingTeam)], ['tagBowler', firstName(bowler.name), accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
+      {[['tagStriker', callName(striker), accentOf(battingTeam)], ['tagBowler', callName(bowler), accentOf(bowlingTeam)], ['tagField', '', accentOf(bowlingTeam)]].map(([k, name, col]) => (
         <div key={k} ref={setNode(k)} className="pointer-events-none absolute left-0 top-0 z-[5000] hidden whitespace-nowrap rounded bg-black/75 px-1.5 text-[10px] font-bold text-white" style={{ borderBottom: `2px solid ${col}` }}>
-          {k === 'tagField' ? firstName(event && plan.catcher >= 0 ? (fielders[plan.catcher]?.player.name ?? '') : plan.chaser >= 0 ? (fielders[plan.chaser]?.player.name ?? '') : '') : name}
+          {k === 'tagField' ? (() => { const f = event && plan.catcher >= 0 ? fielders[plan.catcher]?.player : plan.chaser >= 0 ? fielders[plan.chaser]?.player : undefined; return f ? callName(f) : '' })() : name}
         </div>
       ))}
       {/* a quick white flash when the picture cuts to the other camera */}
@@ -507,8 +507,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           </div>
           {scoreBug && scoreBug.batters.length > 0 && (
             <div className="border-t border-white/15 px-1.5 py-0.5 text-[9px] leading-tight text-slate-200 sm:text-[10px]">
-              {scoreBug.batters.map((b) => <span key={b.name} className="mr-2 whitespace-nowrap"><b className={b.strike ? 'text-amber-300' : 'text-slate-200'}>{b.name.split(' ')[0]}{b.strike ? '*' : ''}</b> {b.runs}<span className="text-slate-400"> ({b.balls})</span></span>)}
-              {scoreBug.bowler && <span className="whitespace-nowrap text-sky-300">· {scoreBug.bowler.name.split(' ')[0]} {scoreBug.bowler.figures}</span>}
+              {scoreBug.batters.map((b) => <span key={b.name} className="mr-2 whitespace-nowrap"><b className={b.strike ? 'text-amber-300' : 'text-slate-200'}>{b.name}{b.strike ? '*' : ''}</b> {b.runs}<span className="text-slate-400"> ({b.balls})</span></span>)}
+              {scoreBug.bowler && <span className="whitespace-nowrap text-sky-300">· {scoreBug.bowler.name} {scoreBug.bowler.figures}</span>}
             </div>
           )}
         </div>
