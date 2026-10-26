@@ -91,7 +91,7 @@ export function reach(root: P, target: P, a: number, b: number, bend: 1 | -1): {
   return { mid: { x: root.x + Math.cos(ang) * a, y: root.y + Math.sin(ang) * a }, end: { x: root.x + (dx / raw) * d, y: root.y + (dy / raw) * d } }
 }
 
-export function solve(p: Pose): Skeleton {
+export function solve(p: Pose, batLen = BAT_LEN): Skeleton {
   const l = rad(p.lean)
   const up = { x: Math.sin(l), y: -Math.cos(l) }
   const side = { x: Math.cos(l), y: Math.sin(l) }
@@ -108,7 +108,7 @@ export function solve(p: Pose): Skeleton {
     const g = armR.end
     batEnd = { x: g.x - d.x * 5, y: g.y - d.y * 5 }
     batBlade = { x: g.x + d.x * 9, y: g.y + d.y * 9 }
-    batTip = { x: g.x + d.x * BAT_LEN, y: g.y + d.y * BAT_LEN }
+    batTip = { x: g.x + d.x * batLen, y: g.y + d.y * batLen }
     if (p.two) targetL = { x: g.x - d.x * 3.5, y: g.y - d.y * 3.5 }
   }
   const armL = reach(shoulderL, targetL, UPPER, FORE, 1)

@@ -19,6 +19,7 @@ import { endPoint, type Placed } from './Stage'
 import { Body, type Kit, type Rig } from './Body'
 import { batsmanPose, bowlerPose, breathe, clamp01, fielderPose, nonStrikerPose, umpirePose } from './bodyPose'
 import { flavorOfTeam } from '../../data/flavors'
+import { auraOf, weaponOf } from '../../data/weapons'
 
 /**
  * The broadcast view: the match as it looks on TV. The camera stands behind the bowler, zooms in as he runs up, follows the ball after the bat,
@@ -54,6 +55,7 @@ function Figure({ player, team, look, rig }: { player?: Player; team?: Team; loo
   const second = ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
   const bat = look === 'striker' || look === 'nonstriker'
   const kit: Kit = {
+    weapon: player ? weaponOf(player.id) : null, aura: player ? auraOf(player.id) : null,
     shirt: primary, trim: second, trousers: ump ? '#0f172a' : '#e5e7eb', pads: bat || look === 'keeper',
     gloves: bat ? '#f8fafc' : look === 'keeper' ? '#fbbf24' : null, boots: ump ? '#020617' : '#f8fafc',
   }

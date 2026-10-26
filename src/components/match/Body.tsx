@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { mirrorPose, solve, type P, type Pose } from './bodyPose'
+import type { Aura, Weapon } from '../../data/weapons'
 
 /** What a figure wears. */
 export interface Kit {
@@ -11,6 +12,9 @@ export interface Kit {
   gloves: string | null
   /** An umpire's hat, a helmet is not drawn (the head is the player's picture). */
   boots: string
+  /** A weapon carried instead of the bat, and a glow round the body (see data/weapons.ts). */
+  weapon?: Weapon | null
+  aura?: Aura | null
 }
 
 export interface Rig {
@@ -44,9 +48,12 @@ export function Body({ kit, rigRef, children }: { kit: Kit; rigRef: (r: Rig | nu
       className="absolute inset-0"
       ref={(el) => {
         if (!el) { rigRef(null); return }
-        rigRef(makeRig(el))
+        rigRef(makeRig(el, kit.weapon?.length))
       }}
     >
+      {kit.aura && (
+        <div className="pointer-events-none absolute" style={{ left: -22, top: -12, width: 104, height: 146, animation: 'aura-flicker 0.7s ease-in-out infinite', transformOrigin: '50% 80%', background: `radial-gradient(ellipse at 50% 58%, ${kit.aura.c2}cc 0%, ${kit.aura.c1}aa 32%, ${kit.aura.c1}44 55%, transparent 72%)` }} />
+      )}
       <svg viewBox="0 0 60 120" width="60" height="120" className="absolute left-0 top-0 overflow-visible" aria-hidden>
         <path data-p="legL" fill="none" stroke={kit.trousers} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
         <path data-p="legR" fill="none" stroke={kit.trousers} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
@@ -59,9 +66,10 @@ export function Body({ kit, rigRef, children }: { kit: Kit; rigRef: (r: Rig | nu
       </svg>
       <div data-head className="absolute left-0 top-0 will-change-transform" style={{ width: 60, height: 120, pointerEvents: 'none', transformOrigin: '30px 28px' }}>{children}</div>
       <svg viewBox="0 0 60 120" width="60" height="120" className="absolute left-0 top-0 overflow-visible" aria-hidden>
-        <path data-p="batH" fill="none" stroke="#7c2d12" strokeWidth="3" strokeLinecap="round" />
-        <path data-p="batB" fill="none" stroke="#e9c98a" strokeWidth="8.5" strokeLinecap="round" />
-        <path data-p="batE" fill="none" stroke="#a16207" strokeWidth="1.2" strokeLinecap="round" opacity="0.55" />
+        <path data-p="batH" fill="none" stroke={kit.weapon?.handle ?? '#7c2d12'} strokeWidth="3" strokeLinecap="round" />
+        <path data-p="batB" fill="none" stroke={kit.weapon?.blade ?? '#e9c98a'} strokeWidth={kit.weapon?.width ?? 8.5} strokeLinecap={kit.weapon?.kind === 'sword' ? 'butt' : 'round'} />
+        <path data-p="batE" fill="none" stroke={kit.weapon?.edge ?? '#a16207'} strokeWidth={kit.weapon ? 1.1 : 1.2} strokeLinecap="round" opacity={kit.weapon ? 0.95 : 0.55} />
+        {kit.weapon && <path data-p="batG" fill="none" stroke={kit.weapon.guard ?? kit.weapon.edge} strokeWidth={kit.weapon.kind === 'sword' ? 2.6 : 3.4} strokeLinecap="round" />}
         <path data-p="upL" fill="none" stroke={shade(kit.shirt, -0.28)} strokeWidth="7.5" strokeLinecap="round" />
         <path data-p="foreL" fill="none" stroke={SKIN} strokeWidth="5.5" strokeLinecap="round" />
         <path data-p="upR" fill="none" stroke={shade(kit.shirt, -0.28)} strokeWidth="7.5" strokeLinecap="round" />
@@ -74,7 +82,7 @@ export function Body({ kit, rigRef, children }: { kit: Kit; rigRef: (r: Rig | nu
   )
 }
 
-function makeRig(root: HTMLElement): Rig {
+function makeRig(root: HTMLElement, batLen?: number): Rig {
   const p: Record<string, SVGPathElement> = {}
   const e: Record<string, SVGElement> = {}
   root.querySelectorAll<SVGPathElement>('[data-p]').forEach((n) => { p[n.dataset.p!] = n })
@@ -91,7 +99,7 @@ function makeRig(root: HTMLElement): Rig {
       const key = [q.hip.x, q.hip.y, q.lean, q.head.dx, q.head.dy, q.head.tilt, q.handL.x, q.handL.y, q.handR.x, q.handR.y, q.footL.x, q.footL.y, q.footR.x, q.footR.y, q.bat, q.two, q.ball].map((v) => (typeof v === 'number' ? Math.round(v * 4) : String(v))).join()
       if (key === last) return
       last = key
-      const s = solve(q)
+      const s = solve(q, batLen)
       hand = { x: (s.handL.x + s.handR.x) / 2, y: (s.handL.y + s.handR.y) / 2 }
       blade = s.batBlade && s.batTip ? { x: s.batBlade.x + (s.batTip.x - s.batBlade.x) * 0.62, y: s.batBlade.y + (s.batTip.y - s.batBlade.y) * 0.62 } : null
       const set = (name: string, d: string) => { if (p[name]) p[name].setAttribute('d', d) }
@@ -108,6 +116,12 @@ function makeRig(root: HTMLElement): Rig {
       set('batH', s.batEnd && s.batBlade ? line(s.batEnd, s.batBlade) : '')
       set('batB', s.batBlade && s.batTip ? line(s.batBlade, s.batTip) : '')
       set('batE', s.batBlade && s.batTip ? line(s.batBlade, s.batTip) : '')
+      // the guard of a sword, or the gold cap of a staff, across the blade where it starts (a short stroke at right angles to it)
+      if (s.batBlade && s.batTip) {
+        const dx = s.batTip.x - s.batBlade.x, dy = s.batTip.y - s.batBlade.y, l = Math.hypot(dx, dy) || 1
+        const nx = -dy / l, ny = dx / l
+        set('batG', line({ x: s.batBlade.x - nx * 4.4, y: s.batBlade.y - ny * 4.4 }, { x: s.batBlade.x + nx * 4.4, y: s.batBlade.y + ny * 4.4 }))
+      } else set('batG', '')
       const at = (name: string, pt: P | null, dx = 0, dy = 0) => {
         const n = e[name]
         if (!n) return
