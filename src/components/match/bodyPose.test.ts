@@ -190,4 +190,26 @@ describe('the bodies drawn in the broadcast view', () => {
       expect(batHitsBall(e)).toBe(false)
     }
   })
+
+  it('a four ends on the rope, whichever way it went', () => {
+    let fours = 0
+    for (let seed = 1; seed <= 10; seed++) {
+      const mm = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      mm.playMatch()
+      for (const inn of mm.innings) {
+        const bowlSide = mm.sides[1 - inn.battingSide]
+        for (const ev of inn.log.filter((e) => e.boundary === 4 && !e.extraType)) {
+          const striker = mm.player(ev.strikerId)
+          const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
+          const share = Math.hypot((plan.end.x - ROPE.cx) / ROPE.rx, (plan.end.z - ROPE.cz) / ROPE.rz)
+          expect(share).toBeGreaterThan(0.97)
+          expect(share).toBeLessThan(1.05)
+          fours++
+        }
+      }
+    }
+    expect(fours).toBeGreaterThan(20)
+  })
 })

@@ -40,10 +40,24 @@ export function ropeDistance(from: V3, dx: number, dz: number): number {
 /** How high the stands are at this share of the rope's size (the slope runs from 0.9 m at 1.03 up to 12 m at 1.34). */
 export const standHeight = (reach: number) => 0.9 + Math.max(0, Math.min(1, (reach - 1.03) / 0.31)) * 11.1
 
-/** The top-down field (160 x 100) onto the ground in metres, with the batsman's stumps as the origin. */
+/**
+ * The top-down field (160 x 100) onto the ground in metres, with the batsman's stumps as the origin. A point on the top-down rope lands exactly on the
+ * rope of the real-sized ground (an ellipse about 70 m out): every point is moved along the line from the stumps through it, by the same share of the way
+ * to the rope in both pictures, so a four ends on the rope whichever way it went and a fielder keeps his place in the field.
+ */
+const TOP = { cx: 80, cy: 50, rx: 66, ry: 40, ox: 80, oy: 70 }
 export function toWorld(x: number, y: number): V3 {
-  // a real ground: the rope is about 70 m from the middle (the top-down map has the batsman near its bottom edge, so the way behind him is stretched more than the way in front)
-  return { x: -(x - 80) * 1.06, y: 0, z: y < 70 ? (y - 70) * 1.3 : (y - 70) * 2.9 }
+  const dx = x - TOP.ox, dy = y - TOP.oy
+  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return { x: 0, y: 0, z: 0 }
+  // where the line from the stumps through this point leaves the top-down rope (the point itself is at 1)
+  const ax = (TOP.ox - TOP.cx) / TOP.rx, ay = (TOP.oy - TOP.cy) / TOP.ry, bx = dx / TOP.rx, by = dy / TOP.ry
+  const A = bx * bx + by * by, B = 2 * (ax * bx + ay * by), C = ax * ax + ay * ay - 1
+  const tTop = (-B + Math.sqrt(Math.max(0, B * B - 4 * A * C))) / (2 * A)
+  const share = 1 / Math.max(1e-6, tTop)
+  // (the picture is mirrored: the top-down off side on the right is the left of the camera behind the bowler)
+  const wx = -dx, wz = dy
+  const t = ropeDistance({ x: 0, y: 0, z: 0 }, wx, wz)
+  return { x: wx * t * share, y: 0, z: wz * t * share }
 }
 
 /** A fielder's place on the ground; the people close to the bat are set by hand because the top-down map stretches them. */

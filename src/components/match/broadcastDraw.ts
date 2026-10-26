@@ -171,6 +171,25 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   for (const z of [-1.22, BOWL_Z + 1.22]) line({ x: -1.5, y: 0, z }, { x: 1.5, y: 0, z }, 0.05, '#ffffff')
   for (const x of [-1.32, 1.32]) { line({ x, y: 0, z: -1.22 }, { x, y: 0, z: 0.9 }, 0.04, '#ffffff'); line({ x, y: 0, z: BOWL_Z + 1.22 }, { x, y: 0, z: BOWL_Z - 0.9 }, 0.04, '#ffffff') }
 
+  // the boundary rope on the grass, and the 30-yard circle (dashed): a stadium shape round the pitch, as on TV
+  {
+    const N = 120
+    for (let i = 0; i < N; i++) {
+      const a0 = (i / N) * Math.PI * 2, a1 = ((i + 1) / N) * Math.PI * 2
+      line(ringPoint(a0, 1, 0), ringPoint(a1, 1, 0), 0.5, '#f8fafc')
+    }
+    const R = 27.43
+    const arc = (cz: number, flip: 1 | -1) => {
+      const pts: V3[] = []
+      for (let i = 0; i <= 24; i++) { const th = (i / 24) * Math.PI; pts.push({ x: R * Math.cos(th), y: 0, z: cz + flip * R * Math.sin(th) }) }
+      return pts
+    }
+    const dashed = (pts: V3[]) => { for (let i = 0; i + 1 < pts.length; i += 2) line(pts[i], pts[i + 1], 0.22, 'rgba(248,250,252,0.7)') }
+    dashed(arc(0, 1))
+    dashed(arc(BOWL_Z, -1))
+    const side = (x: number) => { const pts: V3[] = []; for (let i = 0; i <= 20; i++) pts.push({ x, y: 0, z: BOWL_Z + (i / 20) * (0 - BOWL_Z) }); dashed(pts) }
+    side(R); side(-R)
+  }
   // the ball's trail
   if (sc.trail.length > 1) {
     for (let i = 1; i < sc.trail.length; i++) {

@@ -60,15 +60,12 @@ export function landingSpot(d: DeliveryAim) {
 
 /** A point on the rope in the direction of `angle`, seen from the batsman. */
 function ropePoint(angle: number) {
-  // ray from HIT to the ellipse: solve numerically with a few steps (cheap and stable)
-  let t = 0
-  for (let k = 0; k < 60; k++) {
-    const x = HIT.x + Math.cos(angle) * (t + 1)
-    const y = HIT.y + Math.sin(angle) * (t + 1)
-    if (((x - CX) / RX) ** 2 + ((y - CY) / RY) ** 2 > 1) break
-    t += 1
-  }
-  return { x: HIT.x + Math.cos(angle) * t, y: HIT.y + Math.sin(angle) * t }
+  // where the ray from HIT leaves the ellipse (solved exactly, so a shot to the side reaches the rope as well as one straight back)
+  const dx = Math.cos(angle), dy = Math.sin(angle)
+  const ax = (HIT.x - CX) / RX, ay = (HIT.y - CY) / RY, bx = dx / RX, by = dy / RY
+  const A = bx * bx + by * by, B = 2 * (ax * bx + ay * by), C = ax * ax + ay * ay - 1
+  const t = (-B + Math.sqrt(Math.max(0, B * B - 4 * A * C))) / (2 * A)
+  return { x: HIT.x + dx * t, y: HIT.y + dy * t }
 }
 
 /** Where the ball ends up for a delivery: the shot direction is a stable pseudo-random pick from the ball number. */

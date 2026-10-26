@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene } from './broadcastDraw'
@@ -344,7 +344,18 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           const sz = Math.max(style === 'plain' ? 5 : 9, (r.F * (style === 'plain' ? 0.24 : 0.36)) / bp.d) * (moveDraw ? 1.8 : 1)
           ball.style.display = 'block'
           ball.style.width = ball.style.height = `${sz.toFixed(1)}px`
-          const bx = hand && held > 0 ? bp.x + (hand.x - bp.x) * held : bp.x, by = hand && held > 0 ? bp.y + (hand.y - bp.y) * held : bp.y
+          let bx = hand && held > 0 ? bp.x + (hand.x - bp.x) * held : bp.x, by = hand && held > 0 ? bp.y + (hand.y - bp.y) * held : bp.y
+          // the bat meets the ball: for a moment the ball is exactly on the blade, wherever the shot has put it (the ball is drawn at a fixed spot in the world, the bat is where the pose has swung it)
+          if (ev && batHitsBall(ev)) {
+            const an = anchors.get('striker'), bt = rigs.current.get('striker')?.bat()
+            const wC = t < t2c ? clamp01((t - (t2c - 0.2)) / 0.2) : clamp01(1 - (t - t2c) / 0.26)
+            if (an && bt && wC > 0) {
+              const lx = (bt.x - 30) * an.s, ly = (bt.y - 120) * an.s, a = (an.rot * Math.PI) / 180
+              const sx = an.x + lx * Math.cos(a) - ly * Math.sin(a), sy = an.y + lx * Math.sin(a) + ly * Math.cos(a)
+              bx += (sx - bx) * wC; by += (sy - by) * wC
+              if (wC > 0.4) shadow.style.display = 'none'
+            }
+          }
           ball.style.transform = `translate3d(${(bx - sz / 2).toFixed(1)}px,${(by - sz / 2).toFixed(1)}px,0)`
           ball.style.zIndex = '4000'
           shadow.style.display = held >= 1 ? 'none' : 'block'

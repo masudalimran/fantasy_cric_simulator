@@ -18,6 +18,8 @@ export interface Rig {
   apply: (pose: Pose, left?: boolean) => void
   /** Where the hands are together (in the 60 x 120 box), for a ball being held. */
   hands: () => P
+  /** The middle of the bat's blade, where the ball meets it (null with no bat). */
+  bat: () => P | null
 }
 
 const SKIN = '#f0c8a0'
@@ -80,8 +82,10 @@ function makeRig(root: HTMLElement): Rig {
   const head = root.querySelector<HTMLElement>('[data-head]')
   let last = ''
   let hand: P = { x: 30, y: 70 }
+  let blade: P | null = null
   return {
     hands: () => hand,
+    bat: () => blade,
     apply(pose, left = false) {
       const q = left ? mirrorPose(pose) : pose
       const key = [q.hip.x, q.hip.y, q.lean, q.head.dx, q.head.dy, q.head.tilt, q.handL.x, q.handL.y, q.handR.x, q.handR.y, q.footL.x, q.footL.y, q.footR.x, q.footR.y, q.bat, q.two, q.ball].map((v) => (typeof v === 'number' ? Math.round(v * 4) : String(v))).join()
@@ -89,6 +93,7 @@ function makeRig(root: HTMLElement): Rig {
       last = key
       const s = solve(q)
       hand = { x: (s.handL.x + s.handR.x) / 2, y: (s.handL.y + s.handR.y) / 2 }
+      blade = s.batBlade && s.batTip ? { x: s.batBlade.x + (s.batTip.x - s.batBlade.x) * 0.62, y: s.batBlade.y + (s.batTip.y - s.batBlade.y) * 0.62 } : null
       const set = (name: string, d: string) => { if (p[name]) p[name].setAttribute('d', d) }
       set('legL', line(s.hipL, s.kneeL, s.footL))
       set('legR', line(s.hipR, s.kneeR, s.footR))
