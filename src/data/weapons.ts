@@ -513,10 +513,42 @@ const bright = (hex: string) => {
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
 }
 
+/**
+ * Only characters who really show a glow in their anime or game have an aura: a ki or chakra or reiatsu power-up, a Stand, a flame or lightning power, a
+ * biotic or magic glow, a Reaper or Forerunner light. Everyone else carries a weapon but does not glow.
+ */
+const GLOWING: Record<string, string[]> = {
+  dragonball: ['son-goku', 'vegeta', 'son-gohan', 'piccolo', 'trunks', 'android-18', 'tien-shinhan', 'krillin', 'frieza', 'beerus', 'majin-buu', 'cell', 'yamcha', 'master-roshi', 'hit', 'android-17'],
+  naruto: ['naruto-uzumaki', 'sasuke-uchiha', 'madara-uchiha', 'minato-namikaze', 'itachi-uchiha', 'jiraiya', 'rock-lee', 'might-guy'],
+  bleach: ['ichigo-kurosaki', 'sosuke-aizen', 'kenpachi-zaraki', 'toshiro-hitsugaya', 'genryusai-yamamoto', 'yoruichi-shihoin'],
+  onepiece: ['monkey-d-luffy', 'roronoa-zoro', 'portgas-d-ace', 'edward-newgate', 'shanks', 'sanji'],
+  aot: ['eren-yeager'],
+  mha: ['izuku-midoriya', 'all-might', 'shoto-todoroki', 'katsuki-bakugo', 'endeavor', 'dabi'],
+  demonslayer: ['tanjiro-kamado', 'zenitsu-agatsuma', 'kyojuro-rengoku', 'kokushibo'],
+  jjk: ['satoru-gojo', 'ryomen-sukuna', 'yuji-itadori', 'yuta-okkotsu'],
+  fma: ['edward-elric', 'scar', 'father', 'roy-mustang'],
+  jojo: ['jotaro-kujo', 'dio-brando', 'giorno-giovanna', 'josuke-higashikata', 'jolyne-kujo', 'noriaki-kakyoin', 'jean-pierre-polnareff', 'bruno-bucciarati', 'yoshikage-kira', 'guido-mista', 'narancia-ghirga', 'okuyasu-nijimura', 'rohan-kishibe', 'joseph-joestar', 'jonathan-joestar', 'caesar-zeppeli'],
+  yugioh: ['yugi-muto', 'atem', 'marik-ishtar', 'ishizu-ishtar', 'maximillion-pegasus'],
+  sds: ['meliodas', 'escanor', 'king', 'merlin', 'zeldris', 'estarossa', 'elizabeth-liones'],
+  inuyasha: ['inuyasha', 'sesshomaru', 'kikyo', 'kagome-higurashi', 'naraku'],
+  witcher: ['yennefer-of-vengerberg', 'triss-merigold', 'ciri'],
+  dragonage: ['solas', 'morrigan', 'dorian-pavus', 'anders', 'flemeth', 'garrett-hawke'],
+  dota: ['invoker', 'storm-spirit', 'zeus', 'lina', 'crystal-maiden', 'shadow-fiend', 'io'],
+  poe: ['shaper-of-realms', 'kitava', 'sirus', 'maven', 'atziri'],
+  finalfantasy: ['cloud-strife', 'sephiroth', 'aerith-gainsborough', 'lulu', 'vivi-ornitier', 'terra-branford', 'kefka-palazzo', 'yuna', 'noctis-lucis-caelum'],
+  elderscrolls: ['dovahkiin', 'alduin', 'paarthurnax', 'miraak', 'j-zargo', 'serana'],
+  zelda: ['princess-zelda', 'ganondorf', 'midna', 'mipha', 'urbosa'],
+  masseffect: ['liara-t-soni', 'samara', 'jack', 'miranda-lawson', 'kaidan-alenko', 'javik', 'thane-krios', 'harbinger'],
+  overwatch: ['genji', 'zenyatta', 'mercy', 'tracer', 'hanzo'],
+  halo: ['cortana', 'the-didact', '343-guilty-spark', 'master-chief', 'noble-six'],
+}
+const GLOW_IDS = new Set(Object.entries(GLOWING).flatMap(([team, who]) => who.map((w) => `${team}-${w}`)))
+
 export const weaponOf = (playerId: string): Weapon | null => WEAPONS[playerId] ?? null
 
-/** The aura of a character: his own, else the colours of his signature move (a dark colour is swapped for the bright one, as a black glow would not show). */
+/** The aura of a character who glows: his own hand-picked one, else the colours of his signature move (a dark colour is swapped for the bright one, as a black glow would not show). */
 export function auraOf(playerId: string): Aura | null {
+  if (!GLOW_IDS.has(playerId)) return null
   const own = AURAS[playerId]
   if (own) return own
   const team = playerId.split('-')[0]
@@ -524,3 +556,6 @@ export function auraOf(playerId: string): Aura | null {
   if (!mv) return null
   return bright(mv.c1) < 0.3 ? { c1: mv.c2, c2: '#ffffff' } : { c1: mv.c1, c2: mv.c2 }
 }
+
+/** Who glows, for the tests and for anything that wants to list them. */
+export const glowingIds = (): string[] => [...GLOW_IDS]

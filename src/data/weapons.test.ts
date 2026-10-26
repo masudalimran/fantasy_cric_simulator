@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { STAR_MOVES } from './moves'
 import { BUILT_IN_TEAMS, LEGACY_TEAMS } from './teams'
-import { AURAS, WEAPONS, auraOf, weaponOf } from './weapons'
+import { AURAS, WEAPONS, auraOf, glowingIds, weaponOf } from './weapons'
 
 describe('weapons and auras', () => {
   const all = [...BUILT_IN_TEAMS, ...LEGACY_TEAMS].flatMap((t) => t.players)
-  it('every character in every team carries something of his own and glows', () => {
+  it('every character in every team carries something of his own, and only those who glow in their series have an aura', () => {
     const missing = all.filter((p) => !weaponOf(p.id)).map((p) => p.id)
     expect(missing).toEqual([])
-    for (const p of all) { const a = auraOf(p.id); expect(a, p.id).toBeTruthy(); expect(a!.c1).toMatch(/^#[0-9a-f]{6}$/i) }
+    const glowing = all.filter((p) => auraOf(p.id))
+    for (const p of glowing) expect(auraOf(p.id)!.c1, p.id).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(glowing.length).toBeGreaterThan(80)
+    expect(glowing.length).toBeLessThan(all.length * 0.5) // a minority, not everybody
+    for (const id of glowingIds()) expect(all.some((p) => p.id === id), id).toBe(true)
+    // the ones with no power to show do not glow
+    for (const id of ['assassinscreed-ezio-auditore', 'poe-the-duelist', 'jjk-kento-nanami', 'bleach-kon']) expect(auraOf(id), id).toBeNull()
+    for (const id of ['dragonball-vegeta', 'jjk-satoru-gojo', 'jojo-jotaro-kujo']) expect(auraOf(id), id).toBeTruthy()
     // and everyone has a signature move now, the legacy squads included
     expect(all.filter((p) => !STAR_MOVES[p.id]).map((p) => p.id)).toEqual([])
   })
