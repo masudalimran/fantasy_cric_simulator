@@ -22,6 +22,17 @@ export function headroom(v: number): number {
 }
 const clampRating = (n: number) => Math.max(1, Math.min(99, Math.round(n)))
 
+/** The academy: a youth-pool player (signed from the unsigned list, or on a computer team) learns much faster until he is a 90. */
+export const ACADEMY_TOP = 90
+/** How many times faster an academy player's good games lift his ratings (his losses stay as they were). */
+export const ACADEMY_MATCH_BOOST = 20
+/** ...and no single rating is lifted past this by an academy boost, so he arrives at about 90 and the boost stops. */
+export const ACADEMY_RATING_STOP = 92
+/** How many times faster the coach trains an academy player (and the yearly limit on it grows the same way). */
+export const ACADEMY_COACH_BOOST = 4
+/** Is this player still in the academy: from the youth pool and not yet a 90? */
+export const inAcademy = (p: Player): boolean => YOUTH_BY_ID.has(p.id) && overall(p) < ACADEMY_TOP
+
 const get = (s: PlayerShift | undefined, k: AttrKey) => s?.a?.[k] ?? 0
 
 /** A player with everything he has earned (or lost) added to his starting ratings. */
@@ -107,8 +118,8 @@ function addPoint(d: Delta, p: Player, k: AttrKey, sign: number, r: Rng) {
   if (sign < 0) return add(d, k, -1)
   const v = attrOf(p, k)
   if (v >= 99) return
-  const f = headroom(v)
-  const n = Math.floor(f) + (r.next() < f - Math.floor(f) ? 1 : 0)
+  const f = headroom(v) * (inAcademy(p) ? ACADEMY_MATCH_BOOST : 1)
+  const n = Math.min(inAcademy(p) ? Math.max(1, ACADEMY_RATING_STOP - v) : Infinity, Math.floor(f) + (r.next() < f - Math.floor(f) ? 1 : 0))
   if (n > 0) add(d, k, n)
 }
 

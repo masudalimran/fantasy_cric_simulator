@@ -134,8 +134,8 @@ describe('computer squad selection', () => {
     expect(out.news.some((n) => n.kind === 'out' && n.playerId === slumper.id && /poor form/.test(n.why))).toBe(true)
     expect(out.news.some((n) => n.kind === 'in' && /new face|good form|called up/.test(n.why))).toBe(true)
     expect(validateSquad(out.team.players, out.team.captainId, out.team.keeperId).errors).toEqual([])
-    // only two matches behind him: no verdict yet
-    games.set(slumper.id, 2)
+    // only one match behind him: no verdict yet
+    games.set(slumper.id, 1)
     expect(pickCpuXI(t, season, { date: '2027-05-05' }, form).team.players.slice(0, 11).map((p) => p.id)).toContain(slumper.id)
   })
 

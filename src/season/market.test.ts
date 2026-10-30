@@ -120,7 +120,7 @@ describe('player market', () => {
     const offers = s.market!.offers ?? []
     expect(offers.length).toBeGreaterThan(0)
     expect(offers.length).toBeLessThanOrEqual(3)
-    const o = offers[0]
+    const o = offers.find((x) => (s.market!.budgets[x.teamId] ?? 0) >= x.fee) ?? offers[0] // (the computer teams shop more now, so the first buyer may have spent his purse)
     const before = s.market!.budgets.bleach
     const done = acceptOffer({ ...s, today: '2030-01-14' }, idx, o.id, '2030-01-14')
     expect(done.error).toBeUndefined()

@@ -2,6 +2,7 @@ import { battingScore, overall } from '../data/builders'
 import { autoPickXI, keeperIn, XI_SIZE } from '../data/squad'
 import { Rng } from '../engine/rng'
 import { isInjuredOn, shieldFor, type Shield } from './injuries'
+import { inAcademy } from './progression'
 import type { Player, Team } from '../types'
 import type { Fixture, Season } from './types'
 
@@ -28,6 +29,8 @@ export interface Form {
 const BREAKOUT_DAYS = 21
 /** The most a single great game adds to a player's selection rating. */
 const BREAKOUT_MAX = 10
+/** Selection rating points an academy player gets, and how much more often reserves are given a go than before. */
+const ACADEMY_NUDGE = 3
 
 /** What each player has done in his last few matches this season (runs, boundaries, wickets, maidens). */
 export function formTable(season: Season, teams: Map<string, Team>): Form {
@@ -160,7 +163,8 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
   // against an opponent who is about as good or better, the side that played last time is not sticky: the best players come back
   const gap = fixture.opponent ? strengthOf(team) - strengthOf(fixture.opponent) : 0
   const tough = !!fixture.opponent && gap <= 1
-  const rate = (p: Player) => overall(p) + adj(p) + breakoutBonus(form.breakout.get(p.id)) + (usualIds.has(p.id) && !tough ? 1 : 0)
+  // an academy player who is on the rise gets the benefit of the doubt: a few points on his selection rating, so the youngsters are given games
+  const rate = (p: Player) => overall(p) + adj(p) + breakoutBonus(form.breakout.get(p.id)) + (usualIds.has(p.id) && !tough ? 1 : 0) + (inAcademy(p) ? ACADEMY_NUDGE : 0)
   const batRate = (p: Player) => battingScore(p.batting) + adj(p) * 0.6 - (p.role === 'BOWL' ? 12 : 0)
   const ordered = autoPickXI(pool, rate, batRate)
   let xi = ordered.slice(0, XI_SIZE)
@@ -180,7 +184,7 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
       const keeperNow = keeperIn(xi, team.keeperId)?.id
       const core = new Set([...[...xi].sort((a, b) => overall(b) - overall(a)).slice(0, 6).map((p) => p.id), team.captainId, keeperNow ?? ''])
       const candidatesOut = xi.filter((p) => !core.has(p.id)).sort((a, b) => rate(a) - rate(b))
-      const candidatesIn = [...bench0].sort((a, b) => (apps.get(a.id) ?? 0) - (apps.get(b.id) ?? 0) || rate(b) - rate(a)) // those who have played least first
+      const candidatesIn = [...bench0].sort((a, b) => Number(inAcademy(b)) - Number(inAcademy(a)) || (apps.get(a.id) ?? 0) - (apps.get(b.id) ?? 0) || rate(b) - rate(a)) // those who have played least first
       const bowls = (p: Player) => p.role === 'BOWL' || p.role === 'AR'
       let current = xi
       for (const out of candidatesOut) {
@@ -199,15 +203,15 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
   // Someone who has been playing badly for a few matches is replaced by a fresh face (a reserve who has hardly played, if there is a fair one)
   const zOf = (p: Player) => {
     const r = form.recent.get(p.id)
-    if (r === undefined || (form.games?.get(p.id) ?? 0) < 3) return 0
+    if (r === undefined || (form.games?.get(p.id) ?? 0) < 2) return 0
     const n = p.role === 'BOWL' ? form.norm.bowl : form.norm.bat
     return (r - n.mean) / n.sd
   }
   const slumped: { out: Player; in: Player }[] = []
   {
     const knockout = fixture.phase === 'knockout'
-    const limit = knockout ? 1 : 2
-    const threshold = knockout ? -1.6 : -0.9
+    const limit = knockout ? 2 : 3
+    const threshold = knockout ? -1.2 : -0.5
     const apps = recentApps(season, team, fixture.date)
     const needsBowl = (p: Player) => p.role === 'BOWL' || p.role === 'AR'
     const keeperNow = keeperIn(xi, team.keeperId)?.id
@@ -218,7 +222,7 @@ export function pickCpuXI(team: Team, season: Season, fixture: Pick<Fixture, 'da
       if (slumped.length >= limit) break
       const sub = spare
         .filter((c) => !slumped.some((s) => s.in.id === c.id) && !rested.some((r) => r.in.id === c.id) && c.role !== 'WK' && (!needsBowl(out) || needsBowl(c)) && overall(c) >= overall(out) - (tough ? 6 : 14) && zOf(c) > -0.5)
-        .sort((a, b) => (apps.get(a.id) ?? 0) - (apps.get(b.id) ?? 0) || rate(b) - rate(a))[0]
+            .sort((a, b) => Number(inAcademy(b)) - Number(inAcademy(a)) || (apps.get(a.id) ?? 0) - (apps.get(b.id) ?? 0) || rate(b) - rate(a))[0]
       if (!sub) continue
       const trial = cur.map((p) => (p.id === out.id ? sub : p))
       if (trial.filter(needsBowl).length < 5) continue

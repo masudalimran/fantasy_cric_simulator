@@ -259,7 +259,7 @@ export function releasePlayer(season: Season, base: Map<string, Player>, teamId:
 // ---- The computer's shopping ------------------------------------------------------------------------------------
 
 /** The chance each computer team goes shopping on a window day: the harder the difficulty, the busier they are. */
-const BUSY: Record<Difficulty, number> = { easy: 0.12, normal: 0.2, hard: 0.32, legend: 0.45 }
+const BUSY: Record<Difficulty, number> = { easy: 0.2, normal: 0.32, hard: 0.48, legend: 0.65 }
 
 const hashDay = (seed: number, date: string) => { let h = seed >>> 0; for (let i = 0; i < date.length; i++) { h = Math.imul(h ^ date.charCodeAt(i), 16777619) } return h >>> 0 }
 
@@ -276,7 +276,7 @@ export function cpuMarketDay(season: Season, base: Map<string, Player>, date: st
     const m = cur.market as MarketState
     const squad = (m.squads[teamId] ?? []).map((id) => base.get(id)).filter((p): p is Player => !!p)
     if (squad.length === 0) continue
-    const worth = (p: Player) => { const o = overall(applyShift(p, cur.shifts?.[p.id])); return o + 0.35 * Math.max(0, potentialOf(p) - o) }
+    const worth = (p: Player) => { const o = overall(applyShift(p, cur.shifts?.[p.id])); return o + 0.6 * Math.max(0, potentialOf(p) - o) }
     const sorted = [...squad].sort((a, b) => worth(b) - worth(a))
     const weakest = sorted[Math.min(sorted.length - 1, 13)] // the 14th-best is the line a newcomer must beat
     const purse = m.budgets[teamId] ?? 0
@@ -294,7 +294,7 @@ export function cpuMarketDay(season: Season, base: Map<string, Player>, date: st
       const p = base.get(o.id)
       if (!p || o.price > purse) continue
       const gain = worth(p) - worth(weakest) + rng.normal() * 1.5
-      if (gain > 2 && (!best || gain > best.gain)) best = { id: o.id, price: o.price, gain }
+      if (gain > 1.5 && (!best || gain > best.gain)) best = { id: o.id, price: o.price, gain }
     }
     if (!best) continue
     const drop = squad.length >= SQUAD_CAP ? [...squad].sort((a, b) => worth(a) - worth(b))[0]?.id : undefined

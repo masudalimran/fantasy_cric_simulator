@@ -2,7 +2,7 @@ import { COACHES, COACH_BY_ID, type Coach, type CoachFocus } from '../data/coach
 import { Rng } from '../engine/rng'
 import type { Player } from '../types'
 import { addDays } from './dates'
-import { applyShift, headroom } from './progression'
+import { ACADEMY_COACH_BOOST, applyShift, headroom, inAcademy } from './progression'
 import type { AttrKey, Coaching, PlayerShift, Season } from './types'
 
 /**
@@ -105,8 +105,9 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
       const now = attr === 'fielding' ? p.fielding : (p.batting as unknown as Record<string, number>)[attr] ?? (p.bowling as unknown as Record<string, number> | null)?.[attr] ?? 0
       // the same curve as match gains: a low rating is easy to raise, one near the top is hard (and its yearly limit is lower too)
       const room = headroom(now)
-      if (!now || now >= 97 || yearSoFar(pid, attr) >= Math.max(2, Math.min(8, Math.round(YEARLY_CAP * room)))) continue
-      const add = BASE * skill * room * weight * (focus === 'fielding' ? 1.6 : 1)
+      const boost = inAcademy(p) ? ACADEMY_COACH_BOOST : 1 // the academy's players train four times as fast
+      if (!now || now >= 97 || yearSoFar(pid, attr) >= Math.max(2, Math.min(8, Math.round(YEARLY_CAP * room))) * boost) continue
+      const add = BASE * skill * room * weight * boost * (focus === 'fielding' ? 1.6 : 1)
       const have = (progress?.[pid]?.[attr] ?? 0) + add
       if (have >= 1) {
         const cur = shifts?.[pid] ?? { bat: 0, bowl: 0 }

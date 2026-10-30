@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { overall } from '../data/builders'
 import { BUILT_IN_TEAMS } from '../data/teams'
+import { YOUTH } from '../data/youthPool'
 import { generateSeason } from './generate'
-import { applyDelta, headroom,applyShift, applyShifts, gradePlayedMatches, matchChanges, seasonAttrChanges, seasonChanges, sessionTeam } from './progression'
+import { applyDelta, headroom,applyShift, applyShifts, gradePlayedMatches, matchChanges, seasonAttrChanges, seasonChanges, sessionTeam, ACADEMY_RATING_STOP, inAcademy } from './progression'
 import { nextMatchDate, simDay } from './results'
 import { collect, impactPoints } from './stats'
 import type { RawSummary } from './types'
@@ -129,5 +130,25 @@ describe('catching up a career that was already under way', () => {
     const someId = Object.keys(s.changes ?? {})[0]
     const partly = gradePlayedMatches({ ...old, changes: { [someId]: s.changes![someId] } }, teams)
     expect(partly.changes?.[someId]).toEqual(s.changes![someId])
+  })
+})
+
+describe('the academy', () => {
+  it('lifts a youth player much faster than a veteran for the same great game, and stops at 90', () => {
+    const kid = YOUTH.find((y) => y.role !== 'BOWL' && overall(y) < 70)!
+    const vet = { ...kid, id: 'not-in-the-pool' } // same ratings, but not an academy player
+    expect(inAcademy(kid)).toBe(true)
+    expect(inAcademy(vet)).toBe(false)
+    const team = (p: typeof kid) => new Map([['t', { ...BUILT_IN_TEAMS[0], id: 't', players: [p] }]])
+    let kidGain = 0, vetGain = 0
+    for (let i = 0; i < 40; i++) {
+      const raw = { ...rawWith([[kid.id, 120, 50, 12, 6, 0]]), fixtureId: `g${i}` }
+      const rawVet = { ...rawWith([[vet.id, 120, 50, 12, 6, 0]]), fixtureId: `g${i}` }
+      kidGain += Object.values(matchChanges(raw, 't20', team(kid))[kid.id]?.a ?? {}).reduce((a, b) => a + b, 0)
+      vetGain += Object.values(matchChanges(rawVet, 't20', team(vet))[vet.id]?.a ?? {}).reduce((a, b) => a + b, 0)
+      for (const v of Object.values(matchChanges(raw, 't20', team(kid))[kid.id]?.a ?? {})) expect(v).toBeLessThanOrEqual(ACADEMY_RATING_STOP)
+    }
+    expect(kidGain).toBeGreaterThan(vetGain * 8)
+    expect(inAcademy({ ...kid, batting: { technique: 99, power: 99, temperament: 99, running: 99 }, bowling: null, role: 'BAT' })).toBe(false) // a 90 or better has graduated
   })
 })
