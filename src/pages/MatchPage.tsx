@@ -234,6 +234,11 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished])
 
+  // (these two are needed by callbacks below, so they are worked out before any early return: a callback made on the toss screen must still know them)
+  const pitchKind = describePitch(match.pitch).kind
+  // the home ground's look on the broadcast (a friendly is played at the first team's ground)
+  const homeTeam = (fixture?.homeId ? teamMap.get(fixture.homeId) : undefined) ?? match.sides[0].team
+  const stadium = stadiumLook(homeTeam, match.seed, match.format, match.clock?.plan.weather ?? null)
   const showFx = useCallback((next: FxEvent) => {
     setFx(next)
     window.clearTimeout(fxTimer.current)
@@ -576,7 +581,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         }
         // a Test day with rain or bad light: play stops for a while (the overs it costs are already in the day's plan; this is the picture of it)
         if (prefs.drama && match.clock && match.clock.plan.lost > 0 && ['drizzle', 'rain', 'bad light'].includes(match.clock.plan.weather) && match.clock.ballsToday === Math.floor((match.clock.plan.scheduled * 6) * 0.45)) {
-          enqueueMoment({ key: lastEv.seq + 0.97, kind: 'raindelay', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'RAIN STOPS PLAY', lines: [], delay: 600, ms: Math.round(RAIN_DELAY_SECONDS * 1000 * rate), rainDelay: { weather: match.clock.plan.weather as 'drizzle' | 'rain' | 'bad light', lost: match.clock.plan.lost, day: match.clock.day, rate } })
+          enqueueMoment({ key: lastEv.seq + 0.98, kind: 'raindelay', player: match.player(lastEv.bowlerId), team: bowlS.team, title: 'RAIN STOPS PLAY', lines: [], delay: 600, ms: Math.round(RAIN_DELAY_SECONDS * 1000 * rate), rainDelay: { weather: match.clock.plan.weather as 'drizzle' | 'rain' | 'bad light', lost: match.clock.plan.lost, day: match.clock.day, rate } })
         }
         // a challenge: the huddle, the T signal, the picture and the verdict (the engine decided it; see engine/drs.ts)
         if (prefs.reviews && lastEv.review) challengeMoments(lastEv, rate, delay)
@@ -707,7 +712,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const team = lastEv.wicket ? bowlS.team : batT
           const pool = lastEv.wicket ? ['cheer', 'huddle'] : lastEv.boundary === 6 && innE.legalBalls >= 90 ? ['cheer', 'stands', 'fireworks'] : ['cheer', 'stands']
           const v = pool[ambientPick(lastEv.seq, pool.length)]
-          if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.97, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, variant: cheerVariantFor(lastEv.seq), why: lastEv.wicket ? 'wicket' : 'boundary', rate }, caption: cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }) }) }
+          if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.96, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, variant: cheerVariantFor(lastEv.seq), why: lastEv.wicket ? 'wicket' : 'boundary', rate }, caption: cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }) }) }
           else if (v === 'huddle') put({ variant: 'huddle', team, players: bowlS.xi.slice(0, 8), rate }, 3800, 'HUDDLE', team, cap('huddle', { team: team.name }))
           else if (v === 'fireworks') put({ variant: 'fireworks', team, rate }, 4200, 'FIREWORKS', team, cap('fireworks', { team: team.name, extra: 'big hit' }))
           else put({ variant: 'stands', team, sign: lastEv.boundary === 6 ? '6' : lastEv.boundary === 4 ? '4' : null, name: lastEv.wicket ? match.player(lastEv.bowlerId).name : match.player(lastEv.strikerId).name, seed: lastEv.seq, rate }, 4400, 'THE STANDS', team, cap(lastEv.wicket ? 'stands-bowling' : 'stands-batting', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
@@ -873,7 +878,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const ln = inn.bowlers.get(notable.bowlerId)
             const best = seasonBests(season).bestBowling
             if (ln && ln.wickets >= 3 && best && (ln.wickets > best.wickets || (ln.wickets === best.wickets && ln.runs < best.runs))) {
-              enqueueMoment({ key: notable.seq + 0.8, kind: 'record', player: bowlerP, team: bowlSideNow.team, title: 'RECORD!', lines: [], delay: 0, ms: Math.round(4800 * rate), record: { category: 'Best bowling of the season', value: `${ln.wickets}/${ln.runs}`, previous: `The old mark was ${best.wickets}/${best.runs} by ${playerIndex.get(best.id)?.player.name ?? 'an earlier player'}`, player: bowlerP, team: bowlSideNow.team, rate } })
+              enqueueMoment({ key: notable.seq + 0.81, kind: 'record', player: bowlerP, team: bowlSideNow.team, title: 'RECORD!', lines: [], delay: 0, ms: Math.round(4800 * rate), record: { category: 'Best bowling of the season', value: `${ln.wickets}/${ln.runs}`, previous: `The old mark was ${best.wickets}/${best.runs} by ${playerIndex.get(best.id)?.player.name ?? 'an earlier player'}`, player: bowlerP, team: bowlSideNow.team, rate } })
             }
           }
         } else if (milestone && outLine) {
@@ -1109,10 +1114,6 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const overEvents = inn.log.filter((e) => e.over === displayOver)
   // the field for this stage of the game (scenery only: the engine never reads it)
   noMirrorRef.current = userBats && (manual || swipeOn)
-  const pitchKind = describePitch(match.pitch).kind
-  // the home ground's look on the broadcast (a friendly is played at the first team's ground)
-  const homeTeam = (fixture?.homeId ? teamMap.get(fixture.homeId) : undefined) ?? match.sides[0].team
-  const stadium = stadiumLook(homeTeam, match.seed, match.format, match.clock?.plan.weather ?? null)
   // your players whose rating rose in this match (a career match only, once its result is saved)
   const upgrades: UpgradeRow[] = (() => {
     if (!match.isOver || !fixture || !season?.myTeamId) return []

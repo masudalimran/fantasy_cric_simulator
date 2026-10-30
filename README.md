@@ -482,3 +482,4 @@ The app is built to feel like a native app on a phone (the desktop layout is unc
 
 When you change behaviour or add a feature, add or change the matching line above in the same change. Anything a
 future reader would need to know (a rule, a page, where something lives) belongs here.
+- **Fix: replay screens missing after the first match**: the match page made its replay set-up (pitch and stadium) after the toss and line-up screens, so a match that started on the toss screen kept a version of it that crashed on every replay and the live picture just carried on. Those two are now worked out first. Replays, delivery screens and close calls open in every match without a restart. Two screens that could share a moment key (cheerleaders and ambient, a bowler record and a maiden) now have their own.
