@@ -651,7 +651,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   else if (phase === 'deliver') { aim = lerp3(stump, b, 0.7); hfov = lerp(32, 21, ease((t - t1) / plan.tDeliver)) * deg }
   else {
     const away = Math.hypot(b.x - plan.meet.x, b.z - plan.meet.z)
-    aim = plan.reverse ? { x: b.x, y: Math.max(0.5, b.y * 0.7), z: b.z } : lerp3(plan.meet, b, 0.85)
+    aim = plan.reverse ? { x: b.x, y: Math.max(0.5, b.y * 0.7), z: b.z } : lerp3(plan.meet, b, plan.hurt ? 0.15 : 0.85) // (a ball off the pad: the picture stays on the batsman, where it hit)
     hfov = (plan.reverse ? Math.min(60, 26 + away * 0.75) : Math.min(52, 22 + away * 0.55)) * deg
     // with runs being taken the picture settles on the pitch so the running can be seen
     if (plan.runOut) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(lerp3(aim, b, 0.5), { x: 0, y: 0.8, z: -9 }, 0.55 * k + 0.2); hfov = Math.max(hfov, lerp(24, 40, k) * deg) }

@@ -165,6 +165,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
+  const bandAt = useRef<{ seq: number; lx: number; ly: number } | null>(null) // where a leg bye hit the batsman (in his own 60 x 120 box)
   const dragonAng = useRef(0) // which way the dragon head is flying (so it does not flick back when the ball moves straight at the camera)
   const cutAt = useRef(-99) // when the picture last cut to another camera (real seconds), for the focus pull
   const blurNow = useRef(0)
@@ -416,6 +417,22 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           }
           // the ball striking the pad (an lbw, or a leg bye) flashes where it lands, too
           if (!hitAt && ev && (L.plan.kind === 'pad' || ev.extraType === 'legbye')) hitAt = { x: bx, y: by }
+          // a leg bye replay marks the spot that was hit with a sticking plaster, which stays on the batsman after the ball has gone
+          const bnd = nodes.current.get('bandaid')
+          if (bnd) {
+            const an = anchors.get('striker')
+            if (ev && ev.extraType === 'legbye' && L.replayCam && an && t >= t2c && nodes.current.get('striker')?.style.display !== 'none') {
+              if (!bandAt.current || bandAt.current.seq !== ev.seq) bandAt.current = { seq: ev.seq, lx: (bx - an.x) / an.s + 30, ly: Math.max(55, Math.min(112, (by - an.y) / an.s + 120)) }
+              const k = clamp01((t - t2c) / 0.25)
+              const size = Math.max(18, 15 * an.s * (1.9 - 0.9 * k))
+              const px = an.x + (bandAt.current.lx - 30) * an.s, py = an.y + (bandAt.current.ly - 120) * an.s
+              bnd.style.display = 'block'
+              bnd.style.opacity = String(k)
+              bnd.style.width = `${(size * 2).toFixed(0)}px`
+              bnd.style.height = `${size.toFixed(0)}px`
+              bnd.style.transform = `translate3d(${(px - size).toFixed(1)}px,${(py - size / 2).toFixed(1)}px,0) rotate(-25deg)`
+            } else { bnd.style.display = 'none'; if (!ev || t < t2c) bandAt.current = null }
+          }
           ball.style.transform = `translate3d(${(bx - sd / 2).toFixed(1)}px,${(by - sd / 2).toFixed(1)}px,0)${dragon ? ` rotate(${ang.toFixed(3)}rad)` : ''}`
           // a flash where the bat meets the ball (bigger for a bigger shot)
           const imp = nodes.current.get('impact')
@@ -554,6 +571,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('fxFlash')} className="pointer-events-none absolute inset-0 z-[4600] hidden" />
       <div ref={setNode('fxRays')} className="pointer-events-none absolute inset-0 z-[4601] hidden" style={{ WebkitMaskImage: 'radial-gradient(circle at 50% 56%, transparent 18%, #000 60%)', maskImage: 'radial-gradient(circle at 50% 56%, transparent 18%, #000 60%)' }} />
       <div ref={setNode('fxVig')} className="pointer-events-none absolute inset-0 z-[4602] hidden" />
+      <div ref={setNode('bandaid')} className="pointer-events-none absolute left-0 top-0 z-[4002] hidden leading-[0]" style={{ filter: 'drop-shadow(0 0 3px #000000aa)' }} aria-hidden>
+        <svg viewBox="0 0 40 20" width="100%" height="100%"><rect x="1" y="3" width="38" height="14" rx="7" fill="#f2c9a4" stroke="#b9855a" strokeWidth="1.5" /><rect x="14" y="3" width="12" height="14" fill="#fde7cf" stroke="#b9855a" strokeWidth="1" /><g fill="#d49a70"><circle cx="6" cy="7" r="1" /><circle cx="6" cy="13" r="1" /><circle cx="10" cy="10" r="1" /><circle cx="34" cy="7" r="1" /><circle cx="34" cy="13" r="1" /><circle cx="30" cy="10" r="1" /></g></svg>
+      </div>
       <div ref={setNode('impact')} className="pointer-events-none absolute left-0 top-0 z-[4001] hidden rounded-full" style={{ background: 'radial-gradient(circle, #ffffff 0%, #fde68a 28%, rgba(251,191,36,0.35) 52%, rgba(251,191,36,0) 70%)' }} />
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
