@@ -3,7 +3,7 @@ import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { ballSpeed } from '../../engine/speed'
 import { fieldPlan } from './fieldSets'
-import { batHitsBall, beatenDot, diveSpot, planBall, ROPE, ropeDistance, sixReach, standHeight } from './broadcast'
+import { batHitsBall, cameraFlair, beatenDot, diveSpot, planBall, ROPE, ropeDistance, sixReach, standHeight } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 import { flavorOfTeam, type Flavor } from '../../data/flavors'
 import { FORE, SHIN, THIGH, UPPER, batsmanPose, bowlerPose, classifyShot, fielderPose, mirrorPose, nonStrikerPose, solve, standing, umpirePose, type Pose, type ShotStyle } from './bodyPose'
@@ -251,5 +251,57 @@ describe('the bodies drawn in the broadcast view', () => {
     }
     for (const style of ['straight', 'drive', 'cut', 'pull', 'flick', 'sweep', 'defend']) expect(seen.has(style), style).toBe(true)
     expect(seen.size).toBeGreaterThanOrEqual(11)
+  })
+})
+
+describe('smoother motion', () => {
+  const batAt = (style: ShotStyle, swing: number) => batsmanPose({ style, t: 2, t1: 0.5, t2: 1.2, swing, hurt: 0, raise: 0, joy: 0, speed: 0, cyc: 0, walkOff: false })
+  it('the bat is moving fastest at contact, not stopped there, for every shot', () => {
+    for (const st of STYLES) {
+      const a = (s: number) => batAt(st, s).bat ?? 0
+      const before = Math.abs(a(0.44) - a(0.40)), early = Math.abs(a(0.12) - a(0.08)), after = Math.abs(a(0.48) - a(0.44))
+      expect(Math.max(before, after), st).toBeGreaterThanOrEqual(early)
+    }
+  })
+  it('the stroke has no jumps: neighbouring moments are near each other', () => {
+    for (const st of STYLES) {
+      let prev = batAt(st, 0.001)
+      for (let s = 0.01; s <= 1; s += 0.01) {
+        const q = batAt(st, s)
+        expect(Math.abs((q.bat ?? 0) - (prev.bat ?? 0)), `${st} at ${s.toFixed(2)}`).toBeLessThan(40)
+        expect(dist(q.handR, prev.handR), `${st} at ${s.toFixed(2)}`).toBeLessThan(14)
+        prev = q
+      }
+    }
+  })
+  it('the bowler melts from the run-up into the jump', () => {
+    const at = (t: number) => bowlerPose({ t, t1: 1, t2: 1.8, arm: 0, speed: 5, cyc: 1, joy: 0, wicket: false })
+    const a = at(0.65), b = at(0.67), c = at(0.8)
+    expect(dist(a.hip, b.hip)).toBeLessThan(2.5)
+    expect(dist(b.footR, c.footR)).toBeLessThan(30)
+  })
+})
+
+describe('TV camera', () => {
+  const plan = { tRun: 1, tDeliver: 0.5, boundary: true, wicketFlies: false, six: false }
+  it('drifts a little, more when zoomed in, never on the spider cam', () => {
+    let wide = 0, tight = 0
+    for (let n = 0; n < 20; n += 0.1) { wide = Math.max(wide, Math.abs(cameraFlair({ now: n, t: 0, hfov: 0.8, plan, overhead: false, replay: false, sinceCut: 9 }).dyaw)); tight = Math.max(tight, Math.abs(cameraFlair({ now: n, t: 0, hfov: 0.3, plan, overhead: false, replay: false, sinceCut: 9 }).dyaw)) }
+    expect(wide).toBeGreaterThan(0.001); expect(wide).toBeLessThan(0.02); expect(tight).toBeGreaterThan(wide)
+    expect(cameraFlair({ now: 3, t: 0, hfov: 0.3, plan, overhead: true, replay: false, sinceCut: 9 })).toEqual({ dyaw: 0, dpitch: 0, hfovScale: 1, blur: 0 })
+  })
+  it('punches in when a boundary is hit and settles back', () => {
+    const f = (t: number, replay = false) => cameraFlair({ now: 0, t, hfov: 0.5, plan, overhead: false, replay, sinceCut: 9 }).hfovScale
+    expect(f(0)).toBe(1)
+    expect(f(1.55)).toBeLessThan(0.95)
+    expect(f(4)).toBeGreaterThan(0.99)
+    expect(f(1.55, true)).toBe(1) // not in a replay
+  })
+  it('softens the background when tight and after a cut, and keeps it sharp when wide', () => {
+    const b = (hfov: number, sinceCut: number) => cameraFlair({ now: 0, t: 0, hfov, plan, overhead: false, replay: false, sinceCut }).blur
+    expect(b(0.8, 9)).toBe(0)
+    expect(b(0.25, 9)).toBeGreaterThan(1)
+    expect(b(0.8, 0.05)).toBeGreaterThan(1.5)
+    expect(b(0.8, 0.6)).toBe(0)
   })
 })

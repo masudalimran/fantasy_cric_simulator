@@ -63,6 +63,38 @@ export function mixPose(a: Pose, b: Pose, k: number): Pose {
   }
 }
 
+/**
+ * A pose mixed the way a body really moves: the feet lead (the stride goes first), the hands and bat follow, and the head arrives last (it stays on the ball).
+ * `k` may go a little below 0 (a wind-up) or above 1 (a follow-through that overshoots and then settles).
+ */
+export function mixFlow(a: Pose, b: Pose, k: number): Pose {
+  const feet = k < 0 ? k : Math.min(1.08, k * 1.25), head = k < 0 ? k : k > 1 ? k : Math.pow(k, 1.35)
+  const m = mixPose(a, b, k)
+  return {
+    ...m,
+    footL: lerpP(a.footL, b.footL, feet), footR: lerpP(a.footR, b.footR, feet),
+    head: { dx: lerp(a.head.dx, b.head.dx, head), dy: lerp(a.head.dy, b.head.dy, head), tilt: lerp(a.head.tilt, b.head.tilt, head) },
+  }
+}
+
+/**
+ * The stroke as one flowing movement (`s` is how far through it, 0 to 1; 0.44 is contact). The bat winds back a touch, speeds up into the ball so it
+ * is going fastest at contact (it no longer stops there), then the follow-through carries a little past its finish and settles. The head stays down on the ball.
+ */
+export function strokePose(shot: { b: Pose; c: Pose; f: Pose }, s: number): Pose {
+  let p: Pose
+  if (s < 0.44) {
+    const u = s / 0.44
+    const wind = u < 0.3 ? -0.09 * Math.sin((Math.PI * u) / 0.3) : 0
+    p = mixFlow(shot.b, shot.c, Math.pow(u, 1.7) + wind)
+  } else {
+    const u = (s - 0.44) / 0.56
+    p = mixFlow(shot.c, shot.f, 1 - Math.pow(1 - u, 2.2) + 0.05 * Math.sin(Math.PI * u) * (1 - u))
+  }
+  const down = Math.sin(Math.PI * clamp01((s - 0.2) / 0.55))
+  return { ...p, head: { ...p.head, dy: p.head.dy + 1.4 * down } }
+}
+
 /** The same pose as a left-handed person would strike it (everything turned about the middle of the box). */
 export function mirrorPose(p: Pose): Pose {
   const m = (q: P): P => ({ x: 60 - q.x, y: q.y })
@@ -302,7 +334,7 @@ export function batsmanPose(c: BatCtx): Pose {
   const shot = fl ? { b: mixPose(base.b, fl.lift, 0.5), c: base.c, f: big ? mixPose(base.f, fl.finish, 0.6) : base.f } : base
   const lift = ease((c.t - (c.t1 - 0.5)) / Math.max(0.2, c.t2 - 0.25 - (c.t1 - 0.5)))
   let p = mixPose(fl ? fl.stance : STANCE, shot.b, lift)
-  if (c.swing > 0) p = c.swing < 0.44 ? mixPose(shot.b, shot.c, ease(c.swing / 0.44)) : mixPose(shot.c, shot.f, ease((c.swing - 0.44) / 0.56))
+  if (c.swing > 0) p = strokePose(shot, c.swing)
   if (c.hurt > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 94 }, lean: 12, head: { dx: 0, dy: 3, tilt: 8 }, handL: { x: -6, y: 24 }, handR: { x: 8, y: 26 }, bat: 40, two: false, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 } }, c.hurt * 0.8)
   // once the shot is done he settles, bat by his foot, until he runs or the next ball comes
   if (c.swing >= 1 && c.raise === 0 && c.joy === 0) p = mixPose(p, WAIT, ease((c.t - (c.t2 + 0.9)) / 0.5))
@@ -375,9 +407,10 @@ export interface BowlCtx {
 export function bowlerPose(c: BowlCtx): Pose {
   const run = c.t < c.t1 - 0.34
   let p: Pose = { ...standing(), ball: true }
+  // running in, the ball held up at the chest, both fists pumping
+  const runPose = () => locomotion({ ...p, hip: { x: 30, y: 86 }, handR: { x: 6, y: 12 }, handL: { x: -6, y: 14 }, lean: 0 }, Math.max(3, c.speed), c.cyc)
   if (run) {
-    // running in, the ball held up at the chest, both fists pumping
-    p = locomotion({ ...p, hip: { x: 30, y: 86 }, handR: { x: 6, y: 12 }, handL: { x: -6, y: 14 }, lean: 0 }, Math.max(3, c.speed), c.cyc)
+    p = runPose()
   } else {
     // the jump and the whirl of the arm: the front arm points up and pulls down as the bowling arm comes over
     const a = clamp01(c.arm)
@@ -403,6 +436,9 @@ export function bowlerPose(c: BowlCtx): Pose {
       p.ball = false
     }
     if (c.speed > 1) p = locomotion(p, c.speed * 0.6, c.cyc, true)
+    // the last strides melt into the jump instead of snapping to it
+    const into = clamp01((c.t - (c.t1 - 0.34)) / 0.14)
+    if (into < 1) p = mixFlow(runPose(), p, ease(into))
   }
   if (c.wicket && c.joy > 0) p = mixPose(p, { ...standing(), handL: { x: -17, y: -22 }, handR: { x: 17, y: -22 } }, ease(c.joy * 2.5))
   return p

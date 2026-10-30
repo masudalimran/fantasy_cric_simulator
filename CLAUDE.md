@@ -49,6 +49,7 @@ A personal, non-commercial cricket simulator with anime and video-game character
 
 - **Direction from the owner (October 2026)**: the broadcast view is a hit with friends. Before adding new features, keep improving it until it looks as close to a real TV match as possible: contact, boundaries, body movement, more shots, heritage-based shots and stances, camera work. Check every change on a phone-sized picture.
 - **The academy is fast on purpose (owner's request, October 2026)**: youth-pool players (`inAcademy` in `season/progression.ts`) gain 20x from good games and train 4x from the coach until they are a 90; computer selection rotates more and teams shop more (`BUSY`). Retune only when asked; the knobs are `ACADEMY_*` constants.
+- **Camera flair and stroke flow are drawing only** (`cameraFlair` in `broadcast.ts`, `strokePose` in `bodyPose.ts`): sway, punch-ins and the soft background change the drawn camera copy and the canvas blur, never the tracked camera, the plan or a result. The blur is CSS on the canvas only (sprites stay sharp); keep it light for phones.
 
 ## Backlog (agreed, not planned yet)
 Achievements and goals; Hall of Fame / retirement; commentary line variety; difficulty-scaled purses; an automated page smoke test; instant replay in the broadcast view; subtitles for the commentary; a lighter broadcast quality setting for slow phones.

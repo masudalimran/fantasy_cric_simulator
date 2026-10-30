@@ -714,3 +714,37 @@ export function approach(a: number, b: number, k: number): number {
   while (d < -Math.PI) d += 2 * Math.PI
   return a + d * k
 }
+
+
+// ---- TV camera work (looks only: it moves the picture, never the ball) ---------------------------------------------------------
+
+export interface Flair { dyaw: number; dpitch: number; hfovScale: number; blur: number }
+
+const bump = (x: number, attack: number, decay: number) => (x < 0 ? 0 : x < attack ? x / attack : Math.exp(-(x - attack) / decay))
+
+/**
+ * What a camera operator adds to the steady picture: the small drift of a hand-held camera (more when zoomed in), a punch-in with a little kick when
+ * the ball is hit for a boundary or the wicket falls, and a soft background when the camera is right in on someone (the focus pull). `now` is real
+ * time in seconds, `t` the clip time, `sinceCut` the seconds since the picture last cut to another camera.
+ */
+export function cameraFlair(o: { now: number; t: number; hfov: number; plan: Pick<Plan, 'tRun' | 'tDeliver' | 'boundary' | 'wicketFlies' | 'six'>; overhead: boolean; replay: boolean; sinceCut: number }): Flair {
+  if (o.overhead) return { dyaw: 0, dpitch: 0, hfovScale: 1, blur: 0 }
+  const zoom = 1 - clamp01(o.hfov / 0.8) // 0 wide, 1 tight
+  const amp = 0.0034 + 0.0032 * zoom
+  const n = o.now
+  const dyaw = amp * (Math.sin(n * 0.9 + 1) + 0.55 * Math.sin(n * 2.3 + 4) + 0.25 * Math.sin(n * 5.1))
+  let dpitch = amp * 0.7 * (Math.sin(n * 1.1 + 2) + 0.5 * Math.sin(n * 2.9) + 0.2 * Math.sin(n * 6.3 + 1))
+  let hfovScale = 1
+  if (!o.replay) {
+    const hit = o.t - (o.plan.tRun + o.plan.tDeliver)
+    if (o.plan.boundary || o.plan.wicketFlies) {
+      const b = bump(hit, 0.07, 0.38)
+      hfovScale -= (o.plan.six ? 0.16 : 0.12) * b
+      dpitch -= 0.014 * b
+    }
+  }
+  // the background goes soft when the picture is tight on someone, and a fresh cut starts blurred and pulls into focus
+  const tight = clamp01((0.5 - o.hfov) / 0.2)
+  const pull = o.sinceCut < 0.5 ? 1 - ease(o.sinceCut / 0.5) : 0
+  return { dyaw, dpitch, hfovScale, blur: Math.max(1.7 * tight, 2.2 * pull) }
+}

@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, BAT_END_Z, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene, type Scene } from './broadcastDraw'
@@ -160,6 +160,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
+  const cutAt = useRef(-99) // when the picture last cut to another camera (real seconds), for the focus pull
+  const blurNow = useRef(0)
 
   useEffect(() => {
     const el = box.current, cv = canvas.current
@@ -189,7 +191,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // (a replay keeps to its own camera and never cuts to the reverse one)
       const wantReverse = L.replayCam ? false : f.reverse
       const base = L.replayCam ? L.replayCam.cam : wantReverse ? camReverse : camWide
-      if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; setTag(wantReverse ? 'CAM 2' : 'CAM 1'); setCutKey((k) => k + 1) }
+      if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; cutAt.current = performance.now() / 1000; setTag(wantReverse ? 'CAM 2' : 'CAM 1'); setCutKey((k) => k + 1) }
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       const focus = L.replayCam?.focus
@@ -236,8 +238,18 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       if (traceRef.current) marks.trace = traceRef.current
       if (L.replayCam && L.event?.extraType === 'wide') marks.wideLine = WIDE_LINE_M
       if (L.replayCam?.focus && L.event?.extraType === 'noball') marks.crease = { z: BOWL_Z + 1.22, over: overstepCm(L.event.seq) / 100 }
-      drawScene(ctx, c, W, H, { marks, move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
-      const r = prep(c, W, H)
+      // the TV camera: hand-held drift, a punch-in on a boundary or a wicket, and a soft background when the picture is tight (drawn only: nothing here touches the ball)
+      let cd = c
+      let blur = 0
+      if (getAnimPrefs().camera) {
+        const now = performance.now() / 1000
+        const fl = cameraFlair({ now, t, hfov: c.hfov, plan: L.plan, overhead: !!L.replayCam?.overhead, replay: !!L.replayCam, sinceCut: now - cutAt.current })
+        cd = { p: c.p, yaw: c.yaw + fl.dyaw, pitch: c.pitch + fl.dpitch, hfov: c.hfov * fl.hfovScale }
+        blur = fl.blur
+      }
+      if (Math.abs(blur - blurNow.current) > 0.2 || (blur === 0) !== (blurNow.current === 0)) { blurNow.current = blur; cv.style.filter = blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : '' }
+      drawScene(ctx, cd, W, H, { marks, move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      const r = prep(cd, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 
       const place = (key: string, world: V3, opts: { heightM?: number; rot?: number } = {}) => {
