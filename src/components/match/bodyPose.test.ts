@@ -9,7 +9,7 @@ import { flavorOfTeam, type Flavor } from '../../data/flavors'
 import { FORE, SHIN, THIGH, UPPER, batsmanPose, bowlerPose, classifyShot, fielderPose, mirrorPose, nonStrikerPose, solve, standing, umpirePose, type Pose, type ShotStyle } from './bodyPose'
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y)
-const STYLES: ShotStyle[] = ['defend', 'drive', 'straight', 'cut', 'pull', 'flick', 'sweep', 'reverse', 'ramp', 'scoop', 'loft', 'beaten', 'leave']
+const STYLES: ShotStyle[] = ['defend', 'drive', 'straight', 'cut', 'pull', 'flick', 'sweep', 'reverse', 'ramp', 'scoop', 'loft', 'beaten', 'leave', 'hook', 'upper', 'glance', 'slog', 'paddle']
 const base = { t1: 1, t2: 1.5, hurt: 0, raise: 0, joy: 0, speed: 0, cyc: 0, walkOff: false }
 
 /** Every pose the game can draw, to check the bones keep their length. */
@@ -303,5 +303,6 @@ describe('TV camera', () => {
     expect(b(0.25, 9)).toBeGreaterThan(1)
     expect(b(0.8, 0.05)).toBeGreaterThan(1.5)
     expect(b(0.8, 0.6)).toBe(0)
+    expect(cameraFlair({ now: 0, t: 0, hfov: 0.25, plan, overhead: false, replay: true, sinceCut: 0 }).blur).toBe(0) // replays stay sharp
   })
 })

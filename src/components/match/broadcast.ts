@@ -91,7 +91,7 @@ export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): {
   if (kind === 'high') return { cam: { p: { x: 0.01, y: 46, z: -10 }, yaw: 0, pitch: 1.2, hfov: 70 * deg }, minHfov: 68 * deg, label: 'Spider cam', keepWide: true, overhead: true }
   // (well back behind the stumps and zoomed right out, so the stumps, the batsman and the ball can all be seen)
   if (kind === 'stump') return { cam: { p: { x: -1.4, y: 1.0, z: 4.2 }, yaw: Math.PI, pitch: 0.05, hfov: 56 * deg }, minHfov: 54 * deg, label: 'Stump cam', keepWide: true }
-  // (the side-on camera stands on the side the ball went to, so it is clear which way the shot went)
+  // (the side-on camera always stands on the side the batsman faces, so his face and chest are what it sees: the off side for a right-hander, the leg side for a left-hander. `shotSide` is that side: -1 or 1 along the pitch's width)
   const dir = shotSide ?? (hash01(seq * 7.7) < 0.5 ? -1 : 1)
   return { cam: { p: { x: dir * 34, y: 4.5, z: -9 }, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0.1, hfov: 34 * deg }, minHfov: 30 * deg, label: 'Side-on' }
 }
@@ -112,6 +112,33 @@ export function withReplaySlow(plan: Plan, deep = false): Plan {
   if (plan.slow) return plan
   // a four or a six is shown deeper into slow motion: from just before the bat meets the ball until the ball has left the bat
   const slow = deep ? { at: plan.tRun + plan.tDeliver - 0.32, len: 1.0, factor: 0.25 } : { at: plan.tRun + plan.tDeliver - 0.22, len: 0.75, factor: 0.35 }
+  return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
+}
+
+/** Where in its flight a lofted shot that is not caught comes down (the rest is bounces and rolling). */
+export const LAND_AT = 0.55
+
+/**
+ * A ball bouncing along the ground after `from` (a share of the flight, 0 to 1): each hop is a parabola, a little lower and shorter than the last (it keeps
+ * about 60% of its speed up off each bounce, so the hops are 60% as long and 36% as high), until it is just rolling. `H` is the first hop's height in
+ * metres and `d1` how long it lasts (a share of the flight). Returns the height above the ground.
+ */
+export function hops(s: number, from: number, H: number, d1: number, keep = 0.6): number {
+  if (s <= from) return 0
+  let t0 = from, d = d1, h = H
+  for (let n = 0; n < 8 && t0 < 1; n++) {
+    if (s < t0 + d) { const u = (s - t0) / d; return 4 * h * u * (1 - u) }
+    t0 += d; d *= keep; h *= keep * keep
+  }
+  return 0
+}
+
+/**
+ * The close-call replay: the ball is bowled at normal speed, then the picture slows right down and zooms in as it passes the stumps or the edge of the bat,
+ * then pulls back out and runs at normal speed again.
+ */
+export function withNearSlow(plan: Plan): Plan {
+  const slow = { at: plan.tRun + plan.tDeliver - 0.26, len: 0.5, factor: 0.2 }
   return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
 }
 
@@ -295,8 +322,10 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const dv = deliveryOf(ev, opts.bowler, { overcast: opts.overcast })
   const lenZ = dv.pitchZ ?? 0
   const stanceX = leftHand ? -0.75 : 0.75
-  const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket' || w.kind === 'lbw')
-  const meet: V3 = { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : dv.height, z: toStumps || wide ? -0.45 : -1.25 }
+  const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket')
+  const lbwOut = !!w && w.kind === 'lbw'
+  // an lbw is the ball striking the front pad, down at shin height, right in front of the batsman's legs (not out at the stumps behind him)
+  const meet: V3 = lbwOut ? { x: stanceX * 0.62, y: 0.38, z: BAT_END_Z - 0.2 } : { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : dv.height, z: toStumps || wide ? -0.45 : -1.25 }
   // a ball that bounces turns a little off the pitch (so it pitches a little to the other side of where it meets the bat) and one that swings bows in the air
   const turnM = dv.pitchZ === null ? 0 : Math.tan((dv.turn * Math.PI) / 180) * Math.abs(meet.z - dv.pitchZ)
   const swingM = Math.tan((dv.swing * Math.PI) / 180) * 14
@@ -320,7 +349,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bye = ev.extraType === 'bye', legbye = ev.extraType === 'legbye'
   if (w) {
     if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' }
-    else if (w.kind === 'lbw') { end = { x: stanceX * 0.7, y: 0.4, z: -0.2 }; kind = 'pad'; swing = false }
+    else if (w.kind === 'lbw') { end = { x: meet.x + (stanceX > 0 ? 0.35 : -0.35), y: 0.06, z: meet.z - 0.55 }; kind = 'pad'; swing = false }
     else if (w.kind === 'stumped') { end = { x: 0, y: 0.9, z: 1.8 }; kind = 'keeper'; wicketFlies = true; swing = false; catcher = 0 }
     else if (w.kind === 'caught and bowled') { end = { x: bowlerX + 1, y: 1.1, z: BOWL_Z + 4 }; kind = 'air'; peak = 3; bowlerCatch = true }
     else if (w.kind === 'run out') {
@@ -577,11 +606,16 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
       ball = { x, y: Math.max(0.05, y), z }
     } else {
       const s = clamp01((t - t2) / plan.tFlight)
-      const e = plan.kind === 'ground' ? 1 - (1 - s) * (1 - s) : s
+      // a lofted shot that is not caught and not a six comes down in the field, then bounces and rolls on
+      const lands = plan.kind === 'air' && !plan.six && plan.catcher < 0 && !plan.bowlerCatch
+      const L = LAND_AT
+      const e = lands ? (s < L ? 0.7 * (s / L) : 0.7 + 0.3 * (1 - (1 - (s - L) / (1 - L)) ** 2)) : plan.kind === 'ground' || plan.kind === 'pad' ? 1 - (1 - s) * (1 - s) : s
       const p = lerp3(plan.meet, plan.end, e)
       let y = lerp(plan.meet.y, plan.end.y, e)
-      if (plan.kind === 'air') y += plan.peak * 4 * s * (1 - s)
-      else if (plan.kind === 'ground') y = 0.12 + (plan.boundary ? 0.35 * Math.abs(Math.sin(s * 9)) * (1 - s) : 0.12 * Math.abs(Math.sin(s * 6)) * (1 - s))
+      if (lands) { y = s < L ? plan.meet.y * (1 - s / L) + plan.peak * 4 * (s / L) * (1 - s / L) : 0.11 + hops(s, L, Math.min(1.5, plan.peak * 0.3), (1 - L) * 0.38) }
+      else if (plan.kind === 'air') y += plan.peak * 4 * s * (1 - s)
+      else if (plan.kind === 'pad') y = Math.max(0.06, lerp(plan.meet.y, 0.06, Math.min(1, s * 2.2) ** 2) + 0.1 * Math.sin(Math.PI * Math.min(1, s * 2.5)))
+      else if (plan.kind === 'ground') y = 0.11 + (plan.boundary ? hops(s, 0, 0.42, 0.3) : hops(s, 0, 0.14, 0.42))
       ball = { x: p.x, y: Math.max(0.05, y), z: p.z }
     }
   }
@@ -656,6 +690,21 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     const ua = plan.runOut?.outIsStriker ? Math.min(u0, cap) : u0
     const ub = plan.runOut && !plan.runOut.outIsStriker ? Math.min(u0, cap) : u0
     runners = u0 <= 0 ? null : { a: runner(0, 1, ua), b: runner(1, -1, ub) }
+  } else if (plan.boundary && plan.runs === 0 && t >= t2 + 0.22) {
+    // a four or a six: the batsmen cannot know that beforehand, so they set off for a run, then pull up when they see the ball going to the rope, and walk back
+    const start = t2 + 0.22
+    const dur = plan.six ? 0.5 : 0.95
+    const cap = plan.six ? 0.32 : 0.62
+    const back = start + dur + 0.3
+    const s = t - start
+    const g = s < dur ? cap * ease(s / dur) : cap * (1 - ease((t - back) / 0.9))
+    if (g > 0.001 && t < back + 0.9) {
+      const endZ = (end: number) => (end === 0 ? BAT_END_Z : BOWL_END_Z)
+      const endX = (end: number) => (end === 0 ? plan.stanceX : NON_STRIKER_X)
+      const going = s < dur
+      const at = (from: number, sign: number): V3 => ({ x: lerp(endX(from), endX(1 - from), g) + sign * 1.1 * Math.sin(Math.PI * g), y: going ? Math.abs(Math.sin(s * Math.PI * 4)) * 0.06 : 0, z: lerp(endZ(from), endZ(1 - from), g) })
+      runners = { a: at(0, 1), b: at(1, -1) }
+    }
   } else if (plan.stepOut) {
     // stumped: he comes down the pitch and is beaten
     striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, -2.7, ease((t - (t2 - 0.45)) / 0.5)) }
@@ -746,5 +795,33 @@ export function cameraFlair(o: { now: number; t: number; hfov: number; plan: Pic
   // the background goes soft when the picture is tight on someone, and a fresh cut starts blurred and pulls into focus
   const tight = clamp01((0.5 - o.hfov) / 0.2)
   const pull = o.sinceCut < 0.5 ? 1 - ease(o.sinceCut / 0.5) : 0
-  return { dyaw, dpitch, hfovScale, blur: Math.max(1.7 * tight, 2.2 * pull) }
+  // (a replay keeps everything sharp: it is there to be looked at closely)
+  return { dyaw, dpitch, hfovScale, blur: o.replay ? 0 : Math.max(1.7 * tight, 2.2 * pull) }
+}
+
+
+/**
+ * How much the drawn ball really moved, in degrees, measured from the path the clip draws (so the number shown always matches what is on the screen):
+ * `swing` is the most the ball's path leaves the straight line from the hand to where it pitched, `turn` is the change of direction as it bounces.
+ * The size is measured; the sign (which way) follows the delivery's own.
+ */
+export function drawnAngles(plan: Plan): { swing: number; turn: number } {
+  const none = () => ({ x: 0, y: 0, z: 0 })
+  const at = (u: number) => frameAt(plan, plan.tRun + u * plan.tDeliver, none).ball
+  const ang = (a: V3, b: V3) => Math.atan2(b.x - a.x, b.z - a.z)
+  const air = Math.min(1, plan.bounceU)
+  const pts: V3[] = []
+  for (let i = 0; i <= 40; i++) { const b = at((i / 40) * air); if (b) pts.push(b) }
+  let swing = 0
+  if (pts.length > 2) {
+    const chord = ang(pts[0], pts[pts.length - 1])
+    for (let i = 1; i < pts.length; i++) swing = Math.max(swing, Math.abs(ang(pts[i - 1], pts[i]) - chord))
+  }
+  let turn = 0
+  if (plan.bounceU < 0.99) {
+    const a = at(plan.bounceU - 0.04), b = at(plan.bounceU), c = at(plan.bounceU + 0.04)
+    if (a && b && c) turn = Math.abs(ang(b, c) - ang(a, b))
+  }
+  const deg = 180 / Math.PI
+  return { swing: Math.sign(plan.delivery.swing || 1) * swing * deg, turn: Math.sign(plan.delivery.turn || 1) * turn * deg }
 }

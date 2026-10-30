@@ -6,10 +6,12 @@
 const frac = (n: number) => n - Math.floor(n)
 
 /**
- * How often a scoring shot goes to each part of the field (centred on straight, cover, point, third man, behind, fine leg, square leg and midwicket, in
- * degrees clockwise from straight): all round the ground, with the straight and the cover and midwicket zones the busiest and the way behind the least.
+ * How often a scoring shot goes to each part of the field: sixteen zones round the ground, 22.5 degrees apart (centred on straight, then clockwise: extra
+ * cover, cover, point side, point, backward point, third man, fine third man, behind, and the same on the leg side), with the straight and the cover and
+ * midwicket zones the busiest and the way behind the least. Each zone is filled evenly, so a ball can go anywhere from a push back past the bowler to a
+ * late cut to third man or a hook to fine leg, instead of bunching in a few spots.
  */
-const ZONES: [number, number][] = [[0, 18], [45, 18], [90, 13], [135, 8], [180, 4], [-135, 8], [-90, 13], [-45, 18]]
+const ZONES: [number, number][] = [[0, 9], [22.5, 8], [45, 9], [67.5, 7], [90, 7], [112.5, 4], [135, 4], [157.5, 2], [180, 2], [-157.5, 2], [-135, 4], [-112.5, 4], [-90, 7], [-67.5, 8], [-45, 9], [-22.5, 8]]
 const ZONE_TOTAL = ZONES.reduce((n, z) => n + z[1], 0)
 
 /** Angle in radians in screen coordinates (y down): straight back down the ground is -PI/2. */
@@ -17,8 +19,8 @@ export function shotAngle(seq: number): number {
   const pick = frac(seq * 0.6180339887) * ZONE_TOTAL
   let acc = 0, centre = 0
   for (const [c, w] of ZONES) { acc += w; if (pick < acc) { centre = c; break } }
-  // a spread of up to 40 degrees either side of the middle of the zone, mostly near it (three numbers averaged)
-  const spread = ((frac(seq * 0.3819660113 + 0.5) + frac(seq * 0.7548776662 + 0.31) + frac(seq * 0.5698402910 + 0.77)) / 3 - 0.5) * 2 * 40
+  // anywhere inside the zone (it is 22.5 degrees wide), with a little extra wobble so neighbouring zones blend
+  const spread = (frac(seq * 0.3819660113 + 0.5) - 0.5) * 22.5 + (frac(seq * 0.7548776662 + 0.31) - 0.5) * 8
   return -Math.PI / 2 + ((centre + spread) * Math.PI) / 180
 }
 

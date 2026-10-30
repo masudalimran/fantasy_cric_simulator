@@ -10,8 +10,10 @@ const hash = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5
 /** A very quick ball (145 km/h and up) is drawn as a fireball and a very slow one (under 80) as a snowball; the rest are plain. Looks only. */
 export const FIRE_KMH = 145
 export const ICE_KMH = 80
-export type BallStyle = 'plain' | 'fire' | 'ice'
-export const speedStyle = (kmh: number): BallStyle => (kmh >= FIRE_KMH ? 'fire' : kmh < ICE_KMH ? 'ice' : 'plain')
+/** The rare dragon ball: now and then a quick bowler bowls one far beyond the usual (160 to 200 km/h), drawn as a spiralling dragon in place of the ball and its trail. Looks only. */
+export const DRAGON_KMH = 160
+export type BallStyle = 'plain' | 'fire' | 'ice' | 'dragon'
+export const speedStyle = (kmh: number): BallStyle => (kmh >= DRAGON_KMH ? 'dragon' : kmh >= FIRE_KMH ? 'fire' : kmh < ICE_KMH ? 'ice' : 'plain')
 
 export function ballSpeed(ev: Pick<BallEvent, 'seq' | 'delivery'>, bowler: Pick<Player, 'bowling'>): number {
   const b = bowler.bowling
@@ -28,5 +30,8 @@ export function ballSpeed(ev: Pick<BallEvent, 'seq' | 'delivery'>, bowler: Pick<
   if (len === 'yorker') base += 2
   else if (len === 'short') base += 1
   const spread = (hash(ev.seq * 1.37) - 0.5) * (spin ? 8 : 9)
+  // once in a very long while a quick bowler produces a dragon ball: about one in 300 from a fast bowler, one in 1,200 from a medium one, never from a spinner
+  const chance = type === 'fast' ? 1 / 300 : type === 'medium' ? 1 / 1200 : 0
+  if (chance > 0 && hash(ev.seq * 2.713 + 7.3) < chance) return Math.round(DRAGON_KMH + 40 * hash(ev.seq * 9.11) ** 1.6)
   return Math.round(Math.max(60, Math.min(spin ? 105 : 158, base + spread)))
 }

@@ -1,3 +1,4 @@
+import { DRAGON_KMH } from './speed'
 import type { BallEvent } from './types'
 
 /**
@@ -86,8 +87,11 @@ export function deliveryOf(
 export function deliveryScreen(
   ev: Pick<BallEvent, 'seq' | 'runsBat' | 'boundary' | 'wicket' | 'extraType' | 'legal'>,
   dv: DeliveryLook,
-): 'beamer' | 'yorker' | 'swing' | 'turn' | null {
+  /** The speed of the ball: a dragon ball (see engine/speed.ts) always earns its screen. */
+  kmh?: number,
+): 'beamer' | 'yorker' | 'swing' | 'turn' | 'dragon' | null {
   if (dv.noBallCause === 'beamer') return 'beamer'
+  if (kmh !== undefined && kmh >= DRAGON_KMH && ev.legal && !ev.extraType) return 'dragon'
   if (ev.extraType || ev.wicket || ev.boundary || !ev.legal) return null
   if (dv.length === 'yorker' && ev.runsBat === 0 && hash01(ev.seq * 5.9) < 0.7) return 'yorker'
   if (dv.pace && Math.abs(dv.swing) >= SWING_BIG && hash01(ev.seq * 7.3) < 0.85) return 'swing'

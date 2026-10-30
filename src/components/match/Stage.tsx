@@ -343,7 +343,7 @@ export function Stage({
   const end = event ? endPoint(event, fielders) : HIT
   const six = event?.boundary === 6
   // a free-hit boundary, or a ball bowled very fast, is a fireball; a very slow one is a snowball
-  const bstyle: BallStyle = event?.freeHit && event.boundary ? 'fire' : event ? speedStyle(ballSpeed(event, bowler)) : 'plain'
+  const bstyle: BallStyle = event?.freeHit && event.boundary ? 'fire' : event ? (speedStyle(ballSpeed(event, bowler)) === 'dragon' ? 'fire' : speedStyle(ballSpeed(event, bowler))) : 'plain'
   // a delivery chosen by a person lands where they put it
   const bounce = event?.delivery ? landingSpot(event.delivery) : null
   const wicket = !!event?.wicket

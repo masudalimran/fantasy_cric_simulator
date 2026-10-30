@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Contact } from '../../engine/contact'
 import type { WicketCard } from '../../season/wicketCards'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { BatContact, ContactMeters } from './ContactPanel'
-import { replayCamFor } from './broadcast'
+import { drawnAngles, planBall, replayCamFor } from './broadcast'
+import { endPoint } from './Stage'
 import { Counter, type SixInfo } from './SixReplay'
 import { LENGTH_WORDS, type DeliveryLook } from '../../engine/delivery'
 import { MoveCutIn } from './MoveCutIn'
@@ -230,7 +231,7 @@ export function MissCast({ info }: { info: MissCastInfo }) {
   const compact = w < 520
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={title}>
-      <ReplayFrame base={info.replay} rate={1.5 * r} share={0.56} cam={stumps ? 'stump' : 'side'} tag="Close call" />
+      <ReplayFrame base={info.replay} rate={r} share={0.56} cam={stumps ? 'stump' : 'side'} tag="Close call" near />
       <Bottom from={0.56}>
         <div className="flex h-full items-center gap-3 px-3">
           {stumps ? <StumpsGap miss={m} w={compact ? 96 : 130} /> : <BatGap miss={m} w={compact ? 104 : 140} />}
@@ -378,7 +379,7 @@ export function NoBallCast({ info }: { info: NoBallCastInfo }) {
 
 export interface DeliveryCastInfo {
   replay: ReplayBase
-  screen: 'beamer' | 'yorker' | 'swing' | 'turn'
+  screen: 'beamer' | 'yorker' | 'swing' | 'turn' | 'dragon'
   dv: DeliveryLook
   /** The speed of the ball, km/h. */
   kmh: number
@@ -406,6 +407,7 @@ function Compass({ deg, max, w, color }: { deg: number; max: number; w: number; 
       <motion.path d={`M${cx} ${cy} L${e.x} ${e.y} A ${R} ${R} 0 0 ${a >= 0 ? 1 : 0} ${n.x} ${n.y} Z`} fill={color} opacity="0.35" initial={{ opacity: 0 }} animate={{ opacity: 0.35 }} transition={{ delay: 1.9 }} />
       <line x1={cx} y1={cy} x2={e.x} y2={e.y} stroke="#f8fafc" strokeWidth="1.4" strokeDasharray="3 2.5" />
       <motion.line x1={cx} y1={cy} x2={e.x} y2={e.y} stroke={color} strokeWidth="3" strokeLinecap="round" initial={{ x2: e.x, y2: e.y }} animate={{ x2: n.x, y2: n.y }} transition={{ delay: 1.6, duration: 0.9, type: 'spring', stiffness: 90, damping: 12 }} />
+      {[-1, 1].map((sgn) => <text key={sgn} x={at(sgn * span, R - 17).x} y={at(sgn * span, R - 17).y + 3} textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#94a3b8">{max}°</text>)}
       <circle cx={cx} cy={cy} r="3.4" fill="#f8fafc" />
       <motion.text x={cx} y={cy + 15} textAnchor="middle" fontSize="15" fontWeight="800" fill="#fef3c7" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2 }}>{Math.abs(deg).toFixed(1)}°</motion.text>
     </svg>
@@ -434,33 +436,59 @@ function LengthSide({ dv, w }: { dv: DeliveryLook; w: number }) {
   )
 }
 
+/** The dragon ball's dial: the speed in the middle with a dragon winding round it, its head leading the way. */
+function DragonDial({ kmh, w }: { kmh: number; w: number }) {
+  const turns = 2.6
+  const pts = Array.from({ length: 90 }, (_, i) => { const u = i / 89, a = u * turns * Math.PI * 2, rad = 58 - u * 34; return { x: 70 + Math.cos(a) * rad, y: 70 + Math.sin(a) * rad } })
+  const d = pts.map((q, i) => `${i ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join('')
+  const head = pts[0]
+  return (
+    <svg width={w} height={w} viewBox="0 0 140 140" className="shrink-0" aria-label={`${kmh} kilometres an hour`}>
+      <defs><linearGradient id="dragonBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#dc2626" /><stop offset="0.6" stopColor="#f97316" /><stop offset="1" stopColor="#fde047" /></linearGradient></defs>
+      <g><animateTransform attributeName="transform" type="rotate" from="0 70 70" to="360 70 70" dur="4s" repeatCount="indefinite" />
+        <path d={d} fill="none" stroke="#450a0a" strokeWidth="11" strokeLinecap="round" />
+        <motion.path d={d} fill="none" stroke="url(#dragonBody)" strokeWidth="8" strokeLinecap="round" strokeDasharray="1 0" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.4 }} />
+        <path d={d} fill="none" stroke="#fef9c3" strokeWidth="1.6" strokeDasharray="1 9" strokeLinecap="round" />
+        <g transform={`translate(${head.x} ${head.y}) rotate(35)`}><path d="M-6 -7 L12 0 L-6 7 L-1 0Z" fill="#ea580c" stroke="#450a0a" strokeWidth="1.5" /><path d="M2 -6 L7 -13 L8 -5Z" fill="#fef3c7" /><circle cx="5" cy="-2" r="1.8" fill="#fde047" /><path d="M12 0 Q19 -5 24 0 Q19 5 12 0Z" fill="#fde047" /></g>
+      </g>
+      <text x="70" y="74" textAnchor="middle" className="font-display" fontSize="34" fill="#fff" stroke="#450a0a" strokeWidth="3" paintOrder="stroke">{kmh}</text>
+      <text x="70" y="92" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fed7aa" letterSpacing="2">KM/H</text>
+    </svg>
+  )
+}
+
 /** A delivery worth a second look: a big swing or turn (with a compass), a good yorker, or a beamer above the waist. */
 export function DeliveryCast({ info }: { info: DeliveryCastInfo }) {
   const r = info.rate
   const [box, w] = useWidth()
-  useEffect(() => { const t = window.setTimeout(() => (info.screen === 'beamer' ? sfx.noBall() : sfx.aww(0.5)), 2000 * r); return () => window.clearTimeout(t) }, [r, info.screen])
+  useEffect(() => { const t = window.setTimeout(() => (info.screen === 'beamer' ? sfx.noBall() : info.screen === 'dragon' ? sfx.crowdSix() : sfx.aww(0.5)), 2000 * r); return () => window.clearTimeout(t) }, [r, info.screen])
   const { dv, screen } = info
   const compact = w < 520
-  const deg = screen === 'turn' ? dv.turn : dv.swing
+  // the angle is measured from the path the clip draws, so the number matches what is seen
+  const drawn = useMemo(() => {
+    const b = info.replay
+    return drawnAngles(planBall(b.event, b.fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(b.event, b.fielders), b.striker.hand === 'L', info.kmh, { bowler: info.bowler, overcast: b.look.weather === 'overcast' }))
+  }, [info.replay, info.kmh, info.bowler])
+  const deg = screen === 'turn' ? drawn.turn : drawn.swing
   // "in" is towards the batsman's body (to his leg side), "away" towards the slips
   const into = (deg > 0) !== info.left
-  const title = screen === 'beamer' ? 'BEAMER!' : screen === 'yorker' ? 'YORKER!' : screen === 'swing' ? 'SWING!' : 'TURN!'
-  const color = screen === 'beamer' ? '#ef4444' : screen === 'yorker' ? '#38bdf8' : screen === 'swing' ? '#fb923c' : '#a3e635'
+  const title = screen === 'dragon' ? 'DRAGON BALL!' : screen === 'beamer' ? 'BEAMER!' : screen === 'yorker' ? 'YORKER!' : screen === 'swing' ? 'SWING!' : 'TURN!'
+  const color = screen === 'dragon' ? '#fb923c' : screen === 'beamer' ? '#ef4444' : screen === 'yorker' ? '#38bdf8' : screen === 'swing' ? '#fb923c' : '#a3e635'
   const first = info.bowler.name.split(' ')[0]
-  const line = screen === 'beamer' ? `${dv.height.toFixed(1)} m high as it reached the batsman: above the waist, so a no ball.`
+  const line = screen === 'dragon' ? `${info.kmh} km/h: a molten dragon, faster than any human has ever bowled.` : screen === 'beamer' ? `${dv.height.toFixed(1)} m high as it reached the batsman: above the waist, so a no ball.`
     : screen === 'yorker' ? `Pitched ${Math.abs(dv.pitchZ ?? 0).toFixed(1)} m in front of the stumps, right at the toes · ${info.kmh} km/h`
-    : screen === 'swing' ? `${Math.abs(dv.swing).toFixed(1)}° of swing, ${into ? 'in towards the batsman' : 'away from the batsman'} · ${info.kmh} km/h`
-    : `${Math.abs(dv.turn).toFixed(1)}° of turn off the pitch, ${into ? 'in towards the batsman' : 'away from the batsman'} · ${info.kmh} km/h`
-  const sub = screen === 'beamer' ? `+1 run and a free hit next. ${first} will want that one back.`
+    : screen === 'swing' ? `${Math.abs(deg).toFixed(1)}° of swing, ${into ? 'in towards the batsman' : 'away from the batsman'} · ${info.kmh} km/h`
+    : `${Math.abs(deg).toFixed(1)}° of turn off the pitch, ${into ? 'in towards the batsman' : 'away from the batsman'} · ${info.kmh} km/h`
+  const sub = screen === 'dragon' ? `${first} unleashed a dragon, and ${info.batsman.name} never saw it.` : screen === 'beamer' ? `+1 run and a free hit next. ${first} will want that one back.`
     : screen === 'yorker' ? `${info.batsman.name} just got his bat down in time.`
     : screen === 'swing' ? `${first} is getting it to talk through the air.` : `${first} is getting it to bite and turn.`
-  const cam = screen === 'beamer' ? 'side' : screen === 'yorker' ? 'stump' : 'high'
+  const cam = screen === 'beamer' || screen === 'dragon' ? 'side' : screen === 'yorker' ? 'stump' : 'high'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={title}>
-      <ReplayFrame base={info.replay} rate={1.3 * r} share={0.56} cam={cam} trace={screen === 'swing' || screen === 'turn'} tag={screen === 'swing' ? 'Swing' : screen === 'turn' ? 'Turn' : LENGTH_WORDS[dv.length]} />
+      <ReplayFrame base={info.replay} rate={1.3 * r} share={0.56} cam={cam} trace={screen === 'swing' || screen === 'turn'} tag={screen === 'dragon' ? 'Dragon ball' : screen === 'swing' ? 'Swing' : screen === 'turn' ? 'Turn' : LENGTH_WORDS[dv.length]} />
       <Bottom from={0.56}>
         <div className="flex h-full items-center gap-3 px-3">
-          {screen === 'swing' || screen === 'turn' ? <Compass deg={deg} max={screen === 'swing' ? 5 : 12} w={compact ? 112 : 150} color={color} /> : <LengthSide dv={dv} w={compact ? 118 : 156} />}
+          {screen === 'dragon' ? <DragonDial kmh={info.kmh} w={compact ? 112 : 150} /> : screen === 'swing' || screen === 'turn' ? <Compass deg={deg} max={screen === 'swing' ? 12 : 20} w={compact ? 112 : 150} color={color} /> : <LengthSide dv={dv} w={compact ? 118 : 156} />}
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
             <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 28 : 40, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: `0 0 16px ${color}` }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>{title}</motion.div>
             <motion.div className="text-xs font-extrabold leading-tight sm:text-sm" style={{ color }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.3 * r }}>{line}</motion.div>

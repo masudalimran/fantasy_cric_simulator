@@ -5,7 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
-import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene, type Scene } from './broadcastDraw'
@@ -20,6 +20,10 @@ import { Body, type Kit, type Rig } from './Body'
 import { batsmanPose, bowlerPose, breathe, clamp01, fielderPose, nonStrikerPose, umpirePose } from './bodyPose'
 import { flavorOfTeam } from '../../data/flavors'
 import { auraOf, weaponOf } from '../../data/weapons'
+
+/** The dragon's head (drawn in code, facing right) that takes a dragon ball's place: green scales, gold horns and a flame from the mouth. */
+const DRAGON_SVG = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 44'><defs><linearGradient id='l' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#fde047'/><stop offset='0.45' stop-color='#f97316'/><stop offset='1' stop-color='#b91c1c'/></linearGradient></defs><path d='M68 22 Q80 8 74 4 Q84 20 78 22 Q84 26 74 40 Q80 36 68 22Z' fill='#fb923c'/><path d='M70 22 Q76 15 72 12 Q78 20 75 22 Q78 24 72 32 Q76 28 70 22Z' fill='#fef08a'/><path d='M4 22 C12 8 28 6 42 10 L60 7 L54 17 L66 22 L52 26 L58 36 L40 31 C26 38 12 34 4 22Z' fill='url(#l)' stroke='#450a0a' stroke-width='1.8'/><path d='M12 20 L20 16 L18 22 L28 18 L26 25 L36 20' fill='none' stroke='#1c0a04' stroke-width='1.6' stroke-linejoin='round'/><path d='M26 9 L36 -1 L37 10Z' fill='#fef3c7' stroke='#7c2d12' stroke-width='1'/><path d='M16 12 L22 3 L24 11Z' fill='#fef3c7' stroke='#7c2d12' stroke-width='1'/><circle cx='42' cy='17' r='3.6' fill='#fff7ed'/><circle cx='43' cy='17' r='1.6' fill='#dc2626'/><path d='M44 28 L50 30 L46 26Z' fill='#fff'/></svg>"
+const DRAGON_HEAD = `center / contain no-repeat url("data:image/svg+xml,${encodeURIComponent(DRAGON_SVG)}")`
 
 /**
  * The broadcast view: the match as it looks on TV. The camera stands behind the bowler, zooms in as he runs up, follows the ball after the bat,
@@ -84,7 +88,7 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   if (!on) return null
   return (
     <div className="pointer-events-none absolute right-2 top-9 z-[6001] flex items-baseline gap-1 rounded bg-black/80 px-2 py-0.5 ring-1 ring-sky-300/50 max-sm:right-1 max-sm:top-8">
-      <span className={`font-display text-xl leading-none tabular-nums ${speedStyle(kmh) === 'fire' ? 'text-orange-400' : speedStyle(kmh) === 'ice' ? 'text-cyan-200' : 'text-sky-300'}`}>{kmh}</span>{speedStyle(kmh) === 'fire' && <span className="text-sm" aria-hidden>🔥</span>}{speedStyle(kmh) === 'ice' && <span className="text-sm" aria-hidden>❄️</span>}
+      <span className={`font-display text-xl leading-none tabular-nums ${speedStyle(kmh) === 'dragon' ? 'text-orange-300' : speedStyle(kmh) === 'fire' ? 'text-orange-400' : speedStyle(kmh) === 'ice' ? 'text-cyan-200' : 'text-sky-300'}`}>{kmh}</span>{(speedStyle(kmh) === 'dragon' || speedStyle(kmh) === 'fire') && <span className="text-sm" aria-hidden>{speedStyle(kmh) === 'dragon' ? '🌋' : '🔥'}</span>}{speedStyle(kmh) === 'ice' && <span className="text-sm" aria-hidden>❄️</span>}
       <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-300">km/h</span>
     </div>
   )
@@ -94,7 +98,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   /** Play the clip so that it finishes in this many seconds, whatever its length (every ball of a highlight reel is shown to the end). */
   fitSeconds?: number
   /** Set when this is a replay inside an animation screen: it uses another camera and plays with slow motion around the shot, so it looks different from the live picture. */
-  replay?: { cam: ReplayCam; slowMo?: boolean; /** Deeper slow motion (a four or a six). */ deep?: boolean; /** Draw the path the ball took in the air and off the pitch, against the straight line (swing and turn). */ trace?: boolean } | null
+  replay?: { cam: ReplayCam; slowMo?: boolean; /** Deeper slow motion (a four or a six). */ deep?: boolean; /** Draw the path the ball took in the air and off the pitch, against the straight line (swing and turn). */ trace?: boolean; /** A close call: normal speed, then slow motion and a zoom as the ball passes the stumps or the bat. */ near?: boolean } | null
   /** How worn the pitch is, 0 to 1 (a Test builds it up over the five days). */
   wear?: number
   /** The commentary line of this ball, written along the top once the bat has met it. */
@@ -135,7 +139,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
-  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep])
+  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.near ? withNearSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep, replay?.near])
   // the path of the delivery against the straight line, for the swing and turn replays
   const trace = useMemo(() => {
     if (!replay?.trace || !event) return null
@@ -146,7 +150,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const traceRef = useRef(trace)
   traceRef.current = trace
   const rate = fitSeconds ? Math.max(0.2, Math.min(3, fitSeconds / plan.realTotal)) : rateProp
-  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (Math.sign(plan0.end.x - plan0.meet.x) || undefined) as 1 | -1 | undefined) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
+  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (plan0.stanceX > 0 ? -1 : 1) as 1 | -1) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
   void 0 // eslint-disable-line react-hooks/exhaustive-deps
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
@@ -155,11 +159,13 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     () => (event && !event.review && !fitSeconds && getAnimPrefs().moves ? moveForBall(event, striker, battingTeam, bowler, bowlingTeam) : null),
     [event?.seq, fitSeconds, striker.id, bowler.id, battingTeam.id, bowlingTeam.id], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show })
-  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show }
+  const near = !!replay?.near
+  const live = useRef({ plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show, near })
+  live.current = { plan, rest, event, striker, nonStriker, bowler, fielders, battingTeam, pitch, fire, rate, look, wear, replayCam, show, near }
   const cam = useRef<Cam>({ ...camWide, p: { ...camWide.p } })
   const lastT = useRef(0)
   const reverseNow = useRef(false)
+  const dragonAng = useRef(0) // which way the dragon head is flying (so it does not flick back when the ball moves straight at the camera)
   const cutAt = useRef(-99) // when the picture last cut to another camera (real seconds), for the focus pull
   const blurNow = useRef(0)
 
@@ -195,8 +201,11 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       const focus = L.replayCam?.focus
-      const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : focus ?? f.aim
-      const hfovAt = covers0 ? 0.8 : focus ? L.replayCam!.cam.hfov : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
+      // a close call in slow motion: a moderate zoom (the stump cam from 56° to 26°, the side camera from 34° to 13°) on the stumps or the bat, so the ball and how near it went can still be seen
+      const nearZoom = L.near && f.slowmo && !!L.replayCam
+      const nearStump = nearZoom && !!L.replayCam?.keepWide
+      const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : nearStump ? { x: L.plan.meet.x * 0.5, y: 0.45, z: -0.45 } : focus ?? f.aim
+      const hfovAt = covers0 ? 0.8 : focus ? (f.slowmo ? (15 * Math.PI) / 180 : L.replayCam!.cam.hfov) : nearZoom ? (L.replayCam!.keepWide ? 26 : 13) * (Math.PI / 180) : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
       const c = cam.current
       let goal = lookAt(base.p, aimAt)
       if (L.replayCam?.overhead) {
@@ -215,7 +224,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // a very quick ball is a fireball and a very slow one a snowball while it is bowled; after the bat only a free-hit boundary is on fire
       const delivering = f.phase === 'run' || f.phase === 'deliver'
       const style: BallStyle = delivering ? speedStyle(L.plan.speed) : L.fire ? 'fire' : 'plain'
-      if (f.ball) { trail.push(f.ball); if (trail.length > 14) trail.shift() } else trail.length = 0
+      if (f.ball) { trail.push(f.ball); if (trail.length > (style === 'dragon' ? 40 : 14)) trail.shift() } else trail.length = 0
       // when rain has stopped play (or the day is washed out) the covers are on and nobody is on the field
       const covers = L.look.covers || (L.event === null && L.look.rain === 2)
       // the crowd is on its feet for boundaries and wickets (the picture itself stays steady so the play is easy to follow)
@@ -376,8 +385,21 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             ball.style.boxShadow = style === 'fire' ? '0 0 14px 5px #f97316, 0 0 26px 10px #ef444488' : style === 'ice' ? '0 0 12px 4px #7dd3fc, 0 0 22px 8px #bae6fd88' : '0 0 6px #00000088'
           }
           const sz = Math.max(style === 'plain' ? 5 : 9, (r.F * (style === 'plain' ? 0.24 : 0.36)) / bp.d) * (moveDraw ? 1.8 : 1)
+          // a dragon ball: the dragon's head takes the ball's place, turned the way it is flying
+          const dragon = style === 'dragon' && !moveDraw
+          let sd = sz, ang = 0
+          if (dragon) {
+            sd = Math.max(30, (r.F * 1.5) / bp.d)
+            const pa = trail.length > 1 ? project(r, trail[trail.length - 2]) : null
+            if (pa && Math.hypot(bp.x - pa.x, bp.y - pa.y) > 0.6) dragonAng.current = Math.atan2(bp.y - pa.y, bp.x - pa.x)
+            ang = dragonAng.current
+            ball.style.background = DRAGON_HEAD
+            ball.style.borderColor = 'transparent'
+            ball.style.boxShadow = 'none'
+            ball.style.filter = 'drop-shadow(0 0 6px #f97316) drop-shadow(0 0 14px #ef4444)'
+          } else if (ball.style.filter) ball.style.filter = ''
           ball.style.display = 'block'
-          ball.style.width = ball.style.height = `${sz.toFixed(1)}px`
+          ball.style.width = ball.style.height = `${sd.toFixed(1)}px`
           let bx = hand && held > 0 ? bp.x + (hand.x - bp.x) * held : bp.x, by = hand && held > 0 ? bp.y + (hand.y - bp.y) * held : bp.y
           // the bat meets the ball: for a moment the ball is exactly on the blade, wherever the shot has put it (the ball is drawn at a fixed spot in the world, the bat is where the pose has swung it)
           let hitAt: { x: number; y: number } | null = null
@@ -392,7 +414,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
               if (wC > 0.4) shadow.style.display = 'none'
             }
           }
-          ball.style.transform = `translate3d(${(bx - sz / 2).toFixed(1)}px,${(by - sz / 2).toFixed(1)}px,0)`
+          // the ball striking the pad (an lbw, or a leg bye) flashes where it lands, too
+          if (!hitAt && ev && (L.plan.kind === 'pad' || ev.extraType === 'legbye')) hitAt = { x: bx, y: by }
+          ball.style.transform = `translate3d(${(bx - sd / 2).toFixed(1)}px,${(by - sd / 2).toFixed(1)}px,0)${dragon ? ` rotate(${ang.toFixed(3)}rad)` : ''}`
           // a flash where the bat meets the ball (bigger for a bigger shot)
           const imp = nodes.current.get('impact')
           if (imp) {

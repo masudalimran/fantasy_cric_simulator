@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { fieldPlan } from '../components/match/fieldSets'
-import { frameAt, planBall } from '../components/match/broadcast'
+import { BAT_END_Z, drawnAngles, frameAt, hops, planBall, replayCamera, withNearSlow } from '../components/match/broadcast'
 import { endPoint, placeFielders } from '../components/match/Stage'
 import { deliveryOf, deliveryScreen, isPoorLength, SWING_BIG, TURN_BIG, type LengthKind } from './delivery'
 import { Match } from './match'
@@ -141,5 +141,85 @@ describe('the clip of a ball shows how it was bowled', () => {
     }
     expect(seenSwing).toBeGreaterThanOrEqual(3)
     expect(seenTurn).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('what happens after the bat or pad, and the replay cameras', () => {
+  const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed: 5 })
+  m.playMatch()
+  const inn = m.innings[0]
+  const bowlSide = m.sides[1 - inn.battingSide]
+  const base = inn.log.find((x) => x.legal && !x.extraType && !x.wicket && !x.boundary && x.runsBat === 0)!
+  const planWith = (e: object, hand?: boolean) => {
+    const ev2 = { ...base, ...e } as typeof base
+    const striker = m.player(ev2.strikerId)
+    const p0 = fieldPlan({ format: 't20', over: ev2.over, maxOvers: 20, runs: ev2.score.runs, legalBalls: ev2.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+    const fielders = placeFielders(bowlSide.xi, ev2.bowlerId, p0.spots)
+    return planBall(ev2, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev2, fielders), hand ?? striker.hand === 'L', 135, { bowler: m.player(ev2.bowlerId) })
+  }
+  const none = () => ({ x: 0, y: 0, z: 0 })
+
+  it('an lbw is the ball hitting the front pad, low and right in front of the batsman, and it drops there', () => {
+    for (const left of [false, true]) {
+      const p = planWith({ wicket: { kind: 'lbw', playerId: base.strikerId } }, left)
+      expect(p.kind).toBe('pad')
+      expect(Math.sign(p.meet.x)).toBe(left ? -1 : 1) // at his legs, not at the stumps behind him
+      expect(p.meet.y).toBeLessThan(0.5)
+      expect(p.meet.z).toBeLessThan(BAT_END_Z) // in front of him
+      const after = frameAt(p, p.tRun + p.tDeliver + p.tFlight * 0.8, none).ball!
+      expect(after.y).toBeLessThan(0.3) // it has dropped to the ground
+    }
+  })
+  it('after a hit the ball bounces more than once, each bounce lower than the last', () => {
+    const peaks: number[] = []
+    let prev = 0, up = true
+    for (let s = 0.001; s < 1; s += 0.002) { const y = hops(s, 0, 0.42, 0.3); if (up && y < prev) { peaks.push(prev); up = false } else if (!up && y > prev) up = true; prev = y }
+    expect(peaks.length).toBeGreaterThanOrEqual(3)
+    for (let i = 1; i < peaks.length; i++) expect(peaks[i]).toBeLessThan(peaks[i - 1])
+    expect(hops(0.99, 0, 0.42, 0.3)).toBeLessThan(0.02) // rolling at the end
+  })
+  it('on a four or a six the batsmen set off for a run, pull up and walk back', () => {
+    for (const boundary of [4, 6] as const) {
+      const p = planWith({ boundary, runsBat: boundary, extraType: null })
+      expect(p.runs).toBe(0)
+      const t2 = p.tRun + p.tDeliver
+      const early = frameAt(p, t2 + 0.15, none).runners
+      expect(early).toBeNull() // not yet: he is still finishing the shot
+      let farthest = 0
+      for (let t = t2 + 0.3; t < t2 + 3; t += 0.05) { const r = frameAt(p, t, none).runners; if (r) farthest = Math.max(farthest, Math.abs(r.a.z - BAT_END_Z)) }
+      expect(farthest).toBeGreaterThan(2) // they did run
+      expect(farthest).toBeLessThan(14) // but only part of the way
+      expect(frameAt(p, t2 + 3.5, none).runners).toBeNull() // and are back home
+    }
+  })
+  it('the close-call replay is slow and zoomed only around the moment the ball passes', () => {
+    const p = withNearSlow(planWith({}))
+    const t2 = p.tRun + p.tDeliver
+    expect(p.slow!.at).toBeLessThan(t2)
+    expect(p.slow!.at + p.slow!.len).toBeGreaterThan(t2)
+    expect(p.slow!.len).toBeLessThan(1)
+    expect(frameAt(p, p.tRun * 0.5, none).slowmo).toBe(false)
+    expect(frameAt(p, t2, none).slowmo).toBe(true)
+    expect(frameAt(p, t2 + 1.5, none).slowmo).toBe(false)
+  })
+  it('the side camera is always on the side the batsman faces', () => {
+    for (const hand of [false, true]) {
+      const p = planWith({}, hand)
+      const dir = (p.stanceX > 0 ? -1 : 1) as 1 | -1
+      expect(Math.sign(replayCamera('side', 3, dir).cam.p.x)).toBe(dir)
+      expect(dir).toBe(hand ? 1 : -1) // off side for a right-hander, leg side for a left-hander
+    }
+  })
+  it('the angle shown for swing and turn is measured from the drawn path, so it is never smaller than it looks', () => {
+    let seen = 0
+    for (let seq = 1; seq <= 600 && seen < 6; seq++) {
+      const p = planWith({ seq })
+      if (Math.abs(p.delivery.swing) < SWING_BIG || p.bounceU > 0.98) continue
+      const a = drawnAngles(p)
+      expect(Math.abs(a.swing)).toBeGreaterThan(Math.abs(p.delivery.swing)) // the drawn bow is sharper than the bare setting
+      expect(Math.sign(a.swing)).toBe(Math.sign(p.delivery.swing))
+      seen++
+    }
+    expect(seen).toBeGreaterThan(0)
   })
 })

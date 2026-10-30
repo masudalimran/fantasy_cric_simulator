@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
-import { ExtraScreen, FourScreen, MaidenScreen, type ExtraInfo, type FourInfo, type MaidenInfo } from './EventScreens'
+import { ExtraScreen, FourScreen, MaidenScreen, TiredScreen, type ExtraInfo, type FourInfo, type MaidenInfo, type TiredInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { AmbientScreen, type AmbientInfo } from './AmbientScreens'
 import { CheerScreen, type CheerInfo } from './CheerScreen'
@@ -28,11 +28,13 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast' | 'misscast' | 'almostcast' | 'deliverycast'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast' | 'misscast' | 'almostcast' | 'deliverycast' | 'tired'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
   maiden?: MaidenInfo
+  /** Three runs: the batsman is worn out. */
+  tired?: TiredInfo
   /** For a free hit: who overstepped and who gets the swing. */
   freeHit?: FreeHitInfo
   /** The bowler's big moments: three in three balls, and five wickets. */
@@ -235,7 +237,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
       </motion.div>
     )
   }
-  const small = (moment.kind === 'four' && moment.four) || (moment.kind === 'extra' && moment.extra) || (moment.kind === 'maiden' && moment.maiden)
+  const small = (moment.kind === 'four' && moment.four) || (moment.kind === 'extra' && moment.extra) || (moment.kind === 'maiden' && moment.maiden) || (moment.kind === 'tired' && moment.tired)
   if (small) {
     return (
       <motion.div
@@ -245,6 +247,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         {moment.kind === 'four' && moment.four && <FourScreen info={moment.four} />}
         {moment.kind === 'extra' && moment.extra && <ExtraScreen info={moment.extra} />}
         {moment.kind === 'maiden' && moment.maiden && <MaidenScreen info={moment.maiden} />}
+        {moment.kind === 'tired' && moment.tired && <TiredScreen info={moment.tired} />}
       </motion.div>
     )
   }

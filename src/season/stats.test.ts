@@ -82,7 +82,7 @@ describe('season stats', () => {
     const c = collect(done)
     const tops = [...c.bowl.values()].map((b) => b.topKmh)
     expect(Math.max(...tops)).toBeGreaterThan(120)
-    expect(Math.max(...tops)).toBeLessThan(160)
+    expect(Math.max(...tops)).toBeLessThanOrEqual(200)
     for (const b of c.bowl.values()) expect(b.topKmh).toBeGreaterThan(55)
     const rec = seasonRecords(done).find((r) => r.label === 'Fastest ball')
     expect(rec?.value).toBe(`${Math.max(...tops)} km/h`)

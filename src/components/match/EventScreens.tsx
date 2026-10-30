@@ -283,3 +283,40 @@ export function MaidenScreen({ info }: { info: MaidenInfo }) {
     </div>
   )
 }
+
+
+// ---- Three runs: the batsman is worn out --------------------------------------------------------------------------------------
+
+export interface TiredInfo { batsman: Player; batTeam: Team; rate: number }
+export const TIRED_SECONDS = 3.8
+
+/** Three runs were run: the batsman bends over, panting, sweat flying, the stamina bar draining. */
+export function TiredScreen({ info }: { info: TiredInfo }) {
+  const { batsman, batTeam, rate: r } = info
+  const { box, w } = useWidth()
+  const size = Math.max(58, Math.min(w * 0.18, 104))
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl" aria-label="Three runs, worn out">
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 55%, #7c2d12, #1c0a04 78%)' }} />
+      <Tag text="Three runs" color="#fb923c" />
+      <SkipTag />
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 px-4 text-center">
+        <div className="relative">
+          <motion.span className="inline-block rounded-full leading-[0]" style={{ boxShadow: `0 0 0 4px ${accentOf(batTeam)}, 0 0 26px #fb923c88` }} initial={{ y: -8, scale: 0.7, opacity: 0 }} animate={{ y: [0, 7, 0], scale: [1, 1.05, 1], opacity: 1, rotate: [0, -4, 0, 4, 0] }} transition={{ y: { duration: 0.7 * r, repeat: Infinity }, scale: { duration: 0.7 * r, repeat: Infinity }, rotate: { duration: 1.4 * r, repeat: Infinity }, opacity: { duration: 0.3 } }}>
+            <PlayerAvatar player={batsman} team={batTeam} size={size} />
+          </motion.span>
+          {[-1, 0, 1].map((k) => <motion.span key={k} className="absolute text-xl" style={{ left: `${50 + k * 38}%`, top: '8%' }} initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 1, 0], y: [0, size * 0.7] }} transition={{ delay: (0.3 + (k + 1) * 0.25) * r, duration: 0.9 * r, repeat: Infinity, repeatDelay: 0.2 }} aria-hidden>💧</motion.span>)}
+          {[-1, 1].map((k) => <motion.span key={`p${k}`} className="absolute text-2xl" style={{ [k < 0 ? 'right' : 'left']: '102%', top: '45%' }} initial={{ opacity: 0, x: 0 }} animate={{ opacity: [0, 0.9, 0], x: [0, k * 26], scale: [0.7, 1.3] }} transition={{ delay: 0.5 * r + (k < 0 ? 0 : 0.4), duration: 1.1 * r, repeat: Infinity }} aria-hidden>💨</motion.span>)}
+        </div>
+        <div className="w-full max-w-[16rem]">
+          <div className="mb-0.5 flex justify-between text-[10px] font-extrabold uppercase tracking-wider text-orange-200"><span>Stamina</span><span>Gasping</span></div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-black/50 ring-1 ring-white/10">
+            <motion.div className="h-full rounded-full" initial={{ width: '100%', backgroundColor: '#4ade80' }} animate={{ width: '14%', backgroundColor: ['#4ade80', '#facc15', '#ef4444'] }} transition={{ delay: 0.3 * r, duration: 1.8 * r }} />
+          </div>
+        </div>
+        <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: Math.max(36, Math.min(w * 0.12, 80)), WebkitTextStroke: '2px #431407', paintOrder: 'stroke fill', textShadow: '0 0 26px #fb923caa' }} initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 260, damping: 15 }}>EXHAUSTED!</motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 * r }} className="text-sm font-semibold text-slate-100"><b className="text-orange-300">{batsman.name}</b> ran three and has to stop to catch a breath.</motion.div>
+      </div>
+    </div>
+  )
+}

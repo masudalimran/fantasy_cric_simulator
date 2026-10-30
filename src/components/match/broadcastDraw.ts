@@ -32,7 +32,7 @@ export interface Scene {
   stumpsBowl: number
   /** The ball's last few places, oldest first, for the trail; and whether it is a fireball or a snowball. */
   trail: V3[]
-  style: 'plain' | 'fire' | 'ice'
+  style: 'plain' | 'fire' | 'ice' | 'dragon'
   /** A signature move going on (a six off the bat, a bowler's wicket). */
   move?: MoveDraw | null
   /** TV graphics on the ground for a replay: the wide line, or the popping crease with how far over the front foot landed. */
@@ -221,8 +221,29 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       }
     }
   }
+  // a dragon ball: two molten-lava serpents winding round each other behind the dragon's head, embers glinting
+  if (sc.style === 'dragon' && sc.trail.length > 2) {
+    const pts = sc.trail.map((v) => project(r, v))
+    for (let strand = 0; strand < 2; strand++) {
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i]
+        if (!a || !b) continue
+        const f = i / pts.length
+        const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1
+        const amp = 0.42 * r.F * f / b.d + 2
+        const ph = i * 0.62 - sc.tick * 15 + strand * Math.PI
+        const ox = (-dy / len) * Math.sin(ph) * amp, oy = (dx / len) * Math.sin(ph) * amp
+        const pa = i > 1 ? Math.sin((i - 1) * 0.62 - sc.tick * 15 + strand * Math.PI) * amp : 0
+        ctx.strokeStyle = strand === 0 ? `rgba(${f > 0.55 ? '254,240,138' : '249,115,22'},${0.2 + f * 0.75})` : `rgba(${f > 0.55 ? '251,146,60' : '185,28,28'},${0.2 + f * 0.75})`
+        ctx.lineWidth = Math.max(1.5, 0.34 * r.F * f / b.d)
+        ctx.lineCap = 'round'
+        ctx.beginPath(); ctx.moveTo(a.x + (-dy / len) * pa, a.y + (dx / len) * pa); ctx.lineTo(b.x + ox, b.y + oy); ctx.stroke()
+        if (i % 3 === 0 && f > 0.3) { ctx.fillStyle = `rgba(255,237,160,${0.3 + f * 0.6})`; ctx.beginPath(); ctx.arc(b.x + ox, b.y + oy, Math.max(1, 0.1 * r.F * f / b.d), 0, Math.PI * 2); ctx.fill() }
+      }
+    }
+  }
   // the ball's trail
-  if (sc.trail.length > 1) {
+  if (sc.trail.length > 1 && sc.style !== 'dragon') {
     for (let i = 1; i < sc.trail.length; i++) {
       const a = project(r, sc.trail[i - 1]), b = project(r, sc.trail[i])
       if (!a || !b) continue

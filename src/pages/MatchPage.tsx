@@ -10,6 +10,7 @@ import { MobileNowPlaying, NowPlaying } from '../components/match/NowPlaying'
 import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
+import { TIRED_SECONDS } from '../components/match/EventScreens'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
 import { eventAngle } from '../engine/shots'
 import { getAnimPrefs, getBroadcastView, setManualPlay, useManualPlay, useSwipeAim } from '../prefs'
@@ -542,10 +543,15 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         }
         // how the ball was bowled: a big swing or turn (with a compass), a good yorker that was kept out
         const dvl = prefs.delivery ? deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' }) : null
-        const dscreen = dvl ? deliveryScreen(lastEv, dvl) : null
+        const dscreen = dvl ? deliveryScreen(lastEv, dvl, ballSpeed(lastEv, match.player(lastEv.bowlerId))) : null
         if (dvl && dscreen && dscreen !== 'beamer') {
           const bowlerNow2 = match.player(lastEv.bowlerId)
           enqueueMoment({ key: lastEv.seq + 0.48, kind: 'deliverycast', player: bowlerNow2, team: bowlS.team, title: dscreen.toUpperCase(), lines: [], delay, ms: Math.round(DELIVERY_CAST_SECONDS * 1000 * rate), deliveryCast: { replay: replayBase(lastEv), screen: dscreen, dv: dvl, kmh: ballSpeed(lastEv, bowlerNow2), batsman: match.player(lastEv.strikerId), bowler: bowlerNow2, bowlTeam: bowlS.team, left: match.player(lastEv.strikerId).hand === 'L', rate } })
+        }
+        // three runs run: the batsman is worn out
+        if (prefs.cheer && !lastEv.wicket && !lastEv.boundary && lastEv.total === 3 && lastEv.legal) {
+          const tiredBat = match.player(lastEv.strikerId)
+          enqueueMoment({ key: lastEv.seq + 0.56, kind: 'tired', player: tiredBat, team: batT, title: 'EXHAUSTED!', lines: [], delay, ms: Math.round(TIRED_SECONDS * 1000 * rate), tired: { batsman: tiredBat, batTeam: batT, rate } })
         }
         if (prefs.extras && lastEv.tags.includes('maiden')) {
           const ln = innNow.bowlers.get(lastEv.bowlerId)

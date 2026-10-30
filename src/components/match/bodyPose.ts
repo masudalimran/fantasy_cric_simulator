@@ -157,7 +157,7 @@ export function solve(p: Pose, batLen = BAT_LEN): Skeleton {
 
 // ---- what kind of shot a ball got ------------------------------------------------------------------------------------------
 
-export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave'
+export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave' | 'hook' | 'upper' | 'glance' | 'slog' | 'paddle'
 
 /**
  * Which shot the batsman plays, from where the ball went and how it was bowled. For show only: the same ball, the same result, whatever he is
@@ -173,16 +173,20 @@ export function classifyShot(c: { swing: boolean; wide: boolean; runsBat: number
   const full = c.length > -4.5
   const dist = Math.hypot(c.side, c.ahead)
   if (c.runsBat === 0 && dist < 12) return 'defend'
-  if (c.boundary === 6) return short && c.side > 4 ? 'pull' : 'loft'
+  if (c.boundary === 6) return short && c.side > 4 ? (c.seq % 2 === 0 ? 'hook' : 'pull') : c.side > 6 && !short && c.seq % 3 === 0 ? 'slog' : 'loft'
   const behind = c.ahead < -3
   if (behind) {
+    // a hook off a quick, short ball that goes in the air to fine leg, an upper cut over the slips, and a soft glance or a ghosted dab behind the wicket
+    if (c.air && short && c.speed >= 125 && c.side > 3 && c.seq % 2 === 1) return 'hook'
+    if (c.air && short && c.side < -2 && c.seq % 2 === 0) return 'upper'
+    if (!c.air && Math.abs(c.side) <= 6 && c.seq % 3 !== 1) return 'glance'
     // behind the wicket: a ramp over the keeper off a quick short ball, a scoop off a full one down the leg side, a reverse sweep off a spinner, otherwise a cut, a glance or a pull
     if (c.air && short && c.speed >= 125 && c.side <= 6 && c.seq % 2 === 0) return 'ramp'
     if (c.air && c.length > -3.2 && c.side > 3 && c.ahead < -8 && c.seq % 2 === 1) return 'scoop'
     if (c.speed < 105 && c.side < -2 && c.seq % 3 === 0) return 'reverse'
     return c.side > 3 && short ? 'pull' : c.side > 3 ? 'flick' : 'cut'
   }
-  if (c.side > 4) return short ? 'pull' : c.speed < 105 && !full && c.seq % 2 === 0 ? 'sweep' : 'flick'
+  if (c.side > 4) return short ? (c.air && c.speed >= 125 && c.seq % 3 === 0 ? 'hook' : 'pull') : c.speed < 105 && !full && c.seq % 2 === 0 ? (c.ahead < 4 && c.seq % 4 === 0 ? 'paddle' : 'sweep') : c.air && c.seq % 3 === 0 ? 'slog' : 'flick'
   if (c.air && c.boundary === 4 && c.seq % 2 === 0) return 'loft'
   if (c.side < -9 && short) return 'cut'
   // down the ground: a straight drive, upright, otherwise a drive through the off side
@@ -258,6 +262,31 @@ const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
     c: batPose({ x: 31, y: 101 }, -9, { x: -3, y: 27 }, 2, { x: 15, y: 117 }, { x: 45, y: 116 }, -5),
     f: batPose({ x: 31, y: 98 }, -14, { x: 7, y: -4 }, -148, { x: 17, y: 117 }, { x: 45, y: 114 }, -7),
   },
+  hook: {
+    b: batPose({ x: 30, y: 89 }, -2, { x: -6, y: -2 }, 130, { x: 20, y: 117 }, { x: 40, y: 117 }),
+    c: batPose({ x: 30, y: 88 }, -10, { x: 6, y: -4 }, -112, { x: 20, y: 116 }, { x: 40, y: 117 }, -6),
+    f: batPose({ x: 30, y: 88 }, -14, { x: 12, y: -14 }, -168, { x: 24, y: 117 }, { x: 38, y: 112 }, -8),
+  },
+  upper: {
+    b: batPose({ x: 30, y: 89 }, -2, { x: -8, y: 3 }, 168, { x: 20, y: 117 }, { x: 40, y: 117 }),
+    c: batPose({ x: 31, y: 88 }, -8, { x: -14, y: -2 }, 108, { x: 14, y: 117 }, { x: 45, y: 114 }, -4),
+    f: batPose({ x: 31, y: 88 }, -10, { x: -10, y: -12 }, 140, { x: 13, y: 117 }, { x: 46, y: 112 }, -5),
+  },
+  glance: {
+    b: LIFT,
+    c: batPose({ x: 29, y: 91 }, 6, { x: 5, y: 21 }, -18, { x: 20, y: 118 }, { x: 40, y: 116 }),
+    f: batPose({ x: 29, y: 90 }, 8, { x: 9, y: 15 }, -46, { x: 21, y: 118 }, { x: 40, y: 115 }),
+  },
+  slog: {
+    b: batPose({ x: 30, y: 90 }, -3, { x: -8, y: 0 }, 170, { x: 19, y: 117 }, { x: 41, y: 117 }),
+    c: batPose({ x: 30, y: 92 }, -5, { x: 3, y: 18 }, -50, { x: 15, y: 117 }, { x: 43, y: 115 }, -4),
+    f: batPose({ x: 31, y: 88 }, -16, { x: 14, y: -12 }, -170, { x: 22, y: 117 }, { x: 42, y: 110 }, -8),
+  },
+  paddle: {
+    b: batPose({ x: 30, y: 97 }, 3, { x: -4, y: 18 }, 40, { x: 16, y: 117 }, { x: 44, y: 115 }),
+    c: batPose({ x: 31, y: 100 }, 8, { x: 4, y: 25 }, -40, { x: 13, y: 117 }, { x: 45, y: 116 }, 4),
+    f: batPose({ x: 31, y: 99 }, 8, { x: 9, y: 21 }, -70, { x: 13, y: 117 }, { x: 45, y: 116 }, 4),
+  },
   beaten: {
     b: LIFT,
     c: batPose({ x: 29, y: 91 }, 9, { x: -12, y: 20 }, 34, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
@@ -330,7 +359,7 @@ export function batsmanPose(c: BatCtx): Pose {
   const base = SHOTS[c.style]
   const fl = c.flavor && c.flavor !== 'plain' ? FLAVORS[c.flavor] : null
   // the heritage mixes into the stance, the back-lift and the finish of a big shot; the contact stays the shot's own
-  const big = c.style === 'loft' || c.style === 'drive' || c.style === 'straight' || c.style === 'pull'
+  const big = c.style === 'loft' || c.style === 'drive' || c.style === 'straight' || c.style === 'pull' || c.style === 'hook' || c.style === 'slog'
   const shot = fl ? { b: mixPose(base.b, fl.lift, 0.5), c: base.c, f: big ? mixPose(base.f, fl.finish, 0.6) : base.f } : base
   const lift = ease((c.t - (c.t1 - 0.5)) / Math.max(0.2, c.t2 - 0.25 - (c.t1 - 0.5)))
   let p = mixPose(fl ? fl.stance : STANCE, shot.b, lift)
