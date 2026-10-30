@@ -3,7 +3,7 @@ import { BUILT_IN_TEAMS } from '../data/teams'
 import { fieldPlan } from '../components/match/fieldSets'
 import { BAT_END_Z, drawnAngles, frameAt, hops, planBall, replayCamera, withNearSlow } from '../components/match/broadcast'
 import { endPoint, placeFielders } from '../components/match/Stage'
-import { deliveryOf, deliveryScreen, isPoorLength, SWING_BIG, TURN_BIG, type LengthKind } from './delivery'
+import { ballName, deliveryOf, deliveryScreen, isPoorLength, SWING_BIG, TURN_BIG, type LengthKind } from './delivery'
 import { Match } from './match'
 
 const seamer = { bowling: { type: 'fast', variation: 80 } }
@@ -221,5 +221,28 @@ describe('what happens after the bat or pad, and the replay cameras', () => {
       seen++
     }
     expect(seen).toBeGreaterThan(0)
+  })
+})
+
+describe('naming the kind of ball', () => {
+  const names = (type: string, left = false) => { const c = new Map<string, number>(); for (let i = 1; i <= 3000; i++) { const dv = deliveryOf(ev(i), { bowling: { type, variation: 80 } } as never); const n = ballName(dv, { type, left }); c.set(n, (c.get(n) ?? 0) + 1) } return c }
+  it('a leg-spinner bowls leg breaks mostly and googlies now and then; an off-spinner off breaks and doosras', () => {
+    const leg = names('legspin'), off = names('offspin')
+    expect(leg.get('Leg break') ?? 0).toBeGreaterThan((leg.get('Googly') ?? 0) * 2)
+    expect(leg.get('Googly') ?? 0).toBeGreaterThan(20)
+    expect(off.get('Off break') ?? 0).toBeGreaterThan((off.get('Doosra') ?? 0) * 2)
+    expect(off.get('Doosra') ?? 0).toBeGreaterThan(20)
+    expect(leg.has('Off break')).toBe(false)
+  })
+  it('a seamer bowls swing, cutters, yorkers and bouncers, and never a googly', () => {
+    const c = names('fast')
+    for (const k of ['Out swing', 'In swing', 'Yorker', 'Bouncer']) expect(c.get(k) ?? 0, k).toBeGreaterThan(20)
+    expect(c.has('Googly')).toBe(false)
+    expect(c.has('Doosra')).toBe(false)
+  })
+  it('a dragon ball and a beamer are named as such', () => {
+    const dv = deliveryOf(ev(1), seamer)
+    expect(ballName(dv, { type: 'fast', left: false, kmh: 180 })).toBe('Dragon ball')
+    expect(ballName({ ...dv, noBallCause: 'beamer' }, { type: 'fast', left: false })).toBe('Beamer')
   })
 })

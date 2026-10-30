@@ -524,7 +524,7 @@ export function Stage({
       )}
 
       {/* which field is set, so the changes make sense */}
-      {fieldTag && (
+      {fieldTag && !broadcast && ( // (the broadcast picture stays clean: the field's name is only for the view from above)
         <motion.div key={fieldTag.label} className="pointer-events-none absolute left-2 top-2 z-30 max-w-[60%] rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold uppercase leading-tight tracking-wider text-sky-200 ring-1 ring-sky-300/30 sm:text-[11px]" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           {fieldTag.label}
           <span className="block text-[10px] font-semibold normal-case tracking-normal text-slate-300 max-sm:hidden">{fieldTag.note}</span>

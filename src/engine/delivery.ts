@@ -72,7 +72,9 @@ export function deliveryOf(
   const height = length === 'beamer' ? 1.8 + h * 0.5 : length === 'fullToss' ? 0.95 + h * 0.4 : length === 'lowFullToss' ? 0.35 + h * 0.3 : length === 'yorker' ? 0.1 + h * 0.12
     : length === 'full' ? 0.35 + h * 0.25 : length === 'good' ? 0.7 + h * 0.2 : length === 'short' ? 1.0 + h * 0.2 : 1.5 + h * 0.25
   // swing for a seamer (a little more under cloud), turn for a spinner; a seamer gets a touch of movement off the seam and a spinner a touch of drift
-  const dirS = hash01(ev.seq * 8.1) < 0.5 ? -1 : 1, dirT = hash01(ev.seq * 9.7) < 0.5 ? -1 : 1
+  // a spinner mostly turns the ball his usual way (an off-spinner one way, a leg-spinner and a left-armer the other) and now and then bowls the one that goes the other way (a doosra, a googly)
+  const natural = type === 'offspin' ? 1 : -1
+  const dirS = hash01(ev.seq * 8.1) < 0.5 ? -1 : 1, dirT = pace ? (hash01(ev.seq * 9.7) < 0.5 ? -1 : 1) : hash01(ev.seq * 9.7) < 0.8 ? natural : -natural
   const kick = ev.wicket && (ev.wicket.kind === 'bowled' || ev.wicket.kind === 'lbw' || ev.wicket.kind === 'caught') ? 1.3 : 1
   const swingMag = pace ? Math.pow(hash01(ev.seq * 3.3), 2.2) * (1.1 + vari * 2 + (cond.overcast ? 0.9 : 0)) * kick : hash01(ev.seq * 3.3) * 0.35
   const turnMag = pace ? Math.pow(hash01(ev.seq * 4.1), 2.4) * 1.4 : Math.pow(hash01(ev.seq * 4.1), 1.8) * (3 + vari * 8) * kick
@@ -101,3 +103,34 @@ export function deliveryScreen(
 
 /** A poor length hit for runs (a full toss, a low full toss) is named on its four or six screen. */
 export const isPoorLength = (dv: DeliveryLook) => dv.length === 'fullToss' || dv.length === 'lowFullToss'
+
+
+/**
+ * What kind of ball it was, in a word or two, for the label on the picture: a spinner's leg break, off break, googly or doosra (by which way it turned
+ * against his usual way), arm ball or slider; a seamer's out swing, in swing, off cutter, leg cutter, slower ball, yorker, bouncer or full toss. Worked out
+ * from how the ball was bowled (`dv`), so it always agrees with the picture. For show only.
+ * `left` is whether the batsman is left-handed (which way is "in" turns round).
+ */
+export function ballName(dv: DeliveryLook, o: { type: string; pace?: string | null; left: boolean; kmh?: number }): string {
+  if (o.kmh !== undefined && o.kmh >= DRAGON_KMH) return 'Dragon ball'
+  if (dv.noBallCause === 'beamer') return 'Beamer'
+  const into = (deg: number) => (deg > 0) !== o.left // towards the batsman's body (his leg side)
+  if (!dv.pace) {
+    const natural = o.type === 'offspin' ? 1 : -1
+    const usual = Math.sign(dv.turn) === natural
+    if (dv.length === 'fullToss' || dv.length === 'lowFullToss') return 'Full toss'
+    if (o.pace === 'fast' && Math.abs(dv.turn) < 3) return 'Slider'
+    if (Math.abs(dv.turn) < 1.2) return o.type === 'legspin' ? 'Top-spinner' : 'Arm ball'
+    if (o.type === 'offspin') return usual ? 'Off break' : 'Doosra'
+    if (o.type === 'legspin') return usual ? 'Leg break' : 'Googly'
+    return usual ? 'Left-arm spin' : 'Wrong-un'
+  }
+  if (dv.length === 'yorker') return 'Yorker'
+  if (dv.length === 'bouncer') return 'Bouncer'
+  if (dv.length === 'fullToss' || dv.length === 'lowFullToss') return 'Full toss'
+  if (o.pace === 'slow') return 'Slower ball'
+  if (Math.abs(dv.swing) >= 1.1) return into(dv.swing) ? 'In swing' : 'Out swing'
+  if (Math.abs(dv.turn) >= 0.8) return into(dv.turn) ? 'Off cutter' : 'Leg cutter'
+  if (dv.length === 'short') return 'Short ball'
+  return o.type === 'fast' ? 'Seam up' : 'Straight one'
+}

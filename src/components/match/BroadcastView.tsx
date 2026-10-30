@@ -5,6 +5,7 @@ import type { BallEvent } from '../../engine/types'
 import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
+import { ballName } from '../../engine/delivery'
 import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
@@ -76,8 +77,8 @@ function Figure({ player, team, look, rig }: { player?: Player; team?: Team; loo
   )
 }
 
-/** The speed of the ball, in a TV speed-gun box that shows up as it is let go and fades after a moment. */
-function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number; rate: number }) {
+/** What kind of ball it is (leg break, googly, out swing, yorker...), in a TV label that shows up as the ball is let go and fades after a moment. The speed is on the score bar. */
+function BallTag({ name, dragon, at, dur, rate }: { name: string; dragon: boolean; at: number; dur: number; rate: number }) {
   const [on, setOn] = useState(false)
   useEffect(() => {
     const k = Math.max(0.15, rate)
@@ -87,9 +88,9 @@ function SpeedGun({ kmh, at, dur, rate }: { kmh: number; at: number; dur: number
   }, [at, dur, rate])
   if (!on) return null
   return (
-    <div className="pointer-events-none absolute right-2 top-9 z-[6001] flex items-baseline gap-1 rounded bg-black/80 px-2 py-0.5 ring-1 ring-sky-300/50 max-sm:right-1 max-sm:top-8">
-      <span className={`font-display text-xl leading-none tabular-nums ${speedStyle(kmh) === 'dragon' ? 'text-orange-300' : speedStyle(kmh) === 'fire' ? 'text-orange-400' : speedStyle(kmh) === 'ice' ? 'text-cyan-200' : 'text-sky-300'}`}>{kmh}</span>{(speedStyle(kmh) === 'dragon' || speedStyle(kmh) === 'fire') && <span className="text-sm" aria-hidden>{speedStyle(kmh) === 'dragon' ? '🌋' : '🔥'}</span>}{speedStyle(kmh) === 'ice' && <span className="text-sm" aria-hidden>❄️</span>}
-      <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-300">km/h</span>
+    <div className={`pointer-events-none absolute right-2 top-9 z-[6001] flex items-center gap-1 rounded bg-black/80 px-2 py-0.5 ring-1 max-sm:right-1 max-sm:top-8 ${dragon ? 'ring-orange-400/70' : 'ring-sky-300/50'}`}>
+      {dragon && <span className="text-sm" aria-hidden>🌋</span>}
+      <span className={`font-display text-base leading-none tracking-wide ${dragon ? 'text-orange-300' : 'text-sky-200'}`}>{name}</span>
     </div>
   )
 }
@@ -121,7 +122,6 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const rigs = useRef(new Map<string, Rig>())
   const setRig = (k: string) => (r: Rig | null) => { if (r) rigs.current.set(k, r); else rigs.current.delete(k) }
   const setNode = (k: string) => (el: HTMLElement | null) => { nodes.current.set(k, el) }
-  const [tag, setTag] = useState<string>('CAM 1')
   const [cutKey, setCutKey] = useState(0)
   const fire = !!event?.freeHit && !!event.boundary
   const captionsOn = useCaptions()
@@ -198,7 +198,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // (a replay keeps to its own camera and never cuts to the reverse one)
       const wantReverse = L.replayCam ? false : f.reverse
       const base = L.replayCam ? L.replayCam.cam : wantReverse ? camReverse : camWide
-      if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; cutAt.current = performance.now() / 1000; setTag(wantReverse ? 'CAM 2' : 'CAM 1'); setCutKey((k) => k + 1) }
+      if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; cutAt.current = performance.now() / 1000; setCutKey((k) => k + 1) }
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       const focus = L.replayCam?.focus
@@ -528,7 +528,6 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     // each new ball starts at the run-up: back on the wide camera
     reverseNow.current = false
     const live0 = live.current
-    setTag(live0.replayCam ? live0.replayCam.label.toUpperCase() : 'CAM 1')
     const startCam = live0.replayCam ? live0.replayCam.cam : camWide
     cam.current = { ...startCam, p: { ...startCam.p } }
     const first = live0.event === null
@@ -578,7 +577,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}
-      {event && <SpeedGun key={event.seq} kmh={plan.speed} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
+      {event && <BallTag key={event.seq} name={ballName(plan.delivery, { type: bowler.bowling?.type ?? 'medium', pace: event.delivery?.pace, left: striker.hand === 'L', kmh: plan.speed })} dragon={speedStyle(plan.speed) === 'dragon'} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
       {captionsOn && caption && event && (
         <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.15, rate), duration: 3.4 / Math.max(0.15, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}
@@ -612,7 +611,6 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           )}
         </div>
       )}
-      <span className="pointer-events-none absolute bottom-1.5 right-2 z-[6001] rounded bg-black/60 px-1.5 text-[10px] font-extrabold tracking-widest text-slate-200">{tag}</span>
       <span className="pointer-events-none absolute left-2 bottom-8 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
     </div>
   )
