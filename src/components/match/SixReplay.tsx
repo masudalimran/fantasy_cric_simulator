@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import type { Move } from '../../data/moves'
-import { MoveCutIn } from './MoveCutIn'
 
 /** What a six replay needs. */
 export interface SixInfo {
@@ -76,7 +75,6 @@ export function SixReplay({ info }: { info: SixInfo }) {
           animate={{ y: [0, -4, 0] }} transition={{ delay: 0.9 * r + (i % 9) * 0.05, duration: 0.5, repeat: 3 }} />
       ))}
       <div className="absolute inset-x-0 top-[52%] h-[2px] bg-white/80" />
-      {info.move && <MoveCutIn move={info.move} batsman={batsman} team={team} rate={r} />}
 
       <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-fuchsia-300"><span className="h-2 w-2 animate-pulse rounded-full bg-fuchsia-400" />{monster ? 'Monster six' : 'Six'}</div>
       <div className="absolute right-3 top-3 z-30 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>

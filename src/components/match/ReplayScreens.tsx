@@ -10,7 +10,6 @@ import { drawnAngles, planBall, replayCamFor } from './broadcast'
 import { endPoint } from './Stage'
 import { Counter, type SixInfo } from './SixReplay'
 import { LENGTH_WORDS, type DeliveryLook } from '../../engine/delivery'
-import { MoveCutIn } from './MoveCutIn'
 import { BALL_R, STUMP_HALF, STUMP_HEIGHT, type Miss } from './nearMiss'
 import type { AlmostCaught } from './almost'
 import { wideDirection } from '../../engine/wide'
@@ -336,7 +335,6 @@ export function SixCast({ info }: { info: SixCastInfo }) {
           </div>
         </div>
       </Bottom>
-      {info.move && <MoveCutIn move={info.move} batsman={info.batsman} team={info.team} rate={r} />}
     </div>
   )
 }
