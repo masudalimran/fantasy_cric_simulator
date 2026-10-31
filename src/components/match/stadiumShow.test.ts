@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { camWide, ROPE } from './broadcast'
 import { solve } from './bodyPose'
 import { slopePoint } from './crowdDraw'
-import { cameraAt, cheerAngle, cheerleaders, confettiAt, crowdAt, ENTRANCE, gatePos, huddlePerson, huddleSpot, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, trophyPerson, trophySpot, walkerPos, type ShowKind, type StadiumShow } from './stadiumShow'
+import { balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
 
-const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover']
-const FROM_LIVE = KINDS.filter((k) => k !== 'flyover') // (the fly-over is the other way round: it ENDS at the live camera)
-const show = (kind: ShowKind, seed: number, variant?: StadiumShow['variant']): StadiumShow => ({ kind, variant, seed, colors: ['#f97316', '#1d4ed8'], sign: '6', name: 'Goku Son', word: 'U7W', why: 'boundary' })
+const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone']
+const FROM_LIVE = KINDS.filter((k) => k !== 'flyover' && k !== 'lineup') // (the fly-over is the other way round: it ENDS at the live camera)
+const show = (kind: ShowKind, seed: number, variant?: StadiumShow['variant']): StadiumShow => ({ kind, variant, seed, focus: { x: 10, y: 0, z: -14 }, celebrant: 2, landing: { x: 80, y: 6, z: -4 }, caught: true, colors: ['#f97316', '#1d4ed8'], sign: '6', name: 'Goku Son', word: 'U7W', why: 'boundary' })
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
 
 describe('the stadium shows', () => {
@@ -83,8 +83,9 @@ describe('the stadium shows', () => {
       let prev = cameraAt(s, 0)
       for (let t = 0.05; t <= SHOW_SECONDS[kind]; t += 0.05) {
         const c = cameraAt(s, t)
-        expect(dist(c.p, prev.p), `${kind} ${seed} at ${t.toFixed(2)}`).toBeLessThan(3.5)
-        expect(Math.abs(c.hfov - prev.hfov)).toBeLessThan(0.05)
+        const cut = (kind === 'walkoff' && Math.abs(t - WALKOFF.cut) < 0.08) || (kind === 'milestone' && Math.abs(t - MILESTONE.cut) < 0.08) // (a cut to another camera: the picture flashes white)
+        if (!cut) expect(dist(c.p, prev.p), `${kind} ${seed} at ${t.toFixed(2)}`).toBeLessThan(kind === 'lineup' || kind === 'flyover' ? 6 : 4.2) // (the swoops from high above the stadium are the fast ones)
+        if (!cut) expect(Math.abs(c.hfov - prev.hfov), `${kind} ${seed} at ${t.toFixed(2)} (zoom)`).toBeLessThan(0.06)
         expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
         expect(Math.hypot((c.p.x - ROPE.cx) / (ROPE.rx * 1.6), (c.p.z - ROPE.cz) / (ROPE.rz * 1.6))).toBeLessThan(1)
         expect(c.p.y).toBeGreaterThan(0.5)
@@ -160,5 +161,65 @@ describe('the stadium shows', () => {
       const end = huddlePerson(s, 6, i, n, from)
       expect(end.pose).not.toBeNull()
     }
+  })
+
+  it('the wicket: the nearest six run to the celebrant and jump together; the batsman walks to the gate and is gone', () => {
+    const s = show('hug', 3)
+    const froms = Array.from({ length: 11 }, (_, i) => ({ x: -30 + i * 6, y: 0, z: -14 + (i % 3) * 5 }))
+    const join = hugJoiners(s, froms, 2)
+    expect(join.length).toBe(6)
+    expect(join).not.toContain(2)
+    for (const i of join) {
+      const to = hugSpot(s, join.indexOf(i), join.length)
+      expect(hugPerson(0, froms[i], to, true).arrived).toBe(false)
+      const end = hugPerson(4, froms[i], to, true)
+      expect(end.arrived).toBe(true)
+      expect(dist({ ...end.pos, y: 0 }, { ...to, y: 0 })).toBeLessThan(0.01)
+    }
+    const w = show('walkoff', 3)
+    expect(walkoffPos(w, 0)).not.toBeNull()
+    expect(walkoffPos(w, WALKOFF.end + 0.1)).toBeNull()
+    expect(walkoffPos(w, WALKOFF.cut)!.z).toBeGreaterThan(walkoffPos(w, WALKOFF.start)!.z)
+  })
+  it('a six comes down at the spot it was given: caught in the hands, bouncing down the seats, or away over the roof', () => {
+    const base = show('landing', 5)
+    for (let i = 0; i < 3; i++) {
+      const s: StadiumShow = { ...base, caught: i === 0, gone: i === 2 }
+      expect(landingBall(s, 0)).toBeNull()
+      let maxY = 0
+      for (let t = 0.6; t < SHOW_SECONDS.landing; t += 0.1) { const b = landingBall(s, t); if (b) { expect(Number.isFinite(b.p.x + b.p.y + b.p.z)).toBe(true); maxY = Math.max(maxY, b.p.y) } }
+      expect(maxY).toBeGreaterThan(8)
+      if (i === 2) expect(landingBall(s, 4.5)!.p.y).toBeGreaterThan(30)
+      else expect(landingBall(s, 4.5)!.p.y).toBeLessThan(20)
+    }
+    const c = crowdAt(show('landing', 5), 3)!
+    expect(c.fanReact!.caught).toBe(true)
+    expect(crowdAt({ ...show('landing', 5), gone: true }, 3)!.fanReact).toBeUndefined()
+  })
+  it('the floodlights come on tower by tower while the evening gets darker', () => {
+    expect(towersAt(0).on.every((v) => v === 0)).toBe(true)
+    expect(towersAt(0).dusk).toBe(0)
+    expect(towersAt(8).on.every((v) => v === 1)).toBe(true)
+    expect(towersAt(8).dusk).toBe(1)
+    expect(towersAt(3.2).on[0]).toBeGreaterThan(towersAt(3.2).on[1])
+  })
+  it('the toss and line-up: the captains meet, the coin goes up and comes down, the teams line up facing the camera', () => {
+    for (const side of [0, 1] as const) {
+      const home = lineSpot(side, 0)
+      expect(Math.abs(captainPos(side, LINEUP.coin, home).x)).toBeLessThan(2)
+      expect(dist(captainPos(side, 12, home), home)).toBeLessThan(0.01)
+      for (let i = 0; i < 11; i++) { expect(linePerson(side, i, 0).arrived).toBe(false); expect(linePerson(side, i, 12).arrived).toBe(true); expect(Math.sign(lineSpot(side, i).x)).toBe(side === 0 ? -1 : 1) }
+    }
+    expect(coinAt(1)).toBeNull()
+    expect(coinAt(LINEUP.coin + 0.7)!.y).toBeGreaterThan(2.5)
+    expect(coinAt(LINEUP.coinEnd + 0.5)).toBeNull()
+  })
+  it('the rain: the covers go over the pitch from the bowler end and the ground staff run with them; the dressing room stands and claps; the photographers flash', () => {
+    expect(coverAt(0)).toBe(0); expect(coverAt(9)).toBe(1)
+    for (let i = 0; i < 6; i++) { expect(crewPos(i, 6, 0).z).toBeLessThan(crewPos(i, 6, 7).z + 30); expect(Number.isFinite(crewPos(i, 6, 3).x)).toBe(true) }
+    for (let i = 0; i < 8; i++) { const sp = balconySpot(i, 8); expect(sp.y).toBeGreaterThan(1); expect(balconyPose(1, i).hip.y).toBeGreaterThan(balconyPose(6, i).hip.y) }
+    let flashes = 0
+    for (let t = 1.5; t < 8; t += 0.1) flashes += photoFlashes(4, t).length
+    expect(flashes).toBeGreaterThan(30)
   })
 })

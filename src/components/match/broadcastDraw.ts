@@ -2,7 +2,7 @@ import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
 import { drawMove, type MoveDraw } from './moveFx'
-import { drawBigScreen, drawConfetti, drawCrowdClose, drawSparks, type BigScreen, type Confetti, type CrowdClose, type Spark } from './crowdDraw'
+import { drawBall3, drawBigScreen, drawConfetti, drawCrowdClose, drawSparks, type Ball3, type BigScreen, type Confetti, type CrowdClose, type Spark } from './crowdDraw'
 
 /** Paints the ground, stands, pitch and stumps of the broadcast view onto a canvas. Pure drawing: it reads the camera and nothing else. */
 
@@ -36,6 +36,14 @@ export interface Scene {
   style: 'plain' | 'fire' | 'ice' | 'dragon'
   /** A stand of people drawn person by person (the stadium cameras of the cheerleader, stands and card-stunt screens). */
   crowd?: CrowdClose | null
+  /** The floodlight towers coming on: how lit each of the four is (0 to 1), and how dark the evening has got (0 daylight, 1 night). Left out, the lights are as the stadium has them. */
+  towers?: { on: number[]; dusk: number }
+  /** The covers going over the pitch (0 to 1), pulled out from the bowler's end. */
+  coverK?: number
+  /** The Man of the Match podium on the pitch. */
+  podium?: boolean
+  /** A ball in the air over the stands. */
+  ball3?: Ball3 | null
   /** Confetti in the air (the trophy celebration). */
   confetti?: Confetti[]
   /** The stadium's giant screen with the fan wall on it. */
@@ -105,6 +113,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   if (sc.crowd) drawCrowdClose(ctx, r, W, H, sc.crowd, L, sc.tick)
   if (sc.screen) drawBigScreen(ctx, r, sc.screen, sc.tick)
   if (sc.confetti && sc.confetti.length) drawConfetti(ctx, r, sc.confetti)
+  if (sc.ball3) drawBall3(ctx, r, sc.ball3)
 
   // the grass: the ground ellipse, then mowing bands along the pitch
   const ground: V3[] = Array.from({ length: 72 }, (_, i) => ringPoint((i / 72) * Math.PI * 2, 1))
@@ -133,17 +142,36 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       ctx.fillStyle = `rgba(255,255,255,${Math.min(1, sc.board.k + 0.2)})`; ctx.fillText(sc.board.text, p.x, p.y); ctx.restore()
     }
   }
-  // floodlights: a glow on each of four towers when the lights are on
-  if (L.lights) {
+  // the evening getting dark (the switching-on show): everything dims and goes blue, then the lamps bring the ground back up
+  if (sc.towers && sc.towers.dusk > 0) {
+    const lit = sc.towers.on.reduce((a, b) => a + b, 0) / Math.max(1, sc.towers.on.length)
+    ctx.fillStyle = `rgba(2,8,30,${(0.82 * sc.towers.dusk * (1 - 0.8 * lit)).toFixed(3)})`; ctx.fillRect(0, 0, W, H)
+  }
+  // floodlights: a glow on each of four towers when the lights are on (in the switching-on show each tower has its own brightness, and the towers show as dark frames before they light)
+  if (L.lights || sc.towers) {
     for (let k = 0; k < 4; k++) {
       const a = Math.PI / 4 + (k * Math.PI) / 2
-      const p = project(r, ringPoint(a, 1.3, 26))
-      if (!p) continue
-      const rad = Math.max(14, (r.F * 14) / p.d)
-      const lg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad)
-      lg.addColorStop(0, 'rgba(255,250,220,0.95)'); lg.addColorStop(0.25, 'rgba(255,244,200,0.5)'); lg.addColorStop(1, 'rgba(255,244,200,0)')
+      const on = sc.towers ? sc.towers.on[k] ?? 0 : 1
+      const top = project(r, ringPoint(a, 1.3, 26))
+      if (!top) continue
+      if (sc.towers) {
+        // the tower itself: a dark mast with a frame of lamps at the top
+        const foot = project(r, ringPoint(a, 1.3, 0))
+        if (foot) { ctx.strokeStyle = 'rgba(15,23,42,0.9)'; ctx.lineWidth = Math.max(2, (r.F * 0.5) / top.d); ctx.beginPath(); ctx.moveTo(foot.x, foot.y); ctx.lineTo(top.x, top.y); ctx.stroke() }
+        const fw = Math.max(10, (r.F * 6) / top.d), fh = fw * 0.55
+        ctx.fillStyle = '#0f172a'; ctx.fillRect(top.x - fw / 2, top.y - fh / 2, fw, fh)
+        for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) {
+          const lit = on > (row * 5 + col) / 15 // the lamps come on one after another
+          ctx.fillStyle = lit ? '#fffbe6' : '#1e293b'
+          ctx.fillRect(top.x - fw / 2 + 2 + col * ((fw - 4) / 5), top.y - fh / 2 + 2 + row * ((fh - 4) / 3), Math.max(1.5, (fw - 4) / 5 - 2), Math.max(1.5, (fh - 4) / 3 - 2))
+        }
+      }
+      if (on <= 0.02) continue
+      const rad = Math.max(14, (r.F * 14) / top.d) * (0.5 + 0.9 * on)
+      const lg = ctx.createRadialGradient(top.x, top.y, 0, top.x, top.y, rad)
+      lg.addColorStop(0, `rgba(255,250,220,${(0.95 * on).toFixed(3)})`); lg.addColorStop(0.25, `rgba(255,244,200,${(0.5 * on).toFixed(3)})`); lg.addColorStop(1, 'rgba(255,244,200,0)')
       ctx.fillStyle = lg
-      ctx.fillRect(p.x - rad, p.y - rad, rad * 2, rad * 2)
+      ctx.fillRect(top.x - rad, top.y - rad, rad * 2, rad * 2)
     }
   }
   // the rope
@@ -284,8 +312,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   if (sc.move) drawMove(ctx, r, sc.move)
 
   // the covers over the pitch
-  if (sc.covers) {
-    const sheet = projectPoly(r, [{ x: -2.7, y: 0.05, z: BOWL_Z - 4 }, { x: 2.7, y: 0.05, z: BOWL_Z - 4 }, { x: 2.7, y: 0.05, z: 4 }, { x: -2.7, y: 0.05, z: 4 }])
+  if (sc.covers || sc.coverK !== undefined) {
+    const zEnd = sc.covers ? 4 : BOWL_Z - 4 + Math.max(0.02, sc.coverK ?? 0) * (4 - (BOWL_Z - 4))
+    const sheet = projectPoly(r, [{ x: -2.7, y: 0.05, z: BOWL_Z - 4 }, { x: 2.7, y: 0.05, z: BOWL_Z - 4 }, { x: 2.7, y: 0.05, z: zEnd }, { x: -2.7, y: 0.05, z: zEnd }])
     fillPoly(ctx, sheet, '#1e3a5f')
     for (let k = 0; k < 9; k++) {
       const z = BOWL_Z - 3.2 + k * 3
@@ -295,6 +324,15 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke()
     }
     for (const x of [-2.8, 2.8]) { const pa = project(r, { x, y: 0.06, z: BOWL_Z - 4 }), pb = project(r, { x, y: 0.06, z: 4 }); if (pa && pb) { ctx.strokeStyle = 'rgba(226,232,240,0.7)'; ctx.lineWidth = Math.max(1, (r.F * 0.08) / ((pa.d + pb.d) / 2)); ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke() } }
+  }
+  // the Man of the Match podium: three steps, the winner's in the middle
+  if (sc.podium) {
+    const box = (x0: number, x1: number, h: number, c: string, top: string) => {
+      const z0 = -8.7, z1 = -7.3
+      fillPoly(ctx, projectPoly(r, [{ x: x0, y: 0, z: z0 }, { x: x1, y: 0, z: z0 }, { x: x1, y: h, z: z0 }, { x: x0, y: h, z: z0 }]), c)
+      fillPoly(ctx, projectPoly(r, [{ x: x0, y: h, z: z0 }, { x: x1, y: h, z: z0 }, { x: x1, y: h, z: z1 }, { x: x0, y: h, z: z1 }]), top)
+    }
+    box(-2.1, -0.75, 0.45, '#334155', '#94a3b8'); box(0.75, 2.1, 0.3, '#334155', '#94a3b8'); box(-0.75, 0.75, 0.9, '#b45309', '#fbbf24')
   }
   // the light of the hour and the weather over everything
   const tint = L.time === 'night' ? 'rgba(2,8,30,0.14)' : L.time === 'dusk' ? 'rgba(251,113,40,0.2)' : grey ? 'rgba(100,116,139,0.16)' : null

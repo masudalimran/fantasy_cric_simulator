@@ -140,6 +140,16 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  if (moment.stadium) {
+    return (
+      <motion.div
+        data-moment="stadium" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3, delay: 0 } }} transition={{ duration: 0.35, delay: moment.delay / 1000 }}
+      >
+        <StadiumCam show={moment.stadium.show} base={moment.stadium.base} rate={moment.stadium.rate} label={moment.stadium.label} cast={moment.stadium.cast} />
+      </motion.div>
+    )
+  }
   if (moment.kind === 'replay' && moment.replay) {
     // a screen of its own: how the wicket happened, a few seconds long (click to skip)
     return (
@@ -239,16 +249,6 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Milestone"
       >
         <MilestoneScreen info={moment.fist} />
-      </motion.div>
-    )
-  }
-  if (moment.kind === 'stadium' && moment.stadium) {
-    return (
-      <motion.div
-        data-moment="stadium" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3, delay: 0 } }} transition={{ duration: 0.35, delay: moment.delay / 1000 }}
-      >
-        <StadiumCam show={moment.stadium.show} base={moment.stadium.base} rate={moment.stadium.rate} label={moment.stadium.label} cast={moment.stadium.cast} />
       </motion.div>
     )
   }

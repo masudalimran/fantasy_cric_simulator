@@ -38,6 +38,12 @@ export interface CrowdClose {
   seed: number
   signs?: FanSign[]
   cards?: CardStunt
+  /** How the whole crowd feels: cheering (the default, by `k`), or groaning with their hands on their heads. */
+  mood?: 'groan'
+  /** A ball coming down among them: the fans round the spot reach for it (a fan takes it in both hands, or they all duck as it crashes into the seats). */
+  fanReact?: { a: number; u: number; t0: number; caught: boolean }
+  /** Umbrellas held up over this share of the fans (0 to 1). */
+  umbrellas?: number
 }
 
 /** A glowing spark in the sky: where it is, a short tail behind it, its colour and size (metres). */
@@ -71,7 +77,20 @@ export function drawCrowdClose(ctx: CanvasRenderingContext2D, r: CamR, W: number
     const h2 = hash01(f.i * 5.3 + 1)
     const wild = clamp01(cr.k * 1.5 - h2 * 0.5)
     const beat = tick * (5.2 + h * 2.4) + h2 * 9
-    const jump = Math.max(0, Math.sin(beat)) * 0.16 * wild * f.m
+    let jump = Math.max(0, Math.sin(beat)) * 0.16 * wild * f.m
+    // a fan close to where the ball comes down: arms up for it, then a catch or a duck
+    let react: 'reach' | 'catch' | 'duck' | null = null
+    let catcher = false
+    if (cr.fanReact) {
+      const fr = cr.fanReact
+      const aDiff = Math.abs((cr.a0 + (cr.a1 - cr.a0) * ((f.col + 0.5) / cr.per)) - fr.a), uDiff = Math.abs(cr.u0 + (cr.u1 - cr.u0) * ((f.row + 0.5) / cr.rows) - fr.u)
+      const near = Math.hypot(aDiff / 0.011, uDiff / 0.055)
+      if (near < 2.4 && tick >= fr.t0 - 0.7) {
+        react = fr.caught ? (tick >= fr.t0 ? 'catch' : 'reach') : (tick >= fr.t0 - 0.15 ? 'duck' : 'reach')
+        catcher = fr.caught && near < 0.6
+        if (react === 'catch') jump = Math.max(jump, Math.abs(Math.sin((tick - fr.t0) * 7)) * 0.22 * f.m)
+      }
+    }
     const m = f.m
     const shirt = palette[Math.floor(h * 997) % palette.length]
     const skin = SKINS[Math.floor(h2 * 997) % SKINS.length]
@@ -83,8 +102,28 @@ export function drawCrowdClose(ctx: CanvasRenderingContext2D, r: CamR, W: number
     ctx.beginPath()
     ctx.roundRect(f.x - bw / 2, baseY - bh, bw, bh, bw * 0.3)
     ctx.fill()
-    // the arms: down and clapping when sitting, both up and waving when wild
-    if (wild > 0.25 || h > 0.8) {
+    // the arms: down and clapping when sitting, both up and waving when wild; hands on the head when the crowd groans, or the reaction to the ball
+    if (react === 'duck') {
+      ctx.strokeStyle = skin; ctx.lineWidth = Math.max(1.2, 0.11 * m); ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(f.x - bw * 0.46, baseY - bh * 0.85); ctx.lineTo(f.x - bw * 0.2, baseY - bh * 1.25)
+      ctx.moveTo(f.x + bw * 0.46, baseY - bh * 0.85); ctx.lineTo(f.x + bw * 0.2, baseY - bh * 1.25)
+      ctx.stroke()
+    } else if (react === 'reach' || react === 'catch') {
+      ctx.strokeStyle = skin; ctx.lineWidth = Math.max(1.2, 0.12 * m); ctx.lineCap = 'round'
+      const tilt = react === 'catch' ? 0.1 : 0.3
+      ctx.beginPath()
+      ctx.moveTo(f.x - bw * 0.46, baseY - bh * 0.85); ctx.lineTo(f.x - bw * tilt, baseY - bh * 2.05)
+      ctx.moveTo(f.x + bw * 0.46, baseY - bh * 0.85); ctx.lineTo(f.x + bw * tilt, baseY - bh * 2.05)
+      ctx.stroke()
+      if (catcher && react === 'catch') { ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(f.x, baseY - bh * 2.2, Math.max(2, 0.13 * m), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#fecaca'; ctx.lineWidth = 1; ctx.stroke() }
+    } else if (cr.mood === 'groan') {
+      ctx.strokeStyle = skin; ctx.lineWidth = Math.max(1.2, 0.11 * m); ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(f.x - bw * 0.46, baseY - bh * 0.85); ctx.lineTo(f.x - bw * 0.62, baseY - bh * 1.5); ctx.lineTo(f.x - bw * 0.2, baseY - bh * 1.6)
+      ctx.moveTo(f.x + bw * 0.46, baseY - bh * 0.85); ctx.lineTo(f.x + bw * 0.62, baseY - bh * 1.5); ctx.lineTo(f.x + bw * 0.2, baseY - bh * 1.6)
+      ctx.stroke()
+    } else if (wild > 0.25 || h > 0.8) {
       const lift = wild > 0.25 ? 1 : 0.55
       const wave = Math.sin(beat * 1.3) * 0.12 * m
       ctx.strokeStyle = skin; ctx.lineWidth = Math.max(1.2, 0.11 * m); ctx.lineCap = 'round'
@@ -99,6 +138,13 @@ export function drawCrowdClose(ctx: CanvasRenderingContext2D, r: CamR, W: number
     ctx.beginPath(); ctx.arc(f.x, baseY - bh - hr * 0.85, hr, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = hair
     ctx.beginPath(); ctx.arc(f.x, baseY - bh - hr * 1.05, hr * 1.02, Math.PI, Math.PI * 2); ctx.fill()
+    // umbrellas in the rain
+    if (cr.umbrellas && h2 < cr.umbrellas) {
+      const ucol = ['#ef4444', '#3b82f6', '#fde047', '#22c55e', '#f8fafc', '#a855f7'][Math.floor(h * 997) % 6]
+      ctx.fillStyle = ucol
+      ctx.beginPath(); ctx.arc(f.x, baseY - bh - hr * 2.4, hr * 3.2, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill()
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = Math.max(0.8, 0.02 * m); ctx.beginPath(); ctx.moveTo(f.x, baseY - bh - hr * 2.4); ctx.lineTo(f.x, baseY - bh - hr * 0.8); ctx.stroke()
+    }
     // a few wave a scarf, and at night some hold up a phone that lights their faces
     if (wild > 0.3 && h > 0.86) {
       ctx.strokeStyle = palette[(f.i * 3) % palette.length]; ctx.lineWidth = Math.max(1.5, 0.12 * m)
@@ -196,6 +242,18 @@ export function drawSparks(ctx: CanvasRenderingContext2D, r: CamR, sparks: Spark
 /** One fan's post on the giant screen. */
 export interface ScreenPost { name: string; handle: string; side: 0 | 1; text: string; likes: number; shares: number; replies: number; age: string }
 
+/** A review on the giant screen: where the ball pitched, hit the pad and was going (across the pitch, -1 leg to 1 off), or the sound graph, and the verdict. */
+export interface ReviewBoard {
+  kind: 'track' | 'edge'
+  pitchX: number; impactX: number; stumpsX: number
+  pitching: string; impact: string; wickets: string
+  /** The decision after the review, and whether it was changed. */
+  out: boolean
+  overturned: boolean
+  /** Who asked (the line under the title). */
+  by: string
+}
+
 /** What a notice on the giant screen says: a title, a line under it, rows of facts that come in one by one, and perhaps one big figure. */
 export interface BoardInfo {
   title: string
@@ -213,6 +271,8 @@ export interface BigScreen {
   posts: ScreenPost[]
   /** A notice instead of the fan wall (the timeout, the super over, the studio). */
   board?: BoardInfo
+  /** A review: the ball tracking (or the sound graph) and the verdict. */
+  review?: ReviewBoard
   /** Seconds into the show: the posts come in one after another. */
   t: number
   /** The batting team's two colours. */
@@ -248,6 +308,7 @@ export function drawBigScreen(ctx: CanvasRenderingContext2D, r: CamR, bs: BigScr
   const bg = ctx.createLinearGradient(0, 0, 0, VH)
   bg.addColorStop(0, '#0f1b36'); bg.addColorStop(1, '#070d1c')
   ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH)
+  if (bs.review) { drawReview(ctx, bs, bs.review, VW); ctx.restore(); return }
   if (bs.board) { drawBoard(ctx, bs, VW, tick); ctx.restore(); return }
   // the header: the hashtag and a LIVE light
   const hg = ctx.createLinearGradient(0, 0, VW, 0)
@@ -340,4 +401,99 @@ export function drawConfetti(ctx: CanvasRenderingContext2D, r: CamR, pieces: Con
     ctx.restore()
   }
   ctx.restore()
+}
+
+/** The ball (and a short streak behind it), for the six that comes down in the stands. */
+export interface Ball3 { p: V3; tail?: V3; size: number }
+export function drawBall3(ctx: CanvasRenderingContext2D, r: CamR, b: Ball3) {
+  const p = project(r, b.p)
+  if (!p) return
+  const px = Math.max(3, (b.size * r.F) / p.d)
+  if (b.tail) {
+    const q = project(r, b.tail)
+    if (q) { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1.5, px * 0.55); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.restore() }
+  }
+  ctx.save()
+  const g = ctx.createRadialGradient(p.x - px * 0.3, p.y - px * 0.3, px * 0.1, p.x, p.y, px)
+  g.addColorStop(0, '#fecaca'); g.addColorStop(0.4, '#dc2626'); g.addColorStop(1, '#7f1d1d')
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, px, 0, Math.PI * 2); ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = Math.max(0.8, px * 0.12); ctx.beginPath(); ctx.arc(p.x, p.y, px * 0.78, -0.6, 0.9); ctx.stroke()
+  ctx.restore()
+}
+
+
+const REVIEW_T = { check: 2.0, path: 3.4, verdict: 6.4 }
+/** When the verdict is shown on the giant screen (seconds into the show), for the crowd's reaction. */
+export const REVIEW_VERDICT_AT = REVIEW_T.verdict
+
+/** The ball tracking drawn on the giant screen: the pitch from behind, the ball's path down to the bounce and the pad, its projection to the stumps, then the verdict. */
+function drawReview(ctx: CanvasRenderingContext2D, bs: BigScreen, rv: ReviewBoard, VW: number) {
+  const t = bs.t
+  const hg = ctx.createLinearGradient(0, 0, VW, 0)
+  hg.addColorStop(0, '#0e7490'); hg.addColorStop(1, '#1e3a8a')
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, VW, 64)
+  ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.font = '900 32px sans-serif'
+  ctx.fillText(rv.kind === 'edge' ? 'SNICKO' : 'BALL TRACKING', VW / 2, 33, VW - 30)
+  if (t < REVIEW_T.check) {
+    // the T signal and "checking"
+    ctx.fillStyle = '#fbbf24'; ctx.font = '900 150px sans-serif'; ctx.fillText('T', VW / 2, 190)
+    ctx.fillStyle = '#fff'; ctx.font = '900 44px sans-serif'; ctx.fillText('REVIEW!', VW / 2, 300)
+    ctx.fillStyle = '#bfdbfe'; ctx.font = '700 26px sans-serif'; ctx.fillText(`${rv.by} asks for a review`, VW / 2, 350, VW - 30)
+    return
+  }
+  const k = Math.max(0, Math.min(1, (t - REVIEW_T.check) / (REVIEW_T.path - REVIEW_T.check + 1.4)))
+  if (rv.kind === 'edge') {
+    // the sound graph: a flat line with a spike where the ball passes the bat (or none)
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(20, 250); ctx.lineTo(VW - 20, 250); ctx.stroke()
+    ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3.5; ctx.beginPath()
+    const upto = 20 + (VW - 40) * k
+    for (let x = 20; x <= upto; x += 3) {
+      const near = Math.abs(x - 300), spike = rv.out ? Math.max(0, 110 - near * 3.2) * Math.sin(x * 1.9) : 0
+      ctx.lineTo(x, 250 + Math.sin(x * 0.9) * 3 + spike)
+    }
+    ctx.stroke()
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(upto, 120); ctx.lineTo(upto, 380); ctx.stroke()
+    ctx.fillStyle = '#cbd5e1'; ctx.font = '700 24px sans-serif'; ctx.fillText(rv.out ? 'A spike as the ball passes the bat' : 'No spike: flat as it passes', VW / 2, 410, VW - 30)
+  } else {
+    // the pitch from behind the bowler: it narrows away from the camera
+    const half = (y: number) => 30 + ((y - 90) / 330) * 120
+    const X = (x: number, y: number) => VW / 2 + x * half(y) * 1.1
+    ctx.fillStyle = '#7c5f35'; ctx.beginPath(); ctx.moveTo(VW / 2 - half(420), 420); ctx.lineTo(VW / 2 + half(420), 420); ctx.lineTo(VW / 2 + half(90), 90); ctx.lineTo(VW / 2 - half(90), 90); ctx.closePath(); ctx.fill()
+    // the stumps and the zone round them
+    ctx.fillStyle = rv.wickets.startsWith('Hitting') ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.12)'
+    ctx.fillRect(X(-0.18, 100), 78, X(0.18, 100) - X(-0.18, 100), 46)
+    ctx.strokeStyle = '#fef3c7'; ctx.lineWidth = 3; for (const x of [-0.12, 0, 0.12]) { ctx.beginPath(); ctx.moveTo(X(x, 100), 84); ctx.lineTo(X(x, 100), 124); ctx.stroke() }
+    const P = { x: X(rv.pitchX, 250), y: 250 }, I = { x: X(rv.impactX, 150), y: 150 }, S = { x: X(rv.stumpsX, 106), y: 106 }, H = { x: X(rv.pitchX * 0.5, 400), y: 400 }
+    const seg = (a: { x: number; y: number }, b: { x: number; y: number }, c: string, dash: number[], from: number, to: number) => {
+      const u = Math.max(0, Math.min(1, (k - from) / (to - from)))
+      if (u <= 0) return
+      ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.setLineDash(dash); ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u); ctx.stroke(); ctx.setLineDash([])
+    }
+    seg(H, P, '#fbbf24', [], 0, 0.4)
+    seg(P, I, '#fb923c', [], 0.4, 0.7)
+    seg(I, S, rv.wickets.startsWith('Hitting') ? '#ef4444' : '#94a3b8', [10, 8], 0.7, 1)
+    const col = (v: string) => (v === 'In line' || v === 'Hitting' ? '#34d399' : v.includes("umpire's call") ? '#fb923c' : '#f87171')
+    const dot = (p: { x: number; y: number }, c: string, from: number) => { if (k < from) return; ctx.fillStyle = c; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke() }
+    dot(P, col(rv.pitching), 0.4); dot(I, col(rv.impact), 0.7); dot(S, col(rv.wickets), 0.98)
+    // the three readings
+    ;(['Pitching', 'Impact', 'Wickets'] as const).forEach((label, i) => {
+      const val = [rv.pitching, rv.impact, rv.wickets][i]
+      if (t < REVIEW_T.path + i * 0.5) return
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect(14 + i * 150, 436, 142, 16 + 0, 6); ctx.fill()
+      ctx.textAlign = 'left'; ctx.fillStyle = '#94a3b8'; ctx.font = '700 15px sans-serif'; ctx.fillText(label.toUpperCase(), 22 + i * 150, 444)
+      ctx.fillStyle = col(val); ctx.font = '800 15px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(val, 148 + i * 150, 444, 82)
+      ctx.textAlign = 'center'
+    })
+  }
+  if (t >= REVIEW_T.verdict) {
+    const u = Math.max(0, Math.min(1, (t - REVIEW_T.verdict) / 0.4))
+    ctx.globalAlpha = u
+    ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, 150, VW, 150)
+    ctx.fillStyle = rv.out ? '#f87171' : '#34d399'; ctx.font = `900 ${Math.round(110 - 22 * u)}px sans-serif`; ctx.textAlign = 'center'
+    ctx.fillText(rv.out ? 'OUT' : 'NOT OUT', VW / 2, 222, VW - 30)
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '700 24px sans-serif'
+    ctx.fillText(rv.overturned ? 'The decision is overturned' : 'The decision stands', VW / 2, 280, VW - 30)
+    ctx.globalAlpha = 1
+  }
 }
