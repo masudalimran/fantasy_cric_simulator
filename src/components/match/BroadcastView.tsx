@@ -7,7 +7,7 @@ import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { ballName } from '../../engine/delivery'
 import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
-import { useCaptions, useScoreBar } from '../../prefs'
+import { useCaptions, useCharacterWeapons, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene, type Scene } from './broadcastDraw'
 import { WIDE_LINE_M } from '../../engine/wide'
@@ -56,11 +56,12 @@ type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper
 
 export function Figure({ player, team, look, rig }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void }) {
   const ump = look === 'umpire'
+  const ownWeapons = useCharacterWeapons()
   const primary = ump ? '#1e293b' : team?.colors.primary ?? '#334155'
   const second = ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
   const bat = look === 'striker' || look === 'nonstriker'
   const kit: Kit = {
-    weapon: player ? weaponOf(player.id) : null, aura: player ? auraOf(player.id) : null,
+    weapon: ownWeapons && player ? weaponOf(player.id) : null, aura: player ? auraOf(player.id) : null,
     shirt: primary, trim: second, trousers: ump ? '#0f172a' : '#e5e7eb', pads: bat || look === 'keeper',
     gloves: bat ? '#f8fafc' : look === 'keeper' ? '#fbbf24' : null, boots: ump ? '#020617' : '#f8fafc',
   }
@@ -68,7 +69,7 @@ export function Figure({ player, team, look, rig }: { player?: Player; team?: Te
     <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
       {/* the shadow on the grass */}
       <div className="absolute rounded-full" style={{ left: 6, top: 110, width: 48, height: 12, background: 'rgba(0,0,0,0.32)' }} />
-      <Body kit={kit} rigRef={rig}>
+      <Body key={ownWeapons ? 'w' : 'b'} kit={kit} rigRef={rig}>
         {ump
           ? <><div className="absolute rounded-full" style={{ left: 8, top: 4, width: 44, height: 44, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 4, top: 0, width: 52, height: 13, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
           : <div className="absolute rounded-full" style={{ left: 2, top: 0, width: 56, height: 56, boxShadow: `0 0 0 3px ${team ? accentOf(team) : '#fff'}, 0 0 10px #000a`, overflow: 'hidden' }}>{player && team && <PlayerAvatar player={player} team={team} size={56} />}</div>}

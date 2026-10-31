@@ -86,6 +86,22 @@ export function useCaptions(): boolean {
   return useSyncExternalStore((cb) => { captionListeners.add(cb); return () => { captionListeners.delete(cb) } }, () => captions, () => false)
 }
 
+// ---- Weapons: a plain cricket bat for everybody, or each character's own weapon -----------------------------
+const WEAPONS_KEY = 'fcs.weapons'
+const weaponListeners = new Set<() => void>()
+let weapons = (() => { try { return localStorage.getItem(WEAPONS_KEY) === '1' } catch { return false } })()
+
+export function setCharacterWeapons(on: boolean) {
+  weapons = on
+  try { localStorage.setItem(WEAPONS_KEY, on ? '1' : '0') } catch { /* just not remembered */ }
+  weaponListeners.forEach((l) => l())
+}
+
+/** Whether each character carries his own weapon in the broadcast view (swords, staffs, hammers...) instead of an ordinary cricket bat (off by default: everybody has a real bat). */
+export function useCharacterWeapons(): boolean {
+  return useSyncExternalStore((cb) => { weaponListeners.add(cb); return () => { weaponListeners.delete(cb) } }, () => weapons, () => false)
+}
+
 // ---- Score bar: the score in the corner of the broadcast picture ---------------------------------------------
 const SCOREBAR_KEY = 'fcs.scorebar'
 const scoreBarListeners = new Set<() => void>()

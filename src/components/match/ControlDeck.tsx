@@ -8,7 +8,7 @@ import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
 import { askVoice, cancelSpeech, setVoiceMode, setVoiceName, setVoiceSpeed, speak, useEnglishVoices, useVoiceMode, useVoiceNames, useVoiceSpeed, voiceSupported, type VoiceMode, type VoiceSpeed } from '../../audio/voice'
 import { VOICE_ROLES, assignVoices, type VoiceRole } from '../../audio/speechText'
-import { animLevelOf, setAnimLevel, setAnimPrefs, setBroadcastView, setCaptions, setScoreBar, setSwipeAim, useAnimPrefs, useBroadcastView, useCaptions, useScoreBar, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
+import { animLevelOf, setAnimLevel, setAnimPrefs, setBroadcastView, setCaptions, setCharacterWeapons, setScoreBar, setSwipeAim, useAnimPrefs, useBroadcastView, useCaptions, useCharacterWeapons, useScoreBar, useSwipeAim, type AnimLevel, type AnimPrefs } from '../../prefs'
 import { DeliveryPad, ShotPad } from './AimPads'
 
 type Auto = 0 | 1 | 2 | 4
@@ -93,6 +93,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
   const swipeOn = useSwipeAim()
   const bcast = useBroadcastView()
   const captionsOn = useCaptions()
+  const weaponsOn = useCharacterWeapons()
   const scoreBarOn = useScoreBar()
   const voiceMode = useVoiceMode()
   const voiceSpeed = useVoiceSpeed()
@@ -158,6 +159,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
         <Fold title="Display options" hint="broadcast view, score bar, captions, play manually" badge={manual ? 'Playing manually' : null}>
           <SwitchRow title="Broadcast view" tip="Show the match the way it looks on TV" on={bcast} set={setBroadcastView} hint={bcast ? 'On: a TV camera follows the bowler and the ball (aim shots with the shot pad)' : 'Off: the field is shown from above'} />
           {bcast && <SwitchRow title="Score bar" tip="The score, the two batsmen and the bowler in the corner of the picture" on={scoreBarOn} set={setScoreBar} hint={scoreBarOn ? 'On: the score is shown in the corner of the picture' : 'Off: the corner of the picture is clear'} />}
+          {bcast && <SwitchRow title="Own weapons" tip="Each character swings his own weapon (a sword, a staff, a hammer...) instead of an ordinary cricket bat" on={weaponsOn} set={setCharacterWeapons} hint={weaponsOn ? 'On: every character carries his own weapon' : 'Off: everybody has an ordinary cricket bat'} />}
           {bcast && <SwitchRow title="Captions" tip="Write the commentary line of each ball along the top of the picture" on={captionsOn} set={setCaptions} hint={captionsOn ? 'On: the commentary line is written on the picture' : 'Off: no captions on the picture'} />}
           {setManual && <SwitchRow title="Play manually" tip="Play every ball yourself: the auto-play options go away and the controls stay in view" on={manual} set={setManual} hint={manual ? 'On: no auto-play, the controls stay in view' : 'Off: auto-play is available'} />}
         </Fold>
