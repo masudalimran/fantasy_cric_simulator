@@ -238,8 +238,18 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
       {show.lower && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] max-w-[88%] rounded-lg bg-black/75 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : show.kind === 'trophy' ? 3.4 : 1.2) / Math.max(0.25, rate)}s both` }}>
-          <div className="flex items-center gap-2"><span className="font-display text-lg uppercase leading-none tracking-wide text-white">{show.lower.title}</span>{show.lower.chip && <span className="rounded bg-amber-300 px-1.5 text-[10px] font-extrabold uppercase tracking-wider text-black">{show.lower.chip}</span>}</div>
+          <div className="flex items-center gap-2"><span className="font-display text-lg uppercase leading-none tracking-wide text-white">{show.lower.title}</span>{show.lower.chip && <span className="rounded bg-amber-300 px-1.5 text-[10px] font-extrabold uppercase tracking-wider text-black">{show.lower.chip}</span>}{show.lower.rating !== undefined && <span className="ml-auto rounded bg-violet-500 px-1.5 font-display text-base leading-none text-white">{show.lower.rating}</span>}</div>
           {show.lower.lines.map((ln, i) => <div key={i} className="text-[11px] font-semibold leading-snug text-slate-200">{ln}</div>)}
+          {show.lower.tiles && show.lower.tiles.length > 0 && (
+            <div className={`mt-1 grid gap-1 ${show.lower.tiles.length <= 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              {show.lower.tiles.slice(0, 6).map((t) => (
+                <div key={t.label} className="rounded bg-white/10 px-1.5 py-0.5 text-center leading-tight">
+                  <div className="font-display text-base leading-none text-white">{t.value}</div>
+                  <div className="truncate text-[8px] font-bold uppercase tracking-wide text-slate-300">{t.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {label && !show.lower && <div className="pointer-events-none absolute bottom-3 left-3 z-[9000] rounded bg-black/70 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-white ring-1" style={{ boxShadow: `inset 3px 0 0 ${show.colors[0]}` }}>{label}</div>}

@@ -378,7 +378,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const rate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
         const opener = inn.batters.filter((b) => b.balls > 0 || b.dismissal).length === 0
         const chip = intro.title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : opener ? 'OPENING' : 'NEW BATSMAN'
-        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: p, team: bat.team, title: intro.title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', seed: match.seed + striker.balls + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: p.hand === 'L', lower: { title: p.name, lines: intro.lines.slice(0, 2), chip } }, base: nowBase(), label: intro.title, rate, cast: { team: bat.team, players: [p] } } })
+        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: p, team: bat.team, title: intro.title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', seed: match.seed + striker.balls + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: p.hand === 'L', lower: { title: p.name, lines: intro.lines.slice(0, 2), chip, tiles: intro.tiles, rating: intro.rating } }, base: nowBase(), label: intro.title, rate, cast: { team: bat.team, players: [p] } } })
       } else enqueueMoment(intro)
     }
     const bowlerId = inn.bowlerId

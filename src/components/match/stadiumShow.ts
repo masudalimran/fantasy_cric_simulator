@@ -13,7 +13,7 @@ import { SCREEN_R, slopePoint, type BigScreen, type BoardInfo, type Confetti, ty
 export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover'
 
 /** The title strip in the corner while a show plays: a name, a few lines under it and a small chip ("CHAMPIONS"). */
-export interface Lower { title: string; lines: string[]; chip?: string }
+export interface Lower { title: string; lines: string[]; chip?: string; /** Figures under the words (a batsman's season: apps, runs, average...) and his overall rating. */ tiles?: { label: string; value: string }[]; rating?: number }
 
 export interface StadiumShow {
   kind: ShowKind
