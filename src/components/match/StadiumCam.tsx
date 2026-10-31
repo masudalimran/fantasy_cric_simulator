@@ -7,8 +7,8 @@ import { Body, type Kit, type Rig } from './Body'
 import { Figure, HEIGHT, MIN_SCALE, WIDTH } from './BroadcastView'
 import { BAT_END_Z, BOWL_Z, fielderWorld, prep, project, type V3 } from './broadcast'
 import { drawScene } from './broadcastDraw'
-import { batsmanPose, breathe, fielderPose, nonStrikerPose, type Pose } from './bodyPose'
-import { cameraAt, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
+import { batsmanPose, breathe, fielderPose, nonStrikerPose, type Pose, standing } from './bodyPose'
+import { bowlerPhase, bowlerPos, cameraAt, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
 import type { ReplayBase } from './ReplayFrame'
 
 /**
@@ -152,7 +152,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         apply(`f${i}`, m.v < 0.3 && !(w && w.pose) ? breathe(pose, tq, 5 + i) : pose)
       })
       const bowlerRest: V3 = { x: 0.8, y: 0, z: BOWL_Z + 3.5 }
-      if (!hideBase) {
+      if (!hideBase && L.show.kind !== 'bowler') {
         const w = huddle ? huddlePerson(L.show, t, n - 1, n, bowlerRest) : null
         const pos = w ? w.pos : bowlerRest
         if (put('bowler', pos)) {
@@ -184,6 +184,15 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           const m = move('w0', wp)
           const raise = Math.max(0, Math.min(1, (t - (ENTRANCE.start + ENTRANCE.walk)) / 0.5)) // he lifts his bat to the crowd when he gets there
           apply('w0', batsmanPose({ style: 'defend', t: 9, t1: 1, t2: 2, swing: 0, hurt: 0, raise, joy: 0, speed: m.v, cyc: m.cyc, walkOff: false }), L.show.left)
+        }
+      }
+      if (cs && L.show.kind === 'bowler') {
+        const bp = bowlerPos(L.show, t)
+        if (put('w0', bp)) {
+          const m = move('w0', bp)
+          const ph = bowlerPhase(L.show, t)
+          const walking = fielderPose({ speed: Math.max(m.v, 0), cyc: m.cyc, ready: 0, dive: 0, catchK: 0, joy: 0, stop: 0, throwK: 0, keeper: false })
+          rigs.current.get('w0')?.apply(ph === 'shine' ? shinePose(t) : ph === 'ready' ? { ...breathe(standing(), tq, 4), ball: true, handR: { x: 6, y: 14 }, handL: { x: -6, y: 16 } } : { ...walking, ball: true, handR: { x: 6, y: 14 } })
         }
       }
       const tn = nodes.current.get('trophy')
@@ -227,7 +236,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         <div ref={setNode('umpire2')} className={sprite} style={box}><Figure look="umpire" rig={setRig('umpire2')} /></div>
         {cast && cast.players.map((p, i) => (
           <div key={p.id} ref={setNode(`w${i}`)} className={sprite} style={box}>
-            <Figure player={p} team={cast.team} look={show.kind === 'entrance' ? 'striker' : 'fielder'} rig={setRig(`w${i}`)} />
+            <Figure player={p} team={cast.team} look={show.kind === 'entrance' ? 'striker' : show.kind === 'bowler' ? 'bowler' : 'fielder'} rig={setRig(`w${i}`)} />
           </div>
         ))}
         {show.kind === 'trophy' && show.trophy && <div ref={setNode('trophy')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: 100, height: 100, transformOrigin: '0 0' }}><TrophyArt kind={show.trophy as TrophyKind} size={100} shine /></div>}
@@ -237,7 +246,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
       {show.lower && (
-        <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] max-w-[88%] rounded-lg bg-black/75 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : show.kind === 'trophy' ? 3.4 : 1.2) / Math.max(0.25, rate)}s both` }}>
+        <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] max-w-[88%] rounded-lg bg-black/75 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : show.kind === 'bowler' ? 2.4 : show.kind === 'trophy' ? 3.4 : 1.2) / Math.max(0.25, rate)}s both` }}>
           <div className="flex items-center gap-2"><span className="font-display text-lg uppercase leading-none tracking-wide text-white">{show.lower.title}</span>{show.lower.chip && <span className="rounded bg-amber-300 px-1.5 text-[10px] font-extrabold uppercase tracking-wider text-black">{show.lower.chip}</span>}{show.lower.rating !== undefined && <span className="ml-auto rounded bg-violet-500 px-1.5 font-display text-base leading-none text-white">{show.lower.rating}</span>}</div>
           {show.lower.lines.map((ln, i) => <div key={i} className="text-[11px] font-semibold leading-snug text-slate-200">{ln}</div>)}
           {show.lower.tiles && show.lower.tiles.length > 0 && (

@@ -294,7 +294,7 @@ const NOTE_STYLE: Record<StageNote['tone'], string> = {
 }
 
 export function Stage({
-  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1, look, scoreBug, caption, wear, fitSeconds, held,
+  event, overEvents, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, fieldTag, pitch, chase, note, moment, onDismissMoment, aimShot, aimDelivery, onSwipe: onSwipeProp, freeHit, rate = 1, look, scoreBug, caption, wear, fitSeconds, held, clipStriker, clipNonStriker,
 }: {
   /** Play the ball's clip so that it finishes in exactly this many seconds (the timeout's highlight reel: every ball is shown to the end). */
   fitSeconds?: number
@@ -324,6 +324,8 @@ export function Stage({
   /** When set, dragging across the field aims the next shot. */
   onSwipe?: (a: ShotAim) => void
   striker: Player; nonStriker: Player | null; bowler: Player
+  /** The two batsmen of the ball being shown: the broadcast picture uses them, so a change of strike at the end of an over does not swap their faces under a celebration. */
+  clipStriker?: Player; clipNonStriker?: Player | null
   battingTeam: Team; bowlingTeam: Team; fielders: Placed[]
 }) {
   // The broadcast view replaces the field from above; dragging to aim a shot only works on the view from above.
@@ -380,7 +382,7 @@ export function Stage({
         onSwipe({ angle: Math.atan2((dy / rect.height) * H, (dx / rect.width) * W), loft: len > rect.width * 0.3 })
       } : undefined}
     >
-      {broadcast && <BroadcastView event={event} striker={striker} nonStriker={nonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} look={look} scoreBug={scoreBug} caption={caption} wear={wear} fitSeconds={fitSeconds} />}
+      {broadcast && <BroadcastView event={event} striker={clipStriker ?? striker} nonStriker={clipNonStriker === undefined ? nonStriker : clipNonStriker} bowler={bowler} battingTeam={battingTeam} bowlingTeam={bowlingTeam} fielders={fielders} pitch={pitch} rate={rate} look={look} scoreBug={scoreBug} caption={caption} wear={wear} fitSeconds={fitSeconds} />}
       {!broadcast && (
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
         <Ground battingColor={battingTeam.colors.primary} pitch={pitch} />

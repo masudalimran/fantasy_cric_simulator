@@ -1,5 +1,5 @@
 import { cardGrid, type CheerVariant } from './CheerScreen'
-import { BAT_END_Z, camWide, lookAt, ROPE, type Cam, type V3 } from './broadcast'
+import { BAT_END_Z, BOWL_Z, camWide, lookAt, ROPE, type Cam, type V3 } from './broadcast'
 import { clamp01, mixPose, standing, type Pose } from './bodyPose'
 import { shade } from '../../engine/stadium'
 import { SCREEN_R, slopePoint, type BigScreen, type BoardInfo, type Confetti, type CrowdClose, type FanSign, type ScreenPost, type Spark } from './crowdDraw'
@@ -10,7 +10,7 @@ import { SCREEN_R, slopePoint, type BigScreen, type BoardInfo, type Confetti, ty
  * where the camera is at each moment, what the crowd and the sky are doing, and how the cheerleaders and the huddle stand. Looks only.
  */
 
-export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover'
+export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover' | 'bowler'
 
 /** The title strip in the corner while a show plays: a name, a few lines under it and a small chip ("CHAMPIONS"). */
 export interface Lower { title: string; lines: string[]; chip?: string; /** Figures under the words (a batsman's season: apps, runs, average...) and his overall rating. */ tiles?: { label: string; value: string }[]; rating?: number }
@@ -43,7 +43,7 @@ export interface StadiumShow {
 }
 
 /** How long each show lasts at full speed (the camera flight is the first part of it). */
-export const SHOW_SECONDS: Record<ShowKind, number> = { cheer: 7, stands: 6.6, huddle: 6.6, fireworks: 7, social: 9.2, entrance: 8.6, trophy: 9.6, board: 8.2, studio: 4.6, flyover: 6 }
+export const SHOW_SECONDS: Record<ShowKind, number> = { cheer: 7, stands: 6.6, huddle: 6.6, fireworks: 7, social: 9.2, entrance: 8.6, trophy: 9.6, board: 8.2, studio: 4.6, flyover: 6, bowler: 7.8 }
 
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k
@@ -116,6 +116,46 @@ function trackKey(show: StadiumShow, t: number): Key {
   return { p: { x: 2.4 + w.x * 0.4, y: 1.75, z: Math.max(w.z - 10, -13) }, aim: { x: w.x, y: 1.3, z: w.z }, hfov: 38 * rad }
 }
 
+// ---- a new bowler comes on ---------------------------------------------------------------------------------------------------
+
+/** Where he marks out his run-up: twelve metres behind the stumps at the bowler's end. */
+export const bowlerMark = (): V3 => ({ x: 0.6, y: 0, z: BOWL_Z - 12 })
+/** Where he jogs in from: out in the deep on one side. */
+export const bowlerFrom = (seed: number): V3 => ({ x: sideOf(seed + 3) * 28, y: 0, z: -24 })
+/** When he sets off, how long the jog takes, then he rubs the ball on his trousers, takes his first run-up steps and settles. */
+export const BOWLER_IN = { start: 1.0, shine: 1.4, steps: 0.9, fly: 2.6 }
+const bowlerDist = (show: StadiumShow): number => { const a = bowlerFrom(show.seed), b = bowlerMark(); return Math.hypot(a.x - b.x, a.z - b.z) }
+const bowlerWalk = (show: StadiumShow): number => Math.max(2.4, Math.min(3.6, bowlerDist(show) / 8))
+/** The moment he reaches his mark. */
+export const bowlerArrives = (show: StadiumShow): number => BOWLER_IN.start + bowlerWalk(show)
+/** What he is doing: jogging in, rubbing the ball, taking his first steps, or ready. */
+export function bowlerPhase(show: StadiumShow, t: number): 'jog' | 'shine' | 'steps' | 'ready' {
+  const a = bowlerArrives(show)
+  return t < a ? 'jog' : t < a + BOWLER_IN.shine ? 'shine' : t < a + BOWLER_IN.shine + BOWLER_IN.steps ? 'steps' : 'ready'
+}
+/** Where he is `t` seconds in. */
+export function bowlerPos(show: StadiumShow, t: number): V3 {
+  const from = bowlerFrom(show.seed), m = bowlerMark()
+  const w = clamp01((t - BOWLER_IN.start) / bowlerWalk(show))
+  const e = 1 - Math.pow(1 - w, 1.5) // quick at first, slowing as he reaches his mark
+  const stepK = ease((t - bowlerArrives(show) - BOWLER_IN.shine) / BOWLER_IN.steps)
+  return { x: lerp(from.x, m.x, e), y: 0, z: lerp(from.z, m.z, e) + 3 * stepK }
+}
+/** The ball rubbed on the trousers: the right hand goes up and down the thigh, the head looks down at it. */
+export function shinePose(t: number): Pose {
+  const b = t * 9
+  return { ...standing(), ball: true, hip: { x: 30, y: 87 }, lean: 2, head: { dx: 0, dy: 3, tilt: 5 }, handL: { x: -8, y: 30 }, handR: { x: 9 + 3 * Math.sin(b), y: 44 + 4 * Math.cos(b) } }
+}
+/** The camera runs ahead of him along the way he comes, looking back at him (and keeps the same place when he stops, pushing in on his face). */
+function bowlerKey(show: StadiumShow, t: number): Key {
+  const w = bowlerPos(show, Math.min(t, bowlerArrives(show)))
+  const from = bowlerFrom(show.seed), m = bowlerMark()
+  const d = Math.hypot(m.x - from.x, m.z - from.z) || 1
+  const dir = { x: (m.x - from.x) / d, z: (m.z - from.z) / d }
+  const arrived = ease((t - bowlerArrives(show)) / 1.2)
+  return { p: { x: w.x + dir.x * 8, y: 1.7, z: w.z + dir.z * 8 }, aim: { x: w.x, y: 1.35, z: w.z + 3 * ease((t - bowlerArrives(show) - BOWLER_IN.shine) / BOWLER_IN.steps) }, hfov: lerp(38, 29, arrived) * rad }
+}
+
 // ---- the trophy -------------------------------------------------------------------------------------------------------------------
 
 /** Where the team gathers: the middle of the ground, just off the pitch. */
@@ -169,6 +209,10 @@ function flightOf(show: StadiumShow): Flight {
     const end = trackKey(show, ENTRANCE.track)
     return { keys: [s0, { p: { x: 6, y: 9, z: 8 }, aim: lerp3(s0.aim, end.aim, 0.6), hfov: 50 * rad }, end], fly: ENTRANCE.track }
   }
+  if (show.kind === 'bowler') {
+    const end = bowlerKey(show, BOWLER_IN.fly)
+    return { keys: [s0, { p: { x: 8, y: 6, z: -20 }, aim: lerp3(s0.aim, end.aim, 0.6), hfov: 46 * rad }, end], fly: BOWLER_IN.fly }
+  }
   if (show.kind === 'trophy') {
     const c = trophyCentre()
     const end: Key = { p: trophyCam(show.seed, 0), aim: { x: c.x, y: 1.5, z: c.z }, hfov: 44 * rad }
@@ -197,6 +241,8 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
   if (show.kind === 'entrance') {
     // after the flight the camera runs ahead of him, looking back
     if (t >= ENTRANCE.track) { const k = trackKey(show, t); p = k.p; aim = k.aim; hfov = k.hfov }
+  } else if (show.kind === 'bowler') {
+    if (t >= BOWLER_IN.fly) { const k = bowlerKey(show, t); p = k.p; aim = k.aim; hfov = k.hfov }
   } else if (show.kind === 'trophy') {
     if (s >= 1) { p = trophyCam(show.seed, hold); aim = { x: trophyCentre().x, y: 1.5 + 0.8 * dh, z: trophyCentre().z } }
   } else if (show.kind === 'cheer' && show.variant !== 'cards') aim = add3(aim, { x: 0, y: 0, z: sideOf(show.seed) * 1.6 }, dh)
@@ -216,7 +262,7 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
 /** The stands drawn person by person (null when the camera has no use for them: the huddle). */
 export function crowdAt(show: StadiumShow, t: number): CrowdClose | null {
   const k = 0.45 + 0.55 * clamp01(t / 2.4)
-  if (show.kind === 'huddle' || show.kind === 'fireworks' || show.kind === 'flyover') return null
+  if (show.kind === 'huddle' || show.kind === 'fireworks' || show.kind === 'flyover' || show.kind === 'bowler') return null
   // the far stand behind the gate: on their feet as the batsman walks out
   if (show.kind === 'entrance') return { a0: Math.PI / 2 - 0.55, a1: Math.PI / 2 + 0.55, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: 0.55 + 0.45 * clamp01((t - 1) / 2), seed: show.seed }
   // the stands behind the team as they lift the cup

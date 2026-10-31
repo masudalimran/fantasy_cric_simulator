@@ -382,7 +382,18 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       } else enqueueMoment(intro)
     }
     const bowlerId = inn.bowlerId
-    if (bowlerId && (inn.bowlers.get(bowlerId)?.legalBalls ?? 0) === 0 && !seen.current!.has(`bowl:${bowlerId}`)) { seen.current!.add(`bowl:${bowlerId}`); enqueueMoment(mk('bowler', bowlerId)) }
+    if (bowlerId && (inn.bowlers.get(bowlerId)?.legalBalls ?? 0) === 0 && !seen.current!.has(`bowl:${bowlerId}`)) {
+      seen.current!.add(`bowl:${bowlerId}`)
+      const intro = mk('bowler', bowlerId)
+      if (getAnimPrefs().intro) {
+        // the bowler jogs in from the deep, marks his run-up and rubs the ball on his trousers, with a strip of who he is
+        const p = match.player(bowlerId), bowl = match.bowlingSide(inn)
+        const rate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
+        const opening = [...inn.bowlers.values()].every((l) => l.legalBalls === 0)
+        const chip = intro.title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : opening ? 'OPENING BOWLER' : 'NEW BOWLER'
+        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: p, team: bowl.team, title: intro.title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.bowler * 1000 * rate), stadium: { show: { kind: 'bowler', seed: match.seed + inn.legalBalls + inn.index * 17, colors: [bowl.team.colors.primary, bowl.team.colors.secondary], lower: { title: p.name, lines: intro.lines.slice(0, 2), chip, tiles: intro.tiles, rating: intro.rating } }, base: nowBase(), label: intro.title, rate, cast: { team: bowl.team, players: [p] } } })
+      } else enqueueMoment(intro)
+    }
   }, [match, seasonStats, fixture, enqueueMoment, nowBase])
 
   // the studio show: the camera flies to the stadium's giant screen (the scores on it) and the studio takes over from there
@@ -1152,6 +1163,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const bowlSide = view.bowlingSide(inn)
   const last = match.events[match.events.length - 1] ?? null
   const lastHere = last && last.innings === inn.index ? last : null
+  // the two batsmen of the last ball: the broadcast picture keeps showing them (not whoever is on strike now), so when the over ends and the strike changes the
+  // picture does not swap their faces: a fifty reached off the last ball of an over is still celebrated by the right batsman
+  const clipWho = lastHere && !lastHere.wicket ? { clipStriker: match.player(lastHere.strikerId), clipNonStriker: match.player(lastHere.nonStrikerId) } : {}
   // the broadcast's score bug: the score, the two batsmen, the bowler and what a chase needs
   const bugBat = (id: string) => { const line = inn.batters.find((b) => b.id === id); return line ? { name: callName(match.player(id)), runs: line.runs, balls: line.balls, strike: id === inn.strikerId } : null }
   const bugBowlerId = inn.bowlerId ?? lastHere?.bowlerId ?? null
@@ -1303,7 +1317,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             {view.isOver ? <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">{resultCard}</div> : showBreak ? <div className="grid min-h-0 flex-1 place-items-center p-4 text-center text-sm text-slate-300"><span><b className="block font-display text-3xl tracking-wide text-white">{match.awaiting === 'day' ? 'Stumps' : 'Innings break'}</b>{match.awaiting === 'day' ? 'Play is over for the day. Press Next day to go on.' : 'Look the innings over, then press Next innings.'}</span></div> : <div className="relative flex min-h-0 flex-1 items-center justify-center p-1.5">
               <div className="w-full" style={{ maxWidth: 'calc((100dvh - 96px) * 1.6)' }}>
                 <Stage held={revealHold !== null}
-                  event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
+                  event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} {...clipWho} bowler={bowler}
                   battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} wear={pitchWear} scoreBug={scoreBug} caption={caption} {...aimProps}
                 />
               </div>
@@ -1332,7 +1346,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           {!view.isOver && !showBreak && <div className="relative shrink-0">
             <div className="px-2 pb-1 pt-2">
               <Stage held={revealHold !== null}
-                event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
+                event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} {...clipWho} bowler={bowler}
                 battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} wear={pitchWear} scoreBug={scoreBug} caption={caption} {...aimProps}
               />
             </div>
@@ -1378,7 +1392,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         <div className="space-y-3 xl:sticky xl:top-3 xl:self-start">
           <div className="mx-auto w-full" style={{ maxWidth: 'max(460px, calc((100vh - 490px) * 1.6))' }}>
             <Stage held={revealHold !== null}
-              event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} bowler={bowler}
+              event={lastHere} overEvents={overEvents} striker={striker} nonStriker={nonStriker} {...clipWho} bowler={bowler}
               battingTeam={batSide.team} bowlingTeam={bowlSide.team} fielders={placeFielders(bowlSide.xi, bowler.id, plan.spots)} fieldTag={plan} pitch={pitchKind} chase={chase} note={note} freeHit={freeHitState} rate={auto === 4 ? 0.5 : auto === 2 ? 0.75 : 1} look={stadium} wear={pitchWear} scoreBug={scoreBug} caption={caption} {...aimProps} moment={moment} onDismissMoment={dismissMoment}
             />
           </div>
