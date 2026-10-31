@@ -237,3 +237,8 @@ img {
 }
 .cap-glint { animation: cap-glint 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .cap-twinkle, .cap-glint { animation: none; opacity: 0.8; } }
+
+@keyframes stadium-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

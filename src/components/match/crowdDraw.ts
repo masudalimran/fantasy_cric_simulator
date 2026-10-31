@@ -196,12 +196,23 @@ export function drawSparks(ctx: CanvasRenderingContext2D, r: CamR, sparks: Spark
 /** One fan's post on the giant screen. */
 export interface ScreenPost { name: string; handle: string; side: 0 | 1; text: string; likes: number; shares: number; replies: number; age: string }
 
-/** The stadium's giant screen, up above the stands: the fan wall with the posts coming in. */
+/** What a notice on the giant screen says: a title, a line under it, rows of facts that come in one by one, and perhaps one big figure. */
+export interface BoardInfo {
+  title: string
+  sub?: string
+  rows: { label: string; value: string }[]
+  /** A big figure under the title (a score, a count down). */
+  big?: string
+}
+
+/** The stadium's giant screen, up above the stands: the fan wall with the posts coming in, or a notice. */
 export interface BigScreen {
   /** The angle round the ground it hangs at, and how wide it is (half, in radians), and how high it runs (metres). */
   a: number; half: number; y0: number; y1: number
   hashtag: string
   posts: ScreenPost[]
+  /** A notice instead of the fan wall (the timeout, the super over, the studio). */
+  board?: BoardInfo
   /** Seconds into the show: the posts come in one after another. */
   t: number
   /** The batting team's two colours. */
@@ -237,6 +248,7 @@ export function drawBigScreen(ctx: CanvasRenderingContext2D, r: CamR, bs: BigScr
   const bg = ctx.createLinearGradient(0, 0, 0, VH)
   bg.addColorStop(0, '#0f1b36'); bg.addColorStop(1, '#070d1c')
   ctx.fillStyle = bg; ctx.fillRect(0, 0, VW, VH)
+  if (bs.board) { drawBoard(ctx, bs, VW, tick); ctx.restore(); return }
   // the header: the hashtag and a LIVE light
   const hg = ctx.createLinearGradient(0, 0, VW, 0)
   hg.addColorStop(0, bs.colors[0]); hg.addColorStop(1, '#1e3a8a')
@@ -276,5 +288,56 @@ export function drawBigScreen(ctx: CanvasRenderingContext2D, r: CamR, bs: BigScr
     ctx.fillText(`\u2665 ${kfmt(Math.round(po.likes * k))}   \u21bb ${kfmt(Math.round(po.shares * k))}`, 84, y + card - 11)
     ctx.globalAlpha = 1
   })
+  ctx.restore()
+}
+
+
+/** The notice on the giant screen: the title in the team's colour, a line under it, and the facts coming in one after another. */
+function drawBoard(ctx: CanvasRenderingContext2D, bs: BigScreen, VW: number, tick: number) {
+  const b = bs.board as BoardInfo
+  const hg = ctx.createLinearGradient(0, 0, VW, 0)
+  hg.addColorStop(0, bs.colors[0]); hg.addColorStop(1, '#1e3a8a')
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, VW, 96)
+  ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'
+  ctx.font = '900 44px sans-serif'; ctx.fillText(b.title, VW / 2, 50, VW - 30)
+  ctx.fillStyle = Math.sin(tick * 5) > 0 ? '#ef4444' : '#7f1d1d'
+  ctx.beginPath(); ctx.arc(26, 26, 8, 0, Math.PI * 2); ctx.fill()
+  if (b.sub) { ctx.fillStyle = '#bfdbfe'; ctx.font = '700 28px sans-serif'; ctx.fillText(b.sub, VW / 2, 128, VW - 30) }
+  let y = b.sub ? 160 : 130
+  if (b.big) {
+    const k = Math.max(0, Math.min(1, (bs.t - 0.8) / 0.5))
+    ctx.globalAlpha = k
+    ctx.fillStyle = '#ffffff'; ctx.font = `900 ${Math.round(84 + (1 - k) * 30)}px sans-serif`; ctx.fillText(b.big, VW / 2, y + 52, VW - 30)
+    ctx.globalAlpha = 1
+    y += 116
+  }
+  b.rows.slice(0, 4).forEach((row, i) => {
+    const k = Math.max(0, Math.min(1, (bs.t - (1.4 + i * 0.7)) / 0.4))
+    if (k <= 0) return
+    const yy = y + i * 62 + (1 - k) * 24
+    ctx.globalAlpha = k
+    ctx.fillStyle = 'rgba(255,255,255,0.09)'
+    ctx.beginPath(); ctx.roundRect(16, yy, VW - 32, 54, 12); ctx.fill()
+    ctx.textAlign = 'left'; ctx.fillStyle = '#cbd5e1'; ctx.font = '700 25px sans-serif'; ctx.fillText(row.label, 32, yy + 29, 230)
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffffff'; ctx.font = '900 30px sans-serif'; ctx.fillText(row.value, VW - 32, yy + 29, 220)
+    ctx.globalAlpha = 1
+  })
+}
+
+/** A piece of confetti: where it is, how it is turned, its colour and size (metres). */
+export interface Confetti { p: V3; rot: number; rgb: [number, number, number]; size: number }
+
+/** Paper confetti, small coloured rectangles turning as they fall. */
+export function drawConfetti(ctx: CanvasRenderingContext2D, r: CamR, pieces: Confetti[]) {
+  ctx.save()
+  for (const c of pieces) {
+    const p = project(r, c.p)
+    if (!p) continue
+    const px = Math.max(1.6, (c.size * r.F) / p.d)
+    ctx.fillStyle = `rgb(${c.rgb[0]},${c.rgb[1]},${c.rgb[2]})`
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(c.rot); ctx.scale(1, 0.45 + 0.55 * Math.abs(Math.cos(c.rot * 2.3)))
+    ctx.fillRect(-px / 2, -px / 4, px, px / 2)
+    ctx.restore()
+  }
   ctx.restore()
 }

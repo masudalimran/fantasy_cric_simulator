@@ -606,7 +606,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         </div>
       ))}
       {/* a quick white flash when the picture cuts to the other camera */}
-      <div key={cutKey} className="pointer-events-none absolute inset-0 z-[6000] bg-white" style={{ animation: cutKey ? 'bcast-cut 0.28s ease-out forwards' : undefined, opacity: 0 }} />
+      <div key={`cut${cutKey}`} className="pointer-events-none absolute inset-0 z-[6000] bg-white" style={{ animation: cutKey ? 'bcast-cut 0.28s ease-out forwards' : undefined, opacity: 0 }} />
       {(look.covers || (event === null && look.rain === 2)) && <div className="pointer-events-none absolute inset-x-0 top-10 z-[6001] text-center"><span className="rounded bg-black/75 px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200 ring-1 ring-sky-300/40">{look.weather === 'washout' ? 'Washed out: no play today' : 'Rain stops play: covers on'}</span></div>}
       {/* the TV score bug: the score and overs, the two batsmen and the bowler, and in a chase what is needed */}
       {scoreBarOn && (scoreBug || event) && (

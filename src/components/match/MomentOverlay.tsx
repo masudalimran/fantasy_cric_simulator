@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
-import { StadiumCam } from './StadiumCam'
+import { StadiumCam, type Cast } from './StadiumCam'
 import type { StadiumShow } from './stadiumShow'
 import type { ReplayBase } from './ReplayFrame'
 import { ExtraScreen, FourScreen, MaidenScreen, TiredScreen, type ExtraInfo, type FourInfo, type MaidenInfo, type TiredInfo } from './EventScreens'
@@ -39,7 +39,7 @@ export interface Moment {
   /** Three runs: the batsman is worn out. */
   tired?: TiredInfo
   /** A stadium show: the camera leaves the live picture for the cheerleaders, the stands, the huddle or the fireworks. */
-  stadium?: { show: StadiumShow; base: ReplayBase; label: string; rate: number }
+  stadium?: { show: StadiumShow; base: ReplayBase; label: string; rate: number; cast?: Cast }
   /** For a free hit: who overstepped and who gets the swing. */
   freeHit?: FreeHitInfo
   /** The bowler's big moments: three in three balls, and five wickets. */
@@ -248,7 +248,7 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         data-moment="stadium" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3, delay: 0 } }} transition={{ duration: 0.35, delay: moment.delay / 1000 }}
       >
-        <StadiumCam show={moment.stadium.show} base={moment.stadium.base} rate={moment.stadium.rate} label={moment.stadium.label} />
+        <StadiumCam show={moment.stadium.show} base={moment.stadium.base} rate={moment.stadium.rate} label={moment.stadium.label} cast={moment.stadium.cast} />
       </motion.div>
     )
   }

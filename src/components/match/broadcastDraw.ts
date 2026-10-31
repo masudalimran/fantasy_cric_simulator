@@ -2,7 +2,7 @@ import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
 import { drawMove, type MoveDraw } from './moveFx'
-import { drawBigScreen, drawCrowdClose, drawSparks, type BigScreen, type CrowdClose, type Spark } from './crowdDraw'
+import { drawBigScreen, drawConfetti, drawCrowdClose, drawSparks, type BigScreen, type Confetti, type CrowdClose, type Spark } from './crowdDraw'
 
 /** Paints the ground, stands, pitch and stumps of the broadcast view onto a canvas. Pure drawing: it reads the camera and nothing else. */
 
@@ -36,6 +36,8 @@ export interface Scene {
   style: 'plain' | 'fire' | 'ice' | 'dragon'
   /** A stand of people drawn person by person (the stadium cameras of the cheerleader, stands and card-stunt screens). */
   crowd?: CrowdClose | null
+  /** Confetti in the air (the trophy celebration). */
+  confetti?: Confetti[]
   /** The stadium's giant screen with the fan wall on it. */
   screen?: BigScreen | null
   /** Fireworks in the sky behind the stands, and how much a burst lights everything up (0 to 1). */
@@ -102,6 +104,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   ctx.globalAlpha = 1
   if (sc.crowd) drawCrowdClose(ctx, r, W, H, sc.crowd, L, sc.tick)
   if (sc.screen) drawBigScreen(ctx, r, sc.screen, sc.tick)
+  if (sc.confetti && sc.confetti.length) drawConfetti(ctx, r, sc.confetti)
 
   // the grass: the ground ellipse, then mowing bands along the pitch
   const ground: V3[] = Array.from({ length: 72 }, (_, i) => ringPoint((i / 72) * Math.PI * 2, 1))

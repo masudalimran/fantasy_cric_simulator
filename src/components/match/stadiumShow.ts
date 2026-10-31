@@ -1,8 +1,8 @@
 import { cardGrid, type CheerVariant } from './CheerScreen'
-import { camWide, lookAt, ROPE, type Cam, type V3 } from './broadcast'
+import { BAT_END_Z, camWide, lookAt, ROPE, type Cam, type V3 } from './broadcast'
 import { clamp01, mixPose, standing, type Pose } from './bodyPose'
 import { shade } from '../../engine/stadium'
-import { SCREEN_R, slopePoint, type BigScreen, type CrowdClose, type FanSign, type ScreenPost, type Spark } from './crowdDraw'
+import { SCREEN_R, slopePoint, type BigScreen, type BoardInfo, type Confetti, type CrowdClose, type FanSign, type ScreenPost, type Spark } from './crowdDraw'
 
 /**
  * The stadium shows: the camera leaves the live picture and travels round the ground to the cheerleaders dancing at the boundary with the crowd behind
@@ -10,7 +10,10 @@ import { SCREEN_R, slopePoint, type BigScreen, type CrowdClose, type FanSign, ty
  * where the camera is at each moment, what the crowd and the sky are doing, and how the cheerleaders and the huddle stand. Looks only.
  */
 
-export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social'
+export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover'
+
+/** The title strip in the corner while a show plays: a name, a few lines under it and a small chip ("CHAMPIONS"). */
+export interface Lower { title: string; lines: string[]; chip?: string }
 
 export interface StadiumShow {
   kind: ShowKind
@@ -29,10 +32,18 @@ export interface StadiumShow {
   /** The fan wall on the stadium's giant screen: the posts and the hashtag. */
   posts?: ScreenPost[]
   hashtag?: string
+  /** A notice on the giant screen (the timeout, the super over, the studio). */
+  board?: BoardInfo
+  /** The batsman walking in is left-handed (which end of the crease he walks to). */
+  left?: boolean
+  /** The strip of words in the corner. */
+  lower?: Lower
+  /** The trophy lifted (its kind: cup, shield, globe...), or null for a team that celebrates without one. */
+  trophy?: string | null
 }
 
 /** How long each show lasts at full speed (the camera flight is the first part of it). */
-export const SHOW_SECONDS: Record<ShowKind, number> = { cheer: 7, stands: 6.6, huddle: 6.4, fireworks: 7, social: 9.2 }
+export const SHOW_SECONDS: Record<ShowKind, number> = { cheer: 7, stands: 6.6, huddle: 6.6, fireworks: 7, social: 9.2, entrance: 8.6, trophy: 9.6, board: 8.2, studio: 4.6, flyover: 6 }
 
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k
@@ -78,18 +89,55 @@ export const screenAngle = (seed: number): number => STAND_ANGLES[Math.floor(has
 
 /** The middle of the huddle: a little way off the pitch, towards the bowler's end. */
 export const huddleCentre = (seed: number): V3 => ({ x: sideOf(seed) * 5, y: 0, z: -12 })
-const HUDDLE_R = 9
-const huddleCam = (seed: number, phi: number): V3 => { const h = huddleCentre(seed); return { x: h.x + Math.sin(phi) * HUDDLE_R, y: 2.7, z: h.z - Math.cos(phi) * HUDDLE_R } }
-const huddlePhi = (hold: number) => -0.55 + 1.1 * ease(hold)
+const HUDDLE_R = 11
+const huddleCam = (seed: number, phi: number): V3 => { const h = huddleCentre(seed); return { x: h.x + Math.sin(phi) * HUDDLE_R, y: 5.4, z: h.z - Math.cos(phi) * HUDDLE_R } }
+const huddlePhi = (hold: number) => -0.9 + 1.8 * ease(hold)
 
 interface Flight { keys: [Key, Key, Key]; fly: number }
+
+// ---- the entrance of a new batsman -------------------------------------------------------------------------------------------
+
+/** The gate the batsmen come out of: the middle of the far stand, at the rope. */
+export const gatePos = (): V3 => ringPt(Math.PI / 2, 0.985)
+/** When he comes out of the gate, how long the walk takes, and when the camera is in front of him. */
+export const ENTRANCE = { start: 2.0, walk: 5.4, track: 3.0 }
+const creaseOf = (show: StadiumShow): V3 => ({ x: show.left ? -0.75 : 0.75, y: 0, z: BAT_END_Z })
+
+/** Where the new batsman is `t` seconds in: in the gate, then across the ground (fast at first, slowing as he gets to the crease). */
+export function walkerPos(show: StadiumShow, t: number): V3 {
+  const g = gatePos(), c = creaseOf(show)
+  const s = clamp01((t - ENTRANCE.start) / ENTRANCE.walk)
+  const e = 1 - Math.pow(1 - s, 1.3)
+  return { x: lerp(g.x, c.x, e), y: 0, z: lerp(g.z, c.z, e) }
+}
+/** The camera that goes in front of him, ten metres ahead, looking back at him coming. */
+function trackKey(show: StadiumShow, t: number): Key {
+  const w = walkerPos(show, Math.max(t, ENTRANCE.track))
+  return { p: { x: 2.4 + w.x * 0.4, y: 1.75, z: Math.max(w.z - 10, -13) }, aim: { x: w.x, y: 1.3, z: w.z }, hfov: 38 * rad }
+}
+
+// ---- the trophy -------------------------------------------------------------------------------------------------------------------
+
+/** Where the team gathers: the middle of the ground, just off the pitch. */
+export const trophyCentre = (): V3 => ({ x: 0, y: 0, z: -8 })
+const trophyStands = (seed: number): number => standAngle(seed + 5)
+const trophyCam = (seed: number, hold: number): V3 => {
+  const c = trophyCentre(), a = trophyStands(seed)
+  const to = ringPt(a, 1)
+  const d = Math.hypot(to.x - c.x, to.z - c.z) || 1
+  const dir = { x: (to.x - c.x) / d, z: (to.z - c.z) / d } // towards the stands behind the team
+  const phi = -0.5 + 1.0 * ease(hold) // the camera swings a little round the team
+  const R = 14 - 2.5 * ease(hold)
+  const bx = -dir.x, bz = -dir.z
+  return { x: c.x + (bx * Math.cos(phi) - bz * Math.sin(phi)) * R, y: 2.4 + 4.2 * ease(hold), z: c.z + (bx * Math.sin(phi) + bz * Math.cos(phi)) * R }
+}
 
 function flightOf(show: StadiumShow): Flight {
   const s0 = startKey()
   const mid = (end: Key, lift: number, extraFov = 4): Key => ({ p: add3(lerp3(s0.p, end.p, 0.5), { x: 0, y: lift, z: 0 }), aim: lerp3(s0.aim, end.aim, 0.5), hfov: lerp(s0.hfov, end.hfov, 0.5) + extraFov * rad })
   if (show.kind === 'cheer' && show.variant === 'cards') {
     const a = standAngle(show.seed + 7)
-    const end: Key = { p: ringPt(a, 0.8, 4.2), aim: add3(slopePoint(a, 0.4), { x: 0, y: 0, z: 0 }), hfov: 40 * rad }
+    const end: Key = { p: ringPt(a, 0.72, 5.5), aim: slopePoint(a, 0.44), hfov: 38 * rad }
     return { keys: [s0, mid(end, 9), end], fly: 2.6 }
   }
   if (show.kind === 'cheer') {
@@ -104,13 +152,32 @@ function flightOf(show: StadiumShow): Flight {
   }
   if (show.kind === 'huddle') {
     const h = huddleCentre(show.seed)
-    const end: Key = { p: huddleCam(show.seed, huddlePhi(0)), aim: { x: h.x, y: 1.05, z: h.z }, hfov: 40 * rad }
-    return { keys: [s0, mid(end, 3, 0), end], fly: 2.2 }
+    const end: Key = { p: huddleCam(show.seed, huddlePhi(0)), aim: { x: h.x, y: 0.9, z: h.z }, hfov: 38 * rad }
+    return { keys: [s0, mid(end, 3, 0), end], fly: 2.4 }
   }
-  if (show.kind === 'social') {
-    const a = screenAngle(show.seed)
+  if (show.kind === 'social' || show.kind === 'board') {
+    const a = screenAngle(show.seed + (show.kind === 'board' ? 5 : 0))
     const end: Key = { p: ringPt(a, 0.8, 8), aim: ringPt(a, SCREEN_R, 15), hfov: 34 * rad }
     return { keys: [s0, mid(end, 8), end], fly: 2.8 }
+  }
+  if (show.kind === 'studio') {
+    const a = screenAngle(show.seed + 9)
+    const end: Key = { p: ringPt(a, 0.9, 7), aim: ringPt(a, SCREEN_R, 16.5), hfov: 29 * rad }
+    return { keys: [s0, mid(end, 7), end], fly: 3.5 }
+  }
+  if (show.kind === 'entrance') {
+    const end = trackKey(show, ENTRANCE.track)
+    return { keys: [s0, { p: { x: 6, y: 9, z: 8 }, aim: lerp3(s0.aim, end.aim, 0.6), hfov: 50 * rad }, end], fly: ENTRANCE.track }
+  }
+  if (show.kind === 'trophy') {
+    const c = trophyCentre()
+    const end: Key = { p: trophyCam(show.seed, 0), aim: { x: c.x, y: 1.5, z: c.z }, hfov: 44 * rad }
+    return { keys: [s0, mid(end, 7), end], fly: 2.6 }
+  }
+  if (show.kind === 'flyover') {
+    // the other way round: it comes down from high above the far stand and ends exactly where the broadcast camera stands, so the first ball follows on
+    const start: Key = { p: { x: -60, y: 46, z: 18 }, aim: { x: 0, y: 0, z: -8 }, hfov: 62 * rad }
+    return { keys: [start, { p: { x: -26, y: 24, z: -62 }, aim: { x: 0, y: 2, z: -6 }, hfov: 54 * rad }, s0], fly: SHOW_SECONDS.flyover }
   }
   const end: Key = { p: { x: 0, y: 15, z: -50 }, aim: { x: 0, y: 33, z: 42 }, hfov: 60 * rad }
   return { keys: [s0, { p: { x: 0, y: 11, z: -47 }, aim: { x: 0, y: 14, z: 20 }, hfov: 52 * rad }, end], fly: 2.6 }
@@ -123,10 +190,16 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
   const [k0, k1, k2] = fl.keys
   let p = curve(k0.p, k1.p, k2.p, s)
   let aim = curve(k0.aim, k1.aim, k2.aim, s)
-  const hfov = s < 0.5 ? lerp(k0.hfov, k1.hfov, s * 2) : lerp(k1.hfov, k2.hfov, (s - 0.5) * 2)
+  let hfov = s < 0.5 ? lerp(k0.hfov, k1.hfov, s * 2) : lerp(k1.hfov, k2.hfov, (s - 0.5) * 2)
   const hold = clamp01((t - fl.fly) / Math.max(0.1, T - fl.fly))
   const dh = ease(hold)
-  if (show.kind === 'cheer' && show.variant !== 'cards') aim = add3(aim, { x: 0, y: 0, z: sideOf(show.seed) * 1.6 }, dh)
+  if (show.kind === 'flyover') return { p, ...lookAt(p, aim), hfov }
+  if (show.kind === 'entrance') {
+    // after the flight the camera runs ahead of him, looking back
+    if (t >= ENTRANCE.track) { const k = trackKey(show, t); p = k.p; aim = k.aim; hfov = k.hfov }
+  } else if (show.kind === 'trophy') {
+    if (s >= 1) { p = trophyCam(show.seed, hold); aim = { x: trophyCentre().x, y: 1.5 + 0.8 * dh, z: trophyCentre().z } }
+  } else if (show.kind === 'cheer' && show.variant !== 'cards') aim = add3(aim, { x: 0, y: 0, z: sideOf(show.seed) * 1.6 }, dh)
   else if (show.kind === 'cheer' || show.kind === 'stands') {
     const a = show.kind === 'stands' ? standAngle(show.seed) : standAngle(show.seed + 7)
     const tan = { x: -Math.sin(a) * ROPE.rx, y: 0, z: Math.cos(a) * ROPE.rz }
@@ -134,7 +207,7 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
     aim = add3(aim, { x: tan.x / l, y: 0, z: tan.z / l }, (show.kind === 'stands' ? 5 : 2) * (dh - 0.5) * s)
   } else if (show.kind === 'huddle') {
     if (s >= 1) p = huddleCam(show.seed, huddlePhi(hold))
-  } else aim = add3(aim, { x: 1, y: 0, z: 0 }, 16 * (dh - 0.5) * s)
+  } else if (show.kind === 'fireworks') aim = add3(aim, { x: 1, y: 0, z: 0 }, 16 * (dh - 0.5) * s)
   return { p, ...lookAt(p, aim), hfov }
 }
 
@@ -143,7 +216,12 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
 /** The stands drawn person by person (null when the camera has no use for them: the huddle). */
 export function crowdAt(show: StadiumShow, t: number): CrowdClose | null {
   const k = 0.45 + 0.55 * clamp01(t / 2.4)
-  if (show.kind === 'huddle' || show.kind === 'fireworks') return null
+  if (show.kind === 'huddle' || show.kind === 'fireworks' || show.kind === 'flyover') return null
+  // the far stand behind the gate: on their feet as the batsman walks out
+  if (show.kind === 'entrance') return { a0: Math.PI / 2 - 0.55, a1: Math.PI / 2 + 0.55, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: 0.55 + 0.45 * clamp01((t - 1) / 2), seed: show.seed }
+  // the stands behind the team as they lift the cup
+  if (show.kind === 'trophy') { const a = trophyStands(show.seed); return { a0: a - 0.32, a1: a + 0.32, u0: 0.03, u1: 0.97, rows: 12, per: 64, k: 0.7 + 0.3 * clamp01((t - 2) / 2), seed: show.seed } }
+  if (show.kind === 'board' || show.kind === 'studio') { const a = screenAngle(show.seed + (show.kind === 'board' ? 5 : 9)); return { a0: a - 0.2, a1: a + 0.2, u0: 0.03, u1: 0.99, rows: 12, per: 46, k: 0.6, seed: show.seed } }
   if (show.kind === 'social') { const a = screenAngle(show.seed); return { a0: a - 0.2, a1: a + 0.2, u0: 0.03, u1: 0.99, rows: 12, per: 46, k: 0.8, seed: show.seed } }
   if (show.kind === 'cheer' && show.variant !== 'cards') {
     const a = cheerAngle(show.seed)
@@ -169,6 +247,9 @@ export const crowdCheer = (_show: StadiumShow, t: number): number => clamp01(0.5
 
 /** The giant screen `t` seconds in (null for the other shows). */
 export function screenAt(show: StadiumShow, t: number): BigScreen | null {
+  if ((show.kind === 'board' || show.kind === 'studio') && show.board) {
+    return { a: screenAngle(show.seed + (show.kind === 'board' ? 5 : 9)), half: 0.085, y0: 10.5, y1: 25, hashtag: '', posts: [], board: show.board, t, colors: show.colors }
+  }
   if (show.kind !== 'social' || !show.posts) return null
   return { a: screenAngle(show.seed), half: 0.085, y0: 10.5, y1: 25, hashtag: show.hashtag ?? 'MATCHDAY', posts: show.posts, t, colors: show.colors }
 }
@@ -193,17 +274,19 @@ export function bursts(show: StadiumShow): Burst[] {
   const palette: [number, number, number][] = [rgbOf(show.colors[0]), rgbOf(show.colors[1]), [255, 255, 255], [255, 214, 80], [255, 110, 70]]
   // (a dark team colour is no use against the night sky: brighten it)
   const bright = (c: [number, number, number]): [number, number, number] => { const m = Math.max(...c); const f = m < 150 ? 150 / Math.max(1, m) : 1; return [Math.min(255, c[0] * f + 20), Math.min(255, c[1] * f + 20), Math.min(255, c[2] * f + 20)] }
-  return Array.from({ length: BURSTS }, (_, i) => {
+  const trophy = show.kind === 'trophy'
+  return Array.from({ length: trophy ? 6 : BURSTS }, (_, i) => {
     const h = (n: number) => hash01(show.seed * 3.1 + i * n)
     const c: V3 = { x: lerp(-50, 50, h(1.7)), y: lerp(30, 56, h(2.9)), z: lerp(4, 36, h(4.3)) }
     const a = palette[Math.floor(h(5.9) * palette.length)], b = palette[Math.floor(h(6.7) * palette.length)]
-    return { t0: 1.0 + i * 0.52 + h(7.9) * 0.2, c, r: lerp(17, 28, h(8.3)), col: [bright(a), bright(b)], from: { x: c.x + (h(9.1) - 0.5) * 12, y: 12, z: c.z + (h(9.7) - 0.5) * 10 } }
+    return { t0: (trophy ? 3.6 : 1.0) + i * 0.52 + h(7.9) * 0.2, c, r: lerp(17, 28, h(8.3)), col: [bright(a), bright(b)], from: { x: c.x + (h(9.1) - 0.5) * 12, y: 12, z: c.z + (h(9.7) - 0.5) * 10 } }
   })
 }
 
 /** The sparks in the sky `t` seconds into the show, and how bright the flash of the newest burst is (0 to 1). */
 export function sparksAt(show: StadiumShow, t: number): { sparks: Spark[]; flash: number } {
   const sparks: Spark[] = []
+  if (show.kind !== 'fireworks' && show.kind !== 'trophy') return { sparks, flash: 0 } // (only these two have a sky to light up)
   let flash = 0
   for (const b of bursts(show)) {
     const rise = 0.75
@@ -298,7 +381,7 @@ export function cheerleaders(show: StadiumShow, t: number): Dancer[] {
 export function huddleSpot(show: StadiumShow, i: number, n: number, widen = 0): V3 {
   const h = huddleCentre(show.seed)
   const a = (i / n) * Math.PI * 2 + 0.4
-  const r = 1.35 + n * 0.04 + widen
+  const r = 2.3 + n * 0.05 + widen
   return { x: h.x + Math.cos(a) * r, y: 0, z: h.z + Math.sin(a) * r }
 }
 
@@ -317,9 +400,67 @@ export function huddlePerson(show: StadiumShow, t: number, i: number, n: number,
   if (walking) return { pos, walking, pose: null }
   const b = beatAt(t) * 0.6
   const lean = (i % 2 ? 1 : -1) * 4
-  const huddled: Pose = { ...standing(), hip: { x: 30, y: 91 + 1.2 * Math.sin(b + i) }, lean, head: { dx: 0, dy: 5, tilt: lean }, handL: { x: -25, y: -2 + Math.sin(b + i) * 2 }, handR: { x: 25, y: -2 - Math.sin(b + i) * 2 }, footL: { x: 21, y: 117 }, footR: { x: 39, y: 117 } }
+  const huddled: Pose = { ...standing(), hip: { x: 30, y: 91 + 1.2 * Math.sin(b + i) }, lean, head: { dx: 0, dy: 5, tilt: lean }, handL: { x: -27, y: 6 + Math.sin(b + i) * 2 }, handR: { x: 27, y: 6 - Math.sin(b + i) * 2 }, footL: { x: 21, y: 117 }, footR: { x: 39, y: 117 } }
   if (brk <= 0) return { pos, walking, pose: huddled }
   // the break: everybody jumps with both arms up
   const cheer: Pose = { ...standing(), hip: { x: 30, y: 85.3 - 14 * Math.max(0, Math.sin(Math.PI * clamp01((t - huddleBreakAt() - 0.1) / 0.6))) }, handL: { x: -17, y: -26 }, handR: { x: 17, y: -26 }, head: { dx: 0, dy: -1, tilt: 0 } }
   return { pos: { ...pos, y: 0.5 * Math.max(0, Math.sin(Math.PI * clamp01((t - huddleBreakAt() - 0.1) / 0.6))) }, walking: false, pose: mixPose(huddled, cheer, ease(brk)) }
+}
+
+// ---- the trophy celebration --------------------------------------------------------------------------------------------------
+
+/** The confetti in the air: cannons at the sides of the ground fire it up in two volleys, and it flutters down. */
+export function confettiAt(show: StadiumShow, t: number): Confetti[] {
+  if (show.kind !== 'trophy') return []
+  const out: Confetti[] = []
+  const cols: [number, number, number][] = [rgbOf(show.colors[0]), rgbOf(show.colors[1]), [255, 255, 255], [255, 214, 80], [239, 68, 68], [56, 189, 248]]
+  const cannons: V3[] = [{ x: -16, y: 0, z: -17 }, { x: 16, y: 0, z: -17 }, { x: -16, y: 0, z: 1 }, { x: 16, y: 0, z: 1 }]
+  ;[3.2, 5.6].forEach((tv, vi) => {
+    const tau = t - tv
+    if (tau < 0) return
+    cannons.forEach((c, ci) => {
+      for (let i = 0; i < 55; i++) {
+        const h = (n: number) => hash01(vi * 131 + ci * 17 + i * n + show.seed)
+        const ang = h(1.3) * Math.PI * 2, spread = 0.25 + 0.6 * h(2.1)
+        const vx = -Math.sign(c.x) * 11 + Math.cos(ang) * spread * 9, vz = (c.z < -8 ? 3 : -3) + Math.sin(ang) * spread * 9
+        const vy = 17 + h(3.7) * 9
+        const k = 1 - Math.exp(-1.3 * tau)
+        const y = Math.max(0.05, (vy / 1.3) * k - 1.7 * tau) // it goes up, then flutters down
+        out.push({ p: { x: c.x + (vx / 1.3) * k + Math.sin(tau * 3 + h(5.1) * 6) * 0.5, y, z: c.z + (vz / 1.3) * k + Math.cos(tau * 2.7 + h(6.3) * 6) * 0.4 }, rot: tau * (3 + h(7.7) * 5) + h(8.9) * 6, rgb: cols[Math.floor(h(9.3) * cols.length)], size: 0.2 })
+      }
+    })
+  })
+  return out
+}
+
+/** Where person `i` of `n` stands for the picture: the captain (0) in the middle with the cup, the rest in two rings round him. */
+export function trophySpot(i: number, n: number): V3 {
+  const c = trophyCentre()
+  if (i === 0) return c
+  const a = ((i - 1) / Math.max(1, n - 1)) * Math.PI * 2 + 0.3
+  const r = 3.1 + (i % 2) * 1.1
+  return { x: c.x + Math.cos(a) * r, y: 0, z: c.z + Math.sin(a) * r }
+}
+/** Where they run in from. */
+export const trophyStart = (i: number, n: number): V3 => { const c = trophyCentre(), s = trophySpot(i, n); return { x: c.x + (s.x - c.x) * 4.6, y: 0, z: c.z + (s.z - c.z) * 4.6 } }
+/** When the captain lifts the cup. */
+export const LIFT_AT = 3.0
+
+/** One of the winners `t` seconds in: running in, then jumping with both arms up; the captain holds the cup at his chest, then lifts it over his head. */
+export function trophyPerson(t: number, i: number, n: number): { pos: V3; arrived: boolean; pose: Pose | null; lift: number } {
+  const to = trophySpot(i, n), from = trophyStart(i, n)
+  const w = ease((t - 0.2 - (i % 5) * 0.08) / 2.3)
+  const pos = lerp3(from, to, w)
+  const lift = i === 0 ? ease((t - LIFT_AT) / 0.7) : 0
+  if (w < 1) return { pos, arrived: false, pose: null, lift }
+  const b = beatAt(t) * 0.8 + i * 0.9
+  if (i === 0) {
+    const up = standing()
+    const chest: Pose = { ...up, hip: { x: 30, y: 86 }, handL: { x: -9, y: 8 }, handR: { x: 9, y: 8 } }
+    const high: Pose = { ...up, hip: { x: 30, y: 85.3 - 2 * Math.max(0, Math.sin(b)) }, lean: 2 * Math.sin(b), handL: { x: -22, y: -28 }, handR: { x: 22, y: -28 } }
+    return { pos, arrived: true, pose: mixPose(chest, high, lift), lift }
+  }
+  const jump = Math.max(0, Math.sin(b))
+  const pose: Pose = { ...standing(), hip: { x: 30, y: 85.3 - 11 * jump }, lean: 4 * Math.sin(b), handL: { x: -29, y: -20 + 4 * Math.sin(b + 1) }, handR: { x: 29, y: -20 - 4 * Math.sin(b + 1) }, head: { dx: 0, dy: -1, tilt: 5 * Math.sin(b) }, footL: { x: 24, y: 117 - 3 * jump }, footR: { x: 36, y: 117 - 3 * jump } }
+  return { pos: { ...pos, y: 0.35 * jump }, arrived: true, pose, lift }
 }
