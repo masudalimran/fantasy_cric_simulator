@@ -15,6 +15,8 @@ export interface Kit {
   /** A weapon carried instead of the bat, and a glow round the body (see data/weapons.ts). */
   weapon?: Weapon | null
   aura?: Aura | null
+  /** Pom-poms in both hands (a cheerleader), in this colour. */
+  pom?: string
 }
 
 export interface Rig {
@@ -53,6 +55,7 @@ function headShape(kind: Head, color: string, glow: string) {
     case 'flame': return <><path d="M0 12 Q -9 0 -4 -9 Q -1 -3 3 -7 Q 9 0 0 12 Z" fill={glow} opacity="0.8" /><path d="M0 9 Q -4 1 -1 -4 Q 2 0 3 -2 Q 5 3 0 9 Z" fill={color} /></>
     case 'crystal': return <path d="M0 11 L-6 0 L0 -10 L6 0 Z" fill={color} stroke="#ffffff" strokeWidth="1" />
     case 'bolt': return <path d="M2 -12 L-5 1 L0 1 L-3 13 L7 -2 L1 -2 Z" fill={color} stroke={glow} strokeWidth="0.8" />
+    case 'flag': return <><path d="M0 -26 L30 -20 Q 19 -13 30 -5 L0 -5 Z" fill={color} stroke={edge} strokeWidth="0.8" /><path d="M0 -26 L30 -20 Q 19 -13 30 -5 L0 -5 Z" fill="#ffffff" opacity="0.18" /></>
     case 'gun': return <><rect x="-2.4" y="-1" width="4.8" height="11" rx="1" fill={color} /><circle cy="12" r="2.2" fill="#fde047" opacity="0.8" /></>
     default: return null
   }
@@ -99,6 +102,7 @@ export function Body({ kit, rigRef, children }: { kit: Kit; rigRef: (r: Rig | nu
         <path data-p="foreR" fill="none" stroke={SKIN} strokeWidth="5.5" strokeLinecap="round" />
         <circle data-e="gloveL" r={kit.gloves ? 4.6 : 2.8} fill={kit.gloves ?? SKIN} stroke={kit.gloves ? '#00000055' : 'none'} strokeWidth="0.8" />
         <circle data-e="gloveR" r={kit.gloves ? 4.6 : 2.8} fill={kit.gloves ?? SKIN} stroke={kit.gloves ? '#00000055' : 'none'} strokeWidth="0.8" />
+        {kit.pom && <><circle data-e="pomL" r="10" fill={kit.pom} stroke="#ffffffaa" strokeWidth="1.6" strokeDasharray="1.6 2.2" /><circle data-e="pomL2" r="5" fill="#ffffff" opacity="0.55" /><circle data-e="pomR" r="10" fill={kit.pom} stroke="#ffffffaa" strokeWidth="1.6" strokeDasharray="1.6 2.2" /><circle data-e="pomR2" r="5" fill="#ffffff" opacity="0.55" /></>}
         <circle data-e="ball" r="2.6" fill="#dc2626" stroke="#fecaca" strokeWidth="0.6" />
       </svg>
     </div>
@@ -177,6 +181,8 @@ function makeRig(root: HTMLElement, batLen?: number): Rig {
       }
       at('gloveL', s.handL)
       at('gloveR', s.handR)
+      at('pomL', s.handL, 0, -4); at('pomL2', s.handL, -2, -6)
+      at('pomR', s.handR, 0, -4); at('pomR2', s.handR, 2, -6)
       at('ball', q.ball ? s.handR : null, 0, -1)
       at('bootL', s.footL, 0, 1)
       at('bootR', s.footR, 0, 1)

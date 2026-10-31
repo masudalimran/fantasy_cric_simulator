@@ -5,7 +5,7 @@ import { STAR_MOVES, TEAM_MOVES } from './moves'
  * glows round him. Looks only (see `Body.tsx`): the weapon is drawn where the bat would be and is swung exactly like it, so the shot, the ball and the
  * result are the same. One row per character; a character not listed (a youth or custom player) keeps the plain bat and has no aura.
  */
-export type Head = 'axe' | 'hammer' | 'spear' | 'scythe' | 'crescent' | 'orb' | 'flame' | 'crystal' | 'bolt' | 'gun'
+export type Head = 'axe' | 'hammer' | 'spear' | 'scythe' | 'crescent' | 'orb' | 'flame' | 'crystal' | 'bolt' | 'gun' | 'flag'
 
 export interface Weapon {
   /** A bat charged with power, a staff or pole, or a sword. */

@@ -153,7 +153,7 @@ export const camReverse: Cam = { p: { x: 0, y: 7, z: 13.5 }, yaw: Math.PI, pitch
 
 const NEAR = 0.3
 
-interface CamR { c: Cam; sy: number; cy: number; sp: number; cp: number; F: number; W: number; H: number }
+export interface CamR { c: Cam; sy: number; cy: number; sp: number; cp: number; F: number; W: number; H: number }
 export function prep(c: Cam, W: number, H: number): CamR {
   return { c, sy: Math.sin(c.yaw), cy: Math.cos(c.yaw), sp: Math.sin(c.pitch), cp: Math.cos(c.pitch), F: W / 2 / Math.tan(c.hfov / 2), W, H }
 }

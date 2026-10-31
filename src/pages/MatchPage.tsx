@@ -39,6 +39,7 @@ import { commentary } from '../engine/commentary'
 import { catchCause, catchContact, fourContact, sixContact } from '../engine/contact'
 import { shotText } from '../components/match/AimPads'
 import { cheerVariantFor } from '../components/match/CheerScreen'
+import { SHOW_SECONDS, type ShowKind, type StadiumShow } from '../components/match/stadiumShow'
 import type { ReplayBase } from '../components/match/ReplayFrame'
 import { ALMOST_CAST_SECONDS, EXTRA_CAST_SECONDS, FOUR_SECONDS, DELIVERY_CAST_SECONDS, MISS_CAST_SECONDS, NO_BALL_CAST_SECONDS, SIX_CAST_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { wicketCard } from '../season/wicketCards'
@@ -710,19 +711,25 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           lastCheer.current = lastEv.seq
           enqueueMoment({ key: lastEv.seq + 0.97, kind: 'ambient', player: match.player(lastEv.strikerId), team, title, lines: [], delay: 300, ms: Math.round(ms * rate), ambient, caption })
         }
+        // the stadium shows: the camera leaves the live picture for the cheerleaders, the stands, the huddle or the fireworks
+        const stadiumShow = (kind: ShowKind, team: Team, extra: Partial<StadiumShow>, title: string, caption?: string) => {
+          lastCheer.current = lastEv.seq
+          const show: StadiumShow = { kind, seed: lastEv.seq, colors: [team.colors.primary, team.colors.secondary], word: team.short, ...extra }
+          enqueueMoment({ key: lastEv.seq + (kind === 'cheer' ? 0.96 : 0.97), kind: 'stadium', player: match.player(lastEv.strikerId), team, title, lines: [], delay: 300, ms: Math.round(SHOW_SECONDS[kind] * 1000 * rate), stadium: { show, base: replayBase(lastEv), label: title, rate }, caption })
+        }
         // what the commentary box says about the screen (the cheerleaders, the crowd, the stats desk...)
         const cap = (k: CaptionKind, ctx: CaptionCtx) => ambientCaption(k, ctx, lastEv.seq)
         const scorer = first(match.player(lastEv.strikerId).name)
         const teamMark = Math.floor(lastEv.score.runs / 50) * 50
-        if (teamMark >= 100 && lastEv.score.runs - lastEv.total < teamMark && lastEv.score.runs >= teamMark && ambientPick(lastEv.seq, 2) === 0) { put({ variant: 'fireworks', team: batT, rate }, 4200, 'FIREWORKS', batT, cap('fireworks', { team: batT.name, extra: `` })); return }
+        if (teamMark >= 100 && lastEv.score.runs - lastEv.total < teamMark && lastEv.score.runs >= teamMark && ambientPick(lastEv.seq, 2) === 0) { stadiumShow('fireworks', batT, {}, 'Fireworks', cap('fireworks', { team: batT.name, extra: `` })); return }
         if ((lastEv.boundary || lastEv.wicket) && cheersAfter(lastEv.seq)) {
           const team = lastEv.wicket ? bowlS.team : batT
           const pool = lastEv.wicket ? ['cheer', 'huddle'] : lastEv.boundary === 6 && innE.legalBalls >= 90 ? ['cheer', 'stands', 'fireworks'] : ['cheer', 'stands']
           const v = pool[ambientPick(lastEv.seq, pool.length)]
-          if (v === 'cheer') { lastCheer.current = lastEv.seq; enqueueMoment({ key: lastEv.seq + 0.96, kind: 'cheer', player: match.player(lastEv.strikerId), team, title: 'CHEERLEADERS', lines: [], delay: 300, ms: Math.round(3800 * rate), cheer: { team, variant: cheerVariantFor(lastEv.seq), why: lastEv.wicket ? 'wicket' : 'boundary', rate }, caption: cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }) }) }
-          else if (v === 'huddle') put({ variant: 'huddle', team, players: bowlS.xi.slice(0, 8), rate }, 3800, 'HUDDLE', team, cap('huddle', { team: team.name }))
-          else if (v === 'fireworks') put({ variant: 'fireworks', team, rate }, 4200, 'FIREWORKS', team, cap('fireworks', { team: team.name, extra: 'big hit' }))
-          else put({ variant: 'stands', team, sign: lastEv.boundary === 6 ? '6' : lastEv.boundary === 4 ? '4' : null, name: lastEv.wicket ? match.player(lastEv.bowlerId).name : match.player(lastEv.strikerId).name, seed: lastEv.seq, rate }, 4400, 'THE STANDS', team, cap(lastEv.wicket ? 'stands-bowling' : 'stands-batting', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
+          if (v === 'cheer') stadiumShow('cheer', team, { variant: cheerVariantFor(lastEv.seq), why: lastEv.wicket ? 'wicket' : 'boundary' }, 'Cheerleaders', cap(lastEv.wicket ? 'cheer-wicket' : 'cheer-boundary', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
+          else if (v === 'huddle') stadiumShow('huddle', team, {}, 'Huddle', cap('huddle', { team: team.name }))
+          else if (v === 'fireworks') stadiumShow('fireworks', team, {}, 'Fireworks', cap('fireworks', { team: team.name, extra: 'big hit' }))
+          else stadiumShow('stands', team, { sign: lastEv.boundary === 6 ? '6' : lastEv.boundary === 4 ? '4' : null, name: lastEv.wicket ? match.player(lastEv.bowlerId).name : match.player(lastEv.strikerId).name, why: lastEv.wicket ? 'wicket' : 'boundary' }, 'In the stands', cap(lastEv.wicket ? 'stands-bowling' : 'stands-batting', { team: team.name, player: lastEv.wicket ? first(match.player(lastEv.bowlerId).name) : scorer }))
           return
         }
         // a quiet moment at the end of an over
@@ -739,12 +746,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           else if (v === 'worm') put({ variant: 'worm', stats: si, rate }, 6000, 'THE WORM', batT, cap('worm', { team: batT.name }))
           else if (v === 'manhattan') put({ variant: 'manhattan', stats: si, rate }, 5600, 'OVER BY OVER', batT, cap('manhattan', { team: batT.name }))
           else if (v === 'scoring') put({ variant: 'scoring', stats: si, rate }, 5600, 'HOW THE RUNS CAME', batT, cap('scoring', { team: batT.name }))
-          else if (v === 'stands') put({ variant: 'stands', team: batT, sign: null, name: innE.batters.slice().sort((x, y) => y.runs - x.runs)[0] ? match.player(innE.batters.slice().sort((x, y) => y.runs - x.runs)[0].id).name : null, seed: lastEv.seq, rate }, 4400, 'THE STANDS', batT, cap('stands-batting', { team: batT.name, player: scorer }))
+          else if (v === 'stands') stadiumShow('stands', batT, { sign: null, name: innE.batters.slice().sort((x, y) => y.runs - x.runs)[0] ? match.player(innE.batters.slice().sort((x, y) => y.runs - x.runs)[0].id).name : null }, 'In the stands', cap('stands-batting', { team: batT.name, player: scorer }))
           else if (v === 'social') {
             const best = [...innE.bowlers.entries()].sort((x, y) => y[1].wickets - x[1].wickets)[0]
             const top = [...innE.batters].sort((x, y) => y.runs - x.runs)[0]
             const posts = socialPosts({ bat: batT, bowl: bowlS.team, runs: lastEv.score.runs, wickets: lastEv.score.wickets, overs: `${over}.0`, striker: scorer, bowler: first(match.player(lastEv.bowlerId).name), top: top ? { name: first(match.player(top.id).name), runs: top.runs } : null, best: best ? { name: first(match.player(best[0]).name), wickets: best[1].wickets } : null, chase }, lastEv.seq)
-            put({ variant: 'social', team: batT, posts, hashtag: `${batT.short}v${bowlS.team.short}`, rate }, 8600, 'FAN CHAT', batT, cap('social', { team: batT.name }))
+            stadiumShow('social', batT, { posts, hashtag: `${batT.short}v${bowlS.team.short}` }, 'Fan wall', cap('social', { team: batT.name }))
           }
           else { const chat = boxChat(match, lastEv.seq); boxLines.current = chat; put({ variant: 'box', lines: chat, teams: [batT, bowlS.team], rate }, 10400, 'COMMENTARY BOX', batT) }
         }

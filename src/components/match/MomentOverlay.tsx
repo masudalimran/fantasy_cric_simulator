@@ -2,6 +2,9 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Player, Team } from '../../types'
 import { OriginTag, RatingBadge, accentOf } from '../ui'
+import { StadiumCam } from './StadiumCam'
+import type { StadiumShow } from './stadiumShow'
+import type { ReplayBase } from './ReplayFrame'
 import { ExtraScreen, FourScreen, MaidenScreen, TiredScreen, type ExtraInfo, type FourInfo, type MaidenInfo, type TiredInfo } from './EventScreens'
 import { FreeHitScreen, type FreeHitInfo } from './FreeHitScreen'
 import { AmbientScreen, type AmbientInfo } from './AmbientScreens'
@@ -28,13 +31,15 @@ import { BallIcon, BatIcon, MoodPortrait, type Mood } from './Portrait'
  */
 export interface Moment {
   key: number
-  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast' | 'misscast' | 'almostcast' | 'deliverycast' | 'tired'
+  kind: 'milestone' | 'hattrick' | 'haul' | 'duck' | 'review' | 'runout' | 'timeout' | 'partnership' | 'tension' | 'target' | 'superover' | 'swing' | 'record' | 'phase' | 'cheer' | 'ambient' | 'noball' | 'batsman' | 'bowler' | 'replay' | 'six' | 'freehit' | 'four' | 'extra' | 'maiden' | 'wicketfx' | 'challenge' | 'timeoutintro' | 'challengewon' | 'raindelay' | 'catch' | 'fourcast' | 'wicketcast' | 'extracast' | 'misscast' | 'almostcast' | 'deliverycast' | 'tired' | 'stadium'
   /** Screens for a four, an extra (wide, bye, leg bye) and a maiden over. */
   four?: FourInfo
   extra?: ExtraInfo
   maiden?: MaidenInfo
   /** Three runs: the batsman is worn out. */
   tired?: TiredInfo
+  /** A stadium show: the camera leaves the live picture for the cheerleaders, the stands, the huddle or the fireworks. */
+  stadium?: { show: StadiumShow; base: ReplayBase; label: string; rate: number }
   /** For a free hit: who overstepped and who gets the swing. */
   freeHit?: FreeHitInfo
   /** The bowler's big moments: three in three balls, and five wickets. */
@@ -234,6 +239,16 @@ export function MomentOverlay({ moment, onDismiss }: { moment: Moment; onDismiss
         aria-label="Milestone"
       >
         <MilestoneScreen info={moment.fist} />
+      </motion.div>
+    )
+  }
+  if (moment.kind === 'stadium' && moment.stadium) {
+    return (
+      <motion.div
+        data-moment="stadium" onClick={onDismiss} className="absolute inset-0 z-[45] cursor-pointer overflow-hidden rounded-2xl"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3, delay: 0 } }} transition={{ duration: 0.35, delay: moment.delay / 1000 }}
+      >
+        <StadiumCam show={moment.stadium.show} base={moment.stadium.base} rate={moment.stadium.rate} label={moment.stadium.label} />
       </motion.div>
     )
   }

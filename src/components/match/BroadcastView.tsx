@@ -34,10 +34,10 @@ const DRAGON_HEAD = `center / contain no-repeat url("data:image/svg+xml,${encode
 
 const lerp3v = (a: V3, b: V3, t: number): V3 => { const k = t * t * (3 - 2 * t); return { x: a.x + (b.x - a.x) * k, y: 0, z: a.z + (b.z - a.z) * k } }
 const STUB = { seq: 1, runsBat: 0, boundary: null, tags: [], wicket: null, extraType: null, delivery: null } as unknown as BallEvent
-const HEIGHT = 120
-const WIDTH = 60
+export const HEIGHT = 120
+export const WIDTH = 60
 /** The smallest a person is drawn (far fielders shrink with the distance, but never to nothing). */
-const MIN_SCALE = 0.24
+export const MIN_SCALE = 0.24
 
 /** What the TV score bug shows: the score, the two batsmen, the bowler and, in a chase, what is needed. */
 export interface ScoreBug {
@@ -54,7 +54,7 @@ export interface ScoreBug {
 
 type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper'
 
-function Figure({ player, team, look, rig }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void }) {
+export function Figure({ player, team, look, rig }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void }) {
   const ump = look === 'umpire'
   const primary = ump ? '#1e293b' : team?.colors.primary ?? '#334155'
   const second = ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
