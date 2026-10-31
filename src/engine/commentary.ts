@@ -40,6 +40,7 @@ function plainCommentary(ev: BallEvent, n: Names): string {
       case 'hit wicket': return `Hit wicket! ${out} steps back onto his own stumps.`
     }
   }
+  if (ev.extraType === 'wide' && ev.wideByes) return pick([`Wide, and FOUR byes! ${b} is miles down the leg side and the keeper cannot get near it: five to the total.`, `Wide, and it runs away to the rope for four byes! Five runs, and not a bat in sight.`], q)
   if (ev.extraType === 'wide') return pick([`Wide. ${b} strays down the leg side.`, `Wide ball, too far outside off.`], q)
   if (ev.extraType === 'noball') return `No ball! ${b} oversteps. Free hit coming up.`
   if (ev.extraType === 'bye') return ev.extraRuns >= 4 ? pick([`FOUR BYES! It beats everyone and races away to the rope.`, `FOUR byes! The keeper has no chance, it is gone to the fence.`], q) : `Byes. It beats everyone and they scamper a run.`

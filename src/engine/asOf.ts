@@ -25,6 +25,7 @@ export function inningsBefore(real: Innings, seq: number): Innings {
     if (e.extraType !== 'wide') bl.balls++
     if (e.runsBat === 4) bl.fours++
     if (e.runsBat === 6) bl.sixes++
+    if (e.wideByes) extras.byes += e.wideByes
     if (e.extraType === 'wide') extras.wides += e.extraRuns
     else if (e.extraType === 'noball') extras.noballs += e.extraRuns
     else if (e.extraType === 'bye') extras.byes += e.extraRuns

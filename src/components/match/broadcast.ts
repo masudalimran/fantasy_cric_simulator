@@ -333,7 +333,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bounceU = dv.pitchZ === null ? 1 : Math.max(0.2, Math.min(0.995, (dv.pitchZ - release.z) / (meet.z - release.z)))
   const six = ev.boundary === 6
   // four byes or four leg byes: the ball races to the rope with nobody running
-  const byeFour = (ev.extraType === 'bye' || ev.extraType === 'legbye') && ev.extraRuns >= 4
+  const byeFour = ((ev.extraType === 'bye' || ev.extraType === 'legbye') && ev.extraRuns >= 4) || (wide && !!ev.wideByes) // (a very wide ball runs on past the keeper too)
   const boundary = !!ev.boundary || byeFour
   let end = toWorld(endTop.x, endTop.y)
   let peak = 0
@@ -375,10 +375,17 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
       if (k === 0) kind = 'keeper'
     }
   } else if (wide) {
-    end = { x: lineX * 1.2, y: 0.5, z: 8 }
-    kind = 'keeper'
-    catcher = 0
-    keeperDive = { dir: lineX > 0 ? 1 : -1, at: 0, miss: false }
+    if (ev.wideByes) {
+      // so wide the keeper cannot reach it: it races on to the rope for four byes
+      end = { x: (lineX >= 0 ? 1 : -1) * 6, y: 0.1, z: 15.4 }
+      kind = 'ground'
+      keeperDive = { dir: lineX >= 0 ? 1 : -1, at: 0, miss: true }
+    } else {
+      end = { x: lineX * 1.2, y: 0.5, z: 8 }
+      kind = 'keeper'
+      catcher = 0
+      keeperDive = { dir: lineX > 0 ? 1 : -1, at: 0, miss: false }
+    }
   } else if (bye) {
     // the ball beats the bat and the keeper, and runs away behind them
     end = byeFour ? { x: (lineX >= 0 ? 1 : -1) * 6, y: 0.1, z: 15.4 } : { x: lineX * 1.6 + (lineX >= 0 ? 2 : -2), y: 0.1, z: 15 }

@@ -9,6 +9,7 @@ import { BYE_FOUR, RUNOUT_CHECK, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLO
 import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
 import { sixDistance } from './shots'
+import { wideByesFor } from './wide'
 import {
   BOWL_STYLE_VALUE, DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
   type BallEvent, type BowlStyle, type DeliveryAim, type ShotAim, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
@@ -452,6 +453,7 @@ export class Match {
     // ---- Roll the delivery
     let extraType: BallEvent['extraType'] = null
     let extraRuns = 0
+    let wideByes = 0
     let runsBat = 0
     let legal = true
     let dismissal: BallEvent['wicket'] = null
@@ -462,6 +464,7 @@ export class Match {
       legal = false
       extraType = 'wide'
       extraRuns = 1
+      wideByes = wideByesFor(this.seq) // a very wide ball (120 cm or more) also runs away for four byes
     } else {
       const noBall = r < probs.wide + probs.noball
       let cat = this.rng.weighted(probs.legal)
@@ -485,8 +488,8 @@ export class Match {
       }
     }
     // A side that has forfeited can't sneak a win or a tie while chasing.
-    if (this.forfeitSide === battingSideIdx && inn.target !== null && !dismissal && inn.runs + runsBat + extraRuns >= inn.target - 1) {
-      extraType = null; extraRuns = 0; runsBat = 0; legal = true
+    if (this.forfeitSide === battingSideIdx && inn.target !== null && !dismissal && inn.runs + runsBat + extraRuns + wideByes >= inn.target - 1) {
+      extraType = null; extraRuns = 0; wideByes = 0; runsBat = 0; legal = true
       if (!wasFreeHit) dismissal = this.makeDismissal(inn, striker, bowler, bowlXI, bowlingSideIdx, bowlType, false)
     }
     // ---- Challenges: the batsman can ask for an lbw or a catch behind he has been given out to be checked, and the fielding side can ask about a
@@ -528,8 +531,9 @@ export class Match {
     if (legal) inn.freeHit = false
 
     // ---- Apply it
-    const total = runsBat + extraRuns
+    const total = runsBat + extraRuns + wideByes
     inn.runs += total
+    inn.extras.byes += wideByes // (the bowler is charged the wide only)
     if (extraType === 'wide') inn.extras.wides += extraRuns
     else if (extraType === 'noball') inn.extras.noballs += extraRuns
     else if (extraType === 'bye') inn.extras.byes += extraRuns
@@ -558,7 +562,7 @@ export class Match {
     const ev: BallEvent = {
       seq: this.seq++, innings: inn.index, over, ballInOver, legal,
       strikerId: striker.id, nonStrikerId: inn.nonStrikerId, bowlerId: bowler.id,
-      runsBat, extraType, extraRuns, total, boundary: runsBat === 4 ? 4 : runsBat === 6 ? 6 : 0,
+      runsBat, extraType, extraRuns, ...(wideByes ? { wideByes } : {}), total, boundary: runsBat === 4 ? 4 : runsBat === 6 ? 6 : 0,
       wicket: dismissal, intent, freeHit: wasFreeHit,
       ...(this.shotAim[battingSideIdx] ? { shot: this.shotAim[battingSideIdx] as ShotAim } : {}),
       ...(this.deliveryAim[bowlingSideIdx] ? { delivery: this.deliveryAim[bowlingSideIdx] as DeliveryAim } : {}),

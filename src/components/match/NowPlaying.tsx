@@ -6,7 +6,7 @@ import { economy, oversText, strikeRate } from './format'
 
 export const chip = (ev: BallEvent) => {
   if (ev.wicket) return { t: 'W', c: 'bg-red-500 text-white' }
-  if (ev.extraType === 'wide') return { t: ev.extraRuns > 1 ? `Wd${ev.extraRuns}` : 'Wd', c: 'bg-amber-500 text-black' }
+  if (ev.extraType === 'wide') return { t: ev.wideByes ? `Wd+${ev.wideByes}b` : ev.extraRuns > 1 ? `Wd${ev.extraRuns}` : 'Wd', c: 'bg-amber-500 text-black' }
   if (ev.extraType === 'noball') return { t: ev.total > 1 ? `Nb${ev.total}` : 'Nb', c: 'bg-amber-500 text-black' }
   if (ev.extraType === 'bye' || ev.extraType === 'legbye') return { t: `${ev.extraType === 'bye' ? 'b' : 'lb'}${ev.extraRuns}`, c: 'bg-slate-500 text-white' }
   if (ev.runsBat === 6) return { t: '6', c: 'bg-fuchsia-500 text-white' }

@@ -73,6 +73,8 @@ export interface BallEvent {
   runsBat: number
   extraType: ExtraType | null
   extraRuns: number
+  /** Byes that ran on a very wide ball (a wide of 120 cm or more goes past the keeper to the boundary: the wide, plus four byes). Left out when there were none. */
+  wideByes?: number
   total: number
   boundary: 0 | 4 | 6
   wicket: (Dismissal & { playerId: string }) | null

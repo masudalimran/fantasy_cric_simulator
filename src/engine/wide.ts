@@ -24,3 +24,8 @@ export const wideDirection = (side: 'off' | 'leg', hand: 'L' | 'R', view: 'above
 export const wideCm = (seq: number): number => Math.round(10 + hash01(seq * 1.3 + 4) ** 1.5 * 140)
 /** Where the wide line is, in metres from the middle stump. */
 export const WIDE_LINE_M = 1.0
+
+/** A wide this far outside the line (cm) goes past the keeper too and runs to the boundary: the wide, and four byes on top. */
+export const WIDE_BYE_CM = 120
+/** The four byes that run on a very wide ball (0 for an ordinary wide). The same figure the wide screen's distance gives, so the number on the screen decides it. */
+export const wideByesFor = (seq: number): number => (wideCm(seq) >= WIDE_BYE_CM ? 4 : 0)

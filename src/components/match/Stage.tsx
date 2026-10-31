@@ -196,7 +196,7 @@ function StumpsFly() {
 function RunChip({ event, x, y, scale }: { event: BallEvent; x: number; y: number; scale: number }) {
   let text: string
   let cls: string
-  if (event.extraType === 'wide') { text = event.extraRuns > 1 ? `WD +${event.extraRuns}` : 'WD'; cls = 'bg-amber-400 text-black' }
+  if (event.extraType === 'wide') { text = event.wideByes ? `WD +${event.wideByes}B` : event.extraRuns > 1 ? `WD +${event.extraRuns}` : 'WD'; cls = 'bg-amber-400 text-black' }
   else if (event.extraType === 'noball') { text = event.total > 1 ? `NB +${event.total}` : 'NB'; cls = 'bg-amber-400 text-black' }
   else if (event.extraType === 'bye') { text = `B +${event.extraRuns}`; cls = 'bg-slate-300 text-black' }
   else if (event.extraType === 'legbye') { text = `LB +${event.extraRuns}`; cls = 'bg-slate-300 text-black' }
