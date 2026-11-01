@@ -393,7 +393,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const lead = players[0]
         const chip = pair ? 'OPENING PAIR' : intros[0].title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : 'NEW BATSMAN'
         const lines = pair ? intros.map((it, i) => `${players[i].name}: ${it.lines.slice(0, 2).join(' · ')}`) : intros[0].lines.slice(0, 2)
-        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: { title: pair ? `${players[0].name} & ${players[1].name}` : lead.name, lines, chip, tiles: pair ? undefined : intros[0].tiles, rating: pair ? undefined : intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
+        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: pair ? { title: `${players[0].name} & ${players[1].name}`, lines: [], chip, pair: intros.map((it, i) => ({ title: players[i].name.split(' ')[0], sub: it.lines[0] ?? '', rating: it.rating, tiles: (it.tiles ?? []).slice(0, 4) })) } : { title: lead.name, lines, chip, tiles: intros[0].tiles, rating: intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
       } else for (const it of intros) enqueueMoment(it)
     }
     const bowlerId = inn.bowlerId
@@ -1218,7 +1218,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     )
   }
   const boostInfo = boostSummary([...(session?.history ?? []), ...(session ? [session.season] : [])], session?.boost, session?.season.difficulty)
-  if (phase === 'toss') return <CoinToss renderReport={(close) => { const pi = describePitch(match.pitch); return <ShowScreen show={{ kind: 'pitchreport', seed: match.seed, colors: [match.sides[0].team.colors.primary, match.sides[0].team.colors.secondary], lower: { title: 'THE PITCH REPORT', lines: [`${pi.icon} ${pi.label}`, pi.tip, tossAdvice(match.pitch).text] } }} base={nowBase()} label="Pitch report" cast={{ team: match.sides[0].team, players: [], host: PRESENTERS[(match.seed + 3) % PRESENTERS.length] }} onDone={close} /> }} boost={match.mySide !== null && !live.replay && boostInfo.allowed ? { available: boostInfo.available, on: !!live.boost, onChange: setLiveBoost } : undefined} sides={match.sides} toss={match.toss} pitch={match.pitch} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
+  if (phase === 'toss') return <CoinToss renderReport={(close) => { return <ShowScreen show={{ kind: 'pitchreport', seed: match.seed, colors: [match.sides[0].team.colors.primary, match.sides[0].team.colors.secondary], lower: pitchReportLower(match.pitch) }} base={nowBase()} label="Pitch report" cast={{ team: match.sides[0].team, players: [], host: PRESENTERS[(match.seed + 3) % PRESENTERS.length] }} onDone={close} /> }} boost={match.mySide !== null && !live.replay && boostInfo.allowed ? { available: boostInfo.available, on: !!live.boost, onChange: setLiveBoost } : undefined} sides={match.sides} toss={match.toss} pitch={match.pitch} mySide={match.mySide} tossed={!!live.tossed} startXI={live.startXI} onTossed={setTossed} editable={editableSides} careerSquad={!!live.myTeamId} onSaveSquad={(side, order, cap, keep) => { setLiveSquad(side, order, cap, keep); if (live.myTeamId && match.mySide === side) updateSeasonForSquad((s) => ({ ...s, lineup: { order, captainId: cap, keeperId: keep } })) /* your lineup is kept for the rest of the career */ }} news={live.news} mustChoose={!live.tossChoice && !(live.myTeamId && match.mySide === null) && (match.mySide === null || match.mySide === match.toss.winnerSide)} onChoose={setTossChoice} onCancel={() => { navigate(fixture ? `${paths.session(fixture.date.slice(0, 7))}?day=${fixture.date}` : paths.play); window.setTimeout(discardLive, 0) /* after we've left, or this page would start the match again */ }} onStart={() => { if (getAnimPrefs().intro) setPhase('lineup'); else { setPhase('play'); setLivePhase('play') } }} />
 
   // between the innings the screen stays on the first innings until you press Next innings
   const holding = holdNow
@@ -1548,6 +1548,18 @@ function InProgress({ live, onDiscard, wanted }: { live: LiveMatch; onDiscard: (
       </div>
     </div>
   )
+}
+
+/** The pitch report's card: the verdict in big coloured words (BAT FIRST, BOWL FIRST or EITHER WAY), what the pitch is like in a line, and three tiles in plain words. */
+function pitchReportLower(pitch: Match['pitch']) {
+  const pi = describePitch(pitch), adv = tossAdvice(pitch)
+  const word = (v: number, spread: number, good: string, mid: string, bad: string) => { const m = 50 + (v / spread) * 22; return m > 60 ? good : m < 40 ? bad : mid }
+  const verdict = adv.choice === 'bat' ? { t: 'BAT FIRST', c: '#34d399' } : adv.choice === 'bowl' ? { t: 'BOWL FIRST', c: '#38bdf8' } : { t: 'EITHER WAY', c: '#fbbf24' }
+  return {
+    title: verdict.t, color: verdict.c, chip: adv.choice ? (adv.strength === 'strong' ? 'STRONG EDGE' : adv.strength === 'clear' ? 'CLEAR EDGE' : 'SLIGHT EDGE') : 'NO EDGE',
+    lines: [`${pi.icon} ${pi.label}: ${pi.tip}`],
+    tiles: [{ label: 'Batting', value: word(pitch.ease, 0.24, 'EASY', 'FAIR', 'TOUGH') }, { label: 'Pace', value: word(pitch.pace, 0.3, 'HELPS', 'FAIR', 'NO HELP') }, { label: 'Spin', value: word(pitch.spin, 0.3, 'TURNS', 'FAIR', 'FLAT') }],
+  }
 }
 
 export function MatchPage() {

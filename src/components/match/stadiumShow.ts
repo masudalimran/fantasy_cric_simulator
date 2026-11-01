@@ -14,7 +14,7 @@ import { REVIEW_VERDICT_AT, SCREEN_R, STAGE, slopePoint, type Ball3, type BigScr
 export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover' | 'bowler' | 'hug' | 'walkoff' | 'landing' | 'lights' | 'lineup' | 'motm' | 'review' | 'rain' | 'milestone' | 'ceremony' | 'physio' | 'dugout' | 'drinks' | 'handshake' | 'pitchreport' | 'salute' | 'fans' | 'pitchmap'
 
 /** The title strip in the corner while a show plays: a name, a few lines under it and a small chip ("CHAMPIONS"). */
-export interface Lower { title: string; lines: string[]; chip?: string; /** Figures under the words (a batsman's season: apps, runs, average...) and his overall rating. */ tiles?: { label: string; value: string }[]; rating?: number }
+export interface Lower { title: string; lines: string[]; chip?: string; /** A colour for the title (a verdict such as BAT FIRST) and the chip. */ color?: string; /** Two people side by side (the two openers), each with his own card. */ pair?: { title: string; sub: string; rating?: number; tiles: { label: string; value: string }[] }[]; /** Figures under the words (a batsman's season: apps, runs, average...) and his overall rating. */ tiles?: { label: string; value: string }[]; rating?: number }
 
 export interface StadiumShow {
   kind: ShowKind

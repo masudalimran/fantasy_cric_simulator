@@ -543,4 +543,6 @@ future reader would need to know (a rule, a page, where something lives) belongs
   - **Fan cam**: after a boundary or a wicket and now and then at the end of an over, three quick cuts to **close-ups of fans** with face paint, shouting or groaning.
   - **Pitch map**: now and then at the end of an over the camera flies to the giant screen showing the pitch with its length zones (yorker, full, good, short, bouncer) and a dot for **where each ball of the over pitched**, coloured by what happened to it.
 - **Fixed**: a duplicate-key warning in the console on the over-end bowler card.
+- **Pitch report card is easy to read now**: the strip under the presenter opens with the **verdict in big coloured words, BAT FIRST (green), BOWL FIRST (blue) or EITHER WAY (amber)**, with a chip for how strong the edge is (*STRONG EDGE*, *CLEAR EDGE*, *SLIGHT EDGE*, *NO EDGE*), one line on what the pitch is like, and three tiles in plain words: **Batting** (EASY, FAIR, TOUGH), **Pace** (HELPS, FAIR, NO HELP) and **Spin** (TURNS, FAIR, FLAT).
+- **The two openers get a card each**: when the openers walk out together the strip is **two cards side by side, one per batsman**, each with his name, rating, role and hand, and his four stats (or ratings), the same card a single incoming batsman gets.
 
