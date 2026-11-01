@@ -308,14 +308,17 @@ export interface SixCastInfo extends SixInfo {
   poor?: string
 }
 export const SIX_CAST_SECONDS = 8.8
+/** A six this far or further is a "Mega Six": it gets its own sponsored screen. */
+export const MEGA_SIX_METRES = 150
 
 /** A six, the broadcast way: the ball played again in slow motion from the bat to the crowd, and under it the distance, where the ball met the bat and the timing. */
 export function SixCast({ info }: { info: SixCastInfo }) {
   const r = info.rate
   const [box, w] = useWidth()
   useEffect(() => { const t = window.setTimeout(() => sfx.six(), 1900 * r); return () => window.clearTimeout(t) }, [r])
-  const monster = info.distance >= 150
+  const monster = info.distance >= MEGA_SIX_METRES
   const compact = w < 520
+  if (monster) return <MegaSix info={info} box={box} compact={compact} />
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={`Six, ${info.distance} metres`}>
       <ReplayFrame base={info.replay} rate={1.5 / r} deep cam={replayCamFor('six', info.replay.event.seq)} />
@@ -330,6 +333,40 @@ export function SixCast({ info }: { info: SixCastInfo }) {
             </motion.div>
             <motion.div className="font-display leading-none tracking-wide text-amber-300" style={{ fontSize: compact ? 30 : 40 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 * r }}>
               <Counter to={info.distance} delay={1.0 * r} dur={2.2 * r} /><span className="ml-1 text-[0.45em] text-amber-200">metres</span>
+            </motion.div>
+            {info.contact && <ContactMeters contact={info.contact} delay={1.8} rate={r} compact />}
+          </div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+/** The sponsored screen for a six of 150 metres or more: the replay under a green \"Mega Six\" banner, a drawn can, and the distance in big neon figures. (Looks only; the can is a plain drawing, not a logo.) */
+function MegaSix({ info, box, compact }: { info: SixCastInfo; box: React.Ref<HTMLDivElement>; compact: boolean }) {
+  const r = info.rate
+  const G = '#7CFC00'
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-black" aria-label={`Mega six, ${info.distance} metres`}>
+      <ReplayFrame base={info.replay} rate={1.5 / r} deep cam={replayCamFor('six', info.replay.event.seq)} tag="Mega six" />
+      <motion.div className="pointer-events-none absolute right-0 top-8 z-[7100] flex items-center gap-1.5 rounded-l-md px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-black" style={{ background: G }} initial={{ x: 120 }} animate={{ x: 0 }} transition={{ delay: 0.4 * r, type: 'spring', stiffness: 200, damping: 22 }}>Monster Energy Mega Six</motion.div>
+      <Bottom>
+        <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3" style={{ background: 'linear-gradient(180deg, #02140a, #000)', boxShadow: `inset 0 2px 0 ${G}` }}>
+          <motion.svg className="shrink-0 self-center" width={compact ? 46 : 60} height={compact ? 92 : 118} viewBox="0 0 40 80" initial={{ opacity: 0, y: 14, rotate: -8 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ delay: 1.0 * r, type: 'spring' }} aria-hidden>
+            <rect x="6" y="6" width="28" height="68" rx="7" fill="#0a0a0a" stroke="#2a2a2a" strokeWidth="1.5" />
+            <rect x="6" y="6" width="28" height="9" rx="5" fill="#9ca3af" />
+            <rect x="6" y="66" width="28" height="8" rx="5" fill="#6b7280" />
+            <path d="M12 20 L20 44 L28 20" fill="none" stroke={G} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 34 L20 58 L28 34" fill="none" stroke={G} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
+          </motion.svg>
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
+              <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${G}` }}><PlayerAvatar player={info.batsman} team={info.team} size={compact ? 28 : 36} /></span>
+              <div className="min-w-0 leading-tight"><div className="truncate text-sm font-extrabold text-white">{info.batsman.name}</div><div className="truncate text-[11px] font-semibold" style={{ color: G }}>{info.longest ? 'His longest six yet' : 'Out of the stadium'}</div></div>
+              <motion.div className="ml-auto shrink-0 font-display text-2xl leading-none tracking-wide sm:text-3xl" style={{ color: G, textShadow: `0 0 18px ${G}` }} initial={{ scale: 2.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.2 * r, type: 'spring' }}>MEGA SIX</motion.div>
+            </motion.div>
+            <motion.div className="font-display leading-none tracking-wide" style={{ fontSize: compact ? 34 : 46, color: G, textShadow: `0 0 22px ${G}88` }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 * r }}>
+              <Counter to={info.distance} delay={1.0 * r} dur={2.2 * r} /><span className="ml-1 text-[0.4em] text-white">metres</span>
             </motion.div>
             {info.contact && <ContactMeters contact={info.contact} delay={1.8} rate={r} compact />}
           </div>

@@ -134,16 +134,19 @@ const creaseOf = (show: StadiumShow): V3 => ({ x: show.left ? -0.75 : 0.75, y: 0
 /** Where the `i`th walker is `t` seconds in: in the gate, then across the ground (fast at first, slowing as he gets to the crease). Two openers come out side by side; the second stops a couple of metres from the first. */
 export function walkerPos(show: StadiumShow, t: number, i = 0): V3 {
   const g = gatePos(), c = creaseOf(show)
-  const end = i === 0 ? c : { x: c.x - Math.sign(c.x) * 1.95, y: 0, z: c.z - 0.4 }
+  // the first goes to the batting end (the striker's), the second to the other end of the pitch (the non-striker's, by the bowler's stumps)
+  const end = i === 0 ? c : { x: -c.x, y: 0, z: BOWL_Z + 0.9 }
   const start = { x: g.x + (i === 0 ? 0.6 : -0.6), y: 0, z: g.z }
   const s = clamp01((t - ENTRANCE.start) / ENTRANCE.walk)
   const e = 1 - Math.pow(1 - s, 1.3)
-  return { x: lerp(start.x, end.x, e), y: 0, z: lerp(start.z, end.z, e) }
+  // (the one heading for the far end walks alongside the pitch, not down it)
+  const bow = i === 0 ? 0 : -Math.sign(c.x || 1) * 3.2 * Math.sin(Math.PI * e)
+  return { x: lerp(start.x, end.x, e) + bow, y: 0, z: lerp(start.z, end.z, e) }
 }
 /** The camera that goes in front of him (or between the two of them), ten metres ahead, looking back at him coming. */
 function trackKey(show: StadiumShow, t: number): Key {
   const w0 = walkerPos(show, Math.max(t, ENTRANCE.track)), w1 = show.pair ? walkerPos(show, Math.max(t, ENTRANCE.track), 1) : w0
-  const w = { x: (w0.x + w1.x) / 2, y: 0, z: (w0.z + w1.z) / 2 }
+  const w = show.pair ? { x: (w0.x * 3 + w1.x) / 4, y: 0, z: (w0.z * 3 + w1.z) / 4 } : { x: (w0.x + w1.x) / 2, y: 0, z: (w0.z + w1.z) / 2 } // (two openers: the camera favours the striker, who has the shorter walk)
   return { p: { x: 2.4 + w.x * 0.4, y: 1.75, z: Math.max(w.z - 10, -13) }, aim: { x: w.x, y: 1.3, z: w.z }, hfov: (show.pair ? 46 : 38) * rad }
 }
 

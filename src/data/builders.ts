@@ -20,6 +20,14 @@ export const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 
+/** Which hand a player bats with when his file does not say: about one in three is left-handed (a little fewer among bowlers), picked from his name so it never changes. Only the looks care (the engine never reads the hand). */
+export function handOf(name: string, role: Role): Hand {
+  let h = 2166136261
+  for (let i = 0; i < name.length; i++) { h ^= name.charCodeAt(i); h = Math.imul(h, 16777619) }
+  const u = ((h >>> 0) % 1000) / 1000
+  return u < (role === 'BOWL' ? 0.22 : 0.36) ? 'L' : 'R'
+}
+
 export type PlayerDef = Omit<Player, 'id'>
 
 /** Compact player definition used by the built-in team files. */
@@ -30,13 +38,13 @@ export function P(
   bowl: BowlTuple | null,
   fielding: number,
   traits: Trait[] = [],
-  hand: Hand = 'R',
+  hand?: Hand,
 ): PlayerDef {
   const batting: BattingRatings = { technique: bat[0], power: bat[1], temperament: bat[2], running: bat[3] }
   const bowling: BowlingRatings | null = bowl
     ? { type: BOWL_TYPES[bowl[0]], accuracy: bowl[1], variation: bowl[2], stamina: bowl[3] }
     : null
-  return { name, role, hand, batting, bowling, fielding, traits }
+  return { name, role, hand: hand ?? handOf(name, role), batting, bowling, fielding, traits }
 }
 
 export interface TeamMeta {

@@ -18,7 +18,7 @@ import { getAnimPrefs, getBroadcastView, setManualPlay, useManualPlay, useSwipeA
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
-import { average, bowlAverage, collect, economy, strikeRate as seasonSR } from '../season/stats'
+import { average, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
@@ -362,14 +362,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const s = seasonStats?.bat.get(id)
         lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
         tiles = s
-          ? [t('Bat apps', s.batApps + 1), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`)]
+          ? [t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Bat apps', s.batApps + 1)]
           : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
       } else {
         const s = seasonStats?.bowl.get(id)
         const w = p.bowling
         lines = [`${bowlLabel(w?.type)} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
         tiles = s
-          ? [t('Bowl apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Average', bowlAverage(s) === null ? '-' : bowlAverage(s)!.toFixed(1)), t('Best', `${s.bestW}/${s.bestR}`), t('5-wicket hauls', s.fiveW)]
+          ? [t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Best', `${s.bestW}/${s.bestR}`), t('Maidens', s.maidens), t('5-wicket hauls', s.fiveW), t('Bowl apps', s.bowlApps + 1)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]
       }
       // a player who joined this year gets a different introduction: where he came from, and what he cost
@@ -903,7 +903,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           if (gone) {
             const outcome = moonOutcome(notable.seq)
             const what = outcome === 'car' ? 'It smashes into a parked car: the alarm is going off' : outcome === 'river' ? 'It splashes down in the river beyond the ground' : 'It hits the blimp above the stadium'
-            show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'OUT OF THE STADIUM!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.moonshot * 1000 * rate6), stadium: { show: { kind: 'moonshot', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], from: pl.meet, landing: pl.end, outcome, lower: { title: `OUT OF THE STADIUM! ${notable.distance ?? ''} m`.trim(), lines: [what], chip: 'MOON SHOT', color: '#f472b6' } }, base: bs, label: 'Out of the stadium', rate: rate6 } })
+            show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'OUT OF THE STADIUM!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.moonshot * 1000 * rate6), stadium: { show: { kind: 'moonshot', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], from: pl.meet, landing: pl.end, outcome, lower: (notable.distance ?? 0) >= 150 ? { title: `MEGA SIX! ${notable.distance} m`, lines: [what], chip: 'MONSTER ENERGY MEGA SIX', color: '#7CFC00' } : { title: `OUT OF THE STADIUM! ${notable.distance ?? ''} m`.trim(), lines: [what], chip: 'MOON SHOT', color: '#f472b6' } }, base: bs, label: 'Out of the stadium', rate: rate6 } })
           } else
           show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.landing * 1000 * rate6), stadium: { show: { kind: 'landing', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], landing: pl.end, caught: fan < 0.4, gone, lower: { title: `SIX! ${notable.distance ?? ''} m`.trim(), lines: [gone ? 'Out of the stadium!' : fan < 0.4 ? 'A fan takes it in the stands' : 'It crashes into the seats'] } }, base: bs, label: 'Six', rate: rate6 } })
         }
@@ -924,7 +924,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const bowlT = match.sides[1 - match.innings[notable.innings].battingSide].team
           show({ key: notable.seq + 0.55, kind: 'stadium', player: match.player(notable.bowlerId), team: bowlT, title: 'WICKET!', lines: [], delay: Math.round(delay * 0.4), ms: Math.round(SHOW_SECONDS.hug * 1000 * rW), stadium: { show: { kind: 'hug', seed: notable.seq, colors: [bowlT.colors.primary, bowlT.colors.secondary], focus, celebrant, lower: { title: 'WICKET!', lines: [dismissalText(match, outLine, match.innings[notable.innings])], chip: `${match.player(notable.bowlerId).name.split(' ')[0]}` } }, base: bs, label: 'Wicket', rate: rW } })
           const ov = outLine.runs >= 50
-          show({ key: notable.seq + 0.56, kind: 'stadium', player: match.player(outLine.id), team, title: ov ? 'STANDING OVATION' : 'OUT', lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.walkoff * 1000 * rW), stadium: { show: { kind: 'walkoff', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], left: match.player(outLine.id).hand === 'L', walk: { ovation: ov, duck: outLine.runs === 0 }, lower: { title: match.player(outLine.id).name, big: { value: String(outLine.runs), sub: `off ${outLine.balls} ball${outLine.balls === 1 ? '' : 's'}` }, color: ov ? '#fbbf24' : outLine.runs === 0 ? '#f87171' : undefined, lines: [dismissalText(match, outLine, match.innings[notable.innings])], tiles: [{ label: 'Fours', value: String(outLine.fours) }, { label: 'Sixes', value: String(outLine.sixes) }, { label: 'Strike rate', value: String(strikeRate(outLine.runs, outLine.balls)) }], chip: ov ? (outLine.runs >= 100 ? 'A HUNDRED: STANDING OVATION' : 'STANDING OVATION') : outLine.runs === 0 ? 'A DUCK' : 'OUT' } }, base: bs, label: 'Walk off', rate: rW, cast: { team, players: [match.player(outLine.id)] } } })
+          show({ key: notable.seq + 0.56, kind: 'stadium', player: match.player(outLine.id), team, title: ov ? 'STANDING OVATION' : 'OUT', lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.walkoff * 1000 * rW), stadium: { show: { kind: 'walkoff', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], left: match.player(outLine.id).hand === 'L', walk: { ovation: ov, duck: outLine.runs === 0 }, lower: { title: match.player(outLine.id).name, big: { value: String(outLine.runs), sub: String(outLine.balls) }, color: ov ? '#fbbf24' : outLine.runs === 0 ? '#f87171' : undefined, lines: [dismissalText(match, outLine, match.innings[notable.innings])], tiles: [{ label: 'Fours', value: String(outLine.fours) }, { label: 'Sixes', value: String(outLine.sixes) }, { label: 'Strike rate', value: String(strikeRate(outLine.runs, outLine.balls)) }], chip: ov ? (outLine.runs >= 100 ? 'A HUNDRED: STANDING OVATION' : 'STANDING OVATION') : outLine.runs === 0 ? 'A DUCK' : 'OUT' } }, base: bs, label: 'Walk off', rate: rW, cast: { team, players: [match.player(outLine.id)] } } })
         }
         if (battingMilestone && outLine) {
           // the two batsmen meet in the middle and bump fists, with the innings on it

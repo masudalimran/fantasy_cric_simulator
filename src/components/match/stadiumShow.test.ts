@@ -224,10 +224,12 @@ describe('the stadium shows', () => {
     expect(flashes).toBeGreaterThan(30)
   })
 
-  it('the two openers come out side by side and stop a couple of metres apart at the crease; the camera goes between them', () => {
+  it('the two openers walk out together, then one takes the striker\'s end and the other the non-striker\'s end, a pitch length apart', () => {
     const s: StadiumShow = { ...show('entrance', 6), pair: true }
-    for (const t of [ENTRANCE.start, 4, 6, 12]) { const a = walkerPos(s, t, 0), b = walkerPos(s, t, 1); expect(Math.abs(a.x - b.x)).toBeGreaterThan(0.5); expect(Math.abs(a.x - b.x)).toBeLessThan(3); expect(Math.abs(a.z - b.z)).toBeLessThan(1) }
-    expect(Math.abs(walkerPos(s, 12, 0).x - walkerPos(s, 12, 1).x)).toBeGreaterThan(1.5)
+    const a = walkerPos(s, 12, 0), b = walkerPos(s, 12, 1)
+    expect(Math.abs(a.z - b.z)).toBeGreaterThan(15)
+    expect(Math.abs(a.x)).toBeLessThan(1.5); expect(Math.abs(b.x)).toBeLessThan(1.5)
+    for (const t of [ENTRANCE.start, 4, 6]) { const p = walkerPos(s, t, 0), q = walkerPos(s, t, 1); expect(Number.isFinite(p.x + q.x + p.z + q.z)).toBe(true) }
     const c = cameraAt(s, 4)
     expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
   })

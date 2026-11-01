@@ -6,6 +6,7 @@ import { callName } from './format'
 import { TrophyArt, type TrophyKind } from './TrophyArt'
 import { PresenterAvatar } from '../PresenterAvatar'
 import { Body, type Kit, type Rig } from './Body'
+import { PlayerAvatar } from '../ui'
 import { Figure, HEIGHT, MIN_SCALE, WIDTH } from './BroadcastView'
 import { BAT_END_Z, BOWL_Z, fielderWorld, prep, project, type V3 } from './broadcast'
 import { drawScene } from './broadcastDraw'
@@ -476,9 +477,9 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       )}
       {show.lower && show.lower.pair && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] grid grid-cols-2 gap-1.5" style={{ animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : 1.6) / Math.max(0.25, rate)}s both` }}>
-          {show.lower.pair.map((c) => (
+          {show.lower.pair.map((c, ci) => (
             <div key={c.title} className="min-w-0 overflow-hidden rounded-md bg-black/85 px-2 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 3px 0 0 ${show.colors[0]}` }}>
-              <div className="flex items-center gap-1.5"><span className="min-w-0 flex-1 truncate font-display text-base uppercase leading-none tracking-wide text-white">{c.title}</span>{c.rating !== undefined && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-sm leading-none text-white ring-2 ring-white/30">{c.rating}</span>}</div>
+              <div className="flex items-center gap-1.5">{cast?.players[ci] && cast.team && <PlayerAvatar player={cast.players[ci]} team={cast.team} size={24} />}<span className="min-w-0 flex-1 truncate font-display text-sm uppercase leading-none tracking-wide text-white">{c.title}</span>{c.rating !== undefined && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-sm leading-none text-white ring-2 ring-white/30">{c.rating}</span>}</div>
               <div className="mt-0.5 truncate text-[10px] font-semibold leading-tight text-slate-300">{c.sub}</div>
               <StatBand tiles={c.tiles.slice(0, 4)} small />
             </div>
@@ -488,8 +489,8 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       {show.lower && show.lower.big && !show.lower.pair && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] flex items-stretch gap-2.5 rounded-lg bg-black/85 px-3 py-2 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${1.4 / Math.max(0.25, rate)}s both` }}>
           <div className="flex shrink-0 flex-col items-center justify-center rounded-md bg-white/10 px-3">
-            <span className="font-display text-[44px] leading-none tabular-nums text-white" style={{ textShadow: show.lower.color ? `0 0 16px ${show.lower.color}` : undefined }}>{show.lower.big.value}</span>
-            <span className="mt-0.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-300">{show.lower.big.sub}</span>
+            <div className="flex items-baseline gap-1"><span className="font-display text-[46px] leading-none tabular-nums text-white" style={{ textShadow: show.lower.color ? `0 0 16px ${show.lower.color}` : undefined }}>{show.lower.big.value}</span><span className="font-display text-[26px] leading-none tabular-nums text-amber-300">({show.lower.big.sub})</span></div>
+            <span className="mt-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-300">Runs (balls)</span>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2"><span className="truncate font-display text-xl uppercase leading-none tracking-wide text-white">{show.lower.title}</span>{show.lower.chip && <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</span>}</div>
@@ -503,13 +504,14 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           <div className="flex items-stretch">
             <div className="w-1.5 shrink-0" style={{ background: show.colors[0] }} />
             <div className="min-w-0 flex-1 px-2.5 py-1.5">
-              {show.lower.chip && <div className="text-[9px] font-extrabold uppercase leading-none tracking-[0.2em]" style={{ color: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</div>}
+              {show.lower.chip && <div className="text-[8px] font-extrabold uppercase leading-none tracking-[0.2em]" style={{ color: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</div>}
               <div className="mt-1 flex items-center gap-2">
-                <span className={`min-w-0 flex-1 truncate font-display uppercase leading-none tracking-wide ${show.lower.color ? 'text-3xl' : 'text-xl text-white'}`} style={show.lower.color ? { color: show.lower.color, textShadow: `0 0 14px ${show.lower.color}88` } : undefined}>{show.lower.title}</span>
-                {show.lower.rating !== undefined && <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-lg leading-none text-white ring-2 ring-white/30">{show.lower.rating}</span>}
+                {show.lower.rating !== undefined && cast?.players[0] && cast.team && <PlayerAvatar player={cast.players[0]} team={cast.team} size={30} />}
+                <span className={`min-w-0 flex-1 truncate font-display uppercase leading-none tracking-wide ${show.lower.color ? 'text-3xl' : 'text-base text-white'}`} style={show.lower.color ? { color: show.lower.color, textShadow: `0 0 14px ${show.lower.color}88` } : undefined}>{show.lower.title}</span>
+                {show.lower.rating !== undefined && <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-base leading-none text-white ring-2 ring-white/30">{show.lower.rating}</span>}
               </div>
-              {show.lower.lines.filter((ln) => ln !== 'Ratings').map((ln, i) => <div key={i} className={`mt-0.5 truncate leading-snug ${i === 0 ? 'text-[11px] font-bold text-slate-200' : 'text-[10px] font-semibold text-slate-400'}`}>{ln}</div>)}
-              {show.lower.tiles && show.lower.tiles.length > 0 && <StatBand tiles={show.lower.tiles.slice(0, 4)} />}
+              {show.lower.lines.filter((ln) => ln !== 'Ratings' && !ln.startsWith('This season')).map((ln, i) => <div key={i} className={`mt-0.5 truncate leading-snug ${i === 0 ? 'text-[10px] font-bold text-slate-200' : 'text-[9px] font-semibold text-slate-400'}`}>{ln}</div>)}
+              {show.lower.tiles && show.lower.tiles.length > 0 && <StatBand tiles={show.lower.tiles.slice(0, 6)} small={show.lower.rating !== undefined} />}
             </div>
           </div>
         </div>
@@ -520,7 +522,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
   )
 }
 
-const SHORT: Record<string, string> = { Technique: 'Tech', Temperament: 'Temp', Running: 'Run', Accuracy: 'Acc', Variation: 'Var', Stamina: 'Stam', 'Strike rate': 'SR', 'Bat apps': 'Apps', 'Bowl apps': 'Apps', Economy: 'Econ', Wickets: 'Wkts' }
+const SHORT: Record<string, string> = { '50s / 100s': '50/100', Maidens: 'Mdns', '5-wicket hauls': '5W', Average: 'Avg', 'Best': 'Best', Technique: 'Tech', Temperament: 'Temp', Running: 'Run', Accuracy: 'Acc', Variation: 'Var', Stamina: 'Stam', 'Strike rate': 'SR', 'Bat apps': 'Apps', 'Bowl apps': 'Apps', Economy: 'Econ', Wickets: 'Wkts' }
 
 /** A row of figures with thin dividers between them (a value over a small label), the stat band of a TV lower third. */
 function StatBand({ tiles, small = false }: { tiles: { label: string; value: string }[]; small?: boolean }) {

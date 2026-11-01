@@ -248,6 +248,8 @@ export interface Plan {
   wicketFlies: boolean
   /** Index in the fielders list of the one who takes the catch / fields it, and the part of the way he goes. */
   catcher: number
+  /** How the catch is taken (looks only): standing, a dive, a leap, one hand stretched, on the run or sliding on the knees. */
+  catchStyle: CatchStyle
   chaser: number
   six: boolean
   boundary: boolean
@@ -312,6 +314,9 @@ const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758
  * driven along the ground or lofted over the infield (more often when the batsman was attacking, and always when he chose to loft it), and an
  * ordinary scoring shot is on the ground with the odd mis-hit in the air. Looks only.
  */
+/** The ways a catch can be taken. */
+export type CatchStyle = 'stand' | 'dive' | 'jump' | 'reach' | 'run' | 'slide'
+
 export function elevation(ev: Pick<BallEvent, 'seq' | 'boundary' | 'distance' | 'intent' | 'runsBat' | 'shot'>, dist: number): { kind: 'ground' | 'air'; peak: number } {
   const h = hash01(ev.seq * 5.3 + 1)
   const power = Math.max(0, Math.min(1, (ev.intent + 1) / 3))
@@ -564,10 +569,21 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const react: Plan['react'] = dropped ? { text: 'Dropped!', at: t3 + 0.05, who: 'bowler' } : appeal ? { text: 'Howzat!', at: t2 + 0.15, who: 'bowler' } : legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
     : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
+  // how the catch is taken, from the ball number: low ones are dived for or slid at, high ones are leapt at, stretched for or run on to (the keeper and the slips just take them)
+  const catchStyle: CatchStyle = (() => {
+    if (catcher < 0 || kind !== 'air' || runOut) return 'stand'
+    if (catcher === 0) return 'stand'
+    const h = hash01(ev.seq * 5.3 + 1.7)
+    const fw = fielders[catcher] ? fielderWorld(fielders[catcher].x, fielders[catcher].y, fielders[catcher].spot) : null
+    const far = fw ? Math.hypot(end.x - fw.x, end.z - fw.z) : 0
+    if (peak < 3.4) return h < 0.55 ? 'dive' : h < 0.8 ? 'slide' : 'stand'
+    if (far > 6) return h < 0.45 ? 'run' : h < 0.7 ? 'jump' : h < 0.85 ? 'reach' : 'stand'
+    return h < 0.35 ? 'jump' : h < 0.6 ? 'reach' : 'stand'
+  })()
   return {
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, slow, realTotal: 0.95 + tDeliver + tFlight + tHold + (slow ? slow.len / slow.factor - slow.len : 0), runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball && dv.noBallCause !== 'beamer' ? BOWL_Z + 1.22 + overstepCm(ev.seq) / 100 + 0.16 : BOWL_Z - 0.7 },
-    release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
+    release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, catchStyle, chaser, six, boundary,
     delivery: dv, bounceU, swingM, turnM,
     appealAt: appeal || w?.kind === 'stumped' ? { at: w?.kind === 'stumped' ? t3 + 0.1 : t2 + 0.3, len: 0.8 } : null, dropped,
     stump: w?.kind === 'stumped' ? { gap: stumpGap(ev.seq), breakAt: t3 + 0.34 } : null,
@@ -793,7 +809,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   const dives = new Map<number, { k: number; dir: number; dx: number; dz: number }>()
   if (plan.keeperDive) { const d = plan.keeperDive; const k = clamp01((t - d.at) / 0.4) * (1 - clamp01((t - d.at - 1.1) / 0.5)); if (k > 0) dives.set(0, { k, dir: d.dir, dx: d.dir, dz: 0 }) }
   // a low catch is a dive; a high one is taken standing
-  if (plan.catcher > 0 && plan.kind === 'air' && plan.peak < 3.4) { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1, dx: plan.end.x - fielderAt(plan.catcher).x, dz: plan.end.z - fielderAt(plan.catcher).z }) }
+  if (plan.catcher > 0 && plan.kind === 'air' && plan.catchStyle === 'dive') { const k = clamp01((t - (t3 - 0.28)) / 0.28) * (1 - clamp01((t - t3 - 0.8) / 0.4)); if (k > 0) dives.set(plan.catcher, { k, dir: Math.sign(plan.end.x - fielderAt(plan.catcher).x) || 1, dx: plan.end.x - fielderAt(plan.catcher).x, dz: plan.end.z - fielderAt(plan.catcher).z }) }
   if (plan.chaserDive && plan.chaser >= 0) { const k = clamp01((sf - 0.8) / 0.18) * (1 - clamp01((t - t3 - 0.7) / 0.4)); if (k > 0) { const d = diveSpot(plan, fielderAt(plan.chaser)); dives.set(plan.chaser, { k, dir: Math.sign(d.dx) || 1, dx: d.dx, dz: d.dz }) } }
   const react = plan.react && t >= plan.react.at && t < plan.react.at + 1.1 ? { text: plan.react.text, who: plan.react.who } : null
   // the boards at the boundary light up with FOUR or SIX where the ball went

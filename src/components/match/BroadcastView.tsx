@@ -61,12 +61,13 @@ type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper
 export function Figure({ player, team, look, rig, tint }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void; /** The colour of a staff member's top (ground staff, the physio, the drinks carriers). */ tint?: string }) {
   const ump = look === 'umpire' || look === 'staff'
   const ownWeapons = useCharacterWeapons()
-  const primary = look === 'staff' ? tint ?? '#e5e7eb' : ump ? '#1e293b' : team?.colors.primary ?? '#334155'
-  const second = look === 'staff' ? '#ef4444' : ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
+  // (an umpire: a white shirt with a dark waistcoat trim, black trousers and black boots)
+  const primary = look === 'staff' ? tint ?? '#e5e7eb' : look === 'umpire' ? '#f8fafc' : ump ? '#1e293b' : team?.colors.primary ?? '#334155'
+  const second = look === 'staff' ? '#ef4444' : look === 'umpire' ? '#111827' : ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
   const bat = look === 'striker' || look === 'nonstriker'
   const kit: Kit = {
     weapon: ownWeapons && player ? weaponOf(player.id) : null, aura: player ? auraOf(player.id) : null,
-    shirt: primary, trim: second, trousers: ump ? '#0f172a' : '#e5e7eb', pads: bat || look === 'keeper',
+    shirt: primary, trim: second, trousers: ump ? '#0b1120' : '#e5e7eb', pads: bat || look === 'keeper',
     gloves: bat ? '#f8fafc' : look === 'keeper' ? '#fbbf24' : null, boots: ump ? '#020617' : '#f8fafc',
   }
   return (
@@ -75,7 +76,17 @@ export function Figure({ player, team, look, rig, tint }: { player?: Player; tea
       <div className="absolute rounded-full" style={{ left: 6, top: 110, width: 48, height: 12, background: 'rgba(0,0,0,0.32)' }} />
       <Body key={ownWeapons ? 'w' : 'b'} kit={kit} rigRef={rig}>
         {ump
-          ? <><div className="absolute rounded-full" style={{ left: 8, top: 4, width: 44, height: 44, background: '#e0b48e', border: '2px solid #0f172a' }} /><div className="absolute" style={{ left: 4, top: 0, width: 52, height: 13, borderRadius: '10px 10px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} /></>
+          ? <>
+            {/* a face with eyes, a nose and a moustache, under a wide white hat with a dark band */}
+            <div className="absolute rounded-full" style={{ left: 9, top: 9, width: 42, height: 44, background: 'radial-gradient(circle at 40% 35%, #f1c9a5, #d9a679 70%, #b9855a)', border: '2px solid #0f172a' }} />
+            <div className="absolute rounded-full bg-slate-900" style={{ left: 19, top: 26, width: 5, height: 5 }} />
+            <div className="absolute rounded-full bg-slate-900" style={{ left: 36, top: 26, width: 5, height: 5 }} />
+            <div className="absolute rounded-full" style={{ left: 28, top: 31, width: 4, height: 7, background: '#c58f64' }} />
+            <div className="absolute" style={{ left: 21, top: 39, width: 18, height: 5, borderRadius: '2px 2px 8px 8px', background: '#334155' }} />
+            <div className="absolute" style={{ left: 0, top: 11, width: 60, height: 7, borderRadius: '50%', background: '#f8fafc', border: '1px solid #94a3b8', boxShadow: '0 2px 3px #0006' }} />
+            <div className="absolute" style={{ left: 11, top: 0, width: 38, height: 15, borderRadius: '14px 14px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} />
+            <div className="absolute" style={{ left: 11, top: 9, width: 38, height: 4, background: '#111827' }} />
+          </>
           : <div className="absolute rounded-full" style={{ left: 2, top: 0, width: 56, height: 56, boxShadow: `0 0 0 3px ${team ? accentOf(team) : '#fff'}, 0 0 10px #000a`, overflow: 'hidden' }}>{player && team && <PlayerAvatar player={player} team={team} size={56} />}</div>}
       </Body>
     </div>
@@ -379,7 +390,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             pz += (L.plan.end.z - pz) * dv.k
           }
         }
-        place(`f${i}`, { x: px, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: pz }, { rot: dv ? screenSide(dv, c.yaw) * dv.k * 78 : 0 })
+        place(`f${i}`, { x: px, y: (caught ? joyHop(f.joy) : 0) + (dv ? 0.25 * dv.k : 0) + (caught && (L.plan.catchStyle === 'jump' || L.plan.catchStyle === 'reach') ? 0.6 * Math.sin(Math.PI * clamp01((t - (t3c - 0.4)) / 0.8)) : 0) + (running ? Math.abs(Math.sin(t * 15 + i)) * 0.14 : 0), z: pz }, { rot: dv ? screenSide(dv, c.yaw) * dv.k * 78 : 0 })
         const mf = move(`f${i}`, w)
         const sfp = clamp01((t - t2c) / pl.tFlight)
         const thrower = pl.runOut ? pl.catcher === i : pl.chaser === i
@@ -389,7 +400,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const stopK = thrower && !pl.boundary && !pl.six && !dv && (pl.kind === 'ground' || !!pl.fellShort) ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
         const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
-        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0, stump: i === 0 ? f.keeperStump : 0, appeal: f.appealK > 0 && (i === 0 || appealers.has(i)) ? f.appealK : 0 })
+        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, catchStyle: caught && !dv && pl.catchStyle !== 'stand' && pl.catchStyle !== 'dive' ? pl.catchStyle : undefined, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0, stump: i === 0 ? f.keeperStump : 0, appeal: f.appealK > 0 && (i === 0 || appealers.has(i)) ? f.appealK : 0 })
         rigs.current.get(`f${i}`)?.apply(mf.v === 0 && !dv && catchK === 0 && stopK === 0 && throwK === 0 ? breathe(fp, tq, 5 + i) : fp)
       })
       // the ball, and its shadow
@@ -680,6 +691,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           )}
         </div>
       )}
+      {/* with the score bar off, only the speed of the last ball shows, where the bar would be */}
+      {!scoreBarOn && scoreBug?.lastKmh ? (() => { const st = speedStyle(scoreBug.lastKmh); const c = st === 'dragon' ? '#fb923c' : st === 'fire' ? '#f87171' : st === 'ice' ? '#7dd3fc' : '#e2e8f0'; return <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums ring-1 ring-white/20" style={{ color: c, textShadow: st === 'plain' ? undefined : `0 0 6px ${c}aa` }}>{st === 'dragon' ? '🌋' : st === 'fire' ? '🔥' : st === 'ice' ? '❄️' : ''}{scoreBug.lastKmh} km/h</div> })() : null}
       {scoreBarOn && scoreBug?.spell && !replay && <SpellCard key={`spell${scoreBug.spell.key}`} spell={scoreBug.spell} color={accentOf(bowlingTeam)} delay={Math.max(1.2, (plan.realTotal * 0.75) / Math.max(0.3, rate))} />}
       <span className="pointer-events-none absolute left-2 bottom-8 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
     </div>

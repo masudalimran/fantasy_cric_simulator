@@ -347,4 +347,18 @@ describe('a run out, an appeal, a dropped catch and the phantom camera', () => {
     const hit = plan.tRun + plan.tDeliver
     expect(sl.slow!.at).toBeLessThan(hit); expect(sl.slow!.at + sl.slow!.len).toBeGreaterThan(hit)
   })
+
+  it('catches are taken in more than one way: standing, a dive, a leap, a stretch, on the run, a slide', () => {
+    const styles = new Set<string>()
+    for (let seed = 1; seed <= 30; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed }); m.playMatch()
+      for (const ev of m.innings[0].log.filter((e) => e.wicket?.kind === 'caught')) {
+        const bowlSide = m.sides[1 - m.innings[0].battingSide]
+        const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: m.player(ev.strikerId).hand })
+        const f = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+        styles.add(planBall(ev, f.map((x) => ({ id: x.player.id, x: x.x, y: x.y, spot: x.spot })), endPoint(ev, f), false).catchStyle)
+      }
+    }
+    expect(styles.size).toBeGreaterThanOrEqual(4)
+  })
 })

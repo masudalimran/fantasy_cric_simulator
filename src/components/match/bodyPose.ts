@@ -506,6 +506,8 @@ export interface FieldCtx {
   appeal?: number
   /** Despair at a dropped catch (0 to 1): both hands on his head. */
   despair?: number
+  /** How a catch is taken (see `catchK`): a leap, one hand stretched high, hands out on the run, or a slide on the knees. Standing and dives are the other poses. */
+  catchStyle?: 'jump' | 'reach' | 'run' | 'slide'
 }
 
 export function fielderPose(c: FieldCtx): Pose {
@@ -519,6 +521,13 @@ export function fielderPose(c: FieldCtx): Pose {
   if (c.speed > 0.8) p = locomotion({ ...p, hip: { x: 30, y: 85.5 } }, c.speed, c.cyc)
   if (c.stop > 0) p = mixPose(p, { ...standing(), hip: { x: 31, y: 105 }, lean: 6, head: { dx: 0, dy: 3, tilt: 0 }, footL: { x: 14, y: 117 }, footR: { x: 42, y: 116 }, handL: { x: -8, y: 28 }, handR: { x: 6, y: 30 } }, ease(c.stop))
   if (c.catchK > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: c.keeper ? 98 : 90 }, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -5, y: -17 }, handR: { x: 5, y: -17 } }, ease(c.catchK))
+  if (c.catchK > 0 && c.catchStyle) {
+    const k = ease(c.catchK)
+    if (c.catchStyle === 'jump') p = mixPose(p, { ...standing(), hip: { x: 30, y: 80 }, footL: { x: 26, y: 113 }, footR: { x: 34, y: 111 }, handL: { x: -6, y: -36 }, handR: { x: 6, y: -36 }, head: { dx: 0, dy: -2, tilt: 0 } }, k)
+    else if (c.catchStyle === 'reach') p = mixPose(p, { ...standing(), hip: { x: 30, y: 84 }, lean: 6, footL: { x: 22, y: 115 }, footR: { x: 40, y: 112 }, handL: { x: -15, y: 4 }, handR: { x: 11, y: -38 }, head: { dx: 2, dy: -1, tilt: 4 } }, k)
+    else if (c.catchStyle === 'run') p = { ...mixPose(p, { ...p, lean: 9, handL: { x: -4, y: -16 }, handR: { x: 7, y: -19 }, head: { dx: 1, dy: -1, tilt: 0 } }, k) }
+    else p = mixPose(p, { ...standing(), hip: { x: 30, y: 108 }, lean: -14, footL: { x: 46, y: 117 }, footR: { x: 54, y: 117 }, handL: { x: -10, y: 14 }, handR: { x: 12, y: -28 }, head: { dx: 0, dy: -1, tilt: -4 } }, k)
+  }
   if (c.stump && c.stump > 0) p = mixPose(p, { ...standing(), ball: true, hip: { x: 30, y: 103 }, lean: 7, head: { dx: 0, dy: 3, tilt: 0 }, handL: { x: -3, y: 36 }, handR: { x: 3, y: 39 }, footL: { x: 19, y: 117 }, footR: { x: 41, y: 117 } }, ease(c.stump))
   if (c.throwK > 0) {
     const k = clamp01(c.throwK)
