@@ -12,7 +12,7 @@ import { useTeams, useViewedSeason } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { Sheet } from '../Sheet'
-import { OriginTag, OverseasTag, CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
+import { OriginTag, OverseasTag, CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, bowlLabel, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
 import { competitionName, FixtureRow, usePlayerIndex, useTeamMap } from './shared'
 
 type Entry = { kind: 'match'; id: string } | { kind: 'player'; id: string } | { kind: 'team'; id: string }
@@ -313,7 +313,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
               <span className="rounded-full bg-black/40 px-2 py-0.5 font-bold text-white">{ROLE_LABEL[player.role]}</span>
               <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.hand === 'L' ? 'Left' : 'Right'}-hand bat</span>
-              {player.bowling && <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{player.bowling.type}</span>}
+              {player.bowling && <span className="rounded-full bg-black/40 px-2 py-0.5 text-slate-200">{bowlLabel(player.bowling.type)}</span>}
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2"><RatingBadge value={ovr} size="lg" /><div className="text-xs text-slate-300"><div className="hidden font-display text-xl leading-none sm:block" style={{ color: tierOf(ovr).color }}>{tierOf(ovr).label}</div>overall{ovrBase !== ovr && <div className="mt-0.5 tabular-nums" title="Where he started, and what he is now"><span className="text-slate-400">{ovrBase}→</span><span className="text-white">{ovr}</span> <Delta n={ovr - ovrBase} className="text-sm" /></div>}</div></div>
@@ -347,7 +347,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
             <StatBar label="Technique" value={player.batting.technique} base={baseP?.batting.technique} color={accent} /><StatBar label="Power" value={player.batting.power} base={baseP?.batting.power} color={accent} /><StatBar label="Temperament" value={player.batting.temperament} base={baseP?.batting.temperament} color={accent} /><StatBar label="Running" value={player.batting.running} base={baseP?.batting.running} color={accent} />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Bowling{player.bowling ? ` · ${player.bowling.type}` : ''} & fielding</h3>
+            <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Bowling{player.bowling ? ` · ${bowlLabel(player.bowling.type)}` : ''} & fielding</h3>
             {player.bowling ? <><StatBar label="Accuracy" value={player.bowling.accuracy} base={baseP?.bowling?.accuracy} color={accent} /><StatBar label="Variation" value={player.bowling.variation} base={baseP?.bowling?.variation} color={accent} /><StatBar label="Stamina" value={player.bowling.stamina} base={baseP?.bowling?.stamina} color={accent} /></> : <p className="text-sm text-slate-500">Does not bowl.</p>}
             <StatBar label={player.role === 'WK' ? 'Keeping' : 'Fielding'} value={player.fielding} color={accent} />
           </div>

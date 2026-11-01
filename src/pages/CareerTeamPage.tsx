@@ -5,7 +5,7 @@ import { overall } from '../data/builders'
 import { keeperIn } from '../data/squad'
 import { FixtureRow, usePlayerForm, useTeamMap } from '../components/season/shared'
 import { SortTable, type Col } from '../components/season/SortTable'
-import { FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest, accentOf } from '../components/ui'
+import { FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, bowlLabel, TeamCrest, accentOf } from '../components/ui'
 import { paths } from '../routes'
 import { daysBetween, formatDate } from '../season/dates'
 import { injuriesOf, SEVERITY_COLOR, type Injury } from '../season/injuries'
@@ -75,7 +75,7 @@ export function CareerTeamPage() {
             {data.keeper === r.player.id && <span className="rounded bg-sky-400/25 px-1.5 py-px text-[11px] font-bold text-sky-300">WK</span>}
           </span>
           <span className="block text-xs text-slate-400">
-            {ROLE_LABEL[r.player.role]}{r.player.bowling ? ` · ${r.player.bowling.type}` : ''}
+            {ROLE_LABEL[r.player.role]}{r.player.bowling ? ` · ${bowlLabel(r.player.bowling.type)}` : ''}
             {r.injury && <span className="ml-1.5 rounded px-1.5 py-px text-[11px] font-bold uppercase" style={{ background: `${SEVERITY_COLOR[r.injury.severity]}30`, color: SEVERITY_COLOR[r.injury.severity] }} title={`${r.injury.severity} injury, back on ${formatDate(r.injury.back)}`}>{r.injury.name} · {Math.max(1, daysBetween(season.today, r.injury.back))}d</span>}
           </span>
         </span>

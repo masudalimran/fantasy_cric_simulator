@@ -16,7 +16,7 @@ import { myNextFixture } from '../season/results'
 import type { Season } from '../season/types'
 import type { Player, Team } from '../types'
 import { Sheet } from './Sheet'
-import { accentOf, Delta, FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, TeamCrest } from './ui'
+import { accentOf, Delta, FormBar, OverseasTag, PlayerAvatar, RatingBadge, ROLE_LABEL, bowlLabel, TeamCrest } from './ui'
 
 const SLOT_LABELS: Record<number, string> = { 0: 'Openers', 2: 'Top order', 4: 'Middle order', 7: 'Lower order & tail' }
 
@@ -55,7 +55,7 @@ function SquadCard({
       <div className="pointer-events-none min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white"><span className="truncate">{player.name}</span><OverseasTag playerId={player.id} team={team} /></div>
         <div className="truncate text-xs text-slate-400">
-          {ROLE_LABEL[player.role]}{player.bowling ? ` · ${player.bowling.type}` : ''}
+          {ROLE_LABEL[player.role]}{player.bowling ? ` · ${bowlLabel(player.bowling.type)}` : ''}
         </div>
       </div>
       {!injury && <button

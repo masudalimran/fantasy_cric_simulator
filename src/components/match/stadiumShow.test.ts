@@ -232,6 +232,14 @@ describe('the stadium shows', () => {
     expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
   })
 
+  it('the ceremony: the speakers are never on top of each other (the host, the two captains and the Man of the Match)', () => {
+    const s: StadiumShow = { ...show('ceremony', 4), ceremony: { script: [], winCaptainId: 'a3', loseCaptainId: 'b2', motmId: 'a5', cheque: '5,000 COINS', title: 'Cup', hostName: 'Zoe' } }
+    for (let t = 4; t <= SHOW_SECONDS.ceremony; t += 0.1) {
+      const ps = [['a3', 0, 3], ['b2', 1, 2], ['a5', 0, 5]].map(([id, side, i]) => ceremonyPerson(s, t, id as string, ceremonyLine(side as 0 | 1, i as number), side as 0 | 1, i as number).pos)
+      ps.push(hostPos(t))
+      for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) if (ps[i].y > 0.1 && ps[j].y > 0.1) expect(Math.hypot(ps[i].x - ps[j].x, ps[i].z - ps[j].z), `${i}/${j} at ${t.toFixed(1)}`).toBeGreaterThan(0.9)
+    }
+  })
   it('the ceremony: the host walks on, the teams stand at the two sides, each speaker goes up to the microphone in his turn and the Man of the Match stays', () => {
     const script = [{ at: 1, end: 2, who: 'host' as const, text: 'x' }]
     const s: StadiumShow = { ...show('ceremony', 4), ceremony: { script, winCaptainId: 'a3', loseCaptainId: 'b2', motmId: 'a5', cheque: '5,000 COINS', title: 'Cup', hostName: 'Zoe' } }

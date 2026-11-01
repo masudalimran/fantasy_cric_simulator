@@ -5,7 +5,7 @@ import { ATTR_LABEL, ratingRows } from '../../season/progression'
 import { useTeams } from '../../store/useStore'
 import type { Player, Team } from '../../types'
 import { Sheet } from '../Sheet'
-import { Delta, PlayerAvatar, RatingBadge, ROLE_LABEL } from '../ui'
+import { Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, bowlLabel } from '../ui'
 import { TeamLogo } from '../season/Details'
 
 /**
@@ -55,7 +55,7 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-white">{p.name}</span>
           <span className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
-            {ROLE_LABEL[p.role]}{p.bowling ? ` · ${p.bowling.type}` : ''}
+            {ROLE_LABEL[p.role]}{p.bowling ? ` · ${bowlLabel(p.bowling.type)}` : ''}
             {moved.map((r) => <span key={r.key} className="whitespace-nowrap">{ATTR_LABEL[r.key as keyof typeof ATTR_LABEL]} <Delta n={r.now - r.base} /></span>)}
           </span>
         </span>

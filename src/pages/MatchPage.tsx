@@ -92,7 +92,7 @@ import { ATTR_LABEL, sessionTeam } from '../season/progression'
 import { SquadProblemCard, squadProblem } from '../components/season/SquadProblem'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
 import { matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMatch } from '../store/useStore'
-import { Delta, PlayerAvatar, ROLE_LABEL } from '../components/ui'
+import { Delta, PlayerAvatar, ROLE_LABEL, bowlLabel } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
 import { addDays, formatDate } from '../season/dates'
@@ -360,14 +360,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       let lines: string[]
       if (kind === 'batsman') {
         const s = seasonStats?.bat.get(id)
-        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'left' : 'right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
+        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
         tiles = s
           ? [t('Bat apps', s.batApps + 1), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`)]
           : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
       } else {
         const s = seasonStats?.bowl.get(id)
         const w = p.bowling
-        lines = [`${w?.type ?? ''} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
+        lines = [`${bowlLabel(w?.type)} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
         tiles = s
           ? [t('Bowl apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Average', bowlAverage(s) === null ? '-' : bowlAverage(s)!.toFixed(1)), t('Best', `${s.bestW}/${s.bestR}`), t('5-wicket hauls', s.fiveW)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]

@@ -81,7 +81,7 @@ export function Scorecard({ match }: { match: Match }) {
                         {onStrike && <span className="rounded bg-amber-400 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-black">ON STRIKE</span>}
                         {nonStrike && <span className="rounded bg-slate-300 px-1.5 py-px text-[10px] font-extrabold tracking-wider text-black">NON-STRIKER</span>}
                       </div>
-                      <div className="text-[11px] leading-tight text-slate-500">{onStrike || nonStrike ? 'batting' : dismissalText(match, b, inn)}</div>
+                      <div className="text-[11px] leading-tight text-slate-500">{onStrike || nonStrike ? 'Batting' : dismissalText(match, b, inn)}</div>
                     </div>
                   </div>
                 </td>

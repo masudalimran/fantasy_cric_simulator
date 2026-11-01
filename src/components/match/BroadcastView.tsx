@@ -151,6 +151,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const [cutKey, setCutKey] = useState(0)
   const fire = !!event?.freeHit && !!event.boundary
   const captionsOn = useCaptions()
+  // the score bar's names: from the match as it stands, or (before the first ball, when there are no figures yet) from the people at the crease
+  const bugBatters = scoreBug?.batters.length ? scoreBug.batters : [{ name: callName(striker), runs: 0, balls: 0, strike: true }, ...(nonStriker ? [{ name: callName(nonStriker), runs: 0, balls: 0, strike: false }] : [])]
+  const bugBowler = scoreBug?.bowler ?? { name: callName(bowler), figures: '0-0-0-0' }
   const scoreBarOn = useScoreBar()
   // where each fielder stood at the end of the last clip, so the field can change between balls with the fielders walking to their new places
   const lastRest = useRef(new Map<string, V3>())
@@ -643,19 +646,36 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {(look.covers || (event === null && look.rain === 2)) && <div className="pointer-events-none absolute inset-x-0 top-10 z-[6001] text-center"><span className="rounded bg-black/75 px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200 ring-1 ring-sky-300/40">{look.weather === 'washout' ? 'Washed out: no play today' : 'Rain stops play: covers on'}</span></div>}
       {/* the TV score bug: the score and overs, the two batsmen and the bowler, and in a chase what is needed */}
       {scoreBarOn && (scoreBug || event) && (
-        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] w-max max-w-[62%] overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
+        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] w-max max-w-[58%] overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
           <div className="flex items-stretch">
             <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{scoreBug?.team ?? battingTeam.short}</span>
             <span className="px-1.5 py-0.5 font-display text-sm leading-none tabular-nums">{scoreBug?.runs ?? event?.score.runs}/{scoreBug?.wickets ?? event?.score.wickets}</span>
             <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor((scoreBug?.balls ?? event?.score.legalBalls ?? 0) / 6)}.{(scoreBug?.balls ?? event?.score.legalBalls ?? 0) % 6}</span>
           </div>
-          {/* the small print goes on a second line only when there is some (a chase, a partnership, the speed): the two batsmen and the bowler are on the cards under the picture */}
-          {scoreBug && (scoreBug.need || scoreBug.stand || scoreBug.win || scoreBug.lastKmh) && (
+          {/* the two batsmen side by side, then the bowler with the speed of the last ball: three lines in all, so the bar is neither wide nor tall */}
+          {(bugBatters.length > 0 || bugBowler) && (
+            <div className="border-t border-white/15 px-1.5 py-0.5 text-[10px] leading-tight">
+              <div className="flex items-baseline gap-2">
+                {bugBatters.map((b) => (
+                  <span key={b.name} className="flex min-w-0 items-baseline gap-0.5 whitespace-nowrap">
+                    <span className={`max-w-[54px] truncate font-bold ${b.strike ? 'text-amber-300' : 'text-slate-300'}`}>{b.name}{b.strike ? '*' : ''}</span>
+                    <span className="font-bold tabular-nums text-white">{b.runs}<span className="font-normal text-slate-400">({b.balls})</span></span>
+                  </span>
+                ))}
+              </div>
+              {bugBowler && (
+                <div className="mt-0.5 flex items-baseline gap-1.5 whitespace-nowrap border-t border-white/20 pt-0.5">
+                  <span className="max-w-[60px] truncate font-bold text-sky-300">{bugBowler.name}</span>
+                  <span className="font-bold tabular-nums text-white">{bugBowler.figures}</span>
+                  {scoreBug?.lastKmh ? (() => { const st = speedStyle(scoreBug.lastKmh); const c = st === 'dragon' ? '#fb923c' : st === 'fire' ? '#f87171' : st === 'ice' ? '#7dd3fc' : '#e2e8f0'; return <span className="ml-auto pl-1 font-extrabold tabular-nums" style={{ color: c, textShadow: st === 'plain' ? undefined : `0 0 6px ${c}aa` }}>{st === 'dragon' ? '🌋' : st === 'fire' ? '🔥' : st === 'ice' ? '❄️' : ''}{scoreBug.lastKmh} km/h</span> })() : null}
+                </div>
+              )}
+            </div>
+          )}
+          {scoreBug && (scoreBug.need || scoreBug.win) && (
             <div className="flex flex-wrap items-center gap-x-2 border-t border-white/15 px-1.5 py-0.5 text-[9px] font-bold leading-snug">
               {scoreBug.need && <span className="text-amber-300">{scoreBug.need}</span>}
               {scoreBug.win && <span className="font-extrabold" style={{ color: scoreBug.win.pct >= 50 ? '#34d399' : '#f87171' }}>{scoreBug.win.team} {scoreBug.win.pct}%</span>}
-              {scoreBug.stand && <span className="text-slate-300">P {scoreBug.stand}</span>}
-              {scoreBug.lastKmh ? <span className="text-sky-300">{scoreBug.lastKmh} km/h</span> : null}
             </div>
           )}
         </div>

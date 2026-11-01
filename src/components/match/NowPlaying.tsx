@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import type { Match } from '../../engine/match'
 import type { BallEvent } from '../../engine/types'
 import { ClickAvatar } from './PlayerCard'
-import { accentOf } from '../ui'
+import { bowlLabel } from '../ui'
 import { economy, oversText, strikeRate } from './format'
 
 export const chip = (ev: BallEvent) => {
@@ -73,7 +73,7 @@ export function NowPlaying({ match, displayOver }: { match: Match; displayOver: 
               <ClickAvatar player={bowler} team={bowl.team} size={44} />
               <div className="min-w-0 flex-1 leading-tight">
                 <div className="text-[15px] font-bold text-white">{bowler.name}</div>
-                <div className="text-[11px] capitalize text-slate-300">{bowler.bowling?.type ?? 'part-timer'}{bowlerLine && <> · Econ <b className="text-white">{economy(bowlerLine)}</b></>}</div>
+                <div className="text-[11px] capitalize text-slate-300">{bowler.bowling ? bowlLabel(bowler.bowling.type) : 'Part-timer'}{bowlerLine && <> · Econ <b className="text-white">{economy(bowlerLine)}</b></>}</div>
               </div>
             </div>
             {/* the figures are longer than a batsman's, so they get a line to themselves (kept small so the card stays short) */}
@@ -112,53 +112,34 @@ export function MobileNowPlaying({ match, displayOver }: { match: Match; display
   const sinceWicket = lastWicket === -1 ? inn.log : inn.log.slice(inn.log.length - lastWicket)
   const partnership = { runs: sinceWicket.reduce((s, e) => s + e.total, 0), balls: sinceWicket.filter((e) => e.legal).length }
 
-  const batColor = accentOf(bat.team), bowlColor = accentOf(bowl.team)
-  // a batsman's line: portrait, name, runs big and balls small; the one on strike is brighter and has a marker
-  const batRow = (line: typeof strikerLine, strike: boolean) => {
-    if (!line) return null
-    const pl = match.player(line.id)
-    return (
-      <div key={line.id} className={`flex items-center gap-1.5 ${strike ? '' : 'opacity-75'}`}>
-        <ClickAvatar player={pl} team={bat.team} size={strike ? 34 : 28} />
-        <div className="min-w-0 flex-1 leading-tight">
-          <div className={`truncate font-bold ${strike ? 'text-[13px] text-white' : 'text-[11px] text-slate-200'}`}>{strike && <span className="mr-1 text-amber-300">▶</span>}{pl.name}</div>
-          {strike && <div className="text-[10px] text-slate-400">SR {strikeRate(line.runs, line.balls)} · 4s {line.fours} · 6s {line.sixes}</div>}
+  const cell = (kind: keyof typeof ACCENT, avatar: React.ReactNode, name: string, big: React.ReactNode, small: React.ReactNode) => (
+    <div className="relative min-w-0 overflow-hidden rounded-xl border border-line bg-panel-2 px-2 pb-1.5 pt-2">
+      <div className="absolute inset-x-0 top-0 h-1" style={{ background: ACCENT[kind].bar }} />
+      <div className="flex items-center gap-1.5">
+        {avatar}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[11px] font-bold leading-tight text-white">{name}</div>
+          <div className="font-display text-base leading-tight text-white">{big}</div>
         </div>
-        <div className="shrink-0 whitespace-nowrap text-right leading-none"><span className={`font-display tabular-nums text-white ${strike ? 'text-2xl' : 'text-lg'}`}>{line.runs}</span><span className="ml-0.5 text-[10px] tabular-nums text-slate-400">({line.balls})</span></div>
       </div>
-    )
-  }
+      <div className="mt-0.5 truncate text-[10px] text-slate-400">{small}</div>
+    </div>
+  )
 
   return (
-    <div className="shrink-0 border-b border-line bg-ink px-2 py-1.5">
-      <div className="flex overflow-hidden rounded-lg bg-panel-2 ring-1 ring-white/10">
-        <div className="min-w-0 flex-[1.25] space-y-1 border-l-4 px-2 py-1.5" style={{ borderColor: batColor }}>
-          {batRow(strikerLine, true)}
-          {batRow(nonLine, false)}
-        </div>
-        {bowler && (
-          <div className="min-w-0 flex-1 border-l-4 border-l-transparent px-2 py-1.5" style={{ boxShadow: `inset 3px 0 0 ${bowlColor}` }}>
-            <div className="flex items-center gap-1.5">
-              <ClickAvatar player={bowler} team={bowl.team} size={30} />
-              <div className="min-w-0 flex-1 leading-tight">
-                <div className="truncate text-[13px] font-bold text-white">{bowler.name}</div>
-                <div className="truncate text-[10px] capitalize text-slate-400">{bowler.bowling?.type ?? 'part-timer'}{bowlerLine && <> · Econ {economy(bowlerLine)}</>}</div>
-              </div>
-            </div>
-            <div className="mt-1 flex items-baseline justify-between gap-1">
-              <span className="font-display text-lg leading-none tabular-nums text-white">{bowlerLine ? `${oversText(bowlerLine.legalBalls)}-${bowlerLine.maidens}-${bowlerLine.runs}-${bowlerLine.wickets}` : '0-0-0-0'}</span>
-              <span className="text-[9px] uppercase tracking-wider text-slate-500">O-M-R-W</span>
-            </div>
-          </div>
-        )}
+    <div className="shrink-0 space-y-1.5 border-b border-line bg-ink px-2 py-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
+        {strikerLine && cell('striker', <ClickAvatar player={match.player(strikerLine.id)} team={bat.team} size={30} />, match.player(strikerLine.id).name, <>{strikerLine.runs}<span className="ml-0.5 font-sans text-[11px] text-slate-300">({strikerLine.balls})</span></>, <><b className="text-amber-300">ON STRIKE</b> · SR {strikeRate(strikerLine.runs, strikerLine.balls)}</>)}
+        {nonLine && cell('nonstriker', <ClickAvatar player={match.player(nonLine.id)} team={bat.team} size={30} />, match.player(nonLine.id).name, <>{nonLine.runs}<span className="ml-0.5 font-sans text-[11px] text-slate-300">({nonLine.balls})</span></>, <>Non-striker · 4s {nonLine.fours} 6s {nonLine.sixes}</>)}
+        {bowler && cell('bowler', <ClickAvatar player={bowler} team={bowl.team} size={30} />, bowler.name, bowlerLine ? `${oversText(bowlerLine.legalBalls)}-${bowlerLine.maidens}-${bowlerLine.runs}-${bowlerLine.wickets}` : '0-0-0-0', <><b className="text-red-300">BOWLING</b> · {bowlerLine ? `Econ ${economy(bowlerLine)}` : bowlLabel(bowler.bowling?.type)}</>)}
       </div>
-      <div className="mt-1 flex items-center justify-between gap-2 px-0.5">
+      <div className="flex items-center justify-between gap-2 px-0.5">
         <div className="flex min-w-0 items-center gap-1">
           <span className="mr-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Over {displayOver + 1}</span>
           {overEvents.length === 0 && <span className="text-[11px] text-slate-500">no balls yet</span>}
           {overEvents.map((e) => { const c = chip(e); return <motion.span key={e.seq} initial={{ scale: 0 }} animate={{ scale: 1 }} className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold ${c.c}`}>{c.t}</motion.span> })}
         </div>
-        <div className="shrink-0 whitespace-nowrap text-[11px] text-slate-300">P'ship <b className="text-white">{partnership.runs}</b> <span className="text-slate-500">({partnership.balls})</span></div>
+        <div className="shrink-0 text-[11px] text-slate-300">Partnership <b className="text-white">{partnership.runs}</b> <span className="text-slate-500">({partnership.balls})</span></div>
       </div>
     </div>
   )

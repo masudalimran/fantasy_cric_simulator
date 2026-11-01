@@ -7,7 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { describeChanges, keeperIn } from '../data/squad'
 import { defaultTeam, useStore, useTeams } from '../store/useStore'
 import type { Player, Team } from '../types'
-import { accentOf, FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, StatBar, TeamBackdrop, TeamCrest, tierOf } from './ui'
+import { accentOf, FormBar, PlayerAvatar, RatingBadge, ROLE_LABEL, bowlLabel, StatBar, TeamBackdrop, TeamCrest, tierOf } from './ui'
 import { usePlayerForm } from './season/shared'
 import { useViewedSeason } from '../store/useStore'
 
@@ -74,7 +74,7 @@ function PlayerRow({ player, team, pos }: { player: Player; team: Team; pos?: nu
           </div>
           <div className="truncate text-xs text-slate-400">
             {ROLE_LABEL[player.role]}
-            {player.bowling ? ` · ${player.bowling.type}` : ''} · {tierOf(ovr).label}
+            {player.bowling ? ` · ${bowlLabel(player.bowling.type)}` : ''} · {tierOf(ovr).label}
           </div>
         </div>
         {inCareer && <FormBar z={formOf(player.id)} />}

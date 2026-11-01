@@ -3,7 +3,7 @@ import type { Match } from '../../engine/match'
 import type { Action } from '../../engine/replay'
 import type { Intent } from '../../engine/types'
 import { FORMATS } from '../../engine/types'
-import { PlayerAvatar } from '../ui'
+import { PlayerAvatar, bowlLabel } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { oversText } from './format'
 import { askVoice, cancelSpeech, setVoiceMode, setVoiceName, setVoiceSpeed, speak, useEnglishVoices, useVoiceMode, useVoiceNames, useVoiceSpeed, voiceSupported, type VoiceMode, type VoiceSpeed } from '../../audio/voice'
@@ -325,7 +325,7 @@ export function ControlDeck({ match, act, auto, setAuto, mySide = null, spectati
                 <PlayerAvatar player={p} team={bowl.team} size={26} />
                 <span className="min-w-0 flex-1 leading-tight">
                   <span className="block truncate text-[12px] font-bold text-white">{p.name}</span>
-                  <span className="block truncate text-[11px] text-slate-400">{p.bowling?.type} · {oversText(line?.legalBalls ?? 0)} ov{line ? ` · ${line.wickets}/${line.runs}` : ''}</span>
+                  <span className="block truncate text-[11px] text-slate-400">{bowlLabel(p.bowling?.type)} · {oversText(line?.legalBalls ?? 0)} ov{line ? ` · ${line.wickets}/${line.runs}` : ''}</span>
                 </span>
                 {on && <span className="rounded bg-red-500 px-1 py-px text-[10px] font-extrabold text-white">NEXT</span>}
               </button>

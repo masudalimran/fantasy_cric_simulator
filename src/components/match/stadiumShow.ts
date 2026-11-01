@@ -383,7 +383,8 @@ export function coinAt(t: number): { y: number; turn: number } | null {
 // ---- the post-match presentation ---------------------------------------------------------------------------------------------
 
 const HOST_SPOT: V3 = { x: -1.9, y: STAGE.h, z: -7.7 }
-const SPEAK_SPOT: V3 = { x: 1.4, y: STAGE.h, z: -7.7 }
+/** Each speaker has his own place at the microphones, side by side along the stage, so two of them are never in the same spot (the winning captain, the Man of the Match, the losing captain). */
+const speakSpot = (show: StadiumShow, id: string): V3 => ({ x: id === show.ceremony?.winCaptainId ? 0.0 : id === show.ceremony?.motmId ? 1.7 : 3.4, y: STAGE.h, z: -7.7 })
 /** Where the winners (side 0) and the losers (side 1) stand at the sides of the stage, in two rows, clapping. */
 export function ceremonyLine(side: 0 | 1, i: number): V3 {
   const x = (side === 0 ? -1 : 1) * (6.4 + (i % 6) * 0.9)
@@ -412,10 +413,11 @@ export function ceremonyPerson(show: StadiumShow, t: number, id: string, line: V
   const from: V3 = { x: line.x + (side === 0 ? -34 : 34), y: 0, z: line.z }
   let pos = lerp3(from, line, run)
   let onStage = false
+  const SPEAK_SPOT = speakSpot(show, id)
   for (const tn of turnsOf(show, id)) {
-    if (t >= tn.start && t < tn.start + WALK) { pos = lerp3(line, SPEAK_SPOT, ease((t - tn.start) / WALK)); onStage = true }
+    if (t >= tn.start && t < tn.start + WALK) { const k = ease((t - tn.start) / WALK); pos = lerp3(line, SPEAK_SPOT, k); pos = { ...pos, z: pos.z - 1.4 * Math.sin(Math.PI * k) }; onStage = true }
     else if (t >= tn.start + WALK && t < tn.end) { pos = SPEAK_SPOT; onStage = true }
-    else if (t >= tn.end && t < tn.end + WALK) { pos = lerp3(SPEAK_SPOT, line, ease((t - tn.end) / WALK)); onStage = true }
+    else if (t >= tn.end && t < tn.end + WALK) { const k = ease((t - tn.end) / WALK); pos = lerp3(SPEAK_SPOT, line, k); pos = { ...pos, z: pos.z - 1.4 * Math.sin(Math.PI * k) }; onStage = true }
   }
   return { pos, arrived: run >= 1, onStage }
 }
@@ -424,11 +426,11 @@ function ceremonyKey(t: number): Key {
   const B = CEREMONY_BEATS
   const wide: Key = { p: { x: 0, y: 2.9, z: -27 }, aim: { x: 0, y: 1.6, z: -8 }, hfov: 62 * rad }
   const duo: Key = { p: { x: 0.8, y: 2.3, z: -20 }, aim: { x: -0.2, y: 1.65, z: -8 }, hfov: 40 * rad }
-  const close: Key = { p: { x: 2.0, y: 2.1, z: -16.5 }, aim: { x: 0.3, y: 1.6, z: -8 }, hfov: 33 * rad }
+  const close: Key = { p: { x: 2.8, y: 2.1, z: -16.5 }, aim: { x: 1.7, y: 1.6, z: -8 }, hfov: 38 * rad }
   const mix = (a: Key, b: Key, k: number): Key => ({ p: lerp3(a.p, b.p, k), aim: lerp3(a.aim, b.aim, k), hfov: lerp(a.hfov, b.hfov, k) })
   let key = wide
   key = mix(key, duo, ease((t - (B.win - 1.4)) / 1.6))
-  key = mix(key, { ...duo, p: { ...duo.p, x: 1.4 }, aim: { ...duo.aim, x: 0.6 } }, ease((t - (B.lose - 1.0)) / 1.6) * 0.0 + ease((t - (B.lose - 1.0)) / 1.6))
+  key = mix(key, { ...duo, p: { ...duo.p, x: 2.6 }, aim: { ...duo.aim, x: 1.9 } }, ease((t - (B.lose - 1.0)) / 1.6) * 0.0 + ease((t - (B.lose - 1.0)) / 1.6))
   key = mix(key, close, ease((t - (B.motm - 1.4)) / 1.8))
   key = mix(key, wide, ease((t - (B.close - 0.6)) / 2.0))
   return key
@@ -639,7 +641,9 @@ function flightOf(show: StadiumShow): Flight {
   }
   if (show.kind === 'cheer') {
     const side = sideOf(show.seed), G = cheerSpot(show.seed)
-    const end: Key = { p: { x: G.x - side * 15, y: 3.2, z: G.z - 4.5 }, aim: { x: G.x, y: 2.6, z: G.z - 5.5 }, hfov: 50 * rad }
+    // the flight ends on the DJ booth; the camera then pans along the stand to the cheerleaders on their platform
+    const D = djCentre(show.seed)
+    const end: Key = { p: { x: G.x - side * 20, y: 3.4, z: G.z - 7 }, aim: { x: D.x, y: 1.8, z: D.z }, hfov: 50 * rad }
     return { keys: [s0, mid(end, 6), end], fly: 2.6 }
   }
   if (show.kind === 'stands') {
@@ -831,7 +835,11 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
     if (t >= BOWLER_IN.fly) { const k = bowlerKey(show, t); p = k.p; aim = k.aim; hfov = k.hfov }
   } else if (show.kind === 'trophy') {
     if (s >= 1) { p = trophyCam(show.seed, hold); aim = { x: trophyCentre().x, y: 1.5 + 0.8 * dh, z: trophyCentre().z } }
-  } else if (show.kind === 'cheer' && show.variant !== 'cards') aim = add3(aim, { x: 0, y: 0, z: sideOf(show.seed) * 1.6 }, dh)
+  } else if (show.kind === 'cheer' && show.variant !== 'cards') {
+    // a slow pan: the DJ and his crew first, then along to the cheerleaders, where it stays
+    const D = djCentre(show.seed), C = platformCentre(show.seed), k = ease((t - fl.fly - 1.0) / 2.6)
+    if (s >= 1) aim = { x: lerp(D.x, C.x, k), y: lerp(1.8, 2.6, k), z: lerp(D.z, C.z, k) + sideOf(show.seed) * 1.6 * dh * k }
+  }
   else if (show.kind === 'cheer' || show.kind === 'stands') {
     const a = show.kind === 'stands' ? standAngle(show.seed) : standAngle(show.seed + 7)
     const tan = { x: -Math.sin(a) * ROPE.rx, y: 0, z: Math.cos(a) * ROPE.rz }

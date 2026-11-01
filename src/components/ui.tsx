@@ -50,6 +50,9 @@ export function tierOf(rating: number): { label: string; color: string } {
   return { label: 'Tailender', color: '#64748b' }
 }
 
+/** A bowling type as written on screen (Fast, Medium, Off spin, Leg spin, Left-arm spin). */
+export const BOWL_LABEL: Record<string, string> = { fast: 'Fast', medium: 'Medium', offspin: 'Off spin', legspin: 'Leg spin', leftspin: 'Left-arm spin' }
+export const bowlLabel = (t: string | undefined | null): string => (t ? BOWL_LABEL[t] ?? t.charAt(0).toUpperCase() + t.slice(1) : '')
 export const ROLE_LABEL: Record<Role, string> = { BAT: 'Batsman', BOWL: 'Bowler', AR: 'All-rounder', WK: 'Keeper' }
 
 export function RatingBadge({ value, size = 'md' }: { value: number; size?: 'sm' | 'md' | 'lg' }) {
