@@ -427,8 +427,8 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         <div ref={setNode('bowler')} className={sprite} style={box}><Figure player={base.bowler} team={base.bowlTeam} look="bowler" rig={setRig('bowler')} /></div>
         <div ref={setNode('striker')} className={sprite} style={box}><Figure player={base.striker} team={base.batTeam} look="striker" rig={setRig('striker')} /></div>
         {base.nonStriker && <div ref={setNode('nonstriker')} className={sprite} style={box}><Figure player={base.nonStriker} team={base.batTeam} look="nonstriker" rig={setRig('nonstriker')} /></div>}
-        <div ref={setNode('umpire1')} className={sprite} style={box}><Figure look="umpire" rig={setRig('umpire1')} /></div>
-        <div ref={setNode('umpire2')} className={sprite} style={box}><Figure look="umpire" rig={setRig('umpire2')} /></div>
+        <div ref={setNode('umpire1')} className={sprite} style={box}><Figure look="umpire" variant={1} rig={setRig('umpire1')} /></div>
+        <div ref={setNode('umpire2')} className={sprite} style={box}><Figure look="umpire" variant={3} rig={setRig('umpire2')} /></div>
         {cast && show.kind === 'ceremony' && cast.host && <div ref={setNode('host')} className={sprite} style={box}><HostFigure presenter={cast.host} colors={show.colors} rig={setRig('host')} /></div>}
         {cast && cast.rivals && cast.rivals.players.map((p, i) => (
           <div key={`v${p.id}`} ref={setNode(`v${i}`)} className={sprite} style={box}>
@@ -443,7 +443,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         ))}
         {cast && show.kind === 'pitchreport' && cast.host && <div ref={setNode('host')} className={sprite} style={box}><HostFigure presenter={cast.host} colors={show.colors} rig={setRig('host')} /></div>}
         {cast && cast.crew && Array.from({ length: cast.crew }, (_, i) => (
-          <div key={`g${i}`} ref={setNode(`g${i}`)} className={sprite} style={box}><Figure look="umpire" rig={setRig(`g${i}`)} /></div>
+          <div key={`g${i}`} ref={setNode(`g${i}`)} className={sprite} style={box}><Figure look="umpire" variant={i + 5} rig={setRig(`g${i}`)} /></div>
         ))}
         {cast && cast.players.map((p, i) => (
           <div key={p.id} ref={setNode(`w${i}`)} className={sprite} style={box}>

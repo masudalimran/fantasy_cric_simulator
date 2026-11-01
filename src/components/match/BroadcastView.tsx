@@ -58,7 +58,12 @@ export interface ScoreBug {
 
 type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper' | 'staff'
 
-export function Figure({ player, team, look, rig, tint }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void; /** The colour of a staff member's top (ground staff, the physio, the drinks carriers). */ tint?: string }) {
+const FACE = {
+  skin: [['#f1c9a5', '#d9a679', '#b9855a'], ['#e8b88f', '#c98f63', '#a06e45'], ['#c68a5e', '#a86d44', '#7d4f2c'], ['#8d5a3b', '#6e4228', '#4a2a17'], ['#fadcc0', '#e6b996', '#c99572']],
+  hair: ['#1f2937', '#4b2e1b', '#6b7280', '#111827'],
+}
+
+export function Figure({ player, team, look, rig, tint, variant = 0 }: { /** Which face an umpire or a member of the staff has (a skin tone, a beard or moustache, glasses): any whole number. */ variant?: number; player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void; /** The colour of a staff member's top (ground staff, the physio, the drinks carriers). */ tint?: string }) {
   const ump = look === 'umpire' || look === 'staff'
   const ownWeapons = useCharacterWeapons()
   // (an umpire: a white shirt with a dark waistcoat trim, black trousers and black boots)
@@ -77,12 +82,27 @@ export function Figure({ player, team, look, rig, tint }: { player?: Player; tea
       <Body key={ownWeapons ? 'w' : 'b'} kit={kit} rigRef={rig}>
         {ump
           ? <>
-            {/* a face with eyes, a nose and a moustache, under a wide white hat with a dark band */}
-            <div className="absolute rounded-full" style={{ left: 9, top: 9, width: 42, height: 44, background: 'radial-gradient(circle at 40% 35%, #f1c9a5, #d9a679 70%, #b9855a)', border: '2px solid #0f172a' }} />
-            <div className="absolute rounded-full bg-slate-900" style={{ left: 19, top: 26, width: 5, height: 5 }} />
-            <div className="absolute rounded-full bg-slate-900" style={{ left: 36, top: 26, width: 5, height: 5 }} />
-            <div className="absolute rounded-full" style={{ left: 28, top: 31, width: 4, height: 7, background: '#c58f64' }} />
-            <div className="absolute" style={{ left: 21, top: 39, width: 18, height: 5, borderRadius: '2px 2px 8px 8px', background: '#334155' }} />
+            {/* a face with eyes and a nose, a beard or moustache of its own, perhaps glasses, under a wide white hat with a dark band */}
+            {/* (the face; from behind it is the back of the head instead) */}
+            <div className="absolute inset-0 group-data-[back=1]:hidden">
+            <div className="absolute rounded-full" style={{ left: 9, top: 9, width: 42, height: 44, background: `radial-gradient(circle at 40% 35%, ${FACE.skin[variant % 5][0]}, ${FACE.skin[variant % 5][1]} 70%, ${FACE.skin[variant % 5][2]})`, border: '2px solid #0f172a' }} />
+            {(() => {
+              const hair = FACE.hair[(variant * 3 + 1) % 4], style = Math.floor(variant / 1) % 6
+              return <>
+                <div className="absolute rounded-full bg-slate-900" style={{ left: 19, top: 26, width: 5, height: 5 }} />
+                <div className="absolute rounded-full bg-slate-900" style={{ left: 36, top: 26, width: 5, height: 5 }} />
+                <div className="absolute rounded-full" style={{ left: 28, top: 31, width: 4, height: 7, background: 'rgba(0,0,0,0.18)' }} />
+                {style === 0 && <div className="absolute" style={{ left: 20, top: 38, width: 20, height: 5, borderRadius: '2px 2px 9px 9px', background: hair }} />}
+                {style === 1 && <div className="absolute" style={{ left: 11, top: 34, width: 38, height: 19, borderRadius: '4px 4px 20px 20px', background: hair, opacity: 0.95 }} />}
+                {style === 2 && <><div className="absolute" style={{ left: 22, top: 38, width: 16, height: 4, borderRadius: 4, background: hair }} /><div className="absolute" style={{ left: 26, top: 44, width: 8, height: 9, borderRadius: '2px 2px 8px 8px', background: hair }} /></>}
+                {style === 3 && <div className="absolute" style={{ left: 14, top: 38, width: 32, height: 14, borderRadius: '2px 2px 16px 16px', background: hair, opacity: 0.35 }} />}
+                {style === 4 && <><div className="absolute" style={{ left: 10, top: 28, width: 7, height: 22, borderRadius: 6, background: hair }} /><div className="absolute" style={{ left: 43, top: 28, width: 7, height: 22, borderRadius: 6, background: hair }} /><div className="absolute" style={{ left: 18, top: 39, width: 24, height: 5, borderRadius: '2px 2px 9px 9px', background: hair }} /></>}
+                {style === 5 && <div className="absolute" style={{ left: 12, top: 36, width: 36, height: 17, borderRadius: '4px 4px 18px 18px', background: '#e5e7eb' }} />}
+                {variant % 3 === 1 && <><div className="absolute rounded-full" style={{ left: 15, top: 23, width: 14, height: 11, border: '2px solid #111827' }} /><div className="absolute rounded-full" style={{ left: 31, top: 23, width: 14, height: 11, border: '2px solid #111827' }} /><div className="absolute" style={{ left: 28, top: 27, width: 4, height: 2, background: '#111827' }} /></>}
+              </>
+            })()}
+            </div>
+            <div className="absolute hidden rounded-full group-data-[back=1]:block" style={{ left: 9, top: 9, width: 42, height: 44, background: `radial-gradient(circle at 50% 40%, ${FACE.hair[(variant * 3 + 1) % 4]}, #0f172a)`, border: '2px solid #0f172a' }} />
             <div className="absolute" style={{ left: 0, top: 11, width: 60, height: 7, borderRadius: '50%', background: '#f8fafc', border: '1px solid #94a3b8', boxShadow: '0 2px 3px #0006' }} />
             <div className="absolute" style={{ left: 11, top: 0, width: 38, height: 15, borderRadius: '14px 14px 3px 3px', background: '#f8fafc', border: '1px solid #94a3b8' }} />
             <div className="absolute" style={{ left: 11, top: 9, width: 38, height: 4, background: '#111827' }} />
@@ -340,6 +360,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       place('nonstriker', rb)
       place('bowler', { x: f.bowler.x, y: (ev?.wicket && ev.wicket.kind !== 'run out' ? joyHop(f.joy) : Math.abs(Math.sin(f.bowler.z * 1.9)) * 0.1 * (f.phase === 'run' ? 1 : 0)), z: f.bowler.z })
       place('umpire1', { x: -1.15, y: 0, z: -22.2 })
+      // the main umpire stands behind the bowler's stumps looking down the pitch at the batsman: seen from behind the bowler it is the back of his head; from the other end (the reverse camera) it is his face
+      nodes.current.get('umpire1')?.setAttribute('data-back', c.p.z < -22.4 ? '1' : '0')
       place('umpire2', { x: stance > 0 ? 13 : -13, y: 0, z: -2 })
       const pl = L.plan
       const t2c = pl.tRun + pl.tDeliver, t3c = t2c + pl.tFlight
@@ -624,8 +646,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {nonStriker && <div ref={setNode('nonstriker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={nonStriker} team={battingTeam} look="nonstriker" rig={setRig('nonstriker')} /></div>}
       <div ref={setNode('striker')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={striker} team={battingTeam} look="striker" rig={setRig('striker')} /></div>
       <div ref={setNode('bowler')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure player={bowler} team={bowlingTeam} look="bowler" rig={setRig('bowler')} /></div>
-      <div ref={setNode('umpire1')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire1')} /></div>
-      <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" rig={setRig('umpire2')} /></div>
+      <div ref={setNode('umpire1')} data-back="1" className="group absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" variant={1} rig={setRig('umpire1')} /></div>
+      <div ref={setNode('umpire2')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: WIDTH, height: HEIGHT, transformOrigin: '0 0' }}><Figure look="umpire" variant={3} rig={setRig('umpire2')} /></div>
       <div ref={setNode('fxFlash')} className="pointer-events-none absolute inset-0 z-[4600] hidden" />
       <div ref={setNode('fxRays')} className="pointer-events-none absolute inset-0 z-[4601] hidden" style={{ WebkitMaskImage: 'radial-gradient(circle at 50% 56%, transparent 18%, #000 60%)', maskImage: 'radial-gradient(circle at 50% 56%, transparent 18%, #000 60%)' }} />
       <div ref={setNode('fxVig')} className="pointer-events-none absolute inset-0 z-[4602] hidden" />
