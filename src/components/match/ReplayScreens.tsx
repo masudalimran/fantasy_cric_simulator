@@ -285,14 +285,14 @@ export function AlmostCast({ info }: { info: AlmostCastInfo }) {
   const first = a.fielder.name.split(' ')[0]
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="So nearly caught">
-      <ReplayFrame base={info.replay} rate={1.4 * r} share={0.56} cam={replayCamFor('catch', info.replay.event.seq)} tag="So nearly" />
+      <ReplayFrame base={info.replay} rate={1.4 * r} share={0.56} cam={replayCamFor('catch', info.replay.event.seq)} tag={a.dropped ? 'Dropped' : 'So nearly'} />
       <Bottom from={0.56}>
         <div className="flex h-full items-center gap-3 px-3">
           <FallShort gap={a.gap} w={compact ? 118 : 150} fielder={a.fielder} team={info.bowlTeam} />
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 26 : 38, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 14px #f59e0b' }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>SO NEARLY!</motion.div>
-            <motion.div className="text-xs font-extrabold leading-tight text-amber-300 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>It fell {a.gap.toFixed(1)} m in front of {first}</motion.div>
-            <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{info.batsman.name} lofted it {a.distance} m and it hung for {a.hang} s before dropping just short: {a.runs} {a.runs === 1 ? 'run' : 'runs'}.</motion.div>
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 26 : 38, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 14px #f59e0b' }} initial={{ scale: 2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.0 * r, type: 'spring', stiffness: 220, damping: 16 }}>{a.dropped ? 'DROPPED!' : 'SO NEARLY!'}</motion.div>
+            <motion.div className="text-xs font-extrabold leading-tight text-amber-300 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4 * r }}>{a.dropped ? `${first} got both hands to it and put it down` : `It fell ${a.gap.toFixed(1)} m in front of ${first}`}</motion.div>
+            <motion.div className="text-[10.5px] font-semibold leading-snug text-slate-200 sm:text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.2 * r }}>{info.batsman.name} lofted it {a.distance} m and it hung for {a.hang} s before {a.dropped ? 'it was spilled' : 'dropping just short'}: {a.runs} {a.runs === 1 ? 'run' : 'runs'}.</motion.div>
           </div>
         </div>
       </Bottom>
@@ -367,6 +367,97 @@ export function NoBallCast({ info }: { info: NoBallCastInfo }) {
           <motion.div className="min-w-0 text-xs font-semibold leading-snug text-slate-100 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 * r }}>
             <b className="text-amber-300">{info.bowler.name.split(' ')[0]}</b> overstepped by <b className="text-rose-300">{info.cm} cm</b>.<br />+1 run and a free hit next.
           </motion.div>
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+// ---- A run out -------------------------------------------------------------------------------------------------------------------
+
+export interface RunOutCastInfo {
+  replay: ReplayBase
+  batsman: Player
+  batTeam: Team
+  fielder: Player | null
+  bowlTeam: Team
+  /** How far short of the crease his bat was, in centimetres. */
+  cm: number
+  rate: number
+}
+export const RUNOUT_CAST_SECONDS = 9.4
+
+/** A run out as the third umpire shows it: the camera low at square leg of the end the stumps were broken at, the throw coming in, the bat short of the line with the gap marked. */
+export function RunOutCast({ info }: { info: RunOutCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => {
+    const ts = [window.setTimeout(() => sfx.howzat(), 200), window.setTimeout(() => sfx.thinking(), 3600 * r), window.setTimeout(() => sfx.decisionOut(), 7600 * r)]
+    return () => ts.forEach(clearTimeout)
+  }, [r])
+  const compact = w < 520
+  const fielder = info.fielder ? info.fielder.name.split(' ')[0] : 'The fielder'
+  const steps = [
+    { at: 2.4, text: `${info.batsman.name.split(' ')[0]} goes for the run` },
+    { at: 3.8, text: `${fielder} gathers it and throws at the stumps` },
+    { at: 5.3, text: 'A direct hit: the stumps are broken' },
+    { at: 6.8, text: `His bat is ${info.cm} cm short of the line` },
+  ]
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Run out">
+      <ReplayFrame base={info.replay} rate={1.1 * r} share={0.6} cam="runout" tag="Third umpire" />
+      <Bottom from={0.6}>
+        <div className="flex h-full flex-col justify-center gap-1 px-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.batTeam)}` }}><PlayerAvatar player={info.batsman} team={info.batTeam} size={compact ? 30 : 38} /></span>
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 26 : 36, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 18px #f59e0b' }} initial={{ opacity: 0, scale: 1.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 * r, type: 'spring', stiffness: 260, damping: 16 }}>RUN OUT?</motion.div>
+            <motion.div className="ml-auto font-display leading-none tracking-wide" style={{ fontSize: compact ? 30 : 42, color: '#f87171', WebkitTextStroke: '2px #450a0a', paintOrder: 'stroke fill' }} initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 7.6 * r, type: 'spring', stiffness: 260, damping: 15 }}>OUT!</motion.div>
+          </div>
+          {steps.map((st) => (
+            <motion.div key={st.text} className="flex items-center gap-1.5 text-[11px] font-semibold leading-tight text-slate-100 sm:text-xs" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: st.at * r }}>
+              <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-500 text-[10px] font-extrabold text-white">✓</span>{st.text}
+            </motion.div>
+          ))}
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
+// ---- The phantom camera -------------------------------------------------------------------------------------------------------------
+
+export interface PhantomCastInfo {
+  replay: ReplayBase
+  /** What it shows: the bat meeting the ball for a six, or the ball hitting the stumps. */
+  what: 'six' | 'bowled'
+  batsman: Player
+  batTeam: Team
+  bowler: Player
+  bowlTeam: Team
+  kmh: number
+  rate: number
+}
+export const PHANTOM_CAST_SECONDS = 6.4
+
+/** A very close, extra-slow replay of the moment of contact (or the ball hitting the stumps), the way a TV phantom camera shows it. */
+export function PhantomCast({ info }: { info: PhantomCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => { const t = window.setTimeout(() => sfx.whoosh(), 400 * r); return () => window.clearTimeout(t) }, [r])
+  const compact = w < 520
+  const six = info.what === 'six'
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Phantom camera">
+      <ReplayFrame base={info.replay} rate={1.3 * r} share={0.7} cam="phantom" tag="Phantom cam" />
+      <Bottom from={0.7}>
+        <div className="flex h-full items-center gap-3 px-3">
+          <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(six ? info.batTeam : info.bowlTeam)}` }}><PlayerAvatar player={six ? info.batsman : info.bowler} team={six ? info.batTeam : info.bowlTeam} size={compact ? 36 : 46} /></span>
+          <div className="min-w-0">
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 24 : 34, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 14px #38bdf8' }} initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 * r }}>PHANTOM CAM</motion.div>
+            <motion.div className="text-xs font-semibold leading-snug text-slate-200 sm:text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 * r }}>
+              {six ? <>{info.batsman.name.split(' ')[0]} meets a {info.kmh} km/h ball: filmed at about 2,000 frames a second.</> : <>{info.bowler.name.split(' ')[0]} hits the stumps at {info.kmh} km/h: the bails barely move before it is through.</>}
+            </motion.div>
+          </div>
         </div>
       </Bottom>
     </div>

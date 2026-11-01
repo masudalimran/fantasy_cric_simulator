@@ -441,6 +441,8 @@ export interface BowlCtx {
   arm: number; speed: number; cyc: number
   /** Joy (0 to 1) after a wicket, and whether this ball had one. */
   joy: number; wicket: boolean
+  /** Shouting the appeal (0 to 1), and despair (hands on his head) at a dropped catch (0 to 1). */
+  appeal?: number; despair?: number
 }
 
 export function bowlerPose(c: BowlCtx): Pose {
@@ -480,6 +482,8 @@ export function bowlerPose(c: BowlCtx): Pose {
     if (into < 1) p = mixFlow(runPose(), p, ease(into))
   }
   if (c.wicket && c.joy > 0) p = mixPose(p, { ...standing(), handL: { x: -17, y: -22 }, handR: { x: 17, y: -22 } }, ease(c.joy * 2.5))
+  if (c.appeal && c.appeal > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 84 }, lean: -4, head: { dx: 0, dy: -2, tilt: -6 }, handL: { x: -19, y: -27 }, handR: { x: 19, y: -29 }, ball: false }, ease(c.appeal))
+  if (c.despair && c.despair > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 88 }, lean: 6, head: { dx: 0, dy: 3, tilt: 5 }, handL: { x: -8, y: -12 }, handR: { x: 8, y: -12 } }, ease(c.despair))
   return p
 }
 
@@ -498,6 +502,10 @@ export interface FieldCtx {
   keeper: boolean
   /** The keeper whipping the bails off (0 to 1): crouched over the stumps, both gloves down and together. */
   stump?: number
+  /** Shouting the appeal (0 to 1): up on his toes, both arms thrown up, turned to the umpire. */
+  appeal?: number
+  /** Despair at a dropped catch (0 to 1): both hands on his head. */
+  despair?: number
 }
 
 export function fielderPose(c: FieldCtx): Pose {
@@ -518,6 +526,8 @@ export function fielderPose(c: FieldCtx): Pose {
     const d = dirOf(180 + ang)
     p = { ...p, handR: { x: d.x * 24, y: d.y * 24 }, handL: { x: -14, y: -4 + 14 * k }, lean: lerp(-5, 8, ease((k - 0.4) / 0.6)), ball: k < 0.55 }
   }
+  if (c.appeal && c.appeal > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: c.keeper ? 98 : 83 }, lean: -3, head: { dx: 0, dy: -2, tilt: -6 }, handL: { x: -19, y: -27 }, handR: { x: 19, y: -29 }, footL: { x: 24, y: 114 }, footR: { x: 36, y: 117 } }, ease(c.appeal))
+  if (c.despair && c.despair > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 88 }, lean: 6, head: { dx: 0, dy: 3, tilt: 5 }, handL: { x: -8, y: -12 }, handR: { x: 8, y: -12 }, footL: { x: 24, y: 117 }, footR: { x: 36, y: 117 } }, ease(c.despair))
   if (c.dive > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 93 }, lean: 0, head: { dx: 0, dy: 0, tilt: 0 }, handL: { x: -7, y: -25 }, handR: { x: 7, y: -25 }, footL: { x: 25, y: 116 }, footR: { x: 35, y: 112 } }, ease(c.dive))
   if (c.joy > 0) p = mixPose(p, { ...standing(), handL: { x: -17, y: -22 }, handR: { x: 17, y: -22 } }, ease(c.joy * 2.5))
   return p

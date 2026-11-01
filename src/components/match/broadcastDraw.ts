@@ -56,7 +56,7 @@ export interface Scene {
   /** A signature move going on (a six off the bat, a bowler's wicket). */
   move?: MoveDraw | null
   /** TV graphics on the ground for a replay: the wide line, or the popping crease with how far over the front foot landed. */
-  marks?: { /** A stumping: the popping crease lit up and how far out of it his back foot is (cm). */ stumpGap?: { z: number; cm: number }; wideLine?: number; crease?: { z: number; over: number }; /** The path the ball took in the air and off the pitch (orange), and the straight line it would have taken (white, dashed). */ trace?: { curve: V3[]; straight: [V3, V3] } }
+  marks?: { /** A stumping: the popping crease lit up and how far out of it his back foot is (cm). */ stumpGap?: { z: number; cm: number; /** Which way short of the crease is (-1 towards the bowler, +1 the other way) and an extra length (a stumped batsman's back foot trails behind the front one). */ sign?: 1 | -1; off?: number; text?: string }; wideLine?: number; crease?: { z: number; over: number }; /** The path the ball took in the air and off the pitch (orange), and the straight line it would have taken (white, dashed). */ trace?: { curve: V3[]; straight: [V3, V3] } }
 }
 
 const fillPoly = (ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], fill: string) => {
@@ -242,17 +242,17 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     for (const x of [-sc.marks.wideLine, sc.marks.wideLine]) { line({ x, y: 0.01, z: BOWL_Z - 2 }, { x, y: 0.01, z: 6 }, 0.1, 'rgba(251,146,60,0.9)'); line({ x, y: 0.01, z: -1.22 }, { x, y: 0.01, z: 1.2 }, 0.28, 'rgba(251,146,60,0.45)') }
   }
   if (sc.marks?.stumpGap) {
-    const { z, cm } = sc.marks.stumpGap
+    const { z, cm, sign = -1, off = 0.32, text } = sc.marks.stumpGap
     const a = project(r, { x: -1.4, y: 0.012, z }), b = project(r, { x: 1.4, y: 0.012, z })
     if (a && b) {
       ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = Math.max(2.5, (r.F * 0.05) / ((a.d + b.d) / 2)); ctx.lineCap = 'round'
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
     }
-    const c0 = project(r, { x: 0.9, y: 0.02, z }), c1 = project(r, { x: 0.9, y: 0.02, z: z - cm / 100 - 0.32 })
+    const c0 = project(r, { x: 0.9, y: 0.02, z }), c1 = project(r, { x: 0.9, y: 0.02, z: z + sign * (cm / 100 + off) })
     if (c0 && c1) {
       ctx.strokeStyle = '#ef4444'; ctx.lineWidth = Math.max(2, (r.F * 0.035) / c0.d); ctx.beginPath(); ctx.moveTo(c0.x, c0.y); ctx.lineTo(c1.x, c1.y); ctx.stroke()
       ctx.fillStyle = '#fff'; ctx.font = `800 ${Math.max(11, Math.min(18, (r.F * 0.2) / c0.d))}px sans-serif`; ctx.textAlign = 'center'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3
-      ctx.strokeText(`${cm} CM OUT OF HIS GROUND`, r.W / 2, r.H * 0.2); ctx.fillText(`${cm} CM OUT OF HIS GROUND`, r.W / 2, r.H * 0.2)
+      const msg = text ?? `${cm} CM OUT OF HIS GROUND`; ctx.strokeText(msg, r.W / 2, r.H * 0.2); ctx.fillText(msg, r.W / 2, r.H * 0.2)
     }
   }
   if (sc.marks?.crease) {

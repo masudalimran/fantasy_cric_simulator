@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { screenSide, elevation, replayCamera, replayCamFor, withReplaySlow, withStumpSlow, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
+import { screenSide, elevation, replayCamera, replayCamFor, withReplaySlow, withStumpSlow, withRunOutSlow, withPhantomSlow, BOWL_Z, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 
 const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
@@ -276,5 +276,75 @@ describe('a stumping, played the way it happens', () => {
     const slow = withStumpSlow(plan)
     expect(slow.slow!.at).toBeLessThan(plan.stump!.breakAt)
     expect(slow.slow!.at + slow.slow!.len).toBeGreaterThan(plan.stump!.breakAt)
+  })
+})
+
+describe('a run out, an appeal, a dropped catch and the phantom camera', () => {
+  const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed: 5 })
+  m.playMatch()
+  const inn = m.innings[0]
+  const base = inn.log.find((x) => x.legal && !x.extraType && !x.wicket && !x.boundary && x.runsBat === 0)!
+  const side = m.sides[1 - inn.battingSide]
+  const planWith = (o: object) => {
+    const e = { ...base, ...o } as typeof base
+    const striker = m.player(e.strikerId)
+    const p0 = fieldPlan({ format: 't20', over: e.over, maxOvers: 20, runs: e.score.runs, legalBalls: e.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+    const fielders = placeFielders(side.xi, e.bowlerId, p0.spots)
+    return { plan: planBall(e, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(e, fielders), striker.hand === 'L', 135, { bowler: m.player(e.bowlerId) }), rest: fielders.map((f) => fielderWorld(f.x, f.y, f.spot)) }
+  }
+  it('a run out: the batsman is stopped short of the crease by exactly the centimetres on the screen when the stumps are hit', () => {
+    for (let seq = 1; seq <= 24; seq++) {
+      const { plan, rest } = planWith({ seq, runsBat: 1, total: 1, wicket: { kind: 'run out', playerId: base.strikerId, bowlerId: base.bowlerId, fielderId: side.xi[4].id } })
+      const ro = plan.runOut!
+      const hit = plan.tRun + plan.tDeliver + plan.tFlight + ro.tThrow
+      const f = frameAt(plan, hit, (i) => rest[i] ?? { x: 0, y: 0, z: 0 })
+      const r = ro.outIsStriker ? f.runners!.a : f.runners!.b
+      const crease = ro.destEnd === 0 ? -1.22 : BOWL_Z + 1.22
+      const shortBy = ro.destEnd === 0 ? crease - r.z : r.z - crease
+      // (the runner also swerves a little sideways, so only the way along the pitch is compared)
+      expect(shortBy * 100, `seq ${seq}`).toBeGreaterThan(ro.gapCm - 6)
+      expect(shortBy * 100, `seq ${seq}`).toBeLessThan(ro.gapCm + 6)
+    }
+    const { plan } = planWith({ seq: 3, runsBat: 1, total: 1, wicket: { kind: 'run out', playerId: base.strikerId, bowlerId: base.bowlerId, fielderId: side.xi[4].id } })
+    const cam = replayCamera('runout', 3, -1, plan.runOut!.destEnd === 0 ? 0 : BOWL_Z)
+    expect(cam.cam.p.y).toBeLessThan(1.5)
+    const sl = withRunOutSlow(plan)
+    const hit = plan.tRun + plan.tDeliver + plan.tFlight + plan.runOut!.tThrow
+    expect(sl.slow!.at).toBeLessThan(hit); expect(sl.slow!.at + sl.slow!.len).toBeGreaterThan(hit)
+  })
+  it('an lbw, a catch behind and a stumping all get an appeal: the umpire is looked at while they shout', () => {
+    for (const w of [{ kind: 'lbw' }, { kind: 'stumped', fielderId: side.xi[0].id }] as const) {
+      const { plan, rest } = planWith({ seq: 7, wicket: { ...w, playerId: base.strikerId, bowlerId: base.bowlerId } })
+      expect(plan.appealAt).not.toBeNull()
+      const mid = plan.appealAt!.at + 0.4
+      const f = frameAt(plan, mid, (i) => rest[i] ?? { x: 0, y: 0, z: 0 })
+      expect(f.appealK).toBeGreaterThan(0.9)
+      expect(f.aim.z).toBeLessThan(-15) // looking at the umpire at the bowler's end
+      expect(frameAt(plan, plan.appealAt!.at + plan.appealAt!.len + 0.6, (i) => rest[i] ?? { x: 0, y: 0, z: 0 }).appealK).toBe(0)
+    }
+    expect(planWith({ seq: 8 }).plan.appealAt).toBeNull() // an ordinary dot ball has none
+  })
+  it('some lofted catches are put down: it lands at his hands, the bowler puts his hands on his head', () => {
+    let dropped = 0
+    for (let seq = 1; seq <= 200; seq++) {
+      const { plan, rest } = planWith({ seq, runsBat: 2, total: 2 })
+      if (!plan.dropped) continue
+      dropped++
+      expect(plan.fellShort!.gap).toBeLessThan(0.3)
+      expect(plan.react!.text).toBe('Dropped!')
+      const t3 = plan.tRun + plan.tDeliver + plan.tFlight
+      expect(frameAt(plan, t3 + 0.5, (i) => rest[i] ?? { x: 0, y: 0, z: 0 }).despair).toBeGreaterThan(0.9)
+    }
+    expect(dropped).toBeGreaterThan(0)
+  })
+  it('the phantom camera is very close and the slow motion is extreme and short, around the contact', () => {
+    const cam = replayCamera('phantom', 5, 1)
+    expect(cam.cam.hfov).toBeLessThan(0.5)
+    const { plan } = planWith({ seq: 5 })
+    const sl = withPhantomSlow(plan)
+    expect(sl.slow!.factor).toBeLessThan(0.1)
+    expect(sl.slow!.len).toBeLessThan(0.5)
+    const hit = plan.tRun + plan.tDeliver
+    expect(sl.slow!.at).toBeLessThan(hit); expect(sl.slow!.at + sl.slow!.len).toBeGreaterThan(hit)
   })
 })

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { sfx } from '../../audio/sfx'
 import type { Track } from '../../season/moments'
 import type { Player, Team } from '../../types'
+import type { ReplayBase } from './ReplayFrame'
+import { RunOutCast } from './ReplayScreens'
 import { PlayerAvatar } from '../ui'
 
 export function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
@@ -252,11 +254,14 @@ export function ReviewScreen({ info }: { info: ReviewInfo }) {
 // ---- A run out sent to the third umpire ----------------------------------------------------------------------------
 
 export interface RunOutInfo { batsman: Player; batTeam: Team; fielder: Player | null; bowlTeam: Team; cm: number; text: string; rate: number
+  /** The ball played again from the run-out camera (set for a real run out: the screen is then the replay one). */
+  replay?: ReplayBase
   /** False when the third umpire finds the bat in (the batsman is safe). Missing means out. */
   out?: boolean }
 
 /** The stadium screen for a run out: the third umpire checks the frames, a close-up shows the bat short of the line and by how much, then OUT. */
 export function RunOutReview({ info }: { info: RunOutInfo }) {
+  if (info.replay && info.out !== false) return <RunOutCast info={{ replay: info.replay, batsman: info.batsman, batTeam: info.batTeam, fielder: info.fielder, bowlTeam: info.bowlTeam, cm: info.cm, rate: info.rate }} />
   const { batsman, batTeam, cm, rate: r } = info
   const safe = info.out === false
   const text = safe ? `in by ${cm} cm: he makes his ground` : info.text

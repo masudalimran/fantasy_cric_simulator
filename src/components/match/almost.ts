@@ -13,6 +13,8 @@ export interface AlmostCaught {
   distance: number
   hang: number
   runs: number
+  /** He got both hands to it and put it down. */
+  dropped: boolean
 }
 
 /** Close enough to be a "so nearly" (the ball landed this near the fielder or less). */
@@ -26,6 +28,6 @@ export function almostCaught(ev: BallEvent, fielders: Placed[], leftHand: boolea
   if (!plan.fellShort || plan.fellShort.gap > ALMOST_CATCH_M || plan.chaser < 0) return null
   return {
     gap: Math.round(plan.fellShort.gap * 10) / 10, fielder: fielders[plan.chaser].player,
-    distance: Math.round(Math.hypot(plan.end.x - plan.meet.x, plan.end.z - plan.meet.z)), hang: Math.round(plan.tFlight * 10) / 10, runs: ev.runsBat,
+    distance: Math.round(Math.hypot(plan.end.x - plan.meet.x, plan.end.z - plan.meet.z)), hang: Math.round(plan.tFlight * 10) / 10, runs: ev.runsBat, dropped: plan.dropped,
   }
 }

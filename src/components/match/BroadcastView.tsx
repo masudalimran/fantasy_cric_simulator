@@ -6,7 +6,7 @@ import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { ballName } from '../../engine/delivery'
-import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withReplaySlow, withStumpSlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withPhantomSlow, withReplaySlow, withRunOutSlow, withStumpSlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useCharacterWeapons, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene, type Scene } from './broadcastDraw'
@@ -48,6 +48,10 @@ export interface ScoreBug {
   batters: { name: string; runs: number; balls: number; strike: boolean }[]
   bowler: { name: string; figures: string } | null
   need: string | null
+  /** The partnership ("29 (23)"), the chasing side's chance of winning, and the bowler's figures at the end of an over (shown as a card for a few seconds). */
+  stand?: string | null
+  win?: { team: string; pct: number } | null
+  spell?: { key: number; name: string; figures: string; over: number } | null
   /** The speed of the last ball, km/h. */
   lastKmh?: number | null
 }
@@ -96,6 +100,27 @@ function BallTag({ name, dragon, at, dur, rate }: { name: string; dragon: boolea
   )
 }
 
+/** The bowler's figures at the end of an over, a card that slides in over the picture for a few seconds after the last ball. */
+function SpellCard({ spell, color, delay }: { spell: NonNullable<ScoreBug['spell']>; color: string; delay: number }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const a = window.setTimeout(() => setOn(true), delay * 1000)
+    const b = window.setTimeout(() => setOn(false), (delay + 3.6) * 1000)
+    return () => { window.clearTimeout(a); window.clearTimeout(b) }
+  }, [spell.key, delay])
+  if (!on) return null
+  return (
+    <motion.div className="pointer-events-none absolute left-2 top-9 z-[6002] overflow-hidden rounded bg-black/85 ring-1 ring-white/20" initial={{ x: -120, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}>
+      <div className="flex items-stretch">
+        <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: color }}>Over {spell.over}</span>
+        <span className="px-2 py-0.5 font-display text-sm leading-none tracking-wide text-white">{spell.name}</span>
+        <span className="border-l border-white/20 px-2 py-0.5 font-display text-sm leading-none tabular-nums text-sky-300">{spell.figures}</span>
+      </div>
+      <div className="border-t border-white/15 px-2 text-[9px] font-bold uppercase tracking-wider text-slate-400">overs · maidens · runs · wickets</div>
+    </motion.div>
+  )
+}
+
 export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate: rateProp = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0, replay, fitSeconds }: {
   /** Play the clip so that it finishes in this many seconds, whatever its length (every ball of a highlight reel is shown to the end). */
   fitSeconds?: number
@@ -140,7 +165,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
-  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.cam === 'gloves' && plan0.stump ? withStumpSlow(plan0) : replay?.near ? withNearSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep, replay?.near])
+  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.cam === 'gloves' && plan0.stump ? withStumpSlow(plan0) : replay?.cam === 'runout' && plan0.runOut ? withRunOutSlow(plan0) : replay?.cam === 'phantom' ? withPhantomSlow(plan0) : replay?.near ? withNearSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep, replay?.near])
   // the path of the delivery against the straight line, for the swing and turn replays
   const trace = useMemo(() => {
     if (!replay?.trace || !event) return null
@@ -151,7 +176,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const traceRef = useRef(trace)
   traceRef.current = trace
   const rate = fitSeconds ? Math.max(0.2, Math.min(3, fitSeconds / plan.realTotal)) : rateProp
-  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (plan0.stanceX > 0 ? -1 : 1) as 1 | -1) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
+  const replayCam = useMemo(() => (replay ? replayCamera(replay.cam, event?.seq ?? 0, (plan0.stanceX > 0 ? -1 : 1) as 1 | -1, plan0.runOut ? (plan0.runOut.destEnd === 0 ? 0 : BOWL_Z) : 0) : null), [replay?.cam, event?.seq]) // eslint-disable-line react-hooks/exhaustive-deps
   void 0 // eslint-disable-line react-hooks/exhaustive-deps
 
   const rest = useMemo(() => fielders.map((f) => fielderWorld(f.x, f.y, f.spot)), [fielders])
@@ -203,12 +228,12 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
       // the no-ball camera looks at the actual front foot of this bowler: where he lands (a little low, so the boot and the line are both in the picture)
-      const focus = L.replayCam?.focus ? (L.replayCam.label === 'Front-foot cam' ? { x: L.plan.runTo.x + 0.05, y: 0.1, z: L.plan.runTo.z } : L.replayCam.focus) : undefined
+      const focus = L.replayCam?.focus ? (L.replayCam.label === 'Front-foot cam' ? { x: L.plan.runTo.x + 0.05, y: 0.1, z: L.plan.runTo.z } : L.replayCam.label === 'Phantom cam' ? { x: L.plan.meet.x, y: Math.max(0.3, L.plan.meet.y), z: L.plan.meet.z } : L.replayCam.focus) : undefined
       // a close call in slow motion: a moderate zoom (the stump cam from 56° to 26°, the side camera from 34° to 13°) on the stumps or the bat, so the ball and how near it went can still be seen
       const nearZoom = L.near && f.slowmo && !!L.replayCam
       const nearStump = nearZoom && !!L.replayCam?.keepWide
       const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : nearStump ? { x: L.plan.meet.x * 0.5, y: 0.45, z: -0.45 } : focus ?? f.aim
-      const hfovAt = covers0 ? 0.8 : focus ? (f.slowmo ? ((L.replayCam!.label === 'Front-foot cam' ? 19 : 29) * Math.PI) / 180 : L.replayCam!.cam.hfov) : nearZoom ? (L.replayCam!.keepWide ? 26 : 13) * (Math.PI / 180) : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
+      const hfovAt = covers0 ? 0.8 : focus ? (f.slowmo ? ((L.replayCam!.label === 'Front-foot cam' ? 19 : L.replayCam!.label === 'Phantom cam' ? 21 : L.replayCam!.label === 'Run-out cam' ? 30 : 29) * Math.PI) / 180 : L.replayCam!.cam.hfov) : nearZoom ? (L.replayCam!.keepWide ? 26 : 13) * (Math.PI / 180) : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
       const c = cam.current
       let goal = lookAt(base.p, aimAt)
       if (L.replayCam?.overhead) {
@@ -249,6 +274,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const marks: Scene['marks'] = {}
       if (traceRef.current) marks.trace = traceRef.current
       if (L.replayCam && L.event?.extraType === 'wide') marks.wideLine = WIDE_LINE_M
+      if (L.replayCam?.label === 'Run-out cam' && L.plan.runOut) marks.stumpGap = { z: L.plan.runOut.destEnd === 0 ? -1.22 : BOWL_Z + 1.22, cm: L.plan.runOut.gapCm, sign: L.plan.runOut.destEnd === 0 ? -1 : 1, off: 0, text: `${L.plan.runOut.gapCm} CM SHORT` }
       if (L.replayCam?.label === 'Stumping cam' && L.plan.stump) marks.stumpGap = { z: -1.22, cm: L.plan.stump.gap }
       if (L.replayCam?.focus && L.event?.extraType === 'noball') marks.crease = { z: BOWL_Z + 1.22, over: overstepCm(L.event.seq) / 100 }
       // the TV camera: hand-held drift, a punch-in on a boundary or a wicket, and a soft background when the picture is tight (drawn only: nothing here touches the ball)
@@ -265,6 +291,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const r = prep(cd, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 
+      // who joins the appeal: the keeper and the closest fielders
+      const appealers = new Set<number>(L.rest.map((w, i) => ({ i, d: Math.hypot(w.x, w.z - 4) })).filter((x) => x.i > 0).sort((a, b) => a.d - b.d).slice(0, 3).map((x) => x.i))
       const place = (key: string, world: V3, opts: { heightM?: number; rot?: number } = {}) => {
         const node = nodes.current.get(key)
         if (!node) return
@@ -309,7 +337,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const sp = batsmanPose({ flavor: flavorOfTeam(L.battingTeam.id), style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut, stranded: f.stranded })
       rigs.current.get('striker')?.apply(f.batSwing === 0 && ms.v === 0 && !strikerOut ? breathe(sp, tq, 1) : sp, lh)
       { const np = nonStrikerPose({ t, t1: pl.tRun, speed: mn.v, cyc: mn.cyc, bat: true, walkOff: out && !!pl.runOut && !pl.runOut.outIsStriker }); rigs.current.get('nonstriker')?.apply(mn.v === 0 ? breathe(np, tq, 2) : np, L.nonStriker?.hand === 'L') }
-      rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' && !pl.reviewed }))
+      rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' && !pl.reviewed, appeal: f.appealK, despair: f.despair }))
       // the umpires' arms
       for (const who of [1, 2] as const) {
         const sg = f.signal && f.signal.who === who ? f.signal : null
@@ -358,7 +386,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const stopK = thrower && !pl.boundary && !pl.six && !dv && (pl.kind === 'ground' || !!pl.fellShort) ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
         const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
-        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0, stump: i === 0 ? f.keeperStump : 0 })
+        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0, stump: i === 0 ? f.keeperStump : 0, appeal: f.appealK > 0 && (i === 0 || appealers.has(i)) ? f.appealK : 0 })
         rigs.current.get(`f${i}`)?.apply(mf.v === 0 && !dv && catchK === 0 && stopK === 0 && throwK === 0 ? breathe(fp, tq, 5 + i) : fp)
       })
       // the ball, and its shadow
@@ -619,6 +647,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor((scoreBug?.balls ?? event?.score.legalBalls ?? 0) / 6)}.{(scoreBug?.balls ?? event?.score.legalBalls ?? 0) % 6} ov</span>
             {scoreBug?.lastKmh ? <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-sky-300">{scoreBug.lastKmh} km/h</span> : null}
             {scoreBug?.need && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-amber-300">{scoreBug.need}</span>}
+            {scoreBug?.stand && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">P {scoreBug.stand}</span>}
+            {scoreBug?.win && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-extrabold leading-snug" style={{ color: scoreBug.win.pct >= 50 ? '#34d399' : '#f87171' }}>{scoreBug.win.team} {scoreBug.win.pct}%</span>}
           </div>
           {scoreBug && scoreBug.batters.length > 0 && (
             <div className="border-t border-white/15 px-1.5 py-0.5 text-[9px] leading-tight text-slate-200 sm:text-[10px]">
@@ -628,6 +658,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           )}
         </div>
       )}
+      {scoreBarOn && scoreBug?.spell && !replay && <SpellCard key={scoreBug.spell.key} spell={scoreBug.spell} color={accentOf(bowlingTeam)} delay={Math.max(1.2, (plan.realTotal * 0.75) / Math.max(0.3, rate))} />}
       <span className="pointer-events-none absolute left-2 bottom-8 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
     </div>
   )

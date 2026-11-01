@@ -10,6 +10,7 @@ import { MobileNowPlaying, NowPlaying } from '../components/match/NowPlaying'
 import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
+import { PHANTOM_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { TIRED_SECONDS } from '../components/match/EventScreens'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
 import { eventAngle } from '../engine/shots'
@@ -616,7 +617,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const almost = prefs.nearmiss ? almostCaught(lastEv, replayBase(lastEv).fielders, match.player(lastEv.strikerId).hand === 'L', match.player(lastEv.bowlerId)) : null
         if (almost) {
           const striker = match.player(lastEv.strikerId)
-          enqueueMoment({ key: lastEv.seq + 0.46, kind: 'almostcast', player: striker, team: batT, title: 'SO NEARLY!', lines: [], delay, ms: Math.round(ALMOST_CAST_SECONDS * 1000 * rate), almostCast: { replay: replayBase(lastEv), almost, batsman: striker, batTeam: batT, bowlTeam: bowlS.team, rate } })
+          enqueueMoment({ key: lastEv.seq + 0.46, kind: 'almostcast', player: striker, team: batT, title: almost.dropped ? 'DROPPED!' : 'SO NEARLY!', lines: [], delay, ms: Math.round(ALMOST_CAST_SECONDS * 1000 * rate), almostCast: { replay: replayBase(lastEv), almost, batsman: striker, batTeam: batT, bowlTeam: bowlS.team, rate } })
         }
         // how the ball was bowled: a big swing or turn (with a compass), a good yorker that was kept out
         const dvl = prefs.delivery ? deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' }) : null
@@ -854,6 +855,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const rate6 = sp === 4 ? 0.5 : sp === 2 ? 0.7 : 1
           show({ key: notable.seq + 0.25, kind: 'six', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.7), ms: Math.round(SIX_CAST_SECONDS * 1000 * rate6), sixCast: { replay: replayBase(notable), poor: (() => { const d = deliveryOf(notable, match.player(notable.bowlerId), { overcast: stadium.weather === 'overcast' }); return isPoorLength(d) ? LENGTH_WORDS[d.length] : undefined })(), batsman: hitter, team, distance: notable.distance, rate: rate6, contact: sixContact(notable, hitter.batting.power), longest: earlier > 0 && notable.distance > earlier, fire: notable.freeHit, move: getAnimPrefs().moves && isBigSix(notable) ? moveFor(hitter.id, team) ?? undefined : undefined } })
         }
+        // the phantom camera: a very close, extra-slow look at the bat meeting the ball on some sixes, and at the stumps going on some bowled wickets
+        if (getAnimPrefs().phantom && ((notable.boundary === 6 && Math.sin(notable.seq * 4.7) > 0.2) || (notable.wicket && (notable.wicket.kind === 'bowled') && Math.sin(notable.seq * 3.3) > 0.1))) {
+          const hitterP = match.player(notable.strikerId), bowlerPh = match.player(notable.bowlerId)
+          const bowlTP = match.sides[1 - match.innings[notable.innings].battingSide].team
+          show({ key: notable.seq + 0.265, kind: 'phantomcast', player: notable.boundary === 6 ? hitterP : bowlerPh, team: notable.boundary === 6 ? team : bowlTP, title: 'PHANTOM CAM', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(PHANTOM_CAST_SECONDS * 1000 * (sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1)), phantomCast: { replay: replayBase(notable), what: notable.boundary === 6 ? 'six' : 'bowled', batsman: hitterP, batTeam: team, bowler: bowlerPh, bowlTeam: bowlTP, kmh: ballSpeed(notable, bowlerPh), rate: sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1 } })
+        }
         // a six: the camera cuts to the stands where it came down (a fan catches it, or they duck; or it clears the stadium)
         if (notable.boundary === 6 && getAnimPrefs().six && getAnimPrefs().cheer) {
           const hitter = match.player(notable.strikerId)
@@ -910,7 +917,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const outLines = [dismissalText(match, outLine, inn), `${outLine.runs} (${outLine.balls}) · SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
           const reviews = getAnimPrefs().reviews
           // a run out goes to the third umpire first; some lbw outs are reviewed by the batsman first
-          if (reviews && w.kind === 'run out') { const gap = runOutGap(notable.seq); show({ key: notable.seq + 0.3, kind: 'runout', player: match.player(outLine.id), team, title: 'RUN OUT?', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(7200 * rate), runout: { batsman: match.player(outLine.id), batTeam: team, fielder: fielderP, bowlTeam: bowlSideNow.team, cm: gap.cm, text: gap.text, rate } }) }
+          if (reviews && w.kind === 'run out') { const gap = runOutGap(notable.seq); show({ key: notable.seq + 0.3, kind: 'runout', player: match.player(outLine.id), team, title: 'RUN OUT?', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(9800 * rate), runout: { batsman: match.player(outLine.id), batTeam: team, fielder: fielderP, bowlTeam: bowlSideNow.team, cm: gap.cm, text: gap.text, rate, replay: replayBase(notable) } }) }
           if (reviews && !notable.review && w.kind === 'lbw') show({ key: notable.seq + 0.3, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(6200 * rate), review: { plain: true, by: 'bat', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
           const bowlIdx = (1 - match.innings[notable.innings].battingSide) as 0 | 1
           if (reviews && !notable.review && w.kind === 'caught' && w.fielderId && w.fielderId === match.keeperOf(bowlIdx)) show({ key: notable.seq + 0.32, kind: 'review', player: match.player(outLine.id), team, title: 'REVIEW', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(10000 * rate), review: { plain: true, by: 'bat', kind: 'edge', batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, out: true, track: trackFor(notable.seq, true), rate } })
@@ -1229,6 +1236,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     bowler: bugBowlerId && bugBowl ? { name: callName(match.player(bugBowlerId)), figures: `${bugBowl.wickets}/${bugBowl.runs}` } : null,
     lastKmh: lastHere ? ballSpeed(lastHere, match.player(lastHere.bowlerId)) : null,
     need: inn.target !== null && inn.target - inn.runs > 0 ? `Need ${inn.target - inn.runs} off ${match.maxOvers * 6 - inn.legalBalls}` : null,
+    // the TV extras: the partnership, the chasing side's chance of winning, and the bowler's figures at the end of an over
+    stand: lastHere && inn.log.some((e) => e.seq === lastHere.seq) ? (() => { const pt = partnershipAt(inn.log, lastHere); return pt.runs > 0 ? `${pt.runs} (${pt.balls})` : null })() : null,
+    win: inn.index === 1 && inn.target !== null && match.format !== 'test' && !view.isOver ? (() => { const ser = winChanceSeries({ format: match.format, maxOvers: match.maxOvers, innings: view.innings }); const p = ser[ser.length - 1]?.p; return p === undefined ? null : { team: batSide.team.short, pct: Math.round(p * 100) } })() : null,
+    spell: lastHere && inn.log.some((e) => e.seq === lastHere.seq) && lastHere.legal && lastHere.score.legalBalls % 6 === 0 && lastHere.score.legalBalls > 0 && !view.isOver && inn.bowlers.get(lastHere.bowlerId) ? (() => { const l = inn.bowlers.get(lastHere.bowlerId)!; return { key: lastHere.seq, name: callName(match.player(lastHere.bowlerId)), figures: `${Math.floor(l.legalBalls / 6)}-${l.maidens}-${l.runs}-${l.wickets}`, over: Math.floor(l.legalBalls / 6) } })() : null,
   }
   // a free hit: the ball about to be bowled ('next') or the one just bowled, whose outcome is on the field ('ball')
   const freeHitState: 'next' | 'ball' | null = view.isOver ? null : inn.freeHit ? 'next' : lastHere?.freeHit ? 'ball' : null

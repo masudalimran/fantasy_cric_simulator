@@ -117,7 +117,7 @@ describe('the broadcast-style screens', () => {
   it('the so-nearly screen says how far in front of him it fell', () => {
     const ev = all.find((e) => e.legal && !e.wicket && !e.extraType && e.runsBat >= 1)!
     const base = baseFor(m, ev)
-    const html = clean(renderToString(<AlmostCast info={{ replay: base, almost: { gap: 1.4, fielder: base.fielders[3].player, distance: 41, hang: 2.1, runs: 2 }, batsman: m.player(ev.strikerId), batTeam: A, bowlTeam: B, rate: 1 }} />))
+    const html = clean(renderToString(<AlmostCast info={{ replay: base, almost: { gap: 1.4, fielder: base.fielders[3].player, distance: 41, hang: 2.1, runs: 2, dropped: false }, batsman: m.player(ev.strikerId), batTeam: A, bowlTeam: B, rate: 1 }} />))
     expect(html).toContain('SO NEARLY!')
     expect(html).toContain('fell 1.4 m in front of')
     expect(html).toContain('41 m')
