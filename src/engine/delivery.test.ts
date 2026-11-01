@@ -3,7 +3,7 @@ import { BUILT_IN_TEAMS } from '../data/teams'
 import { fieldPlan } from '../components/match/fieldSets'
 import { BAT_END_Z, drawnAngles, frameAt, hops, planBall, replayCamera, withNearSlow } from '../components/match/broadcast'
 import { endPoint, placeFielders } from '../components/match/Stage'
-import { ballName, deliveryOf, deliveryScreen, isPoorLength, SWING_BIG, TURN_BIG, type LengthKind } from './delivery'
+import { pitchSpot, ballName, deliveryOf, deliveryScreen, isPoorLength, SWING_BIG, TURN_BIG, type LengthKind } from './delivery'
 import { Match } from './match'
 
 const seamer = { bowling: { type: 'fast', variation: 80 } }
@@ -244,5 +244,18 @@ describe('naming the kind of ball', () => {
     const dv = deliveryOf(ev(1), seamer)
     expect(ballName(dv, { type: 'fast', left: false, kmh: 180 })).toBe('Dragon ball')
     expect(ballName({ ...dv, noBallCause: 'beamer' }, { type: 'fast', left: false })).toBe('Beamer')
+  })
+})
+
+describe('where a ball pitched, for the pitch map', () => {
+  it('a yorker pitches near the stumps and a bouncer far from them, always in front of the bat and on the pitch', () => {
+    for (let i = 1; i <= 400; i++) {
+      const dv = deliveryOf(ev(i), seamer)
+      const sp = pitchSpot(ev(i), dv)
+      expect(sp.z).toBeLessThan(0); expect(sp.z).toBeGreaterThan(-14)
+      expect(Math.abs(sp.x)).toBeLessThan(2.2)
+      if (dv.length === 'yorker') expect(sp.z).toBeGreaterThan(-2.1)
+      if (dv.length === 'bouncer') expect(sp.z).toBeLessThan(-10)
+    }
   })
 })

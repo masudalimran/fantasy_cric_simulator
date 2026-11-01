@@ -134,3 +134,13 @@ export function ballName(dv: DeliveryLook, o: { type: string; pace?: string | nu
   if (dv.length === 'short') return 'Short ball'
   return o.type === 'fast' ? 'Seam up' : 'Straight one'
 }
+
+
+/** Where a ball pitched, across the pitch (metres from the middle stump; off side positive for a right-hander's view from behind the bowler) and down it (metres from the stumps, negative towards the bowler), for the pitch map. Worked out the way the clip draws it, so the map and the clip agree. */
+export function pitchSpot(ev: Pick<BallEvent, 'seq' | 'delivery'>, dv: DeliveryLook): { x: number; z: number } {
+  const line = ev.delivery ? ev.delivery.line / 50 : (hash01(ev.seq * 3.1) - 0.5) * 0.9
+  const meetX = line * 1.1 * 0.6
+  const z = dv.pitchZ ?? -0.6
+  const turnM = dv.pitchZ === null ? 0 : Math.tan((dv.turn * Math.PI) / 180) * Math.abs(-1.25 - dv.pitchZ)
+  return { x: meetX - turnM, z }
+}

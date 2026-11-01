@@ -21,3 +21,17 @@ export function LineupWalkout({ show, base, cast, onDone }: { show: StadiumShow;
     </div>
   )
 }
+
+/** Any stadium show as a full-screen screen of its own (the pitch report before the toss): it closes itself when it has played, or on a tap. */
+export function ShowScreen({ show, base, cast, label, onDone }: { show: StadiumShow; base: ReplayBase; cast?: Cast; label: string; onDone: () => void }) {
+  useEffect(() => {
+    const id = window.setTimeout(onDone, SHOW_SECONDS[show.kind] * 1000 + 500)
+    return () => window.clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <div className="fixed inset-0 z-[60] cursor-pointer bg-black" style={{ paddingTop: 'var(--sat)' }} onClick={onDone} aria-label={label}>
+      <StadiumCam show={show} base={base} cast={cast} label={label} />
+    </div>
+  )
+}

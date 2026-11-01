@@ -44,6 +44,8 @@ export interface CrowdClose {
   fanReact?: { a: number; u: number; t0: number; caught: boolean }
   /** Umbrellas held up over this share of the fans (0 to 1). */
   umbrellas?: number
+  /** Close-up fans: faces get eyes, a mouth and face paint, and each holds a little sign now and then. */
+  hero?: boolean
 }
 
 /** A glowing spark in the sky: where it is, a short tail behind it, its colour and size (metres). */
@@ -138,6 +140,19 @@ export function drawCrowdClose(ctx: CanvasRenderingContext2D, r: CamR, W: number
     ctx.beginPath(); ctx.arc(f.x, baseY - bh - hr * 0.85, hr, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = hair
     ctx.beginPath(); ctx.arc(f.x, baseY - bh - hr * 1.05, hr * 1.02, Math.PI, Math.PI * 2); ctx.fill()
+    // a close-up fan has a face: eyes, a mouth (open and shouting when the crowd is up, a frown when it groans) and paint in the team's colours
+    if (cr.hero && m > 14) {
+      const fy = baseY - bh - hr * 0.85
+      ctx.fillStyle = palette[0]; ctx.globalAlpha = 0.85
+      ctx.fillRect(f.x - hr * 0.95, fy - hr * 0.1, hr * 0.5, hr * 0.28); ctx.fillRect(f.x + hr * 0.45, fy - hr * 0.1, hr * 0.5, hr * 0.28)
+      ctx.globalAlpha = 1
+      ctx.fillStyle = '#0f172a'
+      ctx.beginPath(); ctx.arc(f.x - hr * 0.36, fy - hr * 0.1, Math.max(1, hr * 0.1), 0, Math.PI * 2); ctx.arc(f.x + hr * 0.36, fy - hr * 0.1, Math.max(1, hr * 0.1), 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = '#0f172a'; ctx.lineWidth = Math.max(1, hr * 0.09); ctx.lineCap = 'round'
+      ctx.beginPath()
+      if (cr.mood === 'groan') { ctx.moveTo(f.x - hr * 0.3, fy + hr * 0.62); ctx.quadraticCurveTo(f.x, fy + hr * 0.35, f.x + hr * 0.3, fy + hr * 0.62); ctx.stroke() }
+      else { ctx.fillStyle = '#7f1d1d'; ctx.ellipse(f.x, fy + hr * 0.5, hr * 0.28, hr * (0.12 + 0.18 * Math.abs(Math.sin(beat))), 0, 0, Math.PI * 2); ctx.fill() }
+    }
     // umbrellas in the rain
     if (cr.umbrellas && h2 < cr.umbrellas) {
       const ucol = ['#ef4444', '#3b82f6', '#fde047', '#22c55e', '#f8fafc', '#a855f7'][Math.floor(h * 997) % 6]
@@ -261,6 +276,8 @@ export interface BoardInfo {
   rows: { label: string; value: string }[]
   /** A big figure under the title (a score, a count down). */
   big?: string
+  /** Where each ball of the over pitched (metres across the pitch, and the pitch's length zones), for the pitch map. */
+  map?: { balls: { x: number; z: number; c: string }[]; legend?: string }
 }
 
 /** The stadium's giant screen, up above the stands: the fan wall with the posts coming in, or a notice. */
@@ -371,6 +388,24 @@ function drawBoard(ctx: CanvasRenderingContext2D, bs: BigScreen, VW: number, tic
     ctx.fillStyle = '#ffffff'; ctx.font = `900 ${Math.round(84 + (1 - k) * 30)}px sans-serif`; ctx.fillText(b.big, VW / 2, y + 52, VW - 30)
     ctx.globalAlpha = 1
     y += 116
+  }
+  if (b.map) {
+    // the pitch from above with its length zones and where each ball of the over pitched
+    const X = (x: number) => VW / 2 + x * 92, Y = (z: number) => 172 + ((z + 14) / 14) * 240
+    ctx.fillStyle = '#7c5f35'; ctx.fillRect(X(-1.5), Y(-14), 3 * 92, Y(0) - Y(-14))
+    const zones: [string, number, number, string][] = [['BOUNCER', -13, -10.2, 'rgba(239,68,68,0.22)'], ['SHORT', -10.2, -7.5, 'rgba(251,146,60,0.2)'], ['GOOD', -7.5, -4.5, 'rgba(34,197,94,0.28)'], ['FULL', -4.5, -2.1, 'rgba(56,189,248,0.2)'], ['YORKER', -2.1, -0.6, 'rgba(167,139,250,0.28)']]
+    ctx.textAlign = 'left'; ctx.font = '800 18px sans-serif'
+    for (const [name, z0, z1, col] of zones) { ctx.fillStyle = col; ctx.fillRect(X(-1.5), Y(z0), 3 * 92, Y(z1) - Y(z0)); ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.textBaseline = 'middle'; ctx.fillText(name, 12, (Y(z0) + Y(z1)) / 2) }
+    ctx.fillStyle = '#f8fafc'; for (const x of [-0.11, 0, 0.11]) ctx.fillRect(X(x) - 3, Y(0) - 3, 6, 18)
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(-1.6), Y(-1.22)); ctx.lineTo(X(1.6), Y(-1.22)); ctx.stroke()
+    b.map.balls.forEach((ball, i) => {
+      const k = Math.max(0, Math.min(1, (bs.t - (1.0 + i * 0.55)) / 0.3))
+      if (k <= 0) return
+      ctx.globalAlpha = k; ctx.fillStyle = ball.c; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3
+      ctx.beginPath(); ctx.arc(X(ball.x), Y(Math.max(-13.5, Math.min(-0.3, ball.z))), 11 + (1 - k) * 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1
+    })
+    if (b.map.legend) { ctx.fillStyle = '#cbd5e1'; ctx.textAlign = 'center'; ctx.font = '700 20px sans-serif'; ctx.fillText(b.map.legend, VW / 2, 442, VW - 20) }
+    return
   }
   b.rows.slice(0, 4).forEach((row, i) => {
     const k = Math.max(0, Math.min(1, (bs.t - (1.4 + i * 0.7)) / 0.4))

@@ -56,13 +56,13 @@ export interface ScoreBug {
   lastKmh?: number | null
 }
 
-type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper'
+type Look = 'striker' | 'nonstriker' | 'bowler' | 'fielder' | 'umpire' | 'keeper' | 'staff'
 
-export function Figure({ player, team, look, rig }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void }) {
-  const ump = look === 'umpire'
+export function Figure({ player, team, look, rig, tint }: { player?: Player; team?: Team; look: Look; rig: (r: Rig | null) => void; /** The colour of a staff member's top (ground staff, the physio, the drinks carriers). */ tint?: string }) {
+  const ump = look === 'umpire' || look === 'staff'
   const ownWeapons = useCharacterWeapons()
-  const primary = ump ? '#1e293b' : team?.colors.primary ?? '#334155'
-  const second = ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
+  const primary = look === 'staff' ? tint ?? '#e5e7eb' : ump ? '#1e293b' : team?.colors.primary ?? '#334155'
+  const second = look === 'staff' ? '#ef4444' : ump ? '#f8fafc' : team?.colors.secondary ?? '#e2e8f0'
   const bat = look === 'striker' || look === 'nonstriker'
   const kit: Kit = {
     weapon: ownWeapons && player ? weaponOf(player.id) : null, aura: player ? auraOf(player.id) : null,
@@ -658,7 +658,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
           )}
         </div>
       )}
-      {scoreBarOn && scoreBug?.spell && !replay && <SpellCard key={scoreBug.spell.key} spell={scoreBug.spell} color={accentOf(bowlingTeam)} delay={Math.max(1.2, (plan.realTotal * 0.75) / Math.max(0.3, rate))} />}
+      {scoreBarOn && scoreBug?.spell && !replay && <SpellCard key={`spell${scoreBug.spell.key}`} spell={scoreBug.spell} color={accentOf(bowlingTeam)} delay={Math.max(1.2, (plan.realTotal * 0.75) / Math.max(0.3, rate))} />}
       <span className="pointer-events-none absolute left-2 bottom-8 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
     </div>
   )

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { camWide, ROPE } from './broadcast'
 import { solve } from './bodyPose'
 import { slopePoint } from './crowdDraw'
-import { ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
+import { dugoutPose, DRINKS, drinksPerson, drinkSpot, fanCut, handshakePos, shaking, physioPos, physioPose, batsmanDown, PHYSIO, presenterPose, presenterPos, PITCHREP, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
 
-const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony']
+const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony', 'physio', 'dugout', 'drinks', 'handshake', 'pitchreport', 'salute', 'fans', 'pitchmap']
 const FROM_LIVE = KINDS.filter((k) => k !== 'flyover' && k !== 'lineup') // (the fly-over is the other way round: it ENDS at the live camera)
 const show = (kind: ShowKind, seed: number, variant?: StadiumShow['variant']): StadiumShow => ({ kind, variant, seed, focus: { x: 10, y: 0, z: -14 }, celebrant: 2, landing: { x: 80, y: 6, z: -4 }, caught: true, colors: ['#f97316', '#1d4ed8'], sign: '6', name: 'Goku Son', word: 'U7W', why: 'boundary' })
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
@@ -83,7 +83,7 @@ describe('the stadium shows', () => {
       let prev = cameraAt(s, 0)
       for (let t = 0.05; t <= SHOW_SECONDS[kind]; t += 0.05) {
         const c = cameraAt(s, t)
-        const cut = (kind === 'walkoff' && Math.abs(t - WALKOFF.cut) < 0.08) || (kind === 'milestone' && Math.abs(t - MILESTONE.cut) < 0.08) // (a cut to another camera: the picture flashes white)
+        const cut = (kind === 'fans' && [2.2, 4.4].some((c) => Math.abs(t - c) < 0.08)) || (kind === 'walkoff' && Math.abs(t - WALKOFF.cut) < 0.08) || (kind === 'milestone' && Math.abs(t - MILESTONE.cut) < 0.08) // (a cut to another camera: the picture flashes white)
         if (!cut) expect(dist(c.p, prev.p), `${kind} ${seed} at ${t.toFixed(2)}`).toBeLessThan(kind === 'lineup' || kind === 'flyover' ? 6 : 4.2) // (the swoops from high above the stadium are the fast ones)
         if (!cut) expect(Math.abs(c.hfov - prev.hfov), `${kind} ${seed} at ${t.toFixed(2)} (zoom)`).toBeLessThan(0.06)
         expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
@@ -249,5 +249,54 @@ describe('the stadium shows', () => {
     expect(back.onStage).toBe(false); expect(Math.abs(back.pos.x - line(0, 3).x)).toBeLessThan(0.01)
     expect(ceremonyPerson(s, 28, 'a5', line(0, 5), 0, 5).onStage).toBe(true) // the Man of the Match stays up
     expect(turnsOf(s, 'nobody')).toEqual([])
+  })
+
+  it('the physio runs on from the side, kneels at the batsman, and the batsman is doubled over until he is treated', () => {
+    const s = show('physio', 5)
+    expect(Math.abs(physioPos(s, 0).x)).toBeGreaterThan(20)
+    expect(Math.hypot(physioPos(s, PHYSIO.arrive + 0.1).x - physioPos(s, 20).x, physioPos(s, 20).z - physioPos(s, 5).z)).toBeLessThan(0.01)
+    expect(physioPose(1)).toBeNull(); expect(physioPose(5)!.hip.y).toBeGreaterThan(100)
+    expect(batsmanDown(0)).toBe(0); expect(batsmanDown(4)).toBeGreaterThan(0.95); expect(batsmanDown(PHYSIO.up + 1)).toBe(0)
+  })
+  it('the dressing room reacts: they stand and clap when it goes well and slump with their heads in their hands when it does not', () => {
+    for (let i = 0; i < 8; i++) { expect(dugoutPose(4, i, 'cheer').hip.y).toBeLessThan(dugoutPose(0, i, 'cheer').hip.y); expect(dugoutPose(4, i, 'groan').head.dy).toBeGreaterThan(dugoutPose(0, i, 'groan').head.dy) }
+  })
+  it('the drinks break: they walk to the group, stand there, and walk back; the staff come and go', () => {
+    const s = show('drinks', 5), from = { x: -20, y: 0, z: -30 }
+    expect(drinksPerson(s, 0, 2, 11, from).settled).toBe(false)
+    const mid = drinksPerson(s, 4, 2, 11, from)
+    expect(mid.settled).toBe(true); expect(Math.hypot(mid.pos.x - drinkSpot(s, 2, 11).x, mid.pos.z - drinkSpot(s, 2, 11).z)).toBeLessThan(0.01)
+    expect(Math.hypot(drinksPerson(s, DRINKS.back + 3, 2, 11, from).pos.x - from.x, 0)).toBeLessThan(0.01)
+    expect(Math.abs(staffPos(s, 0, 4, 0).x)).toBeGreaterThan(30)
+    expect(Math.abs(staffPos(s, 0, 4, 4).x)).toBeLessThan(10)
+  })
+  it('the handshakes: the two lines pass along the ground, the front men meet first and shake hands', () => {
+    expect(handshakePos(0, 0, 0).x).toBeLessThan(handshakePos(1, 0, 0).x)
+    expect(handshakePos(0, 0, 8).x).toBeGreaterThan(handshakePos(1, 0, 8).x) // (they have passed)
+    let met = 0
+    for (let t = 1; t < 9; t += 0.1) if (shaking(0, 0, t, 11)) met++
+    expect(met).toBeGreaterThan(2)
+    expect(shaking(0, 10, 1, 11)).toBe(false)
+  })
+  it('the pitch report: the presenter walks to the pitch and crouches to press a key into it, then stands to talk', () => {
+    expect(presenterPos(0).x).toBeLessThan(presenterPos(5).x)
+    expect(presenterPose(PITCHREP.press + 0.5).hip.y).toBeGreaterThan(100)
+    expect(presenterPose(PITCHREP.stand + 1.5).hip.y).toBeLessThan(90)
+  })
+  it('the salute: the bowler runs towards the crowd, kisses the ball, then holds it up', () => {
+    const a = saluteBowler(0, 4), b = saluteBowler(2.2, 4), c = saluteBowler(4, 4)
+    expect(b.pos.z).toBeGreaterThan(a.pos.z)
+    expect(b.pose.handR.y).toBeLessThan(0)
+    expect(c.pose.handR.y).toBeLessThan(b.pose.handR.y + 0.1)
+  })
+  it('the fan cam cuts three times, each at another place in the stands, with the faces drawn close', () => {
+    expect(fanCut(0.5)).toBe(0); expect(fanCut(2.5)).toBe(1); expect(fanCut(6)).toBe(2)
+    const a = crowdAt(show('fans', 3), 0.5)!, b = crowdAt(show('fans', 3), 2.5)!
+    expect(a.hero).toBe(true); expect((a.a0 + a.a1) / 2).not.toBeCloseTo((b.a0 + b.a1) / 2, 2)
+    expect(crowdAt({ ...show('fans', 3), mood: 'groan' }, 1)!.mood).toBe('groan')
+  })
+  it('the pitch map is a notice on the giant screen', () => {
+    const s: StadiumShow = { ...show('pitchmap', 4), board: { title: 'THE OVER', rows: [], map: { balls: [{ x: 0, z: -5, c: '#fff' }] } } }
+    expect(screenAt(s, 3)!.board!.map!.balls.length).toBe(1)
   })
 })

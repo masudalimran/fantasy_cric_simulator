@@ -127,8 +127,10 @@ function TeamSheet({ side, mine, news, startXI, onEdit }: { side: Side; mine: bo
  * bar along the bottom: tap it, it spins, the toss is decided (and, if you won it, you choose to bat or bowl),
  * and then play begins.
  */
-export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel, mySide = null, tossed = false, onTossed, startXI, editable = [false, false], careerSquad = false, onSaveSquad, pitch, boost }: {
+export function CoinToss({ renderReport, sides, toss, onStart, mustChoose = false, onChoose, news = [], onCancel, mySide = null, tossed = false, onTossed, startXI, editable = [false, false], careerSquad = false, onSaveSquad, pitch, boost }: {
   sides: [Side, Side]; toss: TossResult; onStart: () => void
+  /** The pitch report as a stadium show (the presenter at the pitch): given, it is shown instead of the old card. */
+  renderReport?: (onClose: () => void) => React.ReactNode
   /** The pitch for this match: a report is shown once the coin has landed. */
   pitch?: Pitch
   /** The toss winner is a person, who hasn't picked yet. */
@@ -175,7 +177,7 @@ export function CoinToss({ sides, toss, onStart, mustChoose = false, onChoose, n
     setTimeout(() => setStage('done'), 2400)
   }
 
-  const reportEl = <AnimatePresence>{report && pitch && <PitchReport key="pr" pitch={pitch} onClose={() => setReport(false)} />}</AnimatePresence>
+  const reportEl = <AnimatePresence>{report && pitch && (renderReport ? <div key="prs">{renderReport(() => setReport(false))}</div> : <PitchReport key="pr" pitch={pitch} onClose={() => setReport(false)} />)}</AnimatePresence>
   const reportBtn = stage === 'done' && pitch ? <button onClick={() => setReport(true)} className="mt-1 cursor-pointer rounded-full border border-amber-300/60 px-3 py-0.5 text-xs font-bold text-amber-300 active:bg-white/10">Pitch report</button> : null
 
   const mobile = useIsMobile()
