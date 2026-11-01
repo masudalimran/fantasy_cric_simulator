@@ -48,7 +48,7 @@ export function FourCast({ info }: { info: FourCastInfo }) {
   const how = c.quality >= 0.8 ? 'Middled it' : c.quality >= 0.55 ? 'Well timed' : 'Found the gap'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Four">
-      <ReplayFrame base={info.replay} rate={1.5 * r} deep cam={replayCamFor('four', info.replay.event.seq)} />
+      <ReplayFrame base={info.replay} rate={1.5 / r} deep cam={replayCamFor('four', info.replay.event.seq)} />
       <Bottom>
         <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3">
           <motion.div className="shrink-0 self-center" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r }}><BatContact contact={c} height={compact ? 84 : 118} delay={1.7} rate={r} /></motion.div>
@@ -92,7 +92,7 @@ export function WicketCast({ info }: { info: WicketCastInfo }) {
   const compact = w < 520
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={info.card.title}>
-      <ReplayFrame base={info.replay} rate={1.6 * r} cam={replayCamFor(info.kind, info.replay.event.seq)} />
+      <ReplayFrame base={info.replay} rate={1.6 / r} cam={replayCamFor(info.kind, info.replay.event.seq)} />
       <Bottom>
         <div className="flex h-full flex-col justify-center gap-1.5 px-3 py-1.5">
           <motion.div className="flex items-center gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 * r }}>
@@ -158,7 +158,7 @@ export function ExtraCast({ info }: { info: ExtraCastInfo }) {
   const [box, w] = useWidth()
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={info.title}>
-      <ReplayFrame base={info.replay} rate={1.2 * r} share={0.7} cam={info.wide ? replayCamFor('wide', info.replay.event.seq) : replayCamFor('extra', info.replay.event.seq)} />
+      <ReplayFrame base={info.replay} rate={1.2 / r} share={0.7} cam={info.wide ? replayCamFor('wide', info.replay.event.seq) : replayCamFor('extra', info.replay.event.seq)} />
       <Bottom from={0.7}>
         <div className="flex h-full items-center justify-center gap-3 px-3">
           {info.wide && <WideGap wide={info.wide} w={Math.max(96, Math.min(w * 0.3, 150))} />}
@@ -230,7 +230,7 @@ export function MissCast({ info }: { info: MissCastInfo }) {
   const compact = w < 520
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={title}>
-      <ReplayFrame base={info.replay} rate={r} share={0.56} cam={stumps ? 'stump' : 'side'} tag="Close call" near />
+      <ReplayFrame base={info.replay} rate={1 / r} share={0.56} cam={stumps ? 'stump' : 'side'} tag="Close call" near />
       <Bottom from={0.56}>
         <div className="flex h-full items-center gap-3 px-3">
           {stumps ? <StumpsGap miss={m} w={compact ? 96 : 130} /> : <BatGap miss={m} w={compact ? 104 : 140} />}
@@ -285,7 +285,7 @@ export function AlmostCast({ info }: { info: AlmostCastInfo }) {
   const first = a.fielder.name.split(' ')[0]
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="So nearly caught">
-      <ReplayFrame base={info.replay} rate={1.4 * r} share={0.56} cam={replayCamFor('catch', info.replay.event.seq)} tag={a.dropped ? 'Dropped' : 'So nearly'} />
+      <ReplayFrame base={info.replay} rate={1.4 / r} share={0.56} cam={replayCamFor('catch', info.replay.event.seq)} tag={a.dropped ? 'Dropped' : 'So nearly'} />
       <Bottom from={0.56}>
         <div className="flex h-full items-center gap-3 px-3">
           <FallShort gap={a.gap} w={compact ? 118 : 150} fielder={a.fielder} team={info.bowlTeam} />
@@ -318,7 +318,7 @@ export function SixCast({ info }: { info: SixCastInfo }) {
   const compact = w < 520
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={`Six, ${info.distance} metres`}>
-      <ReplayFrame base={info.replay} rate={1.5 * r} deep cam={replayCamFor('six', info.replay.event.seq)} />
+      <ReplayFrame base={info.replay} rate={1.5 / r} deep cam={replayCamFor('six', info.replay.event.seq)} />
       <Bottom>
         <div className="flex h-full items-stretch gap-2 px-2 py-1 sm:gap-3 sm:px-3">
           {info.contact && <motion.div className="shrink-0 self-center" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4 * r }}><BatContact contact={info.contact} height={compact ? 84 : 118} delay={1.7} rate={r} /></motion.div>}
@@ -359,7 +359,7 @@ export function NoBallCast({ info }: { info: NoBallCastInfo }) {
   const compact = w < 520
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="No ball">
-      <ReplayFrame base={info.replay} rate={1.2 * r} share={0.66} cam={replayCamFor('noball', info.replay.event.seq)} tag="Front foot" />
+      <ReplayFrame base={info.replay} rate={1.2 / r} share={0.66} cam={replayCamFor('noball', info.replay.event.seq)} tag="Front foot" />
       <Bottom from={0.66}>
         <div className="flex h-full items-center justify-center gap-3 px-3">
           <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.bowlTeam)}` }}><PlayerAvatar player={info.bowler} team={info.bowlTeam} size={compact ? 34 : 44} /></span>
@@ -405,7 +405,7 @@ export function RunOutCast({ info }: { info: RunOutCastInfo }) {
   ]
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Run out">
-      <ReplayFrame base={info.replay} rate={1.1 * r} share={0.6} cam="runout" tag="Third umpire" />
+      <ReplayFrame base={info.replay} rate={1.1 / r} share={0.6} cam="runout" tag="Third umpire" />
       <Bottom from={0.6}>
         <div className="flex h-full flex-col justify-center gap-1 px-3">
           <div className="flex items-center gap-2">
@@ -448,7 +448,7 @@ export function PhantomCast({ info }: { info: PhantomCastInfo }) {
   const six = info.what === 'six'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Phantom camera">
-      <ReplayFrame base={info.replay} rate={1.3 * r} share={0.7} cam="phantom" tag="Phantom cam" />
+      <ReplayFrame base={info.replay} rate={1.3 / r} share={0.7} cam="phantom" tag="Phantom cam" />
       <Bottom from={0.7}>
         <div className="flex h-full items-center gap-3 px-3">
           <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(six ? info.batTeam : info.bowlTeam)}` }}><PlayerAvatar player={six ? info.batsman : info.bowler} team={six ? info.batTeam : info.bowlTeam} size={compact ? 36 : 46} /></span>
@@ -499,7 +499,7 @@ export function StumpCast({ info }: { info: StumpCastInfo }) {
   ]
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Stumping">
-      <ReplayFrame base={info.replay} rate={1.1 * r} share={0.6} cam="gloves" tag="Third umpire" />
+      <ReplayFrame base={info.replay} rate={1.1 / r} share={0.6} cam="gloves" tag="Third umpire" />
       <Bottom from={0.6}>
         <div className="flex h-full flex-col justify-center gap-1 px-3">
           <div className="flex items-center gap-2">
@@ -628,7 +628,7 @@ export function DeliveryCast({ info }: { info: DeliveryCastInfo }) {
   const cam = screen === 'beamer' || screen === 'dragon' ? 'side' : screen === 'yorker' ? 'stump' : 'high'
   return (
     <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label={title}>
-      <ReplayFrame base={info.replay} rate={1.3 * r} share={0.56} cam={cam} trace={screen === 'swing' || screen === 'turn'} tag={screen === 'dragon' ? 'Dragon ball' : screen === 'swing' ? 'Swing' : screen === 'turn' ? 'Turn' : LENGTH_WORDS[dv.length]} />
+      <ReplayFrame base={info.replay} rate={1.3 / r} share={0.56} cam={cam} trace={screen === 'swing' || screen === 'turn'} tag={screen === 'dragon' ? 'Dragon ball' : screen === 'swing' ? 'Swing' : screen === 'turn' ? 'Turn' : LENGTH_WORDS[dv.length]} />
       <Bottom from={0.56}>
         <div className="flex h-full items-center gap-3 px-3">
           {screen === 'dragon' ? <DragonDial kmh={info.kmh} w={compact ? 112 : 150} /> : screen === 'swing' || screen === 'turn' ? <Compass deg={deg} max={screen === 'swing' ? 12 : 20} w={compact ? 112 : 150} color={color} /> : <LengthSide dv={dv} w={compact ? 118 : 156} />}

@@ -278,6 +278,8 @@ export interface BoardInfo {
   big?: string
   /** Where each ball of the over pitched (metres across the pitch, and the pitch's length zones), for the pitch map. */
   map?: { balls: { x: number; z: number; c: string }[]; legend?: string }
+  /** Where each ball of the over passed the stumps (metres across, metres up), for the beehive. */
+  hive?: { balls: { x: number; y: number; c: string }[]; legend?: string }
 }
 
 /** The stadium's giant screen, up above the stands: the fan wall with the posts coming in, or a notice. */
@@ -389,6 +391,25 @@ function drawBoard(ctx: CanvasRenderingContext2D, bs: BigScreen, VW: number, tic
     ctx.globalAlpha = 1
     y += 116
   }
+  if (b.hive) {
+    // the stumps from the bowler's end, the ball's height up the side, and where each ball of the over went past
+    const X = (x: number) => VW / 2 + x * 330, Y = (h: number) => 440 - h * 230
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(X(-0.6), Y(1.6), 1.2 * 330, Y(0) - Y(1.6))
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5
+    for (const h of [0.5, 1.0, 1.5]) { ctx.beginPath(); ctx.moveTo(X(-0.6), Y(h)); ctx.lineTo(X(0.6), Y(h)); ctx.stroke() }
+    ctx.fillStyle = '#7c5f35'; ctx.fillRect(X(-0.6), Y(0), 1.2 * 330, 8)
+    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(X(-0.11), Y(0.71), 0.22 * 330, 0.71 * 230)
+    ctx.fillStyle = '#fef3c7'; for (const x of [-0.11, 0, 0.11]) ctx.fillRect(X(x) - 4, Y(0.71), 8, 0.71 * 230)
+    ctx.fillRect(X(-0.11) - 4, Y(0.71) - 4, 0.22 * 330 + 8, 6)
+    b.hive.balls.forEach((ball, i) => {
+      const k = Math.max(0, Math.min(1, (bs.t - (1.0 + i * 0.55)) / 0.3))
+      if (k <= 0) return
+      ctx.globalAlpha = k; ctx.fillStyle = ball.c; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3
+      ctx.beginPath(); ctx.arc(X(Math.max(-0.58, Math.min(0.58, ball.x))), Y(ball.y), 12 + (1 - k) * 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1
+    })
+    if (b.hive.legend) { ctx.fillStyle = '#cbd5e1'; ctx.textAlign = 'center'; ctx.font = '700 20px sans-serif'; ctx.fillText(b.hive.legend, VW / 2, 470, VW - 20) }
+    return
+  }
   if (b.map) {
     // the pitch from above with its length zones and where each ball of the over pitched
     const X = (x: number) => VW / 2 + x * 92, Y = (z: number) => 172 + ((z + 14) / 14) * 240
@@ -499,15 +520,23 @@ function drawReview(ctx: CanvasRenderingContext2D, bs: BigScreen, rv: ReviewBoar
     ctx.fillRect(X(-0.18, 100), 78, X(0.18, 100) - X(-0.18, 100), 46)
     ctx.strokeStyle = '#fef3c7'; ctx.lineWidth = 3; for (const x of [-0.12, 0, 0.12]) { ctx.beginPath(); ctx.moveTo(X(x, 100), 84); ctx.lineTo(X(x, 100), 124); ctx.stroke() }
     const P = { x: X(rv.pitchX, 250), y: 250 }, I = { x: X(rv.impactX, 150), y: 150 }, S = { x: X(rv.stumpsX, 106), y: 106 }, H = { x: X(rv.pitchX * 0.5, 400), y: 400 }
-    const seg = (a: { x: number; y: number }, b: { x: number; y: number }, c: string, dash: number[], from: number, to: number) => {
-      const u = Math.max(0, Math.min(1, (k - from) / (to - from)))
-      if (u <= 0) return
-      ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.setLineDash(dash); ctx.lineCap = 'round'
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u); ctx.stroke(); ctx.setLineDash([])
+    // one smooth curve from the bowler's hand through the bounce and the pad on to the stumps (Catmull-Rom through the four marks)
+    const pts = [H, P, I, S]
+    const at = (u: number) => {
+      const i = Math.min(2, Math.floor(u)), f = u - i
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(3, i + 2)]
+      const c = (a: number, b: number, c2: number, d: number) => 0.5 * (2 * b + (c2 - a) * f + (2 * a - 5 * b + 4 * c2 - d) * f * f + (-a + 3 * b - 3 * c2 + d) * f * f * f)
+      return { x: c(p0.x, p1.x, p2.x, p3.x), y: c(p0.y, p1.y, p2.y, p3.y) }
     }
-    seg(H, P, '#fbbf24', [], 0, 0.4)
-    seg(P, I, '#fb923c', [], 0.4, 0.7)
-    seg(I, S, rv.wickets.startsWith('Hitting') ? '#ef4444' : '#94a3b8', [10, 8], 0.7, 1)
+    const upto = k < 0.4 ? (k / 0.4) : k < 0.7 ? 1 + (k - 0.4) / 0.3 : 2 + Math.min(1, (k - 0.7) / 0.3)
+    const hit = rv.wickets.startsWith('Hitting')
+    ctx.lineWidth = 5; ctx.lineCap = 'round'
+    for (let u = 0; u < upto - 1e-6; u += 0.04) {
+      const e = Math.min(upto, u + 0.04), q0 = at(u), q1 = at(e)
+      ctx.strokeStyle = u < 1 ? '#fbbf24' : u < 2 ? '#fb923c' : hit ? '#ef4444' : '#94a3b8'
+      if (u >= 2 && Math.floor((u - 2) / 0.04) % 2 === 1) continue
+      ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke()
+    }
     const col = (v: string) => (v === 'In line' || v === 'Hitting' ? '#34d399' : v.includes("umpire's call") ? '#fb923c' : '#f87171')
     const dot = (p: { x: number; y: number }, c: string, from: number) => { if (k < from) return; ctx.fillStyle = c; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke() }
     dot(P, col(rv.pitching), 0.4); dot(I, col(rv.impact), 0.7); dot(S, col(rv.wickets), 0.98)

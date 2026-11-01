@@ -490,9 +490,12 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
             } else imp.style.display = 'none'
           }
           ball.style.zIndex = '4000'
-          shadow.style.display = held >= 1 ? 'none' : 'block'
-          shadow.style.width = `${(sz * 1.3).toFixed(1)}px`
-          shadow.style.height = `${(sz * 0.45).toFixed(1)}px`
+          // the shadow only shows while the ball is low (a ball high in the air with its shadow far below it looked like two balls): it fades as the ball rises
+          const lowK = clamp01(1 - (f.ball?.y ?? 0) / 3)
+          shadow.style.display = held >= 1 || lowK < 0.1 ? 'none' : 'block'
+          shadow.style.opacity = String((0.5 * lowK).toFixed(2))
+          shadow.style.width = `${(sz * 1.3 * (0.6 + 0.4 * lowK)).toFixed(1)}px`
+          shadow.style.height = `${(sz * 0.45 * (0.6 + 0.4 * lowK)).toFixed(1)}px`
           shadow.style.transform = `translate3d(${(gp.x - sz * 0.65).toFixed(1)}px,${(gp.y - sz * 0.2).toFixed(1)}px,0)`
           shadow.style.zIndex = '1'
         } else { ball.style.display = 'none'; shadow.style.display = 'none' }

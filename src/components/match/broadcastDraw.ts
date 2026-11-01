@@ -2,6 +2,7 @@ import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
 import { drawMove, type MoveDraw } from './moveFx'
+import { drawDJBooth, drawDugout, drawOutside, drawPlatform, type OutsideDraw } from './setDraw'
 import { drawStage, type StageDraw, drawBall3, drawBigScreen, drawConfetti, drawCrowdClose, drawSparks, type Ball3, type BigScreen, type Confetti, type CrowdClose, type Spark } from './crowdDraw'
 
 /** Paints the ground, stands, pitch and stumps of the broadcast view onto a canvas. Pure drawing: it reads the camera and nothing else. */
@@ -44,6 +45,8 @@ export interface Scene {
   podium?: boolean
   /** The presentation stage with its backdrop. */
   stage?: StageDraw
+  /** Things built at the side of the ground: the team's dugout, the cheerleaders' platform with the DJ's booth, and (for a six out of the stadium) the city beyond the stands. */
+  sets?: { dugout?: [string, string]; platform?: { centre: V3; side: 1 | -1; colors: [string, string]; dj?: V3 }; outside?: OutsideDraw }
   /** A ball in the air over the stands. */
   ball3?: Ball3 | null
   /** Confetti in the air (the trophy celebration). */
@@ -81,6 +84,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   g.addColorStop(0, sky[0]); g.addColorStop(0.55, sky[1]); g.addColorStop(1, '#0b3a22')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
+  if (sc.sets?.outside) drawOutside(ctx, r, sc.sets.outside)
   const lift = L.time === 'day' ? (grey ? 0.1 : 0.26) : L.time === 'dusk' ? 0.1 : 0
 
   // fireworks hang in the sky, behind the stands
@@ -307,8 +311,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       const a = project(r, sc.trail[i - 1]), b = project(r, sc.trail[i])
       if (!a || !b) continue
       const f = i / sc.trail.length
-      ctx.strokeStyle = sc.style === 'fire' ? `rgba(${f > 0.5 ? '253,224,71' : '249,115,22'},${0.15 + f * 0.6})` : sc.style === 'ice' ? `rgba(${f > 0.5 ? '240,249,255' : '125,211,252'},${0.18 + f * 0.6})` : `rgba(255,255,255,${0.1 + f * 0.35})`
-      ctx.lineWidth = Math.max(1, (sc.style === 'plain' ? 0.18 : 0.5) * r.F * f / b.d)
+      ctx.strokeStyle = sc.style === 'fire' ? `rgba(${f > 0.5 ? '253,224,71' : '249,115,22'},${0.15 + f * 0.6})` : sc.style === 'ice' ? `rgba(${f > 0.5 ? '240,249,255' : '125,211,252'},${0.18 + f * 0.6})` : `rgba(255,255,255,${0.04 + f * 0.26})`
+      ctx.lineWidth = Math.max(1, (sc.style === 'plain' ? 0.09 : 0.5) * r.F * f * f / b.d) // (a thin comet tail that dies away behind the ball, so it reads as the ball's own trail and not a second white ball)
       ctx.lineCap = 'round'
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
     }
@@ -341,6 +345,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
     }
     for (const x of [-2.8, 2.8]) { const pa = project(r, { x, y: 0.06, z: BOWL_Z - 4 }), pb = project(r, { x, y: 0.06, z: 4 }); if (pa && pb) { ctx.strokeStyle = 'rgba(226,232,240,0.7)'; ctx.lineWidth = Math.max(1, (r.F * 0.08) / ((pa.d + pb.d) / 2)); ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke() } }
   }
+  if (sc.sets?.dugout) drawDugout(ctx, r, sc.sets.dugout)
+  if (sc.sets?.platform) { const pl = sc.sets.platform; drawPlatform(ctx, r, pl.centre, pl.side, pl.colors, sc.tick); if (pl.dj) drawDJBooth(ctx, r, pl.dj, pl.side, pl.colors, sc.tick) }
   if (sc.stage) drawStage(ctx, r, sc.stage)
   // the Man of the Match podium: three steps, the winner's in the middle
   if (sc.podium) {

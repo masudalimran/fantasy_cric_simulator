@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { PLATFORM } from './setDraw'
 import { camWide, ROPE } from './broadcast'
 import { solve } from './bodyPose'
 import { slopePoint } from './crowdDraw'
 import { dugoutPose, DRINKS, drinksPerson, drinkSpot, fanCut, handshakePos, shaking, physioPos, physioPose, batsmanDown, PHYSIO, presenterPose, presenterPos, PITCHREP, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
 
-const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony', 'physio', 'dugout', 'drinks', 'handshake', 'pitchreport', 'salute', 'fans', 'pitchmap']
+const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony', 'physio', 'dugout', 'drinks', 'handshake', 'pitchreport', 'salute', 'fans', 'pitchmap', 'beehive', 'moonshot']
 const FROM_LIVE = KINDS.filter((k) => k !== 'flyover' && k !== 'lineup') // (the fly-over is the other way round: it ENDS at the live camera)
 const show = (kind: ShowKind, seed: number, variant?: StadiumShow['variant']): StadiumShow => ({ kind, variant, seed, focus: { x: 10, y: 0, z: -14 }, celebrant: 2, landing: { x: 80, y: 6, z: -4 }, caught: true, colors: ['#f97316', '#1d4ed8'], sign: '6', name: 'Goku Son', word: 'U7W', why: 'boundary' })
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
@@ -142,7 +143,7 @@ describe('the stadium shows', () => {
         }
       }
       const top = cheerleaders(show('cheer', seed, 'pyramid'), 5)
-      const lifts = top.map((x) => x.pos.y).sort((a, b) => a - b)
+      const lifts = top.map((x) => x.pos.y - PLATFORM.h).sort((a, b) => a - b) // (they dance on the raised platform)
       expect(lifts[0]).toBeLessThan(0.1)
       expect(lifts[5]).toBeGreaterThan(1.6) // the one on top
       expect(lifts.filter((l) => l > 0.8 && l < 1.4).length).toBe(2)

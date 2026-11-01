@@ -144,3 +144,10 @@ export function pitchSpot(ev: Pick<BallEvent, 'seq' | 'delivery'>, dv: DeliveryL
   const turnM = dv.pitchZ === null ? 0 : Math.tan((dv.turn * Math.PI) / 180) * Math.abs(-1.25 - dv.pitchZ)
   return { x: meetX - turnM, z }
 }
+
+/** Where a ball passed (or would have passed) the stumps, for the beehive: metres across from the middle stump (off side positive, as the pitch map) and metres up. For show only, worked out from the ball number like the rest. */
+export function stumpsSpot(ev: Pick<BallEvent, 'seq' | 'delivery'>, dv: DeliveryLook): { x: number; y: number } {
+  const pitch = pitchSpot(ev, dv)
+  const swingM = Math.tan((dv.swing * Math.PI) / 180) * 3
+  return { x: pitch.x * 0.8 + swingM * 0.25 + (hash01(ev.seq * 7.7) - 0.5) * 0.12, y: Math.max(0.05, Math.min(1.6, dv.height * (0.75 + hash01(ev.seq * 4.3) * 0.5))) }
+}

@@ -40,9 +40,9 @@ import { commentary } from '../engine/commentary'
 import { catchCause, catchContact, fourContact, sixContact } from '../engine/contact'
 import { shotText } from '../components/match/AimPads'
 import { cheerVariantFor } from '../components/match/CheerScreen'
-import { hugFocusOf, SHOW_SECONDS, type ShowKind, type StadiumShow } from '../components/match/stadiumShow'
+import { hugFocusOf, moonOutcome, SHOW_SECONDS, type ShowKind, type StadiumShow } from '../components/match/stadiumShow'
 import type { Cast } from '../components/match/StadiumCam'
-import { pitchSpot } from '../engine/delivery'
+import { pitchSpot, stumpsSpot } from '../engine/delivery'
 import { trophyOf } from '../components/match/TrophyArt'
 import { StadiumCam } from '../components/match/StadiumCam'
 import { ceremonyScript, type CeremonyCtx } from '../components/match/ceremonyScript'
@@ -835,7 +835,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const chase = innE.target !== null ? { need: innE.target - innE.runs, balls: FORMATS[match.format].overs * 6 - innE.legalBalls } : null
           // now and then the numbers of the innings go up on screen instead: a wagon wheel, the worm, the runs of each over, how the runs came
           const stats = innE.log.length >= 24
-          const pool = ['stands', 'social', 'box', 'pitchmap', 'fans', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring'] : [])]
+          const pool = ['stands', 'social', 'box', 'pitchmap', 'beehive', 'fans', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring'] : [])]
           const v = pool[ambientPick(lastEv.seq + 1, pool.length)]
           const shots = innE.log.filter((e) => e.strikerId === lastEv.strikerId && e.runsBat > 0).length
           const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined }
@@ -845,6 +845,10 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           else if (v === 'pitchmap') {
             const balls = innE.log.filter((e) => e.over === lastEv.over && e.innings === lastEv.innings).map((e) => { const spot = pitchSpot(e, deliveryOf(e, match.player(e.bowlerId), { overcast: stadium.weather === 'overcast' })); return { x: spot.x, z: spot.z, c: e.wicket ? '#ef4444' : e.boundary === 6 ? '#e879f9' : e.boundary === 4 ? '#38bdf8' : e.total > 0 ? '#e2e8f0' : '#94a3b8' } })
             stadiumShow('pitchmap', bowlS.team, { board: { title: 'THE OVER', sub: `${first(match.player(lastEv.bowlerId).name)} · over ${over}`, rows: [], map: { balls, legend: 'Grey: dot · White: runs · Blue: four · Pink: six · Red: wicket' } } }, 'Pitch map')
+          }
+          else if (v === 'beehive') {
+            const balls = innE.log.filter((e) => e.over === lastEv.over && e.innings === lastEv.innings).map((e) => { const spot = stumpsSpot(e, deliveryOf(e, match.player(e.bowlerId), { overcast: stadium.weather === 'overcast' })); return { x: spot.x, y: spot.y, c: e.wicket ? '#ef4444' : e.boundary === 6 ? '#e879f9' : e.boundary === 4 ? '#38bdf8' : e.total > 0 ? '#e2e8f0' : '#94a3b8' } })
+            stadiumShow('beehive', bowlS.team, { board: { title: 'BEEHIVE', sub: `${first(match.player(lastEv.bowlerId).name)} · over ${over}`, rows: [], hive: { balls, legend: 'Where each ball passed the stumps' } } }, 'Beehive')
           }
           else if (v === 'fans') stadiumShow('fans', batT, { mood: 'cheer', lower: { title: 'IN THE STANDS', lines: ['The fans are enjoying the cricket'] } }, 'Fan cam')
           else if (v === 'scoring') put({ variant: 'scoring', stats: si, rate }, 5600, 'HOW THE RUNS CAME', batT, cap('scoring', { team: batT.name }))
@@ -895,6 +899,12 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const pl = planBall(notable, bs.fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(notable, bs.fielders), bs.striker.hand === 'L', ballSpeed(notable, bs.bowler), { bowler: bs.bowler })
           const gone = !!notable.distance && sixReach(notable.distance) > 1.34
           const fan = Math.abs(Math.sin(notable.seq * 12.9898 + 78.233) * 43758.5453) % 1
+          // out of the stadium: the camera chases the ball up over the roof and out over the city to where it comes down (a parked car, the river or a blimp)
+          if (gone) {
+            const outcome = moonOutcome(notable.seq)
+            const what = outcome === 'car' ? 'It smashes into a parked car: the alarm is going off' : outcome === 'river' ? 'It splashes down in the river beyond the ground' : 'It hits the blimp above the stadium'
+            show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'OUT OF THE STADIUM!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.moonshot * 1000 * rate6), stadium: { show: { kind: 'moonshot', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], from: pl.meet, landing: pl.end, outcome, lower: { title: `OUT OF THE STADIUM! ${notable.distance ?? ''} m`.trim(), lines: [what], chip: 'MOON SHOT', color: '#f472b6' } }, base: bs, label: 'Out of the stadium', rate: rate6 } })
+          } else
           show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.landing * 1000 * rate6), stadium: { show: { kind: 'landing', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], landing: pl.end, caught: fan < 0.4, gone, lower: { title: `SIX! ${notable.distance ?? ''} m`.trim(), lines: [gone ? 'Out of the stadium!' : fan < 0.4 ? 'A fan takes it in the stands' : 'It crashes into the seats'] } }, base: bs, label: 'Six', rate: rate6 } })
         }
         // a wicket: the team runs to mob whoever took it, then the batsman walks off through the crowd (standing up for him after a big score)
@@ -914,7 +924,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const bowlT = match.sides[1 - match.innings[notable.innings].battingSide].team
           show({ key: notable.seq + 0.55, kind: 'stadium', player: match.player(notable.bowlerId), team: bowlT, title: 'WICKET!', lines: [], delay: Math.round(delay * 0.4), ms: Math.round(SHOW_SECONDS.hug * 1000 * rW), stadium: { show: { kind: 'hug', seed: notable.seq, colors: [bowlT.colors.primary, bowlT.colors.secondary], focus, celebrant, lower: { title: 'WICKET!', lines: [dismissalText(match, outLine, match.innings[notable.innings])], chip: `${match.player(notable.bowlerId).name.split(' ')[0]}` } }, base: bs, label: 'Wicket', rate: rW } })
           const ov = outLine.runs >= 50
-          show({ key: notable.seq + 0.56, kind: 'stadium', player: match.player(outLine.id), team, title: ov ? 'STANDING OVATION' : 'OUT', lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.walkoff * 1000 * rW), stadium: { show: { kind: 'walkoff', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], left: match.player(outLine.id).hand === 'L', walk: { ovation: ov, duck: outLine.runs === 0 }, lower: { title: match.player(outLine.id).name, lines: [dismissalText(match, outLine, match.innings[notable.innings]), `${outLine.runs} off ${outLine.balls} balls`], chip: ov ? (outLine.runs >= 100 ? 'STANDING OVATION: A HUNDRED' : 'STANDING OVATION') : outLine.runs === 0 ? 'A DUCK' : undefined } }, base: bs, label: 'Walk off', rate: rW, cast: { team, players: [match.player(outLine.id)] } } })
+          show({ key: notable.seq + 0.56, kind: 'stadium', player: match.player(outLine.id), team, title: ov ? 'STANDING OVATION' : 'OUT', lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.walkoff * 1000 * rW), stadium: { show: { kind: 'walkoff', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], left: match.player(outLine.id).hand === 'L', walk: { ovation: ov, duck: outLine.runs === 0 }, lower: { title: match.player(outLine.id).name, big: { value: String(outLine.runs), sub: `off ${outLine.balls} ball${outLine.balls === 1 ? '' : 's'}` }, color: ov ? '#fbbf24' : outLine.runs === 0 ? '#f87171' : undefined, lines: [dismissalText(match, outLine, match.innings[notable.innings])], tiles: [{ label: 'Fours', value: String(outLine.fours) }, { label: 'Sixes', value: String(outLine.sixes) }, { label: 'Strike rate', value: String(strikeRate(outLine.runs, outLine.balls)) }], chip: ov ? (outLine.runs >= 100 ? 'A HUNDRED: STANDING OVATION' : 'STANDING OVATION') : outLine.runs === 0 ? 'A DUCK' : 'OUT' } }, base: bs, label: 'Walk off', rate: rW, cast: { team, players: [match.player(outLine.id)] } } })
         }
         if (battingMilestone && outLine) {
           // the two batsmen meet in the middle and bump fists, with the innings on it

@@ -12,7 +12,7 @@ import { drawScene } from './broadcastDraw'
 import { batsmanPose, breathe, fielderPose, nonStrikerPose, type Pose, standing } from './bodyPose'
 import { CEREMONY_BEATS } from './ceremonyScript'
 import { beatAt } from './stadiumShow'
-import { batsmanDown, dugoutPose, drinksPerson, handshakePos, shaking, physioPos, physioPose, presenterPos, presenterPose, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, balconyPose, balconySpot, bowlerPhase, bowlerPos, cameraAt, captainPos, coinAt, coverAt, crewPos, landingBall, linePerson, lineSpot, LINEUP, MILESTONE, photoFlashes, podiumPos, towersAt, hugCelebrant, hugJoiners, hugPerson, hugSpot, walkoffPos, WALKOFF, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
+import { benchSpot, benchStand, platformCentre, platformSide, djCentre, djPose, crewPose, DJ, moonBall, moonLandAt, moonOutcome, batsmanDown, dugoutPose, drinksPerson, handshakePos, shaking, physioPos, physioPose, presenterPos, presenterPose, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, balconyPose, bowlerPhase, bowlerPos, cameraAt, captainPos, coinAt, coverAt, crewPos, landingBall, linePerson, lineSpot, LINEUP, MILESTONE, photoFlashes, podiumPos, towersAt, hugCelebrant, hugJoiners, hugPerson, hugSpot, walkoffPos, WALKOFF, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
 import type { ReplayBase } from './ReplayFrame'
 
 /**
@@ -104,7 +104,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       if (crowd?.fanReact) crowd = { ...crowd, fanReact: { ...crowd.fanReact, t0: crowd.fanReact.t0 * Math.max(0.25, L.rate) } }
       drawScene(ctx, cam, W, H, {
         pitch: L.base.pitch, look: L.show.kind === 'rain' ? { ...L.base.look, rain: L.show.rain ?? 2, weather: 'rain' as const, covers: false } : L.show.kind === 'lights' ? { ...L.base.look, time: 'dusk', lights: false, rain: 0, weather: 'clear' as const } : L.base.look, tick: real, cheer: crowdCheer(L.show, t), wear: 0, board: null, covers: false, stumps: 0, stumpsBowl: 0, trail: [], style: 'plain',
-        crowd, coverK: L.show.kind === 'rain' ? coverAt(t) : undefined, stage: L.show.kind === 'ceremony' && L.show.ceremony ? { colors: L.show.colors, title: 'PLAYER OF THE MATCH', sub: L.show.ceremony.title } : undefined, podium: L.show.kind === 'motm', towers: L.show.kind === 'lights' ? towersAt(t) : undefined, ball3: L.show.kind === 'landing' ? landingBall(L.show, t) : null, screen: screenAt(L.show, t), confetti: confettiAt(L.show, t), sparks: L.show.kind === 'motm' || (L.show.kind === 'ceremony' && t > 17) ? [...sk.sparks, ...photoFlashes(L.show.seed, t)] : sk.sparks, flash: sk.flash,
+        crowd, ball3: L.show.kind === 'moonshot' ? moonBall(L.show, t) : L.show.kind === 'landing' ? landingBall(L.show, t) : null, coverK: L.show.kind === 'rain' ? coverAt(t) : undefined, sets: { dugout: (L.show.kind === 'milestone' && t >= MILESTONE.cut) || L.show.kind === 'dugout' ? L.show.colors : undefined, platform: L.show.kind === 'cheer' && L.show.variant !== 'cards' ? { centre: platformCentre(L.show.seed), side: platformSide(L.show.seed), colors: L.show.colors, dj: djCentre(L.show.seed) } : undefined, outside: L.show.kind === 'moonshot' ? { seed: L.show.seed, landing: { x: (L.show.landing ?? { x: 160, y: 0, z: -10 }).x, y: 0, z: (L.show.landing ?? { x: 160, y: 0, z: -10 }).z }, outcome: L.show.outcome ?? moonOutcome(L.show.seed), since: t - moonLandAt(), tick: real } : undefined }, stage: L.show.kind === 'ceremony' && L.show.ceremony ? { colors: L.show.colors, title: 'PLAYER OF THE MATCH', sub: L.show.ceremony.title } : undefined, podium: L.show.kind === 'motm', towers: L.show.kind === 'lights' ? towersAt(t) : undefined,  screen: screenAt(L.show, t), confetti: confettiAt(L.show, t), sparks: L.show.kind === 'motm' || (L.show.kind === 'ceremony' && t > 17) ? [...sk.sparks, ...photoFlashes(L.show.seed, t)] : sk.sparks, flash: sk.flash,
       })
       // the light of the hour: at dusk everything goes golden and a low sun glows on the horizon
       if (L.base.look.time === 'dusk' && L.show.kind !== 'lights') {
@@ -166,7 +166,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       const hugFroms = hug ? [...L.rest, hugBowlerRest] : []
       const hugCel = hug ? (L.show.celebrant === 'bowler' || L.show.celebrant === undefined ? L.rest.length : L.show.celebrant) : -1
       const hugJoin = hug ? hugJoiners(L.show, hugFroms, hugCel) : []
-      const hideBase = L.show.kind === 'trophy' || L.show.kind === 'rain' || L.show.kind === 'motm' || L.show.kind === 'lineup' || L.show.kind === 'milestone' || L.show.kind === 'ceremony' || L.show.kind === 'dugout' || L.show.kind === 'handshake' || L.show.kind === 'pitchreport' || L.show.kind === 'fans' || L.show.kind === 'pitchmap'
+      const hideBase = L.show.kind === 'trophy' || L.show.kind === 'rain' || L.show.kind === 'motm' || L.show.kind === 'lineup' || L.show.kind === 'milestone' || L.show.kind === 'ceremony' || L.show.kind === 'dugout' || L.show.kind === 'handshake' || L.show.kind === 'pitchreport' || L.show.kind === 'fans' || L.show.kind === 'pitchmap' || L.show.kind === 'beehive'
       const n = L.base.fielders.length + 1
       if (!hideBase) L.base.fielders.forEach((_f, i) => {
         let w = huddle ? huddlePerson(L.show, t, i, n, L.rest[i]) : null
@@ -213,6 +213,12 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           rigs.current.get(`c${i}`)?.apply(d.pose)
         })
       }
+      // the DJ and his crew in their own booth beside the platform
+      if (L.show.kind === 'cheer' && L.show.variant !== 'cards') {
+        const D = djCentre(L.show.seed), sd = platformSide(L.show.seed)
+        if (put('dj', { x: D.x + sd * 0.5, y: DJ.h, z: D.z })) apply('dj', djPose(t))
+        ;[0, 1].forEach((i) => { if (put(`crew${i}`, { x: D.x + sd * 0.4, y: DJ.h, z: D.z + (i ? 2.3 : -2.3) })) apply(`crew${i}`, crewPose(t, i)) })
+      }
       // the people the show is about: the new batsman walking in, or the winners with the cup
       const cs = L.cast
       if (cs && L.show.kind === 'entrance') {
@@ -248,7 +254,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         const bw: V3 = { x: L.base.striker.hand === 'L' ? -0.75 : 0.75, y: 0, z: BAT_END_Z }
         if (put('w0', bw)) apply('w0', batsmanPose({ style: 'defend', t: 9, t1: 1, t2: 2, swing: 0, hurt: 0, raise: Math.min(1, t / 0.9), joy: 0, speed: 0, cyc: 0, walkOff: false }), L.base.striker.hand === 'L')
         const mates = cs.players.slice(1)
-        mates.forEach((_p, i) => { const sp = balconySpot(i, mates.length); if (t >= MILESTONE.cut && put(`w${i + 1}`, sp)) apply(`w${i + 1}`, balconyPose(t, i)); else { const nd = nodes.current.get(`w${i + 1}`); if (nd) nd.style.display = 'none' } })
+        mates.forEach((_p, i) => { const sp = benchSpot(i, mates.length, benchStand(t, i, MILESTONE.cut + 0.3)); if (t >= MILESTONE.cut && put(`w${i + 1}`, sp)) apply(`w${i + 1}`, balconyPose(t, i)); else { const nd = nodes.current.get(`w${i + 1}`); if (nd) nd.style.display = 'none' } })
       }
       // Man of the Match: the winner on the middle step, arms up, with the cup; the photographers' flashes go off round the rope
       if (cs && L.show.kind === 'motm') {
@@ -274,7 +280,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           let sp: V3 | null = null, pose: Pose | null = null
           if (L.show.kind === 'physio') { sp = physioPos(L.show, t); pose = physioPose(t) }
           else if (L.show.kind === 'drinks') { sp = staffPos(L.show, i, cs.staff.count, t); pose = null }
-          else if (L.show.kind === 'dugout') { sp = balconySpot(i === 0 ? 5 : 2, 8); sp = { x: sp.x + 1.6, y: sp.y, z: sp.z }; pose = { ...standing(), hip: { x: 30, y: 85.3 }, handL: { x: -10, y: 24 }, handR: { x: 11 + 4 * Math.sin(t * 2), y: 6 + 3 * Math.cos(t * 2.3) } } }
+          else if (L.show.kind === 'dugout') { const b0 = benchSpot(0, 1, 1); sp = { x: 4.6, y: 0, z: b0.z + 0.9 }; pose = { ...standing(), hip: { x: 30, y: 85.3 }, handL: { x: -10, y: 24 }, handR: { x: 11 + 4 * Math.sin(t * 2), y: 6 + 3 * Math.cos(t * 2.3) } } }
           if (!sp || !put(`s${i}`, sp)) continue
           const m = move(`s${i}`, sp)
           apply(`s${i}`, pose ?? fielderPose({ speed: Math.max(m.v, 3.5), cyc: m.cyc, ready: 0, dive: 0, catchK: 0, joy: 0, stop: 0, throwK: 0, keeper: false }))
@@ -283,7 +289,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       // the dressing room: the team reacting
       if (cs && L.show.kind === 'dugout') {
         const mood = L.show.mood ?? 'cheer'
-        cs.players.forEach((_p, i) => { const sp = balconySpot(i, cs.players.length); if (put(`w${i}`, sp)) apply(`w${i}`, dugoutPose(t, i, mood)) })
+        cs.players.forEach((_p, i) => { const sp = benchSpot(i, cs.players.length, mood === 'cheer' ? benchStand(t, i, 1.0) : 0); if (put(`w${i}`, sp)) apply(`w${i}`, dugoutPose(t, i, mood)) })
       }
       // the pitch report: the presenter crouching at the pitch
       if (cs && L.show.kind === 'pitchreport' && cs.host) {
@@ -444,6 +450,8 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           </div>
         ))}
         {(show.kind === 'trophy' || show.kind === 'motm') && show.trophy && <div ref={setNode('trophy')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: 100, height: 100, transformOrigin: '0 0' }}><TrophyArt kind={show.trophy as TrophyKind} size={100} shine /></div>}
+        {nCheer > 0 && <div ref={setNode('dj')} className={sprite} style={box}><HostFigure presenter={PRESENTERS[(show.seed + 5) % PRESENTERS.length]} colors={[show.colors[1], show.colors[0]]} rig={setRig('dj')} /></div>}
+        {nCheer > 0 && [0, 1].map((i) => <div key={`crew${i}`} ref={setNode(`crew${i}`)} className={sprite} style={box}><Figure look="staff" tint={i ? '#0ea5e9' : '#7c3aed'} rig={setRig(`crew${i}`)} /></div>)}
         {Array.from({ length: nCheer }, (_, i) => (
           <div key={`c${i}`} ref={setNode(`c${i}`)} className={sprite} style={box}><Cheerleader i={i} colors={show.colors} flag={fl} rig={setRig(`c${i}`)} /></div>
         ))}
@@ -484,7 +492,29 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           ))}
         </div>
       )}
-      {show.lower && !show.lower.pair && (
+      {show.lower && show.lower.big && !show.lower.pair && (
+        <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] flex items-stretch gap-2.5 rounded-lg bg-black/85 px-3 py-2 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${1.4 / Math.max(0.25, rate)}s both` }}>
+          <div className="flex shrink-0 flex-col items-center justify-center rounded-md bg-white/10 px-3">
+            <span className="font-display text-[44px] leading-none tabular-nums text-white" style={{ textShadow: show.lower.color ? `0 0 16px ${show.lower.color}` : undefined }}>{show.lower.big.value}</span>
+            <span className="mt-0.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-300">{show.lower.big.sub}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2"><span className="truncate font-display text-xl uppercase leading-none tracking-wide text-white">{show.lower.title}</span>{show.lower.chip && <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</span>}</div>
+            {show.lower.lines.map((ln, i) => <div key={i} className="mt-0.5 text-[13px] font-bold leading-snug text-amber-200">{ln}</div>)}
+            {show.lower.tiles && show.lower.tiles.length > 0 && (
+              <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                {show.lower.tiles.slice(0, 3).map((t) => (
+                  <div key={t.label} className="rounded bg-white/10 px-1 py-1 text-center leading-none">
+                    <div className="font-display text-lg leading-none text-white">{t.value}</div>
+                    <div className="mt-0.5 text-[9px] font-extrabold uppercase tracking-wide text-slate-300">{t.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {show.lower && !show.lower.big && !show.lower.pair && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] max-w-[88%] rounded-lg bg-black/75 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : show.kind === 'bowler' || show.kind === 'walkoff' || show.kind === 'physio' || show.kind === 'dugout' || show.kind === 'drinks' || show.kind === 'handshake' || show.kind === 'pitchreport' || show.kind === 'fans' || show.kind === 'salute' ? 1.6 : show.kind === 'trophy' || show.kind === 'motm' ? 3.4 : show.kind === 'lineup' ? 5.6 : 1.2) / Math.max(0.25, rate)}s both` }}>
           <div className="flex items-center gap-2"><span className={`font-display uppercase leading-none tracking-wide ${show.lower.color ? 'text-3xl' : 'text-lg text-white'}`} style={show.lower.color ? { color: show.lower.color, textShadow: `0 0 14px ${show.lower.color}88` } : undefined}>{show.lower.title}</span>{show.lower.chip && <span className="rounded px-1.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</span>}{show.lower.rating !== undefined && <span className="ml-auto rounded bg-violet-500 px-1.5 font-display text-base leading-none text-white">{show.lower.rating}</span>}</div>
           {show.lower.lines.map((ln, i) => <div key={i} className="text-[11px] font-semibold leading-snug text-slate-200">{ln}</div>)}
