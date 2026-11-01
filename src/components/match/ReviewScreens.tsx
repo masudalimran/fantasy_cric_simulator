@@ -80,7 +80,6 @@ export function BallTrackView({ track, out, rate = 1, compact = false, after = 0
   const lat = [Math.max(-0.9, Math.min(0.9, track.pitchX * 0.45 + (track.pitchX >= 0 ? 0.14 : -0.14))), track.pitchX, track.impactX, track.stumpsX]
   const flightA = sample(lat, 94, 58, 22)
   const flightB = sample(lat, 58, 32, 18)
-  const flight = [...flightA, ...flightB.slice(1)]
   const projected = sample(lat, 32, 16, 14)
   const P = { x: sx(track.pitchX, 58), y: 58 }
   const I = flightB[flightB.length - 1]
@@ -101,11 +100,18 @@ export function BallTrackView({ track, out, rate = 1, compact = false, after = 0
         <motion.path d={pathOf(flightB)} fill="none" stroke="#fb923c" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 0.55 * FLIGHT) * r, duration: 0.45 * FLIGHT * r, ease: 'linear' }} />
         <motion.path d={pathOf(projected)} fill="none" stroke={hit ? '#ef4444' : '#94a3b8'} strokeWidth="1" strokeDasharray="1.6 1.2" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: (after + 1.8) * r, duration: 0.7 * r, ease: 'easeOut' }} />
         {/* the ball itself, with a soft glow, following the curve; then a ghost of it carries on to the stumps */}
-        <motion.circle r="3" fill="#fde68a" opacity="0.3" initial={{ cx: flight[0].x, cy: flight[0].y }} animate={{ cx: flight.map((q) => q.x), cy: flight.map((q) => q.y) }} transition={{ delay: after * r, duration: FLIGHT * r, ease: 'linear' }} />
-        <motion.circle r="1.3" fill="#fff" stroke="#fb7185" strokeWidth="0.5" initial={{ cx: flight[0].x, cy: flight[0].y }} animate={{ cx: flight.map((q) => q.x), cy: flight.map((q) => q.y) }} transition={{ delay: after * r, duration: FLIGHT * r, ease: 'linear' }} />
+        {/* (no ball circle at the bowler's hand: the line itself shows the flight; the ghost ball only carries on from the pad to the stumps) */}
         <motion.circle r="1" fill={hit ? '#ef4444' : '#94a3b8'} initial={{ opacity: 0, cx: projected[0].x, cy: projected[0].y }} animate={{ opacity: [0, 1, 1, 0], cx: projected.map((q) => q.x), cy: projected.map((q) => q.y) }} transition={{ delay: (after + 1.8) * r, duration: 0.7 * r, ease: 'easeOut' }} />
-        <motion.circle cx={P.x} cy={P.y} r="2" fill={col(track.pitching)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 0.55 * FLIGHT) * r, type: 'spring' }} style={{ transformOrigin: `${P.x}px ${P.y}px` }} />
-        <motion.circle cx={I.x} cy={I.y} r="2" fill={col(track.impact)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + FLIGHT) * r, type: 'spring' }} style={{ transformOrigin: `${I.x}px ${I.y}px` }} />
+        {/* the two circles: where it pitched (a ring) and where it hit the pad (a filled disc), each with a small word; the dot at the stumps is where it was going */}
+        <motion.g initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: (after + 0.55 * FLIGHT) * r, type: 'spring' }} style={{ transformOrigin: `${P.x}px ${P.y}px` }}>
+          <circle cx={P.x} cy={P.y} r="3.4" fill="#00000066" stroke={col(track.pitching)} strokeWidth="1" />
+          <circle cx={P.x} cy={P.y} r="1.2" fill={col(track.pitching)} />
+          <text x={P.x + 4.6} y={P.y + 1.2} fontSize="3.2" fontWeight="800" fill="#fff" stroke="#000" strokeWidth="0.5" paintOrder="stroke">DROP</text>
+        </motion.g>
+        <motion.g initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: (after + FLIGHT) * r, type: 'spring' }} style={{ transformOrigin: `${I.x}px ${I.y}px` }}>
+          <circle cx={I.x} cy={I.y} r="3.4" fill={col(track.impact)} stroke="#fff" strokeWidth="0.7" />
+          <text x={I.x + 4.6} y={I.y + 1.2} fontSize="3.2" fontWeight="800" fill="#fff" stroke="#000" strokeWidth="0.5" paintOrder="stroke">PAD</text>
+        </motion.g>
         <motion.circle cx={S.x} cy={S.y} r="1.6" fill={col(track.wickets)} stroke="#fff" strokeWidth="0.4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: (after + 2.5) * r, type: 'spring' }} style={{ transformOrigin: `${S.x}px ${S.y}px` }} />
       </svg>
       {(

@@ -362,14 +362,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const s = seasonStats?.bat.get(id)
         lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
         tiles = s
-          ? [t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0)), t('Bat apps', s.batApps + 1)]
+          ? [t('Apps', s.batApps + 1), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0))]
           : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
       } else {
         const s = seasonStats?.bowl.get(id)
         const w = p.bowling
         lines = [`${bowlLabel(w?.type)} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
         tiles = s
-          ? [t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Best', `${s.bestW}/${s.bestR}`), t('Maidens', s.maidens), t('5-wicket hauls', s.fiveW), t('Bowl apps', s.bowlApps + 1)]
+          ? [t('Apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Best', `${s.bestW}/${s.bestR}`), t('Maidens', s.maidens), t('5-wicket hauls', s.fiveW)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]
       }
       // a player who joined this year gets a different introduction: where he came from, and what he cost
@@ -393,7 +393,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const lead = players[0]
         const chip = pair ? 'OPENING PAIR' : intros[0].title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : 'NEW BATSMAN'
         const lines = pair ? intros.map((it, i) => `${players[i].name}: ${it.lines.slice(0, 2).join(' · ')}`) : intros[0].lines.slice(0, 2)
-        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: pair ? { title: `${players[0].name} & ${players[1].name}`, lines: [], chip, pair: intros.map((it, i) => ({ title: players[i].name.split(' ')[0], sub: it.lines[0] ?? '', rating: it.rating, tiles: (it.tiles ?? []).slice(0, 4) })) } : { title: lead.name, lines, chip, tiles: intros[0].tiles, rating: intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
+        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: pair ? { title: `${players[0].name} & ${players[1].name}`, lines: [], chip, pair: intros.map((it, i) => ({ title: players[i].name.split(' ')[0], sub: it.lines[0] ?? '', rating: it.rating, tiles: (it.tiles ?? []).slice(0, 5) })) } : { title: lead.name, lines, chip, tiles: intros[0].tiles, rating: intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
       } else for (const it of intros) enqueueMoment(it)
     }
     const bowlerId = inn.bowlerId

@@ -538,8 +538,17 @@ function drawReview(ctx: CanvasRenderingContext2D, bs: BigScreen, rv: ReviewBoar
       ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke()
     }
     const col = (v: string) => (v === 'In line' || v === 'Hitting' ? '#34d399' : v.includes("umpire's call") ? '#fb923c' : '#f87171')
-    const dot = (p: { x: number; y: number }, c: string, from: number) => { if (k < from) return; ctx.fillStyle = c; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke() }
-    dot(P, col(rv.pitching), 0.4); dot(I, col(rv.impact), 0.7); dot(S, col(rv.wickets), 0.98)
+    // the two circles: where it pitched (a ring) and where it hit the pad (a filled disc), each named; a small dot at the stumps
+    const circle = (p: { x: number; y: number }, c: string, from: number, ring: boolean, word: string) => {
+      if (k < from) return
+      ctx.lineWidth = 3.5; ctx.strokeStyle = ring ? c : '#fff'; ctx.fillStyle = ring ? 'rgba(0,0,0,0.45)' : c
+      ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+      if (ring) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill() }
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.font = '900 17px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+      ctx.strokeText(word, p.x + 21, p.y); ctx.fillText(word, p.x + 21, p.y); ctx.textAlign = 'center'
+    }
+    circle(P, col(rv.pitching), 0.4, true, 'DROP'); circle(I, col(rv.impact), 0.7, false, 'PAD')
+    if (k >= 0.98) { ctx.fillStyle = col(rv.wickets); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(S.x, S.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke() }
     // the three readings
     ;(['Pitching', 'Impact', 'Wickets'] as const).forEach((label, i) => {
       const val = [rv.pitching, rv.impact, rv.wickets][i]

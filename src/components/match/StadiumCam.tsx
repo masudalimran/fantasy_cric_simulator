@@ -481,7 +481,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
             <div key={c.title} className="min-w-0 overflow-hidden rounded-md bg-black/85 px-2 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 3px 0 0 ${show.colors[0]}` }}>
               <div className="flex items-center gap-1.5">{cast?.players[ci] && cast.team && <PlayerAvatar player={cast.players[ci]} team={cast.team} size={24} />}<span className="min-w-0 flex-1 truncate font-display text-sm uppercase leading-none tracking-wide text-white">{c.title}</span>{c.rating !== undefined && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-sm leading-none text-white ring-2 ring-white/30">{c.rating}</span>}</div>
               <div className="mt-0.5 truncate text-[10px] font-semibold leading-tight text-slate-300">{c.sub}</div>
-              <StatBand tiles={c.tiles.slice(0, 4)} small />
+              <StatBand tiles={c.tiles.slice(0, 5)} small />
             </div>
           ))}
         </div>
