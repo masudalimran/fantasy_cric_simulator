@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { camWide, ROPE } from './broadcast'
 import { solve } from './bodyPose'
 import { slopePoint } from './crowdDraw'
-import { balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
+import { ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
 
-const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone']
+const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony']
 const FROM_LIVE = KINDS.filter((k) => k !== 'flyover' && k !== 'lineup') // (the fly-over is the other way round: it ENDS at the live camera)
 const show = (kind: ShowKind, seed: number, variant?: StadiumShow['variant']): StadiumShow => ({ kind, variant, seed, focus: { x: 10, y: 0, z: -14 }, celebrant: 2, landing: { x: 80, y: 6, z: -4 }, caught: true, colors: ['#f97316', '#1d4ed8'], sign: '6', name: 'Goku Son', word: 'U7W', why: 'boundary' })
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
@@ -36,8 +36,8 @@ describe('the stadium shows', () => {
     for (const left of [false, true]) {
       const s: StadiumShow = { ...show('entrance', 4), left }
       const g = gatePos()
-      expect(dist(walkerPos(s, 0), g)).toBeLessThan(0.01)
-      expect(dist(walkerPos(s, ENTRANCE.start), g)).toBeLessThan(0.01)
+      expect(dist(walkerPos(s, 0), g)).toBeLessThan(0.7) // (at the gate, a little to one side of its middle)
+      expect(dist(walkerPos(s, ENTRANCE.start), walkerPos(s, 0))).toBeLessThan(0.01)
       let prev = g.z
       for (let t = ENTRANCE.start; t <= ENTRANCE.start + ENTRANCE.walk; t += 0.1) { const w = walkerPos(s, t); expect(w.z).toBeLessThanOrEqual(prev + 1e-9); prev = w.z }
       const end = walkerPos(s, SHOW_SECONDS.entrance)
@@ -221,5 +221,33 @@ describe('the stadium shows', () => {
     let flashes = 0
     for (let t = 1.5; t < 8; t += 0.1) flashes += photoFlashes(4, t).length
     expect(flashes).toBeGreaterThan(30)
+  })
+
+  it('the two openers come out side by side and stop a couple of metres apart at the crease; the camera goes between them', () => {
+    const s: StadiumShow = { ...show('entrance', 6), pair: true }
+    for (const t of [ENTRANCE.start, 4, 6, 12]) { const a = walkerPos(s, t, 0), b = walkerPos(s, t, 1); expect(Math.abs(a.x - b.x)).toBeGreaterThan(0.5); expect(Math.abs(a.x - b.x)).toBeLessThan(3); expect(Math.abs(a.z - b.z)).toBeLessThan(1) }
+    expect(Math.abs(walkerPos(s, 12, 0).x - walkerPos(s, 12, 1).x)).toBeGreaterThan(1.5)
+    const c = cameraAt(s, 4)
+    expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
+  })
+
+  it('the ceremony: the host walks on, the teams stand at the two sides, each speaker goes up to the microphone in his turn and the Man of the Match stays', () => {
+    const script = [{ at: 1, end: 2, who: 'host' as const, text: 'x' }]
+    const s: StadiumShow = { ...show('ceremony', 4), ceremony: { script, winCaptainId: 'a3', loseCaptainId: 'b2', motmId: 'a5', cheque: '5,000 COINS', title: 'Cup', hostName: 'Zoe' } }
+    expect(hostPos(0).x).toBeLessThan(hostPos(5).x)
+    expect(Math.hypot(hostPos(20).x - hostPos(8).x, hostPos(20).z - hostPos(8).z)).toBeLessThan(0.01)
+    const line = (side: 0 | 1, i: number) => ceremonyLine(side, i)
+    expect(line(0, 0).x).toBeLessThan(-5); expect(line(1, 0).x).toBeGreaterThan(5)
+    const early = ceremonyPerson(s, 0, 'a3', line(0, 3), 0, 3)
+    expect(early.arrived).toBe(false)
+    const lined = ceremonyPerson(s, 8, 'a1', line(0, 1), 0, 1)
+    expect(lined.arrived).toBe(true); expect(lined.onStage).toBe(false)
+    const cap = turnsOf(s, 'a3')[0]
+    const onMic = ceremonyPerson(s, cap.start + 3, 'a3', line(0, 3), 0, 3)
+    expect(onMic.onStage).toBe(true); expect(Math.abs(onMic.pos.x)).toBeLessThan(3)
+    const back = ceremonyPerson(s, cap.end + 3, 'a3', line(0, 3), 0, 3)
+    expect(back.onStage).toBe(false); expect(Math.abs(back.pos.x - line(0, 3).x)).toBeLessThan(0.01)
+    expect(ceremonyPerson(s, 28, 'a5', line(0, 5), 0, 5).onStage).toBe(true) // the Man of the Match stays up
+    expect(turnsOf(s, 'nobody')).toEqual([])
   })
 })

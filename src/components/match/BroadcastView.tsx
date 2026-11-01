@@ -6,7 +6,7 @@ import type { PitchKind } from '../../engine/pitchInfo'
 import { PlayerAvatar, accentOf } from '../ui'
 import { ballSpeed, speedStyle, type BallStyle } from '../../engine/speed'
 import { ballName } from '../../engine/delivery'
-import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withReplaySlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
+import { approach, BAT_END_Z, cameraFlair, batHitsBall, clipNow, screenSide, replayCamera, warpTime, withFootSlow, withNearSlow, withReplaySlow, withStumpSlow, type ReplayCam, camReverse, camWide, fielderWorld, frameAt, ROPE, BOWL_Z, diveGapMetres, lookAt, planBall, prep, project, type Cam, type Plan, type V3 } from './broadcast'
 import { useCaptions, useCharacterWeapons, useScoreBar } from '../../prefs'
 import { DEFAULT_LOOK, type StadiumLook } from '../../engine/stadium'
 import { drawScene, type Scene } from './broadcastDraw'
@@ -140,7 +140,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
-  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.near ? withNearSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep, replay?.near])
+  const plan: Plan = useMemo(() => (replay?.cam === 'foot' ? withFootSlow(plan0) : replay?.cam === 'gloves' && plan0.stump ? withStumpSlow(plan0) : replay?.near ? withNearSlow(plan0) : replay?.slowMo ? withReplaySlow(plan0, replay.deep) : plan0), [plan0, replay?.slowMo, replay?.cam, replay?.deep, replay?.near])
   // the path of the delivery against the straight line, for the swing and turn replays
   const trace = useMemo(() => {
     if (!replay?.trace || !event) return null
@@ -202,12 +202,13 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       if (wantReverse !== reverseNow.current) { reverseNow.current = wantReverse; snap = true; cutAt.current = performance.now() / 1000; setCutKey((k) => k + 1) }
       // with the covers on there is nothing to follow: a wide picture of the pitch
       const covers0 = L.look.covers || (L.event === null && L.look.rain === 2)
-      const focus = L.replayCam?.focus
+      // the no-ball camera looks at the actual front foot of this bowler: where he lands (a little low, so the boot and the line are both in the picture)
+      const focus = L.replayCam?.focus ? (L.replayCam.label === 'Front-foot cam' ? { x: L.plan.runTo.x + 0.05, y: 0.1, z: L.plan.runTo.z } : L.replayCam.focus) : undefined
       // a close call in slow motion: a moderate zoom (the stump cam from 56° to 26°, the side camera from 34° to 13°) on the stumps or the bat, so the ball and how near it went can still be seen
       const nearZoom = L.near && f.slowmo && !!L.replayCam
       const nearStump = nearZoom && !!L.replayCam?.keepWide
       const aimAt = covers0 ? { x: 0, y: 0, z: -8 } : nearStump ? { x: L.plan.meet.x * 0.5, y: 0.45, z: -0.45 } : focus ?? f.aim
-      const hfovAt = covers0 ? 0.8 : focus ? (f.slowmo ? (15 * Math.PI) / 180 : L.replayCam!.cam.hfov) : nearZoom ? (L.replayCam!.keepWide ? 26 : 13) * (Math.PI / 180) : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
+      const hfovAt = covers0 ? 0.8 : focus ? (f.slowmo ? ((L.replayCam!.label === 'Front-foot cam' ? 19 : 29) * Math.PI) / 180 : L.replayCam!.cam.hfov) : nearZoom ? (L.replayCam!.keepWide ? 26 : 13) * (Math.PI / 180) : L.replayCam && (!f.slowmo || L.replayCam.keepWide) ? Math.max(f.hfov, L.replayCam.minHfov) : f.hfov
       const c = cam.current
       let goal = lookAt(base.p, aimAt)
       if (L.replayCam?.overhead) {
@@ -248,6 +249,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const marks: Scene['marks'] = {}
       if (traceRef.current) marks.trace = traceRef.current
       if (L.replayCam && L.event?.extraType === 'wide') marks.wideLine = WIDE_LINE_M
+      if (L.replayCam?.label === 'Stumping cam' && L.plan.stump) marks.stumpGap = { z: -1.22, cm: L.plan.stump.gap }
       if (L.replayCam?.focus && L.event?.extraType === 'noball') marks.crease = { z: BOWL_Z + 1.22, over: overstepCm(L.event.seq) / 100 }
       // the TV camera: hand-held drift, a punch-in on a boundary or a wicket, and a soft background when the picture is tight (drawn only: nothing here touches the ball)
       let cd = c
@@ -304,7 +306,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       const ms = move('striker', f.striker ?? ra), mn = move('nonstriker', rb), mb = move('bowler', f.bowler)
       const strikerOut = out && (!pl.runOut || pl.runOut.outIsStriker)
       const tq = Math.floor(t * 12) / 12 // (a person at rest moves a dozen times a second, no more)
-      const sp = batsmanPose({ flavor: flavorOfTeam(L.battingTeam.id), style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut })
+      const sp = batsmanPose({ flavor: flavorOfTeam(L.battingTeam.id), style: pl.shot, t, t1: pl.tRun, t2: t2c, swing: f.batSwing, hurt: f.hurt, raise: f.raise, joy: ev?.boundary ? f.joy : 0, speed: ms.v, cyc: ms.cyc, walkOff: strikerOut, stranded: f.stranded })
       rigs.current.get('striker')?.apply(f.batSwing === 0 && ms.v === 0 && !strikerOut ? breathe(sp, tq, 1) : sp, lh)
       { const np = nonStrikerPose({ t, t1: pl.tRun, speed: mn.v, cyc: mn.cyc, bat: true, walkOff: out && !!pl.runOut && !pl.runOut.outIsStriker }); rigs.current.get('nonstriker')?.apply(mn.v === 0 ? breathe(np, tq, 2) : np, L.nonStriker?.hand === 'L') }
       rigs.current.get('bowler')?.apply(bowlerPose({ t, t1: pl.tRun, t2: t2c, arm: f.bowlerArm, speed: mb.v, cyc: mb.cyc, joy: f.joy, wicket: !!ev?.wicket && ev.wicket.kind !== 'run out' && !pl.reviewed }))
@@ -356,7 +358,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const stopK = thrower && !pl.boundary && !pl.six && !dv && (pl.kind === 'ground' || !!pl.fellShort) ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
         const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
-        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0 })
+        const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0, stump: i === 0 ? f.keeperStump : 0 })
         rigs.current.get(`f${i}`)?.apply(mf.v === 0 && !dv && catchK === 0 && stopK === 0 && throwK === 0 ? breathe(fp, tq, 5 + i) : fp)
       })
       // the ball, and its shadow

@@ -9,7 +9,7 @@ import { flavorOfTeam, type Flavor } from '../../data/flavors'
 import { FORE, SHIN, THIGH, UPPER, batsmanPose, bowlerPose, classifyShot, fielderPose, mirrorPose, nonStrikerPose, solve, standing, umpirePose, type Pose, type ShotStyle } from './bodyPose'
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y)
-const STYLES: ShotStyle[] = ['defend', 'drive', 'straight', 'cut', 'pull', 'flick', 'sweep', 'reverse', 'ramp', 'scoop', 'loft', 'beaten', 'leave', 'hook', 'upper', 'glance', 'slog', 'paddle']
+const STYLES: ShotStyle[] = ['defend', 'drive', 'straight', 'cut', 'pull', 'flick', 'sweep', 'reverse', 'ramp', 'scoop', 'loft', 'beaten', 'leave', 'hook', 'upper', 'glance', 'slog', 'paddle', 'stepout']
 const base = { t1: 1, t2: 1.5, hurt: 0, raise: 0, joy: 0, speed: 0, cyc: 0, walkOff: false }
 
 /** Every pose the game can draw, to check the bones keep their length. */

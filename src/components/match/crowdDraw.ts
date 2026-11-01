@@ -497,3 +497,44 @@ function drawReview(ctx: CanvasRenderingContext2D, bs: BigScreen, rv: ReviewBoar
     ctx.globalAlpha = 1
   }
 }
+
+/** The presentation stage in the middle of the ground: a low platform with the backdrop behind it (z grows away from the bowler's end, towards the far stand). */
+export const STAGE = { x0: -5, x1: 5, z0: -9.4, z1: -6.2, h: 0.45, back: -6.0, top: 3.7 }
+
+export interface StageDraw { colors: [string, string]; title: string; sub: string }
+
+/** Draws the stage: the platform (front and top) and the backdrop with the title, in the team's colours, lit like a TV set. */
+export function drawStage(ctx: CanvasRenderingContext2D, r: CamR, st: StageDraw) {
+  const poly = (pts: V3[], fill: string) => {
+    const q = pts.map((p) => project(r, p))
+    if (q.some((p) => !p)) return
+    ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(q[0]!.x, q[0]!.y); for (let i = 1; i < q.length; i++) ctx.lineTo(q[i]!.x, q[i]!.y); ctx.closePath(); ctx.fill()
+  }
+  const { x0, x1, z0, z1, h, back, top } = STAGE
+  // the backdrop: a tall panel standing behind the stage, drawn on a flat page and stretched onto its four corners
+  const bl = project(r, { x: x0, y: h, z: back }), br = project(r, { x: x1, y: h, z: back }), tl = project(r, { x: x0, y: top, z: back }), tr = project(r, { x: x1, y: top, z: back })
+  if (bl && br && tl && tr) {
+    const VW = 640, VH = 230
+    ctx.save()
+    ctx.shadowColor = 'rgba(147,197,253,0.6)'; ctx.shadowBlur = 40
+    ctx.fillStyle = '#0b1220'; ctx.beginPath(); ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(br.x, br.y); ctx.lineTo(bl.x, bl.y); ctx.closePath(); ctx.fill()
+    ctx.restore()
+    ctx.save()
+    ctx.transform((tr.x - tl.x) / VW, (tr.y - tl.y) / VW, (bl.x - tl.x) / VH, (bl.y - tl.y) / VH, tl.x, tl.y)
+    ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip()
+    const g = ctx.createLinearGradient(0, 0, VW, VH)
+    g.addColorStop(0, st.colors[0]); g.addColorStop(1, '#1e3a8a')
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH)
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; for (let i = -2; i < 8; i++) { ctx.beginPath(); ctx.moveTo(i * 110, VH); ctx.lineTo(i * 110 + 90, 0); ctx.lineTo(i * 110 + 130, 0); ctx.lineTo(i * 110 + 40, VH); ctx.closePath(); ctx.fill() }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'
+    ctx.font = '900 54px sans-serif'; ctx.fillText(st.title, VW / 2, 78, VW - 60)
+    ctx.fillStyle = '#fde68a'; ctx.font = '800 30px sans-serif'; ctx.fillText(st.sub, VW / 2, 140, VW - 60)
+    ctx.restore()
+  }
+  // the platform
+  poly([{ x: x0, y: 0, z: z0 }, { x: x1, y: 0, z: z0 }, { x: x1, y: h, z: z0 }, { x: x0, y: h, z: z0 }], '#1e293b')
+  poly([{ x: x0, y: h, z: z0 }, { x: x1, y: h, z: z0 }, { x: x1, y: h, z: z1 }, { x: x0, y: h, z: z1 }], '#475569')
+  // the microphone stand
+  const m0 = project(r, { x: 0.15, y: h, z: -7.9 }), m1 = project(r, { x: 0.15, y: h + 1.45, z: -7.9 })
+  if (m0 && m1) { ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = Math.max(1.5, (r.F * 0.05) / m0.d); ctx.beginPath(); ctx.moveTo(m0.x, m0.y); ctx.lineTo(m1.x, m1.y); ctx.stroke(); ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(m1.x, m1.y, Math.max(2.5, (r.F * 0.09) / m1.d), 0, Math.PI * 2); ctx.fill() }
+}

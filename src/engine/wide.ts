@@ -29,3 +29,10 @@ export const WIDE_LINE_M = 1.0
 export const WIDE_BYE_CM = 120
 /** The four byes that run on a very wide ball (0 for an ordinary wide). The same figure the wide screen's distance gives, so the number on the screen decides it. */
 export const wideByesFor = (seq: number): number => (wideCm(seq) >= WIDE_BYE_CM ? 4 : 0)
+
+/**
+ * How far wide of the stumps a bye went past the keeper, in centimetres (10 to 150; most are close, about one in twelve is a metre or more). It is the same figure
+ * the bye screen shows and the ball is drawn with, and a bye of 100 cm or more runs on to the boundary for four byes.
+ */
+export const byeCm = (seq: number): number => Math.round(10 + 140 * hash01(seq * 2.3 + 6) ** 5.3)
+export const BYE_FOUR_CM = 100

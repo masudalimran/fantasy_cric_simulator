@@ -373,6 +373,60 @@ export function NoBallCast({ info }: { info: NoBallCastInfo }) {
   )
 }
 
+// ---- A stumping ------------------------------------------------------------------------------------------------------------------
+
+export interface StumpCastInfo {
+  replay: ReplayBase
+  batsman: Player
+  batTeam: Team
+  keeper: Player | null
+  bowlTeam: Team
+  /** How far out of his ground his back foot was, in centimetres. */
+  cm: number
+  rate: number
+}
+export const STUMP_CAST_SECONDS = 9
+
+/**
+ * A stumping, as the third umpire's pictures show it: the low camera at square leg in slow motion (he lunges out and misses it, the keeper gathers it behind the
+ * stumps and whips the bails off, with the popping crease lit and the gap marked), then the frames named one after another and the decision.
+ */
+export function StumpCast({ info }: { info: StumpCastInfo }) {
+  const r = info.rate
+  const [box, w] = useWidth()
+  useEffect(() => {
+    const ts = [window.setTimeout(() => sfx.howzat(), 200), window.setTimeout(() => sfx.thinking(), 3800 * r), window.setTimeout(() => sfx.decisionOut(), 7300 * r)]
+    return () => ts.forEach(clearTimeout)
+  }, [r])
+  const compact = w < 520
+  const keeper = info.keeper ? info.keeper.name.split(' ')[0] : 'The keeper'
+  const steps = [
+    { at: 2.4, text: `${info.batsman.name.split(' ')[0]} comes down the pitch and misses it` },
+    { at: 3.9, text: `${keeper} gathers it cleanly behind the stumps` },
+    { at: 5.3, text: 'The bails come off' },
+    { at: 6.6, text: `His back foot is ${info.cm} cm out of his ground` },
+  ]
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden rounded-2xl bg-[#05070d]" aria-label="Stumping">
+      <ReplayFrame base={info.replay} rate={1.1 * r} share={0.6} cam="gloves" tag="Third umpire" />
+      <Bottom from={0.6}>
+        <div className="flex h-full flex-col justify-center gap-1 px-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-block shrink-0 rounded-full leading-[0]" style={{ boxShadow: `0 0 0 2px ${accentOf(info.batTeam)}` }}><PlayerAvatar player={info.batsman} team={info.batTeam} size={compact ? 30 : 38} /></span>
+            <motion.div className="font-display leading-none tracking-wide text-white" style={{ fontSize: compact ? 26 : 36, WebkitTextStroke: '2px #0b1424', paintOrder: 'stroke fill', textShadow: '0 0 18px #f59e0b' }} initial={{ opacity: 0, scale: 1.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 * r, type: 'spring', stiffness: 260, damping: 16 }}>STUMPED?</motion.div>
+            <motion.div className="ml-auto font-display leading-none tracking-wide" style={{ fontSize: compact ? 30 : 42, color: '#f87171', WebkitTextStroke: '2px #450a0a', paintOrder: 'stroke fill' }} initial={{ opacity: 0, scale: 2.2 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 7.3 * r, type: 'spring', stiffness: 260, damping: 15 }}>OUT!</motion.div>
+          </div>
+          {steps.map((st) => (
+            <motion.div key={st.text} className="flex items-center gap-1.5 text-[11px] font-semibold leading-tight text-slate-100 sm:text-xs" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: st.at * r }}>
+              <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-500 text-[10px] font-extrabold text-white">✓</span>{st.text}
+            </motion.div>
+          ))}
+        </div>
+      </Bottom>
+    </div>
+  )
+}
+
 // ---- How the ball was bowled: swing, turn, a yorker, a beamer ---------------------------------------------------------------------
 
 export interface DeliveryCastInfo {

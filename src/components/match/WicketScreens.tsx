@@ -4,6 +4,8 @@ import { sfx } from '../../audio/sfx'
 import type { Player, Team } from '../../types'
 import { PlayerAvatar, accentOf } from '../ui'
 import { TvFrame, useWidth } from './ReviewScreens'
+import type { ReplayBase } from './ReplayFrame'
+import { StumpCast } from './ReplayScreens'
 
 /**
  * The special wicket screens: a dismissal seen the way a broadcast would show it. Which one comes up depends on how the batsman got out
@@ -15,7 +17,7 @@ interface Who { batsman: Player; batTeam: Team; bowler: Player; bowlTeam: Team; 
 
 export type WicketFxInfo =
   | (Who & { type: 'rope'; fielder: Player; height: number; hang: number; cm: number })
-  | (Who & { type: 'stumping'; keeper: Player | null; cm: number })
+  | (Who & { type: 'stumping'; keeper: Player | null; cm: number; /** The ball played again from the stumping camera (set: the screen is the new replay one). */ replay?: ReplayBase; bowlTeam?: Team })
   | (Who & { type: 'bowled'; kmh: number; how: string; side: number })
   | (Who & { type: 'hitwicket' })
   | (Who & { type: 'nelson'; runs: number; balls: number })
@@ -23,7 +25,7 @@ export type WicketFxInfo =
   | (Who & { type: 'stand'; partner: Player; runs: number; balls: number })
 
 /** How long each one runs (seconds at full speed), so the moment lasts as long as its picture. */
-export const WICKET_FX_SECONDS: Record<WicketFxInfo['type'], number> = { rope: 8.4, stumping: 7.2, bowled: 6.2, hitwicket: 6, nelson: 5.2, pair: 5, stand: 5.4 }
+export const WICKET_FX_SECONDS: Record<WicketFxInfo['type'], number> = { rope: 8.4, stumping: 9.2, bowled: 6.2, hitwicket: 6, nelson: 5.2, pair: 5, stand: 5.4 }
 
 const Banner = ({ text, color, delay, w, sub }: { text: string; color: string; delay: number; w: number; sub?: string }) => (
   <motion.div className="absolute inset-x-0 top-[12%] z-30 text-center" initial={{ opacity: 0, scale: 2.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay, type: 'spring', stiffness: 260, damping: 15 }}>
@@ -258,6 +260,8 @@ function StandBroken({ info, w }: { info: Extract<WicketFxInfo, { type: 'stand' 
 const TITLES: Record<WicketFxInfo['type'], string> = { rope: 'Catch in the deep', stumping: 'Third umpire', bowled: 'Stump cam', hitwicket: 'Hit wicket', nelson: 'Nelson', pair: 'Pair', stand: 'Partnership' }
 
 export function WicketFxScreen({ info }: { info: WicketFxInfo }) {
+  // a stumping is the stumping camera in slow motion with the frames named and the decision (the older cartoon frames are only the fallback)
+  if (info.type === 'stumping' && info.replay) return <StumpCast info={{ replay: info.replay, batsman: info.batsman, batTeam: info.batTeam, keeper: info.keeper, bowlTeam: info.bowlTeam ?? info.replay.bowlTeam, cm: info.cm, rate: info.rate }} />
   const [box, w] = useWidth()
   const r = info.rate
   useEffect(() => {

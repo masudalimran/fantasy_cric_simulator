@@ -42,6 +42,8 @@ import { cheerVariantFor } from '../components/match/CheerScreen'
 import { SHOW_SECONDS, type ShowKind, type StadiumShow } from '../components/match/stadiumShow'
 import { trophyOf } from '../components/match/TrophyArt'
 import { StadiumCam } from '../components/match/StadiumCam'
+import { ceremonyScript, type CeremonyCtx } from '../components/match/ceremonyScript'
+import { PRESENTERS } from '../data/presenters'
 import { LineupWalkout } from '../components/match/LineupWalkout'
 import type { ReplayBase } from '../components/match/ReplayFrame'
 import { ALMOST_CAST_SECONDS, EXTRA_CAST_SECONDS, FOUR_SECONDS, DELIVERY_CAST_SECONDS, MISS_CAST_SECONDS, NO_BALL_CAST_SECONDS, SIX_CAST_SECONDS, WICKET_CAST_SECONDS } from '../components/match/ReplayScreens'
@@ -195,7 +197,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const [revealHold, setRevealHold] = useState<number | null>(null)
   const [motmOpen, setMotmOpen] = useState(false)
   const [motmPitch, setMotmPitch] = useState(true) // the Man of the Match is presented on the pitch first, then the detail card
-  useEffect(() => { if (!motmOpen) { setMotmPitch(true); return } if (!getAnimPrefs().intro) { setMotmPitch(false); return } const id = window.setTimeout(() => setMotmPitch(false), SHOW_SECONDS.motm * 1000 + 300); return () => window.clearTimeout(id) }, [motmOpen])
+  useEffect(() => { if (!motmOpen) { setMotmPitch(true); return } if (!getAnimPrefs().intro) { setMotmPitch(false); return } const id = window.setTimeout(() => setMotmPitch(false), SHOW_SECONDS.ceremony * 1000 + 400); return () => window.clearTimeout(id) }, [motmOpen])
   const [upgradesOpen, setUpgradesOpen] = useState(false)
   const [winOpen, setWinOpen] = useState(false)
   const upgradesSeen = useRef(false) // the rating-upgrade screen has been shown for this match
@@ -373,18 +375,21 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       }
       return { key: introSeq.current++, kind, player: p, team, title: move ? (kind === 'batsman' ? 'NEW SIGNING AT THE CREASE' : 'NEW SIGNING INTO THE ATTACK') : kind === 'batsman' ? 'AT THE CREASE' : 'INTO THE ATTACK', lines, tiles, rating: overall(p), delay: 150, ms }
     }
-    const striker = inn.batters.find((b) => b.id === inn.strikerId)
-    if (striker && striker.balls === 0 && !seen.current!.has(`bat:${striker.id}`)) {
-      seen.current!.add(`bat:${striker.id}`)
-      const intro = mk('batsman', striker.id)
+    // whoever comes in (on strike or at the other end, the moment he arrives) walks out from the dressing room; the two openers come out together
+    const fresh = [inn.strikerId, inn.nonStrikerId].map((id) => inn.batters.find((b) => b.id === id)).filter((b): b is NonNullable<typeof b> => !!b && b.balls === 0 && !b.dismissal && !seen.current!.has(`bat:${b.id}`))
+    if (fresh.length > 0) {
+      for (const b of fresh) seen.current!.add(`bat:${b.id}`)
+      const intros = fresh.map((b) => mk('batsman', b.id))
       if (getAnimPrefs().intro) {
-        // the batsman walks out of the gate and across the ground while the crowd stands, with a strip of who he is
-        const p = match.player(striker.id), bat = match.battingSide(inn)
+        const bat = match.battingSide(inn)
         const rate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
-        const opener = inn.batters.filter((b) => b.balls > 0 || b.dismissal).length === 0
-        const chip = intro.title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : opener ? 'OPENING' : 'NEW BATSMAN'
-        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: p, team: bat.team, title: intro.title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', seed: match.seed + striker.balls + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: p.hand === 'L', lower: { title: p.name, lines: intro.lines.slice(0, 2), chip, tiles: intro.tiles, rating: intro.rating } }, base: nowBase(), label: intro.title, rate, cast: { team: bat.team, players: [p] } } })
-      } else enqueueMoment(intro)
+        const players = fresh.map((b) => match.player(b.id))
+        const pair = players.length === 2
+        const lead = players[0]
+        const chip = pair ? 'OPENING PAIR' : intros[0].title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : 'NEW BATSMAN'
+        const lines = pair ? intros.map((it, i) => `${players[i].name}: ${it.lines.slice(0, 2).join(' · ')}`) : intros[0].lines.slice(0, 2)
+        enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: { title: pair ? `${players[0].name} & ${players[1].name}` : lead.name, lines, chip, tiles: pair ? undefined : intros[0].tiles, rating: pair ? undefined : intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
+      } else for (const it of intros) enqueueMoment(it)
     }
     const bowlerId = inn.bowlerId
     if (bowlerId && (inn.bowlers.get(bowlerId)?.legalBalls ?? 0) === 0 && !seen.current!.has(`bowl:${bowlerId}`)) {
@@ -914,7 +919,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const fx = (type: WicketFxInfo['type'], extra: Record<string, unknown>, key: number) => show({ key: notable.seq + key, kind: 'wicketfx', player: match.player(outLine.id), team, title: 'WICKET', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(WICKET_FX_SECONDS[type] * 1000 * rate), wfx: { type, batsman: match.player(outLine.id), batTeam: team, bowler: bowlerP, bowlTeam: bowlSideNow.team, rate, ...extra } as WicketFxInfo })
           if (prefsNow.wicketcam) {
             if (w.kind === 'bowled') fx('bowled', { ...bowledFor(notable.seq, bowlerP.bowling?.type), kmh: ballSpeed(notable, bowlerP) }, 0.33)
-            else if (w.kind === 'stumped') fx('stumping', { keeper: fielderP, cm: stumpGap(notable.seq) }, 0.34)
+            else if (w.kind === 'stumped') fx('stumping', { keeper: fielderP, cm: stumpGap(notable.seq), replay: replayBase(notable), bowlTeam: bowlSideNow.team }, 0.34)
             else if (w.kind === 'hit wicket') fx('hitwicket', {}, 0.35)
             else if ((w.kind === 'caught' || w.kind === 'caught and bowled') && (w.kind === 'caught and bowled' ? bowlerP : fielderP) && w.fielderId !== match.keeperOf(bowlIdx)) {
               const spotNow = placedAt(notable).find((f) => f.player.id === w.fielderId)
@@ -942,6 +947,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
               key: notable.seq + 0.5, kind: 'catch', player: match.player(outLine.id), team, title: 'CAUGHT', lines: [], delay: Math.round(delay * 0.6), ms: Math.round(CATCH_SECONDS * 1000 * rate),
               catchInfo: { event: notable, kind: w.kind as 'caught' | 'caught and bowled', batsman: match.player(outLine.id), nonStriker: match.player(notable.nonStrikerId), bowler: bowlerP, fielder: catchBy, batTeam: team, bowlTeam: bowlSideNow.team, fielders: placed, pitch: pitchKind, look: lookNow, cause, contact: catchContact(notable.seq, cause, match.player(outLine.id).batting.power), reaction: normalCatch && !ropeCatch ? handsFor(notable.seq).reaction : undefined, score: `${outLine.runs} (${outLine.balls})`, rate },
             })
+          } else if (w.kind === 'stumped' && prefsNow.wicketcam) {
+            // (the stumping screen above is its replay)
           } else if (wantReplay && (w.kind === 'bowled' || w.kind === 'lbw' || w.kind === 'stumped' || w.kind === 'hit wicket' || w.kind === 'run out')) {
             // every other way of getting out also gets the broadcast replay, with three facts on how it happened
             const keeperP = match.keeperOf(bowlIdx) ? match.player(match.keeperOf(bowlIdx)!) : null
@@ -1338,10 +1345,23 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <AnimatePresence>{motmOpen && awards && motmPitch && getAnimPrefs().intro && awards.motm && (() => {
         const w = awards.motm
         const entry = match.sides.flatMap((sd) => sd.xi.map((p) => ({ p, team: sd.team }))).find((x) => x.p.id === w.id)
-        if (!entry) return null
+        if (!entry || !match.result) return null
+        // the post-match presentation: a stage in the middle of the ground, the host, both captains one after the other, then the Man of the Match and his prize
+        const winSide = (match.result.winnerSide ?? 0) as 0 | 1
+        const win = match.sides[winSide], lose = match.sides[1 - winSide]
+        const capOf = (sd: typeof win) => sd.xi.find((p) => p.id === sd.team.captainId) ?? sd.xi[0]
         const c = awards.contenders.find((x) => x.id === w.id)
-        const lines = [c?.bat && c.bat.balls > 0 ? `${c.bat.runs}${c.bat.out ? '' : '*'} off ${c.bat.balls}` : '', c?.bowl && c.bowl.balls > 0 ? `${c.bowl.wickets}/${c.bowl.runs} in ${Math.floor(c.bowl.balls / 6)}.${c.bowl.balls % 6} overs` : ''].filter(Boolean)
-        return <motion.div key="motmpitch" className="fixed inset-0 z-[70] cursor-pointer bg-black" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMotmPitch(false)}><StadiumCam show={{ kind: 'motm', seed: match.seed, trophy: 'cup', colors: [entry.team.colors.primary, entry.team.colors.secondary], lower: { title: entry.p.name, lines, chip: 'MAN OF THE MATCH' } }} base={nowBase()} label="Man of the Match" cast={{ team: entry.team, players: [entry.p] }} /></motion.div>
+        const batDeed = c?.bat && c.bat.balls > 0 ? `${c.bat.runs}${c.bat.out ? '' : '*'} off ${c.bat.balls} balls` : ''
+        const bowlDeed = c?.bowl && c.bowl.balls > 0 ? `${c.bowl.wickets}/${c.bowl.runs} in ${Math.floor(c.bowl.balls / 6)}.${c.bowl.balls % 6} overs` : ''
+        const mg = match.result.margin
+        const margin = match.result.winnerSide === null ? 'tie' : !mg ? 'normal' : mg.type === 'runs' ? (mg.value < 10 ? 'close' : mg.value >= 40 ? 'big' : 'normal') : mg.type === 'wickets' ? (mg.value <= 2 ? 'close' : mg.value >= 7 ? 'big' : 'normal') : 'big'
+        const host = PRESENTERS[match.seed % PRESENTERS.length]
+        const knockout = fixture?.phase === 'knockout'
+        const comp = fixture ? season?.competitions.find((x) => x.id === fixture.competitionId) : undefined
+        const title = comp ? competitionName(comp, teamMap) : `${match.format === 'test' ? 'Test' : match.format.toUpperCase()} match`
+        const ctx: CeremonyCtx = { host: host.name.split(' ')[0], winTeam: win.team.name, loseTeam: lose.team.name, winCaptain: callName(capOf(win)), loseCaptain: callName(capOf(lose)), motm: callName(entry.p), motmIsCaptain: entry.p.id === capOf(win).id || entry.p.id === capOf(lose).id, result: (/won by.+$/.exec(match.result.text)?.[0] ?? match.result.text).replace(/\.$/, ''), margin, winnersChased: mg?.type === 'wickets', motmDeed: [batDeed, bowlDeed].filter(Boolean).join(' and ') || 'a fine all-round performance', motmWith: batDeed && bowlDeed ? 'both' : bowlDeed ? 'ball' : 'bat', prize: knockout ? '10,000 coins' : '5,000 coins', seed: match.seed }
+        const ceremony = { script: ceremonyScript(ctx), winCaptainId: capOf(win).id, loseCaptainId: capOf(lose).id, motmId: entry.p.id, cheque: ctx.prize.toUpperCase(), title, hostName: host.name }
+        return <motion.div key="motmpitch" className="fixed inset-0 z-[70] cursor-pointer bg-black" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMotmPitch(false)}><StadiumCam show={{ kind: 'ceremony', seed: match.seed, colors: [win.team.colors.primary, win.team.colors.secondary], ceremony }} base={nowBase()} label="Presentation" cast={{ team: win.team, players: win.xi, rivals: { team: lose.team, players: lose.xi }, host }} /></motion.div>
       })()}</AnimatePresence>
       <AnimatePresence>{motmOpen && awards && !(motmPitch && getAnimPrefs().intro && awards.motm) && <MotmOverlay match={match} awards={awards} onClose={() => { setMotmOpen(false); if (getAnimPrefs().studio && !studioEnded.current) { studioEnded.current = true; openStudioRef.current('end') } else showUpgrades() }} onScorecard={() => setSummaryOpen(true)} />}</AnimatePresence>
       <AnimatePresence>

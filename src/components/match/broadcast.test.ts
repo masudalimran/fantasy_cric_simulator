@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
 import { fieldPlan } from './fieldSets'
-import { screenSide, elevation, replayCamera, replayCamFor, withReplaySlow, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
+import { screenSide, elevation, replayCamera, replayCamFor, withReplaySlow, withStumpSlow, warpTime, frameAt, planBall, prep, project, camWide, camReverse, fielderWorld, lookAt } from './broadcast'
 import { endPoint, placeFielders } from './Stage'
 
 const finite = (v: { x: number; y: number; z: number }) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
@@ -182,7 +182,7 @@ describe('the broadcast view plan', () => {
     for (let s = 1; s <= 30; s++) sides.add(Math.sign(replayCamera('side', s).cam.p.x))
     expect(sides.size).toBe(2)
     // the kind of replay decides the camera: the stump cam only for the ways of being bowled out
-    for (let s = 1; s <= 40; s++) { expect(replayCamFor('four', s)).not.toBe('stump'); expect(replayCamFor('stumped', s)).toBe('side') }
+    for (let s = 1; s <= 40; s++) { expect(replayCamFor('four', s)).not.toBe('stump'); expect(replayCamFor('stumped', s)).toBe('gloves') }
     const cams = new Set<string>()
     for (let s = 1; s <= 40; s++) cams.add(replayCamFor('bowled', s))
     expect(cams.has('stump')).toBe(true)
@@ -232,5 +232,49 @@ describe('the broadcast view plan', () => {
     expect(replayCamera('side', 3, -1).cam.p.x).toBeLessThan(0)
     expect(replayCamera('high', 3).overhead).toBe(true)
     expect(replayCamera('side', 3).overhead).toBeFalsy()
+  })
+})
+
+describe('a stumping, played the way it happens', () => {
+  const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed: 5 })
+  m.playMatch()
+  const inn = m.innings[0]
+  const base = inn.log.find((x) => x.legal && !x.extraType && !x.wicket && !x.boundary)!
+  const side = m.sides[1 - inn.battingSide]
+  const planFor = (seq: number) => {
+    const e = { ...base, seq, wicket: { kind: 'stumped' as const, playerId: base.strikerId, bowlerId: base.bowlerId, fielderId: side.xi[0].id } } as typeof base
+    const striker = m.player(e.strikerId)
+    const p0 = fieldPlan({ format: 't20', over: e.over, maxOvers: 20, runs: e.score.runs, legalBalls: e.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: striker.hand })
+    const fielders = placeFielders(side.xi, e.bowlerId, p0.spots)
+    return { plan: planBall(e, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(e, fielders), striker.hand === 'L', 135, { bowler: m.player(e.bowlerId) }), rest: fielders.map((f) => fielderWorld(f.x, f.y, f.spot)) }
+  }
+  it('he is out of his ground when he misses it, the keeper gathers it and only then whips the bails off', () => {
+    for (let seq = 1; seq <= 20; seq++) {
+      const { plan, rest } = planFor(seq)
+      const t2 = plan.tRun + plan.tDeliver, t3 = t2 + plan.tFlight
+      const at = (t: number) => frameAt(plan, t, (i) => rest[i] ?? { x: 0, y: 0, z: 0 })
+      expect(plan.stump!.breakAt).toBeGreaterThan(t3) // after the ball is in the gloves
+      expect(at(t3 - 0.05).stumps).toBe(0) // not a bail moved before then
+      expect(at(plan.stump!.breakAt - 0.01).stumps).toBe(0)
+      expect(at(plan.stump!.breakAt + 0.9).stumps).toBeGreaterThan(0.9)
+      // his back foot is beyond the popping crease (1.22 m in front of the stumps) by the gap on the screen
+      const s = at(t2 + 0.5).striker!
+      expect(s.z).toBeLessThan(-1.22 - plan.stump!.gap / 100)
+      // the keeper stands right behind the stumps, gathers the ball there and the ball is with him
+      const k = at(t3 + 0.05).moving.get(0)!
+      expect(k.z).toBeGreaterThan(0.2); expect(k.z).toBeLessThan(1.2)
+      expect(at(t3).keeperStump).toBeLessThan(0.3)
+      expect(at(plan.stump!.breakAt).keeperStump).toBeGreaterThan(0.9)
+      expect(at(t3 + 0.04).stranded).toBe(1)
+    }
+  })
+  it('the stumping camera sits low at square leg and the slow motion is around the bails', () => {
+    const cam = replayCamera('gloves', 3, -1)
+    expect(cam.cam.p.y).toBeLessThan(1.5)
+    expect(Math.abs(cam.cam.p.x)).toBeGreaterThan(8)
+    const { plan } = planFor(3)
+    const slow = withStumpSlow(plan)
+    expect(slow.slow!.at).toBeLessThan(plan.stump!.breakAt)
+    expect(slow.slow!.at + slow.slow!.len).toBeGreaterThan(plan.stump!.breakAt)
   })
 })

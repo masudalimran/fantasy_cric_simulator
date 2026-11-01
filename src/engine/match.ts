@@ -9,7 +9,7 @@ import { BYE_FOUR, RUNOUT_CHECK, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLO
 import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
 import { sixDistance } from './shots'
-import { wideByesFor } from './wide'
+import { BYE_FOUR_CM, byeCm, wideByesFor } from './wide'
 import {
   BOWL_STYLE_VALUE, DIFFICULTIES, FORMATS, INTENT_VALUE, phaseOf,
   type BallEvent, type BowlStyle, type DeliveryAim, type ShotAim, type BatterLine, type BowlerLine, type DismissalKind, type Difficulty, type Innings, type Intent,
@@ -480,7 +480,8 @@ export class Match {
       if (cat === BYE || cat === LEGBYE) {
         extraType = cat === BYE ? 'bye' : 'legbye'
         // now and then it races away to the rope: four byes (or leg byes). A separate random stream, so nothing else in the match shifts.
-        extraRuns = new Rng((this.seed ^ Math.imul(this.seq + 1, 0x27d4eb2f) ^ 0xb7e1) >>> 0).chance(BYE_FOUR) ? 4 : 1
+        // a bye that went a metre or more wide of the stumps races on to the rope (four byes); a leg bye off the pad now and then does too (a separate random stream, so nothing else shifts)
+        extraRuns = cat === BYE ? (byeCm(this.seq) >= BYE_FOUR_CM ? 4 : 1) : new Rng((this.seed ^ Math.imul(this.seq + 1, 0x27d4eb2f) ^ 0xb7e1) >>> 0).chance(BYE_FOUR) ? 4 : 1
       } else if (cat === WICKET) {
         dismissal = this.makeDismissal(inn, striker, bowler, bowlXI, bowlingSideIdx, bowlType, noBall || wasFreeHit)
       } else {

@@ -157,15 +157,16 @@ export function solve(p: Pose, batLen = BAT_LEN): Skeleton {
 
 // ---- what kind of shot a ball got ------------------------------------------------------------------------------------------
 
-export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave' | 'hook' | 'upper' | 'glance' | 'slog' | 'paddle'
+export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave' | 'hook' | 'upper' | 'glance' | 'slog' | 'paddle' | 'stepout'
 
 /**
  * Which shot the batsman plays, from where the ball went and how it was bowled. For show only: the same ball, the same result, whatever he is
  * drawn doing. `side` is how far the ball went to the leg side of the batsman (negative: the off side), `ahead` how far down the ground towards the
  * bowler (negative: behind the wicket).
  */
-export function classifyShot(c: { swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
+export function classifyShot(c: { /** He has come down the pitch and missed (a stumping). */ stepOut?: boolean; swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
   if (c.wide) return 'leave'
+  if (c.stepOut) return 'stepout'
   if (c.kind === 'stumps' || c.kind === 'pad' || (!c.swing && c.runsBat === 0)) return 'beaten'
   if (c.runsBat === 0 && c.kind === 'ground' && c.boundary === 0) return 'defend'
   if (c.kind === 'keeper' && c.runsBat === 0 && c.boundary === 0) return c.seq % 3 === 0 ? 'leave' : 'beaten'
@@ -287,6 +288,12 @@ const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
     c: batPose({ x: 31, y: 100 }, 8, { x: 4, y: 25 }, -40, { x: 13, y: 117 }, { x: 45, y: 116 }, 4),
     f: batPose({ x: 31, y: 99 }, 8, { x: 9, y: 21 }, -70, { x: 13, y: 117 }, { x: 45, y: 116 }, 4),
   },
+  // down the pitch at the ball and missing it: a long lunge, the front foot way out, the bat swinging through nothing and carrying him over
+  stepout: {
+    b: batPose({ x: 30, y: 90 }, -2, { x: -8, y: 2 }, 160, { x: 20, y: 117 }, { x: 40, y: 117 }),
+    c: batPose({ x: 27, y: 99 }, 16, { x: -12, y: 24 }, 36, { x: 10, y: 117 }, { x: 47, y: 114 }, 6),
+    f: batPose({ x: 26, y: 101 }, 21, { x: 8, y: 6 }, 150, { x: 9, y: 117 }, { x: 48, y: 113 }, 10),
+  },
   beaten: {
     b: LIFT,
     c: batPose({ x: 29, y: 91 }, 9, { x: -12, y: 20 }, 34, { x: 18, y: 118 }, { x: 40, y: 116 }, 3),
@@ -353,6 +360,8 @@ export interface BatCtx {
   cyc: number
   /** He walks off with his head down. */
   walkOff: boolean
+  /** Left stranded out of his ground after a miss (a stumping), 0 to 1: bent over, bat dropped, looking back at the keeper. */
+  stranded?: number
 }
 
 export function batsmanPose(c: BatCtx): Pose {
@@ -367,6 +376,7 @@ export function batsmanPose(c: BatCtx): Pose {
   if (c.hurt > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 94 }, lean: 12, head: { dx: 0, dy: 3, tilt: 8 }, handL: { x: -6, y: 24 }, handR: { x: 8, y: 26 }, bat: 40, two: false, footL: { x: 23, y: 117 }, footR: { x: 37, y: 117 } }, c.hurt * 0.8)
   // once the shot is done he settles, bat by his foot, until he runs or the next ball comes
   if (c.swing >= 1 && c.raise === 0 && c.joy === 0) p = mixPose(p, WAIT, ease((c.t - (c.t2 + 0.9)) / 0.5))
+  if (c.stranded && c.stranded > 0) p = mixFlow(p, { ...standing(), hip: { x: 28, y: 100 }, lean: 13, head: { dx: 0, dy: 3, tilt: -11 }, handL: { x: -9, y: 28 }, handR: { x: 9, y: 31 }, bat: 20, two: false, footL: { x: 12, y: 117 }, footR: { x: 47, y: 115 } }, ease(c.stranded))
   if (c.speed > 0.5) p = locomotion(carryBat(p), c.speed, c.cyc, c.walkOff)
   if (c.walkOff) p = mixPose(p, { ...p, head: { dx: 0, dy: 3, tilt: 6 }, lean: 3 }, 1)
   if (c.raise > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: 88 }, lean: -3, head: { dx: 0, dy: 0, tilt: -3 }, handR: { x: 15, y: -24 }, handL: { x: -13, y: -19 }, bat: 188, two: false }, ease(c.raise))
@@ -486,6 +496,8 @@ export interface FieldCtx {
   /** Down on one knee to stop the ball (0 to 1) and the throw (0 to 1, 0 when not throwing). */
   stop: number; throwK: number
   keeper: boolean
+  /** The keeper whipping the bails off (0 to 1): crouched over the stumps, both gloves down and together. */
+  stump?: number
 }
 
 export function fielderPose(c: FieldCtx): Pose {
@@ -499,6 +511,7 @@ export function fielderPose(c: FieldCtx): Pose {
   if (c.speed > 0.8) p = locomotion({ ...p, hip: { x: 30, y: 85.5 } }, c.speed, c.cyc)
   if (c.stop > 0) p = mixPose(p, { ...standing(), hip: { x: 31, y: 105 }, lean: 6, head: { dx: 0, dy: 3, tilt: 0 }, footL: { x: 14, y: 117 }, footR: { x: 42, y: 116 }, handL: { x: -8, y: 28 }, handR: { x: 6, y: 30 } }, ease(c.stop))
   if (c.catchK > 0) p = mixPose(p, { ...standing(), hip: { x: 30, y: c.keeper ? 98 : 90 }, footL: { x: 20, y: 117 }, footR: { x: 40, y: 117 }, handL: { x: -5, y: -17 }, handR: { x: 5, y: -17 } }, ease(c.catchK))
+  if (c.stump && c.stump > 0) p = mixPose(p, { ...standing(), ball: true, hip: { x: 30, y: 103 }, lean: 7, head: { dx: 0, dy: 3, tilt: 0 }, handL: { x: -3, y: 36 }, handR: { x: 3, y: 39 }, footL: { x: 19, y: 117 }, footR: { x: 41, y: 117 } }, ease(c.stump))
   if (c.throwK > 0) {
     const k = clamp01(c.throwK)
     const ang = k < 0.4 ? lerp(-20, -150, ease(k / 0.4)) : lerp(-150, 60, ease((k - 0.4) / 0.6))

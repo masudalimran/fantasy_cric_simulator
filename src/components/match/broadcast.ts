@@ -7,9 +7,9 @@ import type { BallEvent } from '../../engine/types'
  * World: X to the right of a camera that stands behind the bowler, Y up, Z from the bowler towards the batsman. The batsman's stumps are at
  * Z = 0 and the bowler's at Z = -20.12. The top-down field of the normal view is stretched onto it so the fielders keep their places.
  */
-import { WIDE_LINE_M, wideCm, wideDirection, wideSide } from '../../engine/wide'
+import { byeCm, WIDE_LINE_M, wideCm, wideDirection, wideSide } from '../../engine/wide'
 import { classifyShot, type ShotStyle } from './bodyPose'
-import { overstepCm } from '../../season/moments'
+import { overstepCm, stumpGap } from '../../season/moments'
 import { deliveryOf, type DeliveryLook } from '../../engine/delivery'
 
 export interface V3 { x: number; y: number; z: number }
@@ -28,6 +28,13 @@ export const ROPE = { cx: 0, cz: -10, rx: 70, rz: 68 }
 export function sixReach(distance: number): number {
   const d = Math.max(50, Math.min(220, distance))
   return d <= 100 ? 1.04 + ((d - 60) / 40) * 0.26 : 1.3 + ((d - 100) / 100) * 1.3
+}
+
+/** Where a ball racing away from `from` in the direction (dx, dz) crosses the rope, a little inside it (so the board it hits is the one in line with it). */
+export function ropeEnd(from: V3, dx: number, dz: number, y = 0.1): V3 {
+  const l = Math.hypot(dx, dz) || 1
+  const t = ropeDistance(from, dx / l, dz / l)
+  return { x: from.x + (dx / l) * t, y, z: from.z + (dz / l) * t }
 }
 
 /** How far along a line from a point on the ground, going the way (dx, dz) (a unit step), the rope is (the ground is inside it). */
@@ -83,11 +90,13 @@ const BOWL_END_Z = BOWL_Z + 0.7
  * The cameras a replay can use instead of the live one, so a replay does not look like the live picture shown again: from the side (square leg), from
  * high above the pitch, or from down at the stumps. Each stays where it is and turns to follow the ball, like the live cameras.
  */
-export type ReplayCam = 'side' | 'high' | 'stump' | 'foot'
+export type ReplayCam = 'side' | 'high' | 'stump' | 'foot' | 'gloves'
 export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): { cam: Cam; minHfov: number; label: string; /** Stay wide even in the slow-motion moment (no close-up). */ keepWide?: boolean; /** Looks straight down and moves with the ball (its own way up, set to match the live picture), instead of turning on the spot. */ overhead?: boolean; /** Keeps looking at this spot instead of following the ball (the front-foot camera). */ focus?: V3 } {
   const deg = Math.PI / 180
   // the front-foot camera: low down at the side of the bowler's crease, close in on where his front foot lands, with the popping crease across the picture
-  if (kind === 'foot') return { cam: { p: { x: 3.8, y: 0.6, z: BOWL_Z - 3.6 }, yaw: 0, pitch: 0.1, hfov: 40 * deg }, minHfov: 36 * deg, label: 'Front-foot cam', keepWide: true, focus: { x: 0.4, y: 0.5, z: BOWL_Z + 1.2 } }
+  if (kind === 'foot') return { cam: { p: { x: 2.9, y: 0.45, z: BOWL_Z - 3.2 }, yaw: 0, pitch: 0.1, hfov: 40 * deg }, minHfov: 36 * deg, label: 'Front-foot cam', keepWide: true, focus: { x: 0.4, y: 0.5, z: BOWL_Z + 1.2 } }
+  // the stumping camera: low and close at square leg, level with the stumps, so the crease, the batsman's foot, the stumps and the keeper's gloves are all in one picture
+  if (kind === 'gloves') { const dir = shotSide ?? (hash01(seq * 7.7) < 0.5 ? -1 : 1); return { cam: { p: { x: dir * 13, y: 1.05, z: -0.2 }, yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0.03, hfov: 34 * deg }, minHfov: 28 * deg, label: 'Stumping cam', keepWide: true, focus: { x: 0, y: 0.8, z: -0.1 } } }
   if (kind === 'high') return { cam: { p: { x: 0.01, y: 46, z: -10 }, yaw: 0, pitch: 1.2, hfov: 70 * deg }, minHfov: 68 * deg, label: 'Spider cam', keepWide: true, overhead: true }
   // (well back behind the stumps and zoomed right out, so the stumps, the batsman and the ball can all be seen)
   if (kind === 'stump') return { cam: { p: { x: -1.4, y: 1.0, z: 4.2 }, yaw: Math.PI, pitch: 0.05, hfov: 56 * deg }, minHfov: 54 * deg, label: 'Stump cam', keepWide: true }
@@ -99,7 +108,7 @@ export function replayCamera(kind: ReplayCam, seq: number, shotSide?: 1 | -1): {
 export function replayCamFor(kind: 'four' | 'six' | 'bowled' | 'lbw' | 'stumped' | 'hit wicket' | 'run out' | 'catch' | 'extra' | 'wide' | 'noball', seq: number): ReplayCam {
   const h = hash01(seq * 3.9)
   if (kind === 'bowled' || kind === 'lbw' || kind === 'hit wicket') return h < 0.6 ? 'stump' : 'side'
-  if (kind === 'stumped') return 'side'
+  if (kind === 'stumped') return 'gloves'
   if (kind === 'run out' || kind === 'catch') return h < 0.5 ? 'high' : 'side'
   if (kind === 'extra') return 'side'
   // a wide is seen from above, where it is plain how far outside the line it went; a no ball from the front-foot camera
@@ -139,6 +148,13 @@ export function hops(s: number, from: number, H: number, d1: number, keep = 0.6)
  */
 export function withNearSlow(plan: Plan): Plan {
   const slow = { at: plan.tRun + plan.tDeliver - 0.26, len: 0.5, factor: 0.2 }
+  return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
+}
+
+/** The stumping replay: slow motion from just before the keeper gathers the ball until the bails are off, so the foot, the crease and the gloves can all be followed. */
+export function withStumpSlow(plan: Plan): Plan {
+  const b = plan.stump?.breakAt ?? plan.tRun + plan.tDeliver + plan.tFlight
+  const slow = { at: b - 0.75, len: 1.35, factor: 0.22 }
   return { ...plan, slow, realTotal: plan.total + slow.len / slow.factor - slow.len }
 }
 
@@ -226,6 +242,8 @@ export interface Plan {
   /** The bowler runs to take the catch off his own bowling; the batsman steps out of his crease to be stumped. */
   bowlerCatch: boolean
   stepOut: boolean
+  /** A stumping: how far out of his ground he was (cm) and when the keeper whips the bails off (clip seconds): after he has gathered the ball, never before. */
+  stump: { gap: number; breakAt: number } | null
   /** The umpire's signal and when it starts (seconds into the clip), and which umpire gives it (1 at the bowler's end, 2 at square leg). */
   signal: { kind: SignalKind; at: number; who: 1 | 2 } | null
   /** A leg bye: the ball hits the batsman, who winces. */
@@ -316,7 +334,8 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const bowlerX = 0.5
   // the line the ball took: a chosen one, otherwise a small stable spread around off stump
   const line = ev.delivery ? ev.delivery.line / 50 : (hash01(ev.seq * 3.1) - 0.5) * 0.9
-  const lineX = wide ? wideDirection(wideSide(ev), leftHand ? 'L' : 'R', 'behind-bowler') * (WIDE_LINE_M + wideCm(ev.seq) / 100) : line * 1.1
+  // (a bye goes past the keeper as far wide of the stumps as its figure says: a metre or more runs on to the rope)
+  const lineX = wide ? wideDirection(wideSide(ev), leftHand ? 'L' : 'R', 'behind-bowler') * (WIDE_LINE_M + wideCm(ev.seq) / 100) : ev.extraType === 'bye' ? (hash01(ev.seq * 5.3) < 0.5 ? -1 : 1) * (0.1 + byeCm(ev.seq) / 100) : line * 1.1
   const release: V3 = { x: bowlerX, y: 2.05, z: BOWL_Z - 0.4 }
   // how it was bowled: where it pitched, how high it reached the batsman, and how far it swung or turned
   const dv = deliveryOf(ev, opts.bowler, { overcast: opts.overcast })
@@ -350,7 +369,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   if (w) {
     if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' }
     else if (w.kind === 'lbw') { end = { x: meet.x + (stanceX > 0 ? 0.35 : -0.35), y: 0.06, z: meet.z - 0.55 }; kind = 'pad'; swing = false }
-    else if (w.kind === 'stumped') { end = { x: 0, y: 0.9, z: 1.8 }; kind = 'keeper'; wicketFlies = true; swing = false; catcher = 0 }
+    else if (w.kind === 'stumped') { end = { x: 0, y: 0.95, z: 0.55 }; kind = 'keeper'; wicketFlies = true; swing = true; catcher = 0 } // (he lunges out, swings and misses; the keeper gathers it behind the stumps)
     else if (w.kind === 'caught and bowled') { end = { x: bowlerX + 1, y: 1.1, z: BOWL_Z + 4 }; kind = 'air'; peak = 3; bowlerCatch = true }
     else if (w.kind === 'run out') {
       // the ball is hit, the batsmen run, a fielder gathers it and throws at the stumps they are running to
@@ -377,7 +396,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   } else if (wide) {
     if (ev.wideByes) {
       // so wide the keeper cannot reach it: it races on to the rope for four byes
-      end = { x: (lineX >= 0 ? 1 : -1) * 6, y: 0.1, z: 15.4 }
+      end = ropeEnd({ x: lineX, y: 0, z: -0.45 }, lineX * 0.3, 12)
       kind = 'ground'
       keeperDive = { dir: lineX >= 0 ? 1 : -1, at: 0, miss: true }
     } else {
@@ -388,7 +407,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     }
   } else if (bye) {
     // the ball beats the bat and the keeper, and runs away behind them
-    end = byeFour ? { x: (lineX >= 0 ? 1 : -1) * 6, y: 0.1, z: 15.4 } : { x: lineX * 1.6 + (lineX >= 0 ? 2 : -2), y: 0.1, z: 15 }
+    end = byeFour ? ropeEnd({ x: lineX, y: 0, z: -0.45 }, lineX * 0.3, 12) : { x: lineX * 1.6 + (lineX >= 0 ? 2 : -2), y: 0.1, z: 15 }
     kind = 'ground'
     keeperDive = { dir: lineX >= 0 ? 1 : -1, at: 0, miss: true }
     swing = false
@@ -396,7 +415,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     // it hits the batsman's pad or body and rolls off to the leg side
     hurt = true
     swing = false
-    end = byeFour ? { x: stanceX > 0 ? 33 : -33, y: 0.1, z: 7 } : { x: stanceX > 0 ? 7 : -7, y: 0.1, z: 7 }
+    end = byeFour ? ropeEnd({ x: stanceX * 0.6, y: 0, z: BAT_END_Z }, stanceX > 0 ? 1 : -1, 0.5) : { x: stanceX > 0 ? 7 : -7, y: 0.1, z: 7 }
     kind = 'ground'
   } else {
     end = { x: end.x, y: 0, z: end.z }
@@ -487,7 +506,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const tDeliver = tDeliverFor(speed)
   const t2 = 0.95 + tDeliver, t3 = t2 + tFlight
   // when the wicket falls: a catch when the ball is taken, the stumps at once, a run out when they are hit; then the batsman walks off
-  const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : t2 + 0.25
+  const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : w.kind === 'stumped' ? t3 + 0.34 : t2 + 0.25
   if (wicketAt !== null) tHold = Math.max(tHold, wicketAt + 1.6 - t3)
   // a fifty or a hundred: he raises his bat once the ball is done
   const milestone = !w && ev.tags.some((t) => t === 'fifty' || t === 'hundred' || t === '150' || t === '200')
@@ -500,7 +519,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   // a challenge: the clip shows the umpire's decision on the field (a finger up, or a shake of the head) and nothing more, as the review is still to come
   if (rv) signal = rv.originalOut ? { kind: 'out', at: (wicketAt ?? t2 + 0.25) + (rv.kind === 'lbw' ? 0.7 : 0.15), who: 1 } : { kind: 'notout', at: t2 + 0.9, who: 1 }
   else if (runOut && opts.holdRunOut) signal = null
-  else if (w) signal = { kind: 'out', at: (wicketAt ?? t3) + (w.kind === 'lbw' ? 0.7 : 0.15), who: 1 }
+  else if (w) signal = { kind: 'out', at: (wicketAt ?? t3) + (w.kind === 'lbw' ? 0.7 : w.kind === 'stumped' ? 0.9 : 0.15), who: 1 }
   else if (wide) signal = { kind: 'wide', at: t2 + 0.35, who: 1 }
   else if (noball) signal = { kind: 'noball', at: 0.95 + 0.12, who: 1 }
   else if (six) signal = { kind: 'six', at: t2 + 0.6, who: 2 }
@@ -519,7 +538,8 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     runFrom: { x: bowlerX, y: 0, z: BOWL_Z - (speed >= 130 ? 11.5 : speed >= 105 ? 8 : 4.5) }, runTo: { x: bowlerX, y: 0, z: noball && dv.noBallCause !== 'beamer' ? BOWL_Z + 1.22 + overstepCm(ev.seq) / 100 + 0.16 : BOWL_Z - 0.7 },
     release, bounce, meet, end, peak, kind, reverse: !behind && dist > 7 && runs === 0, swing, wicketFlies, catcher, chaser, six, boundary,
     delivery: dv, bounceU, swingM, turnM,
-    shot: classifyShot({ swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
+    stump: w?.kind === 'stumped' ? { gap: stumpGap(ev.seq), breakAt: t3 + 0.34 } : null,
+    shot: classifyShot({ stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
     signal, hurt, keeperDive, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
@@ -539,6 +559,9 @@ export interface Frame {
   stumpsBowl: number
   /** The striker's own place when he is not running: stepping out of his crease to be stumped. */
   striker: V3 | null
+  /** The keeper whipping the bails off (0 to 1), and the batsman left stranded out of his ground (0 to 1). */
+  keeperStump: number
+  stranded: number
   reverse: boolean
   /** The place the camera is looking, and how wide. */
   aim: V3; hfov: number
@@ -629,7 +652,7 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   const hitT = t2
   const batSwing = plan.swing ? clamp01((t - (hitT - 0.2)) / 0.45) : clamp01((t - (hitT - 0.12)) / 0.3) * 0.25
   const ro = plan.runOut
-  const hitAt = ro ? t2 + plan.tFlight + ro.tThrow : hitT
+  const hitAt = ro ? t2 + plan.tFlight + ro.tThrow : plan.stump ? plan.stump.breakAt : hitT
   const flyNow = plan.wicketFlies ? clamp01((t - hitAt) / 0.8) : 0
   const stumps = ro ? (ro.destEnd === 0 ? flyNow : 0) : flyNow
   const stumpsBowl = ro && ro.destEnd === 1 ? flyNow : 0
@@ -713,8 +736,9 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
       runners = { a: at(0, 1), b: at(1, -1) }
     }
   } else if (plan.stepOut) {
-    // stumped: he comes down the pitch and is beaten
-    striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, -2.7, ease((t - (t2 - 0.45)) / 0.5)) }
+    // stumped: he lunges out of his crease as the ball is bowled, swings and misses, and is left stranded, his back foot just beyond the popping crease by the number of centimetres the screen gives
+    const outZ = -1.22 - 0.32 - (plan.stump?.gap ?? 15) / 100
+    striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, outZ, ease((t - (t2 - 0.8)) / 0.55)) }
   }
   // the out batsman walks off once the wicket has fallen
   if (plan.exitAt !== null && plan.exitAt !== undefined && t > plan.exitAt + 0.3) {
@@ -740,8 +764,8 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     const k = clamp01((t - (t3 - 0.15)) / 0.2) * (1 - clamp01((t - t3 - 1.4) / 0.5))
     if (k > 0) board = { a: Math.atan2((plan.end.z - ROPE.cz) / ROPE.rz, (plan.end.x - ROPE.cx) / ROPE.rx), text: plan.six ? 'SIX' : 'FOUR', k }
   }
-  const joy = !plan.reviewed && (plan.boundary || plan.wicketFlies || plan.catcher >= 0) ? clamp01((t - (plan.runOut ? hitAt : t3)) / 0.5) : 0
-  return { slowmo, board, signal, hurt, raise, dives, react, runners, striker, stumpsBowl, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2 && !(plan.celebrateAt !== null && plan.celebrateAt !== undefined && t >= plan.celebrateAt - 0.15), aim, hfov, moving, joy, phase }
+  const joy = !plan.reviewed && (plan.boundary || plan.wicketFlies || plan.catcher >= 0) ? clamp01((t - (plan.runOut || plan.stump ? hitAt : t3)) / 0.5) : 0
+  return { slowmo, board, signal, hurt, raise, dives, react, runners, striker, keeperStump: plan.stump ? clamp01((t - (t3 + 0.04)) / 0.28) * (1 - clamp01((t - plan.stump.breakAt - 0.9) / 0.5)) : 0, stranded: plan.stump ? clamp01((t - (t2 + 0.2)) / 0.4) : 0, stumpsBowl, bowler: bowlerPos, bowlerArm, ball, batSwing, stumps, reverse: plan.reverse && t >= t2 && !(plan.celebrateAt !== null && plan.celebrateAt !== undefined && t >= plan.celebrateAt - 0.15), aim, hfov, moving, joy, phase }
 }
 
 /** The camera turned to look at a point, from where it stands. */
