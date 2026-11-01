@@ -643,20 +643,19 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       {(look.covers || (event === null && look.rain === 2)) && <div className="pointer-events-none absolute inset-x-0 top-10 z-[6001] text-center"><span className="rounded bg-black/75 px-3 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200 ring-1 ring-sky-300/40">{look.weather === 'washout' ? 'Washed out: no play today' : 'Rain stops play: covers on'}</span></div>}
       {/* the TV score bug: the score and overs, the two batsmen and the bowler, and in a chase what is needed */}
       {scoreBarOn && (scoreBug || event) && (
-        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
+        <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] w-max max-w-[62%] overflow-hidden rounded bg-black/80 text-white ring-1 ring-white/20">
           <div className="flex items-stretch">
             <span className="px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: accentOf(battingTeam) }}>{scoreBug?.team ?? battingTeam.short}</span>
             <span className="px-1.5 py-0.5 font-display text-sm leading-none tabular-nums">{scoreBug?.runs ?? event?.score.runs}/{scoreBug?.wickets ?? event?.score.wickets}</span>
-            <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor((scoreBug?.balls ?? event?.score.legalBalls ?? 0) / 6)}.{(scoreBug?.balls ?? event?.score.legalBalls ?? 0) % 6} ov</span>
-            {scoreBug?.lastKmh ? <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-sky-300">{scoreBug.lastKmh} km/h</span> : null}
-            {scoreBug?.need && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-amber-300">{scoreBug.need}</span>}
-            {scoreBug?.stand && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">P {scoreBug.stand}</span>}
-            {scoreBug?.win && <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-extrabold leading-snug" style={{ color: scoreBug.win.pct >= 50 ? '#34d399' : '#f87171' }}>{scoreBug.win.team} {scoreBug.win.pct}%</span>}
+            <span className="border-l border-white/20 px-1.5 py-0.5 text-[10px] font-bold leading-snug text-slate-300">{Math.floor((scoreBug?.balls ?? event?.score.legalBalls ?? 0) / 6)}.{(scoreBug?.balls ?? event?.score.legalBalls ?? 0) % 6}</span>
           </div>
-          {scoreBug && scoreBug.batters.length > 0 && (
-            <div className="border-t border-white/15 px-1.5 py-0.5 text-[9px] leading-tight text-slate-200 sm:text-[10px]">
-              {scoreBug.batters.map((b) => <span key={b.name} className="mr-2 whitespace-nowrap"><b className={b.strike ? 'text-amber-300' : 'text-slate-200'}>{b.name}{b.strike ? '*' : ''}</b> {b.runs}<span className="text-slate-400"> ({b.balls})</span></span>)}
-              {scoreBug.bowler && <span className="whitespace-nowrap text-sky-300">· {scoreBug.bowler.name} {scoreBug.bowler.figures}</span>}
+          {/* the small print goes on a second line only when there is some (a chase, a partnership, the speed): the two batsmen and the bowler are on the cards under the picture */}
+          {scoreBug && (scoreBug.need || scoreBug.stand || scoreBug.win || scoreBug.lastKmh) && (
+            <div className="flex flex-wrap items-center gap-x-2 border-t border-white/15 px-1.5 py-0.5 text-[9px] font-bold leading-snug">
+              {scoreBug.need && <span className="text-amber-300">{scoreBug.need}</span>}
+              {scoreBug.win && <span className="font-extrabold" style={{ color: scoreBug.win.pct >= 50 ? '#34d399' : '#f87171' }}>{scoreBug.win.team} {scoreBug.win.pct}%</span>}
+              {scoreBug.stand && <span className="text-slate-300">P {scoreBug.stand}</span>}
+              {scoreBug.lastKmh ? <span className="text-sky-300">{scoreBug.lastKmh} km/h</span> : null}
             </div>
           )}
         </div>

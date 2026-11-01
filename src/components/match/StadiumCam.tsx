@@ -477,17 +477,10 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       {show.lower && show.lower.pair && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] grid grid-cols-2 gap-1.5" style={{ animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : 1.6) / Math.max(0.25, rate)}s both` }}>
           {show.lower.pair.map((c) => (
-            <div key={c.title} className="min-w-0 rounded-lg bg-black/80 px-2 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 3px 0 0 ${show.colors[0]}` }}>
-              <div className="flex items-center gap-1"><span className="min-w-0 flex-1 truncate font-display text-sm uppercase leading-none tracking-wide text-white">{c.title}</span>{c.rating !== undefined && <span className="rounded bg-violet-500 px-1 font-display text-sm leading-none text-white">{c.rating}</span>}</div>
+            <div key={c.title} className="min-w-0 overflow-hidden rounded-md bg-black/85 px-2 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 3px 0 0 ${show.colors[0]}` }}>
+              <div className="flex items-center gap-1.5"><span className="min-w-0 flex-1 truncate font-display text-base uppercase leading-none tracking-wide text-white">{c.title}</span>{c.rating !== undefined && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-sm leading-none text-white ring-2 ring-white/30">{c.rating}</span>}</div>
               <div className="mt-0.5 truncate text-[10px] font-semibold leading-tight text-slate-300">{c.sub}</div>
-              <div className="mt-1 grid grid-cols-2 gap-1">
-                {c.tiles.slice(0, 4).map((t) => (
-                  <div key={t.label} className="rounded bg-white/10 px-1 py-0.5 text-center leading-tight">
-                    <div className="font-display text-sm leading-none text-white">{t.value}</div>
-                    <div className="truncate text-[8px] font-bold uppercase tracking-wide text-slate-300">{t.label}</div>
-                  </div>
-                ))}
-              </div>
+              <StatBand tiles={c.tiles.slice(0, 4)} small />
             </div>
           ))}
         </div>
@@ -501,37 +494,44 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2"><span className="truncate font-display text-xl uppercase leading-none tracking-wide text-white">{show.lower.title}</span>{show.lower.chip && <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</span>}</div>
             {show.lower.lines.map((ln, i) => <div key={i} className="mt-0.5 text-[13px] font-bold leading-snug text-amber-200">{ln}</div>)}
-            {show.lower.tiles && show.lower.tiles.length > 0 && (
-              <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-                {show.lower.tiles.slice(0, 3).map((t) => (
-                  <div key={t.label} className="rounded bg-white/10 px-1 py-1 text-center leading-none">
-                    <div className="font-display text-lg leading-none text-white">{t.value}</div>
-                    <div className="mt-0.5 text-[9px] font-extrabold uppercase tracking-wide text-slate-300">{t.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {show.lower.tiles && show.lower.tiles.length > 0 && <StatBand tiles={show.lower.tiles.slice(0, 3)} />}
           </div>
         </div>
       )}
       {show.lower && !show.lower.big && !show.lower.pair && (
-        <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] max-w-[88%] rounded-lg bg-black/75 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}`, animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : show.kind === 'bowler' || show.kind === 'walkoff' || show.kind === 'physio' || show.kind === 'dugout' || show.kind === 'drinks' || show.kind === 'handshake' || show.kind === 'pitchreport' || show.kind === 'fans' || show.kind === 'salute' ? 1.6 : show.kind === 'trophy' || show.kind === 'motm' ? 3.4 : show.kind === 'lineup' ? 5.6 : 1.2) / Math.max(0.25, rate)}s both` }}>
-          <div className="flex items-center gap-2"><span className={`font-display uppercase leading-none tracking-wide ${show.lower.color ? 'text-3xl' : 'text-lg text-white'}`} style={show.lower.color ? { color: show.lower.color, textShadow: `0 0 14px ${show.lower.color}88` } : undefined}>{show.lower.title}</span>{show.lower.chip && <span className="rounded px-1.5 text-[10px] font-extrabold uppercase tracking-wider text-black" style={{ background: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</span>}{show.lower.rating !== undefined && <span className="ml-auto rounded bg-violet-500 px-1.5 font-display text-base leading-none text-white">{show.lower.rating}</span>}</div>
-          {show.lower.lines.map((ln, i) => <div key={i} className="text-[11px] font-semibold leading-snug text-slate-200">{ln}</div>)}
-          {show.lower.tiles && show.lower.tiles.length > 0 && (
-            <div className={`mt-1 grid gap-1 ${show.lower.tiles.length <= 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-              {show.lower.tiles.slice(0, 6).map((t) => (
-                <div key={t.label} className="rounded bg-white/10 px-1.5 py-0.5 text-center leading-tight">
-                  <div className="font-display text-base leading-none text-white">{t.value}</div>
-                  <div className="truncate text-[8px] font-bold uppercase tracking-wide text-slate-300">{t.label}</div>
-                </div>
-              ))}
+        <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] max-w-[92%] overflow-hidden rounded-md bg-black/85 ring-1 ring-white/15" style={{ animation: `stadium-in 0.5s ease-out ${(show.kind === 'entrance' ? ENTRANCE.track : show.kind === 'bowler' || show.kind === 'walkoff' || show.kind === 'physio' || show.kind === 'dugout' || show.kind === 'drinks' || show.kind === 'handshake' || show.kind === 'pitchreport' || show.kind === 'fans' || show.kind === 'salute' ? 1.6 : show.kind === 'trophy' || show.kind === 'motm' ? 3.4 : show.kind === 'lineup' ? 5.6 : 1.2) / Math.max(0.25, rate)}s both` }}>
+          <div className="flex items-stretch">
+            <div className="w-1.5 shrink-0" style={{ background: show.colors[0] }} />
+            <div className="min-w-0 flex-1 px-2.5 py-1.5">
+              {show.lower.chip && <div className="text-[9px] font-extrabold uppercase leading-none tracking-[0.2em]" style={{ color: show.lower.color ?? '#fcd34d' }}>{show.lower.chip}</div>}
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`min-w-0 flex-1 truncate font-display uppercase leading-none tracking-wide ${show.lower.color ? 'text-3xl' : 'text-xl text-white'}`} style={show.lower.color ? { color: show.lower.color, textShadow: `0 0 14px ${show.lower.color}88` } : undefined}>{show.lower.title}</span>
+                {show.lower.rating !== undefined && <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-lg leading-none text-white ring-2 ring-white/30">{show.lower.rating}</span>}
+              </div>
+              {show.lower.lines.filter((ln) => ln !== 'Ratings').map((ln, i) => <div key={i} className={`mt-0.5 truncate leading-snug ${i === 0 ? 'text-[11px] font-bold text-slate-200' : 'text-[10px] font-semibold text-slate-400'}`}>{ln}</div>)}
+              {show.lower.tiles && show.lower.tiles.length > 0 && <StatBand tiles={show.lower.tiles.slice(0, 4)} />}
             </div>
-          )}
+          </div>
         </div>
       )}
       {label && !show.lower && show.kind !== 'ceremony' && <div className="pointer-events-none absolute bottom-3 left-3 z-[9000] rounded bg-black/70 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-widest text-white ring-1" style={{ boxShadow: `inset 3px 0 0 ${show.colors[0]}` }}>{label}</div>}
       <div className="pointer-events-none absolute right-2 top-2 z-[9000] rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-300">Tap to skip</div>
+    </div>
+  )
+}
+
+const SHORT: Record<string, string> = { Technique: 'Tech', Temperament: 'Temp', Running: 'Run', Accuracy: 'Acc', Variation: 'Var', Stamina: 'Stam', 'Strike rate': 'SR', 'Bat apps': 'Apps', 'Bowl apps': 'Apps', Economy: 'Econ', Wickets: 'Wkts' }
+
+/** A row of figures with thin dividers between them (a value over a small label), the stat band of a TV lower third. */
+function StatBand({ tiles, small = false }: { tiles: { label: string; value: string }[]; small?: boolean }) {
+  return (
+    <div className="mt-1.5 flex divide-x divide-white/15 border-t border-white/15 pt-1">
+      {tiles.map((t) => (
+        <div key={t.label} className="min-w-0 flex-1 px-1 text-center leading-none first:pl-0 last:pr-0">
+          <div className={`truncate font-display tabular-nums text-white ${small ? 'text-sm' : 'text-lg'}`}>{t.value}</div>
+          <div className="mt-0.5 text-[8px] font-bold uppercase tracking-normal text-slate-400">{small ? SHORT[t.label] ?? t.label : t.label}</div>
+        </div>
+      ))}
     </div>
   )
 }
