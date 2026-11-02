@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { setStatsFormat } from '../statsFormat'
+import { useEffect, useMemo, useState } from 'react'
 import { TitlesButton } from '../components/season/TitlesButton'
 import { Link, useSearchParams } from 'react-router'
 import { PlayerCell, competitionName, usePlayerIndex, useTeamMap, type PlayerEntry } from '../components/season/shared'
@@ -242,6 +243,8 @@ export function StatsPage() {
   const format = (params.get('format') ?? '') as MatchFormat | ''
   const set = (key: string, value: string) => setParams((p) => { const n = new URLSearchParams(p); if (value) n.set(key, value); else n.delete(key); return n }, { replace: true })
 
+  // the caps on the portraits follow the format picked here (All adds every format together)
+  useEffect(() => { setStatsFormat(format || null); return () => setStatsFormat(null) }, [format])
   const scope: Scope = useMemo(() => ({ competitionId: competitionId || undefined, format: format || undefined }), [competitionId, format])
   const collected = useMemo(() => (season ? collect(season, scope) : null), [season, scope])
   const records = useMemo(() => (season ? seasonRecords(season, scope) : []), [season, scope])
