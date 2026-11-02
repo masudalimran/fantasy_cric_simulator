@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { average, bowlAverage, collect, economy, mergeBat, mergeBowl, strikeRate } from '../../season/stats'
 import type { BatStat, BowlStat } from '../../season/stats'
 import type { Season } from '../../season/types'
+import type { MatchFormat } from '../../types'
 
 const f1 = (n: number | null, d = 1) => (n === null ? '-' : n.toFixed(d))
 const tile = (label: string, value: React.ReactNode) => (
@@ -15,14 +16,15 @@ const tile = (label: string, value: React.ReactNode) => (
  * A player's overall numbers: this season so far, and (once there are finished seasons) the whole career.
  * `seasons` is every season of the career, oldest first; the last one is the season being played.
  */
-export function OverallStats({ playerId, seasons, live }: { playerId: string; seasons: Season[]; live?: { bat?: BatStat; bowl?: BowlStat } }) {
+export function OverallStats({ playerId, seasons, live, format }: { playerId: string; seasons: Season[]; live?: { bat?: BatStat; bowl?: BowlStat }; /** Count only this format's matches (all of them when left out). */ format?: MatchFormat }) {
   const lines = useMemo(() => seasons.map((s) => {
-    const c = collect(s)
+    const c = collect(s, format ? { format } : {})
     const bat = c.bat.get(playerId), bowl = c.bowl.get(playerId)
     // matches he was in the XI for (older saves only know about the ones where he batted or bowled)
     return { year: s.year, bat, bowl, potm: c.potm.get(playerId) ?? 0, played: c.played.get(playerId) ?? Math.max(bat?.matches ?? 0, bowl?.matches ?? 0) }
-  }), [seasons, playerId])
+  }), [seasons, playerId, format])
   if (lines.length === 0) return null
+  const fmtName = format === 't20' ? 'T20' : format === 'odi' ? 'ODI' : format === 'test' ? 'Test' : ''
   // the match being played right now counts as it goes: being in the XI is a match, and his runs and wickets are added straight away
   const withLive = (bat: BatStat | undefined, bowl: BowlStat | undefined) => ({ bat: mergeBat([bat, live?.bat].filter((x): x is BatStat => !!x)), bowl: mergeBowl([bowl, live?.bowl].filter((x): x is BowlStat => !!x)) })
   const cur = lines[lines.length - 1]
@@ -54,8 +56,8 @@ export function OverallStats({ playerId, seasons, live }: { playerId: string; se
 
   return (
     <div className="space-y-3">
-      {block(`This season (${current.year})${live ? ', including this match so far' : ''}`, current)}
-      {seasons.length > 1 && block(`Career · ${seasons.length} seasons`, career)}
+      {block(`${fmtName ? `${fmtName} · ` : ''}This season (${current.year})${live ? ', including this match so far' : ''}`, current)}
+      {seasons.length > 1 && block(`${fmtName ? `${fmtName} · ` : ''}Career · ${seasons.length} seasons`, career)}
     </div>
   )
 }

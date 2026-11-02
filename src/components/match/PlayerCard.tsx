@@ -63,6 +63,9 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
     for (const l of bowling) if (l.legalBalls > 0) bowl = { id: player.id, matches: 1, balls: l.legalBalls, runs: l.runs, wickets: l.wickets, maidens: l.maidens, bestW: l.wickets, bestR: l.runs, fiveW: l.wickets >= 5 ? 1 : 0, bowlApps: 1, topKmh: match.innings.flatMap((i) => i.log).filter((e) => e.bowlerId === player.id).reduce((m, e) => Math.max(m, ballSpeed(e, player)), 0) }
     return { bat, bowl } // being in the XI is enough to count the match, even before he has batted or bowled
   })()
+  // the stats open on this match's format (T20 in a T20), with Overall (every format) one tap away
+  const [statsTab, setStatsTab] = useState<'format' | 'all'>('format')
+  const fmtLabel = match.format === 't20' ? 'T20' : match.format === 'odi' ? 'ODI' : 'Test'
   const captain = team.captainId === player.id
   const keeper = keeperIn(match.sides.find((s) => s.team.id === team.id)?.xi ?? [], team.keeperId)?.id === player.id
 
@@ -117,8 +120,17 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
           </section>
 
           <section className="rounded-2xl border border-line bg-panel p-3">
-            <h3 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-widest text-sky-300">Overall stats</h3>
-            {career && seasons.length > 0 ? <OverallStats playerId={player.id} seasons={seasons} live={liveStats} /> : <p className="text-sm text-slate-500">Season and career numbers are kept in a career. This is a friendly.</p>}
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-sky-300">Stats</h3>
+              {career && seasons.length > 0 && (
+                <div className="flex gap-1 rounded-full bg-black/30 p-0.5" role="tablist" aria-label="Which stats">
+                  {([['format', fmtLabel], ['all', 'Overall']] as const).map(([k, label]) => (
+                    <button key={k} role="tab" aria-selected={statsTab === k} onClick={() => setStatsTab(k)} className={`cursor-pointer rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wider ${statsTab === k ? 'bg-sky-400 text-black' : 'text-slate-300 hover:text-white'}`}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {career && seasons.length > 0 ? <OverallStats key={statsTab} playerId={player.id} seasons={seasons} live={liveStats} format={statsTab === 'format' ? match.format : undefined} /> : <p className="text-sm text-slate-500">Season and career numbers are kept in a career. This is a friendly.</p>}
           </section>
 
           {career && seasons.length > 0 && <RecentMatches season={seasons[seasons.length - 1]} playerId={player.id} teamId={team.id} teams={careerTeams} />}
