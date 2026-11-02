@@ -1,6 +1,7 @@
 import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
+import { drawFourFx, type FourFxDraw } from './fourFx'
 import { drawMove, type MoveDraw } from './moveFx'
 import { drawDJBooth, drawDugout, drawOutside, drawPlatform, drawSpace, type OutsideDraw, type SpaceDraw } from './setDraw'
 import { drawStage, type StageDraw, drawBall3, drawBigScreen, drawConfetti, drawCrowdClose, drawSparks, type Ball3, type BigScreen, type Confetti, type CrowdClose, type Spark } from './crowdDraw'
@@ -26,6 +27,8 @@ export interface Scene {
   wear: number
   /** A boundary: the boards where the ball went light up with FOUR or SIX. */
   board: { a: number; text: string; k: number } | null
+  /** A little moment where a four crosses the rope (a rippling rope, a flipping board, a mascot, a shockwave...). */
+  fx4?: FourFxDraw | null
   /** The covers are on the pitch (rain stopped play, or a washed-out day). */
   covers: boolean
   /** 0 to 1: how far the batsman's stumps have been knocked over. */
@@ -149,6 +152,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
       ctx.fillStyle = `rgba(255,255,255,${Math.min(1, sc.board.k + 0.2)})`; ctx.fillText(sc.board.text, p.x, p.y); ctx.restore()
     }
   }
+  if (sc.fx4) drawFourFx(ctx, r, sc.fx4)
   // the evening getting dark (the switching-on show): everything dims and goes blue, then the lamps bring the ground back up
   if (sc.towers && sc.towers.dusk > 0) {
     const lit = sc.towers.on.reduce((a, b) => a + b, 0) / Math.max(1, sc.towers.on.length)

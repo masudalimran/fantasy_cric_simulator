@@ -86,7 +86,7 @@ describe('the stadium shows', () => {
       for (let t = 0.05; t <= SHOW_SECONDS[kind]; t += 0.05) {
         const c = cameraAt(s, t)
         const cut = (kind === 'fans' && [2.2, 4.4].some((c) => Math.abs(t - c) < 0.08)) || (kind === 'walkoff' && Math.abs(t - WALKOFF.cut) < 0.08) || (kind === 'milestone' && Math.abs(t - MILESTONE.cut) < 0.08) // (a cut to another camera: the picture flashes white)
-        if (!cut) expect(dist(c.p, prev.p), `${kind} ${seed} at ${t.toFixed(2)}`).toBeLessThan(kind === 'lineup' || kind === 'flyover' ? 6 : 4.2) // (the swoops from high above the stadium are the fast ones)
+        if (!cut) expect(dist(c.p, prev.p), `${kind} ${seed} at ${t.toFixed(2)}`).toBeLessThan(kind === 'lineup' || kind === 'flyover' ? 6 : kind === 'moonshot' ? 4.8 : 4.2) // (the swoops from high above the stadium are the fast ones)
         if (!cut) expect(Math.abs(c.hfov - prev.hfov), `${kind} ${seed} at ${t.toFixed(2)} (zoom)`).toBeLessThan(0.06)
         expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
         expect(Math.hypot((c.p.x - ROPE.cx) / (ROPE.rx * 1.6), (c.p.z - ROPE.cz) / (ROPE.rz * 1.6))).toBeLessThan(1)

@@ -4,6 +4,7 @@ import { clamp01, mixPose, standing, type Pose } from './bodyPose'
 import { shade } from '../../engine/stadium'
 import { benchSpot as benchAt, DUGOUT_C, PLATFORM, DJ } from './setDraw'
 import { SIGN } from './signingScript'
+import { SIX_SCENES, type SixSceneKind } from './sixScenes'
 import { CEREMONY_BEATS, type SpeechLine } from './ceremonyScript'
 import { REVIEW_VERDICT_AT, SCREEN_R, STAGE, slopePoint, type Ball3, type BigScreen, type BoardInfo, type Confetti, type CrowdClose, type FanSign, type ReviewBoard, type ScreenPost, type Spark } from './crowdDraw'
 
@@ -713,21 +714,23 @@ export { PLATFORM, DJ }
 
 // ---- a six out of the stadium ------------------------------------------------------------------------------------------------------
 
-export type MoonOutcome = 'car' | 'river' | 'blimp' | 'satellite' | 'rocket'
+export type MoonOutcome = 'car' | 'blimp' | 'satellite' | 'rocket' | SixSceneKind
 export const isSpace = (o: MoonOutcome | undefined): boolean => o === 'satellite' || o === 'rocket'
 /** A six of this length goes up into space and hits a satellite or a rocket (picked from the ball number each time). */
 export const SPACE_SIX_METRES = 180
 export const spaceOutcome = (seed: number): 'satellite' | 'rocket' => (hash01(seed * 3.7 + 5) < 0.5 ? 'satellite' : 'rocket')
 export const MOON = { launch: 0.35, flight: 3.4, chase: 1.7 }
 export const moonLandAt = (): number => MOON.launch + MOON.flight
-export const moonOutcome = (seed: number): 'car' | 'river' | 'blimp' => (['car', 'river', 'blimp'] as const)[Math.floor(hash01(seed * 6.1 + 2) * 3) % 3]
+/** Where a six out of the ground ends up: on a car, on the blimp, or in one of the cut-away scenes (the river, a restaurant, a plane, a wedding, a rooftop party, a bell tower, a pizza scooter). */
+const CITY_OUTCOMES: MoonOutcome[] = ['car', 'blimp', ...SIX_SCENES]
+export const moonOutcome = (seed: number): MoonOutcome => CITY_OUTCOMES[Math.floor(hash01(seed * 6.1 + 2) * CITY_OUTCOMES.length) % CITY_OUTCOMES.length]
 /** The ball's path: from where the bat met it, high up over the roof and out to where it comes down. */
 function moonPath(show: StadiumShow): { from: V3; to: V3; peak: number; dir: V3 } {
   const from = show.from ?? { x: 0.75, y: 1, z: -1.2 }
   const l = show.landing ?? { x: 160, y: 0, z: -10 }
   const out = show.outcome ?? moonOutcome(show.seed)
   // (into space: straight up and away, to a height where the sky is black)
-  const to: V3 = isSpace(out) ? { x: l.x * 0.3, y: 320, z: l.z * 0.3 } : { x: l.x, y: out === 'blimp' ? 48 : out === 'river' ? 0 : 0.6, z: l.z }
+  const to: V3 = isSpace(out) ? { x: l.x * 0.3, y: 320, z: l.z * 0.3 } : { x: l.x, y: out === 'blimp' ? 48 : out === 'plane' ? 60 : out === 'river' ? 0 : 0.6, z: l.z }
   const d = Math.hypot(to.x - from.x, to.z - from.z) || 1
   return { from, to, peak: isSpace(out) ? 14 : 26 + d * 0.2, dir: { x: (to.x - from.x) / d, y: 0, z: (to.z - from.z) / d } }
 }
@@ -766,14 +769,15 @@ export function spaceAt(show: StadiumShow, t: number): { kind: 'satellite' | 'ro
 /** The chase camera: behind and above the ball as it goes, then wide on where it came down. */
 function moonKey(show: StadiumShow, t: number): Key {
   const { to, dir } = moonPath(show)
+  const outc = show.outcome ?? moonOutcome(show.seed)
   const b = moonBall(show, Math.min(t, moonLandAt() - 0.01)) ?? { p: moonPath(show).from, size: 1 }
   if (t < moonLandAt()) {
     const pull = 18 + 6 * ease((t - MOON.launch) / MOON.flight)
     return { p: { x: b.p.x - dir.x * pull, y: b.p.y + 4.5 + 2 * ease((t - MOON.launch) / MOON.flight), z: b.p.z - dir.z * pull }, aim: b.p, hfov: 46 * rad }
   }
   const k = ease((t - moonLandAt()) / 2.2)
-  const back = isSpace(show.outcome) ? 1 + 0.8 * ease((t - moonLandAt()) / 1.4) : 1 // (into space it backs away from the object as it is hit)
-  return { p: { x: to.x - dir.x * lerp(24, 30, k) * back, y: lerp(10, 7, k) + (show.outcome === 'blimp' ? 36 : 0) + (isSpace(show.outcome) ? to.y - 2 : 0), z: to.z - dir.z * lerp(24, 30, k) * back }, aim: { x: to.x, y: isSpace(show.outcome) ? to.y : to.y * 0.7 + 1, z: to.z }, hfov: lerp(46, show.outcome === 'blimp' ? 54 : 42, ease((t - moonLandAt()) / 1.2)) * rad }
+  const back = isSpace(outc) ? 1 + 0.8 * ease((t - moonLandAt()) / 1.4) : 1 // (into space it backs away from the object as it is hit)
+  return { p: { x: to.x - dir.x * lerp(24, 30, k) * back, y: lerp(10, 7, k) + (outc === 'blimp' ? 36 : 0) + (isSpace(outc) || outc === 'plane' ? to.y - 2 : 0), z: to.z - dir.z * lerp(24, 30, k) * back }, aim: { x: to.x, y: isSpace(outc) || outc === 'plane' ? to.y : to.y * 0.7 + 1, z: to.z }, hfov: lerp(46, outc === 'blimp' ? 54 : 42, ease((t - moonLandAt()) / 1.2)) * rad }
 }
 
 // ---- the trophy -------------------------------------------------------------------------------------------------------------------

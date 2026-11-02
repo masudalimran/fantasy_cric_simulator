@@ -10,6 +10,7 @@ import { MobileNowPlaying, NowPlaying } from '../components/match/NowPlaying'
 import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
+import { isSixScene, SIX_SCENE_TEXT } from '../components/match/sixScenes'
 import { Highlights } from '../components/match/Highlights'
 import { PHANTOM_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { TIRED_SECONDS } from '../components/match/EventScreens'
@@ -981,7 +982,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           // out of the stadium: the camera chases the ball up over the roof and out over the city to where it comes down (a parked car, the river or a blimp)
           if (gone) {
             const outcome = (notable.distance ?? 0) >= SPACE_SIX_METRES ? spaceOutcome(notable.seq) : moonOutcome(notable.seq)
-            const what = outcome === 'satellite' ? 'It leaves the atmosphere and clips a satellite' : outcome === 'rocket' ? 'It climbs into space and hits a rocket on its way up' : outcome === 'car' ? 'It smashes into a parked car: the alarm is going off' : outcome === 'river' ? 'It splashes down in the river beyond the ground' : 'It hits the blimp above the stadium'
+            const what = isSixScene(outcome) ? SIX_SCENE_TEXT[outcome] : outcome === 'satellite' ? 'It leaves the atmosphere and clips a satellite' : outcome === 'rocket' ? 'It climbs into space and hits a rocket on its way up' : outcome === 'car' ? 'It smashes into a parked car: the alarm is going off'  : 'It hits the blimp above the stadium'
             show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: (notable.distance ?? 0) >= SPACE_SIX_METRES ? 'INTO ORBIT!' : 'OUT OF THE STADIUM!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.moonshot * 1000 * rate6), stadium: { show: { kind: 'moonshot', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], from: pl.meet, landing: pl.end, outcome, lower: (notable.distance ?? 0) >= SPACE_SIX_METRES ? { title: `INTO ORBIT! ${notable.distance} m`, lines: [what], chip: 'ORBITAL SIX', color: '#a78bfa' } : (notable.distance ?? 0) >= 150 ? { title: `MEGA SIX! ${notable.distance} m`, lines: [what], chip: 'MONSTER ENERGY MEGA SIX', color: '#7CFC00' } : { title: `OUT OF THE STADIUM! ${notable.distance ?? ''} m`.trim(), lines: [what], chip: 'MOON SHOT', color: '#f472b6' } }, base: bs, label: 'Out of the stadium', rate: rate6 } })
           } else
           show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.landing * 1000 * rate6), stadium: { show: { kind: 'landing', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], landing: pl.end, caught: fan < 0.4, gone, lower: { title: `SIX! ${notable.distance ?? ''} m`.trim(), lines: [gone ? 'Out of the stadium!' : fan < 0.4 ? 'A fan takes it in the stands' : 'It crashes into the seats'] } }, base: bs, label: 'Six', rate: rate6 } })

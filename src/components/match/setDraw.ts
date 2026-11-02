@@ -145,7 +145,7 @@ export interface OutsideDraw {
   seed: number
   /** Where the ball comes down outside, and what it does there. */
   landing: V3
-  outcome: 'car' | 'river' | 'blimp'
+  outcome: 'car' | 'river' | 'blimp' | 'none'
   /** Seconds since the ball came down (negative before it does). */
   since: number
   tick: number

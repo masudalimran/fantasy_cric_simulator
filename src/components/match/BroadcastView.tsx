@@ -152,6 +152,9 @@ function SpellCard({ spell, color, delay }: { spell: NonNullable<ScoreBug['spell
   )
 }
 
+/** Which style of shockwave a team has (0 to 1, from its id). */
+const hashFlavor = (id: string): number => { let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619) } return (h >>> 0) / 4294967296 }
+
 /** How long the fielders need to reach a changed field (0 when nobody moves far). */
 function walkLead(prev: Map<string, V3>, fielders: Placed[], now: V3[]): number {
   let far = 0
@@ -334,7 +337,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         blur = fl.blur
       }
       if (Math.abs(blur - blurNow.current) > 0.2 || (blur === 0) !== (blurNow.current === 0)) { blurNow.current = blur; cv.style.filter = blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : '' }
-      drawScene(ctx, cd, W, H, { marks, move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
+      drawScene(ctx, cd, W, H, { marks, move: moveDraw, pitch: L.pitch, look: L.look, tick: t, cheer, covers, wear: L.wear, board: f.board, fx4: L.plan.fourFx && L.event ? { kind: L.plan.fourFx, a: Math.atan2((L.plan.end.z - ROPE.cz) / ROPE.rz, (L.plan.end.x - ROPE.cx) / ROPE.rx), since: t - (L.plan.tRun + L.plan.tDeliver + L.plan.tFlight), hit: t - (L.plan.tRun + L.plan.tDeliver), seed: L.event.seq, colors: [L.battingTeam.colors.primary, L.battingTeam.colors.secondary], flavor: Math.floor(hashFlavor(L.battingTeam.id) * 4) } : null, stumps: f.stumps, stumpsBowl: f.stumpsBowl, trail: [...trail], style })
       const r = prep(cd, W, H)
       if (covers) { for (const n of nodes.current.values()) if (n) n.style.display = 'none'; lastT.current = t; return }
 

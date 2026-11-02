@@ -1,3 +1,4 @@
+import { fourFxKind, FOUR_FX_BIG, type FourFxKind } from './fourFx'
 import type { BallEvent } from '../../engine/types'
 
 /**
@@ -277,6 +278,8 @@ export interface Plan {
   /** The keeper dives for a wide or a bye (and whether he gets there), a fielder dives at the rope for a four. */
   keeperDive: { dir: number; at: number; miss: boolean } | null
   chaserDive: boolean
+  /** A little moment at the rope for a four (a rippling rope, a flipping board, a mascot...): looks only. */
+  fourFx: FourFxKind | null
   /** After a ball that stayed in the field (a single, a dot...) the fielder sends it back: to the bowler or to the keeper, who then passes it on. Each leg: where to, when it leaves (seconds after the ball got there) and how long it takes. */
   back: { to: V3; at: number; dur: number }[] | null
   /** How the chase of a four goes: nobody near it (the ball is in the gap), a fielder who chases it to the rope without diving, or one so close that he dives and just misses it. */
@@ -559,6 +562,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
       else { const d1 = legDur(end, KEEPER_AT); back = [{ to: KEEPER_AT, at: at0, dur: d1 }, { to: BOWLER_AT, at: at0 + d1 + 0.3, dur: 0.65 }] }
     }
   }
+  // a four sometimes has a little moment at the rope, and the clip waits for the big ones to play out
+  const fourFx: FourFxKind | null = ev.boundary === 4 && !w ? fourFxKind(ev.seq) : null
+  if (fourFx) tHold = Math.max(tHold, FOUR_FX_BIG.includes(fourFx) ? 2.3 : 1.6)
   if (back) tHold = Math.max(tHold, Math.min(2.4, back[back.length - 1].at + back[back.length - 1].dur + 0.2))
   // when the wicket falls: a catch when the ball is taken, the stumps at once, a run out when they are hit; then the batsman walks off
   const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : w.kind === 'stumped' ? t3 + 0.34 : t2 + 0.25
@@ -609,7 +615,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     appealAt: appeal || w?.kind === 'stumped' ? { at: w?.kind === 'stumped' ? t3 + 0.1 : t2 + 0.3, len: 0.8 } : null, dropped,
     stump: w?.kind === 'stumped' ? { gap: stumpGap(ev.seq), breakAt: t3 + 0.34 } : null,
     shot: classifyShot({ stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
-    signal, hurt, keeperDive, back, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, back, fourFx, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -769,6 +775,14 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     // with runs being taken the picture settles on the pitch so the running can be seen
     if (plan.runOut) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(lerp3(aim, b, 0.5), { x: 0, y: 0.8, z: -9 }, 0.55 * k + 0.2); hfov = Math.max(hfov, lerp(24, 40, k) * deg) }
     else if (plan.runs > 0) { const k = ease((t - t2) / Math.max(0.6, plan.tFlight)); aim = lerp3(aim, { x: 0, y: 0.8, z: -9 }, k * 0.8); hfov = Math.max(hfov, lerp(22, 36, k) * deg) }
+  }
+  // a little moment at the rope: the picture goes in on the boards where the ball went, so it can be seen
+  if (plan.fourFx && plan.fourFx !== 'shock' && t >= t3 - 0.1) {
+    const ang = Math.atan2((plan.end.z - ROPE.cz) / ROPE.rz, (plan.end.x - ROPE.cx) / ROPE.rx)
+    const target: V3 = { x: ROPE.cx + Math.cos(ang) * ROPE.rx * 1.03, y: 1.2, z: ROPE.cz + Math.sin(ang) * ROPE.rz * 1.03 }
+    const k = ease((t - (t3 - 0.1)) / 0.7)
+    const zoom = plan.fourFx === 'dog' ? 16 : plan.fourFx === 'ripple' ? 18 : plan.fourFx === 'board' ? 12 : plan.fourFx === 'popcorn' ? 11 : plan.fourFx === 'sprinkler' ? 10 : 9
+    aim = lerp3(aim, target, k); hfov = lerp(hfov, Math.min(hfov / deg, zoom) * deg, k)
   }
   // a nick in slow motion: right up close on the bat and ball
   const slowmo = !!plan.slow && t >= plan.slow.at && t <= plan.slow.at + plan.slow.len
