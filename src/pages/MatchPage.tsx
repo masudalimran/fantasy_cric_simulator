@@ -18,6 +18,7 @@ import { getAnimPrefs, getBroadcastView, setManualPlay, useManualPlay, useSwipeA
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
+import { setStatsFormat } from '../statsFormat'
 import { average, collect, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
@@ -311,16 +312,22 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     momentTimer.current = window.setTimeout(startNextMoment, total)
   }, [openWinWhenIdle])
   const enqueueMoment = useCallback((m: Moment) => {
-    // one replay per ball: a ball never gets two slow-motion replays of the same action (the six replay and then the phantom camera, the wicket replay and then a close call...). The best of them stays (the order of REPLAY_RANK); the other screens of the ball (where it landed, the walk-off, the duck...) are not replays and stay.
-    const rank = REPLAY_RANK.indexOf(m.kind)
-    if (rank >= 0 && m.key < 1_000_000) {
+    // a wicket gets one replay, not three of different kinds (the wicket replay, the catch screen, the phantom camera on a bowled, a swing or close-call replay). Different kinds of moment still stack: a six, a fifty, a no ball each keep their own replay.
+    if (m.key < 1_000_000) {
       const ball = Math.floor(m.key)
-      const same = (q: Moment) => q.key < 1_000_000 && Math.floor(q.key) === ball && REPLAY_RANK.indexOf(q.kind) >= 0
-      if (current.current && same(current.current)) return
-      const clash = queue.current.findIndex(same)
-      if (clash >= 0) {
-        if (rank >= REPLAY_RANK.indexOf(queue.current[clash].kind)) return
-        queue.current.splice(clash, 1)
+      const same = (q: Moment) => q.key < 1_000_000 && Math.floor(q.key) === ball
+      const strong = (q: Moment) => WICKET_STRONG.includes(q.kind)
+      const weak = (q: Moment) => WICKET_WEAK.includes(q.kind) && !(q.kind === 'phantomcast' && q.phantomCast?.what === 'six')
+      if (strong(m)) {
+        if (current.current && same(current.current) && strong(current.current)) return
+        const clash = queue.current.findIndex((q) => same(q) && strong(q))
+        if (clash >= 0) {
+          if (WICKET_STRONG.indexOf(m.kind) >= WICKET_STRONG.indexOf(queue.current[clash].kind)) return
+          queue.current.splice(clash, 1)
+        }
+        queue.current = queue.current.filter((q) => !(same(q) && weak(q)))
+      } else if (weak(m)) {
+        if ((current.current && same(current.current) && strong(current.current)) || queue.current.some((q) => same(q) && strong(q))) return
       }
     }
     queue.current.push(m)
@@ -332,7 +339,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const clearMoments = useCallback(() => { queue.current = []; startNextMoment() }, [startNextMoment])
 
   // First time a batsman faces or a bowler bowls in this match: a few seconds of who he is.
-  const seasonStats = useMemo(() => (fixture && season ? collect(season) : null), [fixture, season])
+  // (the figures on the introduction cards are this format's: a T20 shows T20 runs, wickets and averages)
+  const seasonStats = useMemo(() => (fixture && season ? collect(season, { format: match.format }) : null), [fixture, season, match.format])
+  useEffect(() => { setStatsFormat(match.format); return () => setStatsFormat(null) }, [match.format])
   const seen = useRef<Set<string> | null>(null)
   if (seen.current === null) {
     const s = new Set<string>()
@@ -373,14 +382,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       let lines: string[]
       if (kind === 'batsman') {
         const s = seasonStats?.bat.get(id)
-        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `This season: ${s.runs} runs in ${s.innings} innings` : fixture ? 'No runs yet this season' : 'Ratings']
+        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `This season in ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'}: ${s.runs} runs in ${s.innings} innings` : fixture ? `No ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'} runs yet this season` : 'Ratings']
         tiles = s
           ? [t('Apps', s.batApps + 1), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0))]
           : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
       } else {
         const s = seasonStats?.bowl.get(id)
         const w = p.bowling
-        lines = [`${bowlLabel(w?.type)} bowler`, s ? `This season: ${s.wickets} wickets in ${s.matches} matches` : fixture ? 'No wickets yet this season' : 'Ratings']
+        lines = [`${bowlLabel(w?.type)} bowler`, s ? `This season in ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'}: ${s.wickets} wickets in ${s.matches} matches` : fixture ? `No ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'} wickets yet this season` : 'Ratings']
         tiles = s
           ? [t('Apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Best', `${s.bestW}/${s.bestR}`), t('Maidens', s.maidens), t('5-wicket hauls', s.fiveW)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]
@@ -404,7 +413,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const players = fresh.map((b) => match.player(b.id))
         const pair = players.length === 2
         const lead = players[0]
-        const chip = pair ? 'OPENING PAIR' : intros[0].title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : 'NEW BATSMAN'
+        const chip = pair ? 'OPENING PAIR' : intros[0].title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : 'NEW BATSMAN' + (seasonStats ? ` · ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'TEST' : 'T20'} STATS` : '')
         const lines = pair ? intros.map((it, i) => `${players[i].name}: ${it.lines.slice(0, 2).join(' · ')}`) : intros[0].lines.slice(0, 2)
         enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: pair ? { title: `${players[0].name} & ${players[1].name}`, lines: [], chip, pair: intros.map((it, i) => ({ title: players[i].name.split(' ')[0], sub: it.lines[0] ?? '', rating: it.rating, tiles: (it.tiles ?? []).slice(0, 5) })) } : { title: lead.name, lines, chip, tiles: intros[0].tiles, rating: intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
         // wickets have been falling and a set batsman is still there: when the new one comes in he walks down the pitch for a word (looks only)
@@ -429,7 +438,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const p = match.player(bowlerId), bowl = match.bowlingSide(inn)
         const rate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
         const opening = [...inn.bowlers.values()].every((l) => l.legalBalls === 0)
-        const chip = intro.title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : opening ? 'OPENING BOWLER' : 'NEW BOWLER'
+        const chip = intro.title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : opening ? 'OPENING BOWLER' : 'NEW BOWLER' + (seasonStats ? ` · ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'TEST' : 'T20'} STATS` : '')
         enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: p, team: bowl.team, title: intro.title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.bowler * 1000 * rate), stadium: { show: { kind: 'bowler', seed: match.seed + inn.legalBalls + inn.index * 17, colors: [bowl.team.colors.primary, bowl.team.colors.secondary], lower: { title: p.name, lines: intro.lines.slice(0, 2), chip, tiles: intro.tiles, rating: intro.rating } }, base: nowBase(), label: intro.title, rate, cast: { team: bowl.team, players: [p] } } })
       } else enqueueMoment(intro)
     }
@@ -1606,8 +1615,9 @@ function InProgress({ live, onDiscard, wanted }: { live: LiveMatch; onDiscard: (
 }
 
 /** The pitch report's card: the verdict in big coloured words (BAT FIRST, BOWL FIRST or EITHER WAY), what the pitch is like in a line, and three tiles in plain words. */
-/** The screens that replay a ball in slow motion, best first: only one of them is shown for any one ball. */
-const REPLAY_RANK: Moment['kind'][] = ['wicketcast', 'replay', 'six', 'fourcast', 'four', 'catch', 'almostcast', 'misscast', 'phantomcast', 'deliverycast', 'extracast', 'extra', 'noball']
+/** The replays of a wicket, best first: a wicket shows one of them. The others (a close call, a swing, the phantom camera on a bowled) are dropped for a ball that has a wicket replay. */
+const WICKET_STRONG: Moment['kind'][] = ['wicketcast', 'replay', 'catch']
+const WICKET_WEAK: Moment['kind'][] = ['phantomcast', 'deliverycast', 'misscast', 'almostcast']
 
 function pitchReportLower(pitch: Match['pitch']) {
   const pi = describePitch(pitch), adv = tossAdvice(pitch)

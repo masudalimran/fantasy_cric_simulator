@@ -302,9 +302,10 @@ export interface PlayerForm {
   past?: { years: number; bat?: { innings: number; runs: number; average: number | null; high: number; fifties: number; hundreds: number }; bowl?: { matches: number; wickets: number; economy: number | null; bestW: number; bestR: number } }
 }
 
-export function formBefore(season: Season, id: string, excludeFixtureId: string, earlier: Season[] = []): PlayerForm | null {
-  const results = Object.fromEntries(Object.entries(season.results).filter(([, r]) => r.fixtureId !== excludeFixtureId))
-  const c = collect({ ...season, results })
+export function formBefore(season: Season, id: string, excludeFixtureId: string, earlier: Season[] = [], format?: MatchFormat): PlayerForm | null {
+  const formatOf = new Map(season.fixtures.map((f) => [f.id, f.format]))
+  const results = Object.fromEntries(Object.entries(season.results).filter(([, r]) => r.fixtureId !== excludeFixtureId && (!format || formatOf.get(r.fixtureId) === format)))
+  const c = collect({ ...season, results }, format ? { format } : {})
   const roster = season.roster ?? []
   const at = roster.indexOf(id)
   if (at < 0) return null
@@ -326,7 +327,7 @@ export function formBefore(season: Season, id: string, excludeFixtureId: string,
   const pb = { innings: 0, notOuts: 0, runs: 0, high: 0, fifties: 0, hundreds: 0 }
   const pw = { matches: 0, balls: 0, runs: 0, wickets: 0, bestW: 0, bestR: 0 }
   for (const old of earlier) {
-    const oc = collect(old)
+    const oc = collect(old, format ? { format } : {})
     const ob = oc.bat.get(id), ow = oc.bowl.get(id)
     if (!ob && !ow) continue
     years++
