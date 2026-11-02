@@ -37,13 +37,13 @@ describe('ball speed', () => {
     const b = { bowling: { type: 'fast' as const, accuracy: 70, variation: 70, stamina: 70 } }
     expect(ballSpeed({ seq: 5, delivery: { line: 0, length: 'good', pace: 'slow' } }, b)).toBeLessThan(ballSpeed({ seq: 5, delivery: { line: 0, length: 'good', pace: 'fast' } }, b) - 12)
   })
-  it('a dragon ball (160 to 200 km/h) is rare, only quick bowlers bowl one, and it is drawn as a dragon', () => {
+  it('a dragon ball (160 to 210 km/h) is rare, only quick bowlers bowl one, and it is drawn as a dragon', () => {
     const fast = { bowling: { type: 'fast', accuracy: 80, variation: 80, stamina: 80 } } as Parameters<typeof ballSpeed>[1]
     const spinner = { bowling: { type: 'offspin', accuracy: 80, variation: 80, stamina: 80 } } as Parameters<typeof ballSpeed>[1]
     let dragons = 0, top = 0
     for (let seq = 1; seq <= 30000; seq++) { const v = ballSpeed({ seq, delivery: undefined }, fast); if (v >= DRAGON_KMH) { dragons++; top = Math.max(top, v) } else expect(v).toBeLessThan(160) }
     expect(dragons).toBeGreaterThan(40); expect(dragons).toBeLessThan(200) // about one ball in 300
-    expect(top).toBeLessThanOrEqual(200); expect(top).toBeGreaterThan(180)
+    expect(top).toBeLessThanOrEqual(210); expect(top).toBeGreaterThan(195)
     for (let seq = 1; seq <= 20000; seq++) expect(ballSpeed({ seq, delivery: undefined }, spinner)).toBeLessThan(106)
     expect(speedStyle(165)).toBe('dragon')
     expect(speedStyle(159)).toBe('fire')
