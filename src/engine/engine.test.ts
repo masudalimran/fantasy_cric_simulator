@@ -322,3 +322,20 @@ describe('wicketkeeper choice', () => {
     expect(keeperOf(new Match({ teamA: t, teamB: B, format: 't20', seed: 3 }))).toBe(t.players.find((p) => p.role === 'WK')!.id)
   })
 })
+
+describe('hand against arm', () => {
+  it('a left-hander against a right-arm bowler gains a little, against a left-arm one he loses a little; spinners turn the ball away or into the bat', async () => {
+    const { handEdge, HAND } = await import('./model')
+    const r = { hand: 'R' as const, bowling: { type: 'fast' as const, accuracy: 70, variation: 70, stamina: 70 } }
+    const l = { hand: 'L' as const, bowling: { type: 'fast' as const, accuracy: 70, variation: 70, stamina: 70 } }
+    expect(handEdge({ hand: 'L' }, r)).toBe(HAND.across)
+    expect(handEdge({ hand: 'R' }, r)).toBe(-HAND.same)
+    expect(handEdge({ hand: 'R' }, l)).toBe(HAND.across)
+    const off = { hand: 'R' as const, bowling: { type: 'offspin' as const, accuracy: 70, variation: 70, stamina: 70 } }
+    const leg = { hand: 'R' as const, bowling: { type: 'legspin' as const, accuracy: 70, variation: 70, stamina: 70 } }
+    expect(handEdge({ hand: 'L' }, off)).toBe(-HAND.spin) // the off-spinner turns it away from a left-hander
+    expect(handEdge({ hand: 'R' }, off)).toBe(HAND.spin)
+    expect(handEdge({ hand: 'R' }, leg)).toBe(-HAND.spin)
+    expect(handEdge({ hand: 'L' }, leg)).toBe(HAND.spin)
+  })
+})

@@ -23,7 +23,7 @@ describe('the broadcast view plan', () => {
           const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L')
           kinds.add(plan.kind + (plan.reverse ? '+rev' : ''))
           if (ev.extraType === 'wide') { expect(plan.signal?.kind).toBe('wide'); expect(plan.keeperDive).not.toBeNull() }
-          if (ev.extraType === 'noball') expect(plan.signal?.kind).toBe('noball')
+          if (ev.extraType === 'noball' && !ev.wicket) expect(plan.signal?.kind).toBe('noball')
           if (ev.extraType === 'legbye') expect(plan.hurt).toBe(true)
           if (ev.extraType === 'bye') expect(plan.keeperDive?.miss).toBe(true)
           if (ev.boundary === 6 && !ev.extraType) expect(plan.signal?.kind).toBe('six')

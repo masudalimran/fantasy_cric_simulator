@@ -7,6 +7,7 @@ import { campaignOf } from '../season/stories'
 import { COACHES } from '../data/coaches'
 import { injuriesOf } from '../season/injuries'
 import { overall } from '../data/builders'
+import { getAnimPrefs } from '../prefs'
 import { openWindow, playerIndex, SQUAD_CAP } from '../season/market'
 import { playoffStatus } from '../season/stories'
 import { markSeen, useSeenSet } from '../tips'
@@ -100,8 +101,6 @@ function DayCell({ date, inMonth, fixtures, selected, today, season, onSelect }:
   )
 }
 
-const hashOf = (s: string): number => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return (h >>> 0) / 4294967296 }
-
 export function CalendarPage() {
   const season = useStore(selectSeason)
   const updateSeason = useStore((s) => s.updateSeason)
@@ -142,16 +141,17 @@ export function CalendarPage() {
     if (coach && !seenSet.has(ckey)) return { kind: 'coach' as const, coach, team: mineTeam, keys: [ckey] }
     // the day's moves: players signed, released or sold to another club, one screen each (yours first, then the best players); old ones are not shown again
     const fresh = (season.market?.log ?? []).filter((t) => t.date <= season.today && t.date >= addDays(season.today, -10) && !seenSet.has(`xfer:${sid}:${t.id}`))
-    if (fresh.length > 0) {
+    if (fresh.length > 0 && getAnimPrefs().transfers) {
       const index = playerIndex([...baseTeams.values()], season.market)
       const rows: (TransferRow & { rank: number })[] = []
       for (const t of fresh) {
         const player = (t.to ? teams.get(t.to)?.players.find((p) => p.id === t.playerId) : null) ?? (t.from ? teams.get(t.from)?.players.find((p) => p.id === t.playerId) : null) ?? index.get(t.playerId)
         if (!player) continue
         const to = t.to ? teams.get(t.to) ?? null : null, from = t.from ? teams.get(t.from) ?? null : null
-        const squad = (t.kind === 'release' ? from : to)?.players.filter((p) => p.id !== player.id) ?? []
-        const mates = [...squad].sort((a, b) => hashOf(t.id + a.id) - hashOf(t.id + b.id)).slice(0, 3)
-        rows.push({ t, player, from, to, mates, rank: (t.to === season.myTeamId || t.from === season.myTeamId ? 1000 : 0) + overall(player) })
+        const club = t.kind === 'release' ? from : to
+        if (!club) continue
+        const squad = club.players.filter((p) => p.id !== player.id)
+        rows.push({ t, player, from, to, club, squad, rank: (t.to === season.myTeamId || t.from === season.myTeamId ? 1000 : 0) + overall(player) })
       }
       rows.sort((a, b) => b.rank - a.rank)
       const shown = rows.slice(0, 12)
@@ -290,7 +290,7 @@ export function CalendarPage() {
 
       <AnimatePresence>
         {news?.kind === 'champion' && season && (() => { const c = campaignOf(season, news.comp, news.team.id); return <TournamentVictory key={`champ${news.keys[0]}`} info={{ team: news.team, runnerUp: c.runnerUpId ? teams.get(c.runnerUpId) ?? null : null, tournament: competitionName(news.comp, teams), resultText: c.resultText, played: c.played, won: c.won, players: [...news.team.players.slice(0, 11)].sort((a, b) => (b.id === news.team.captainId ? 1 : 0) - (a.id === news.team.captainId ? 1 : 0)), variant: variantOf(news.comp.id) }} onDone={() => news.keys.forEach(markSeen)} /> })()}
-        {news?.kind === 'transfers' && <TransferNews key="xfer" rows={news.rows} extra={news.extra} mine={season?.myTeamId ?? null} onClose={() => news.keys.forEach(markSeen)} />}
+        {news?.kind === 'transfers' && <TransferNews key="xfer" rows={news.rows} extra={news.extra} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'injury' && <InjuryNews key="inj" rows={news.rows} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'playoff' && <PlayoffNews key={`po${news.keys[0]}`} status={news.status} team={news.team} competition={news.comp} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'coach' && <NewCoachScreen key="coach" coach={news.coach} team={news.team} onClose={() => news.keys.forEach(markSeen)} />}

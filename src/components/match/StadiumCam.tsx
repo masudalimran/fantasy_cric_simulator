@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { PRESENTERS, type Presenter } from '../../data/presenters'
 import { lineAt } from './ceremonyScript'
+import { SIGN } from './signingScript'
 import type { Player, Team } from '../../types'
 import { callName } from './format'
 import { TrophyArt, type TrophyKind } from './TrophyArt'
@@ -13,7 +14,7 @@ import { drawScene } from './broadcastDraw'
 import { batsmanPose, breathe, fielderPose, nonStrikerPose, type Pose, standing } from './bodyPose'
 import { CEREMONY_BEATS } from './ceremonyScript'
 import { beatAt } from './stadiumShow'
-import { isSpace, spaceAt, talkPerson, talkPose, benchSpot, benchStand, platformCentre, platformSide, djCentre, djPose, crewPose, DJ, moonBall, moonLandAt, moonOutcome, batsmanDown, dugoutPose, drinksPerson, handshakePos, shaking, physioPos, physioPose, presenterPos, presenterPose, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, balconyPose, bowlerPhase, bowlerPos, cameraAt, captainPos, coinAt, coverAt, crewPos, landingBall, linePerson, lineSpot, LINEUP, MILESTONE, photoFlashes, podiumPos, towersAt, hugCelebrant, hugJoiners, hugPerson, hugSpot, walkoffPos, WALKOFF, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
+import { signingMate, signingPlayer, signingPose, isSpace, spaceAt, talkPerson, talkPose, benchSpot, benchStand, platformCentre, platformSide, djCentre, djPose, crewPose, DJ, moonBall, moonLandAt, moonOutcome, batsmanDown, dugoutPose, drinksPerson, handshakePos, shaking, physioPos, physioPose, presenterPos, presenterPose, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, balconyPose, bowlerPhase, bowlerPos, cameraAt, captainPos, coinAt, coverAt, crewPos, landingBall, linePerson, lineSpot, LINEUP, MILESTONE, photoFlashes, podiumPos, towersAt, hugCelebrant, hugJoiners, hugPerson, hugSpot, walkoffPos, WALKOFF, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
 import type { ReplayBase } from './ReplayFrame'
 
 /**
@@ -105,7 +106,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       if (crowd?.fanReact) crowd = { ...crowd, fanReact: { ...crowd.fanReact, t0: crowd.fanReact.t0 * Math.max(0.25, L.rate) } }
       drawScene(ctx, cam, W, H, {
         pitch: L.base.pitch, look: L.show.kind === 'rain' ? { ...L.base.look, rain: L.show.rain ?? 2, weather: 'rain' as const, covers: false } : L.show.kind === 'lights' ? { ...L.base.look, time: 'dusk', lights: false, rain: 0, weather: 'clear' as const } : L.base.look, tick: real, cheer: crowdCheer(L.show, t), wear: 0, board: null, covers: false, stumps: 0, stumpsBowl: 0, trail: [], style: 'plain',
-        crowd, ball3: L.show.kind === 'moonshot' ? moonBall(L.show, t) : L.show.kind === 'landing' ? landingBall(L.show, t) : null, coverK: L.show.kind === 'rain' ? coverAt(t) : undefined, sets: { dugout: (L.show.kind === 'milestone' && t >= MILESTONE.cut) || L.show.kind === 'dugout' ? L.show.colors : undefined, platform: L.show.kind === 'cheer' && L.show.variant !== 'cards' ? { centre: platformCentre(L.show.seed), side: platformSide(L.show.seed), colors: L.show.colors, dj: djCentre(L.show.seed) } : undefined, outside: L.show.kind === 'moonshot' && !isSpace(L.show.outcome) ? { seed: L.show.seed, landing: { x: (L.show.landing ?? { x: 160, y: 0, z: -10 }).x, y: 0, z: (L.show.landing ?? { x: 160, y: 0, z: -10 }).z }, outcome: (L.show.outcome ?? moonOutcome(L.show.seed)) as 'car' | 'river' | 'blimp', since: t - moonLandAt(), tick: real } : undefined, space: L.show.kind === 'moonshot' && isSpace(L.show.outcome) ? { ...spaceAt(L.show, t), tick: real } : undefined }, stage: L.show.kind === 'ceremony' && L.show.ceremony ? { colors: L.show.colors, title: 'PLAYER OF THE MATCH', sub: L.show.ceremony.title } : undefined, podium: L.show.kind === 'motm', towers: L.show.kind === 'lights' ? towersAt(t) : undefined,  screen: screenAt(L.show, t), confetti: confettiAt(L.show, t), sparks: L.show.kind === 'motm' || (L.show.kind === 'ceremony' && t > 17) ? [...sk.sparks, ...photoFlashes(L.show.seed, t)] : sk.sparks, flash: sk.flash,
+        crowd, ball3: L.show.kind === 'moonshot' ? moonBall(L.show, t) : L.show.kind === 'landing' ? landingBall(L.show, t) : null, coverK: L.show.kind === 'rain' ? coverAt(t) : undefined, sets: { dugout: (L.show.kind === 'milestone' && t >= MILESTONE.cut) || L.show.kind === 'dugout' ? L.show.colors : undefined, platform: L.show.kind === 'cheer' && L.show.variant !== 'cards' ? { centre: platformCentre(L.show.seed), side: platformSide(L.show.seed), colors: L.show.colors, dj: djCentre(L.show.seed) } : undefined, outside: L.show.kind === 'moonshot' && !isSpace(L.show.outcome) ? { seed: L.show.seed, landing: { x: (L.show.landing ?? { x: 160, y: 0, z: -10 }).x, y: 0, z: (L.show.landing ?? { x: 160, y: 0, z: -10 }).z }, outcome: (L.show.outcome ?? moonOutcome(L.show.seed)) as 'car' | 'river' | 'blimp', since: t - moonLandAt(), tick: real } : undefined, space: L.show.kind === 'moonshot' && isSpace(L.show.outcome) ? { ...spaceAt(L.show, t), tick: real } : undefined }, stage: L.show.kind === 'ceremony' && L.show.ceremony ? { colors: L.show.colors, title: 'PLAYER OF THE MATCH', sub: L.show.ceremony.title } : L.show.kind === 'signing' && L.show.signing ? { colors: L.show.colors, title: L.show.signing.title, sub: L.show.signing.sub } : undefined, podium: L.show.kind === 'motm', towers: L.show.kind === 'lights' ? towersAt(t) : undefined,  screen: screenAt(L.show, t), confetti: confettiAt(L.show, t), sparks: L.show.kind === 'motm' || (L.show.kind === 'ceremony' && t > 17) || (L.show.kind === 'signing' && t > SIGN.arrive - 0.5) ? [...sk.sparks, ...photoFlashes(L.show.seed, t)] : sk.sparks, flash: sk.flash,
       })
       // the light of the hour: at dusk everything goes golden and a low sun glows on the horizon
       if (L.base.look.time === 'dusk' && L.show.kind !== 'lights') {
@@ -167,7 +168,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       const hugFroms = hug ? [...L.rest, hugBowlerRest] : []
       const hugCel = hug ? (L.show.celebrant === 'bowler' || L.show.celebrant === undefined ? L.rest.length : L.show.celebrant) : -1
       const hugJoin = hug ? hugJoiners(L.show, hugFroms, hugCel) : []
-      const hideBase = L.show.kind === 'trophy' || L.show.kind === 'rain' || L.show.kind === 'motm' || L.show.kind === 'lineup' || L.show.kind === 'milestone' || L.show.kind === 'ceremony' || L.show.kind === 'dugout' || L.show.kind === 'handshake' || L.show.kind === 'pitchreport' || L.show.kind === 'fans' || L.show.kind === 'pitchmap' || L.show.kind === 'beehive' || L.show.kind === 'talk'
+      const hideBase = L.show.kind === 'trophy' || L.show.kind === 'rain' || L.show.kind === 'motm' || L.show.kind === 'lineup' || L.show.kind === 'milestone' || L.show.kind === 'ceremony' || L.show.kind === 'dugout' || L.show.kind === 'handshake' || L.show.kind === 'pitchreport' || L.show.kind === 'fans' || L.show.kind === 'pitchmap' || L.show.kind === 'beehive' || L.show.kind === 'talk' || L.show.kind === 'signing'
       const n = L.base.fielders.length + 1
       if (!hideBase) L.base.fielders.forEach((_f, i) => {
         let w = huddle ? huddlePerson(L.show, t, i, n, L.rest[i]) : null
@@ -320,9 +321,40 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         place2('w', cs, 0)
         if (cs.rivals) place2('v', cs.rivals, 1)
       }
+      // a signing (or a leaving) unveiled on the stage: the presenter, the new player walking out, the squad clapping at the sides, the captain stepping up
+      if (cs && L.show.kind === 'signing' && L.show.signing) {
+        const sg = L.show.signing
+        const line = lineAt(sg.script, t)
+        const walk = (key: string, pos: V3, moving: boolean, pose: Pose | null) => {
+          if (!put(key, pos)) return
+          const m = move(key, pos)
+          apply(key, moving && m.v > 0.8 ? fielderPose({ speed: Math.max(3.2, m.v), cyc: m.cyc, ready: 0, dive: 0, catchK: 0, joy: 0, stop: 0, throwK: 0, keeper: false }) : pose ?? { ...standing(), hip: { x: 30, y: 85.3 } })
+        }
+        const pp = signingPlayer(L.show, t)
+        const talkP = (who: 'motm' | 'win' | 'host', p: Pose | null): Pose | null => (line && line.who === who && p ? { ...p, handR: { x: 13, y: 4 + 5 * Math.sin(t * 5) }, lean: 2 * Math.sin(t * 3) } : p)
+        walk('w0', pp.pos, pp.moving, talkP('motm', signingPose(L.show, t, 'player')))
+        cs.players.slice(1).forEach((pl, k) => {
+          const isCap = pl.id === sg.captainId
+          const sm = signingMate(L.show, t, k, isCap)
+          walk(`w${k + 1}`, sm.pos, sm.moving, isCap ? talkP('win', signingPose(L.show, t, 'captain')) : signingPose(L.show, t, 'mate', k))
+        })
+        const hp = hostPos(t)
+        if (put('host', hp)) { const m = move('host', hp); apply('host', m.v > 1 ? fielderPose({ speed: m.v, cyc: m.cyc, ready: 0, dive: 0, catchK: 0, joy: 0, stop: 0, throwK: 0, keeper: false }) : { ...standing(), hip: { x: 30, y: 85.3 }, lean: line?.who === 'host' ? 2 * Math.sin(t * 2.4) : 0, handL: { x: -10, y: 24 }, handR: line?.who === 'host' ? { x: 12, y: 2 + 5 * Math.sin(t * 4.2) } : { x: 10, y: 24 } }) }
+        const subS = nodes.current.get('sub')
+        if (subS && line) {
+          const who = line.who === 'host' ? sg.hostName : line.who === 'win' ? cs.players.find((p) => p.id === sg.captainId)?.name : cs.players[0]?.name
+          const tag = line.who === 'host' ? 'PRESENTER' : line.who === 'win' ? 'CAPTAIN' : sg.mode === 'release' ? 'LEAVING THE CLUB' : 'NEW SIGNING'
+          subS.style.display = 'block'
+          const nameNode = subS.querySelector('[data-who]'), tagNode = subS.querySelector('[data-tag]'), textNode = subS.querySelector('[data-text]')
+          if (nameNode && nameNode.textContent !== (who ?? '')) nameNode.textContent = who ?? ''
+          if (tagNode && tagNode.textContent !== tag) tagNode.textContent = tag
+          if (textNode && textNode.textContent !== line.text) textNode.textContent = line.text
+          subS.style.opacity = String(Math.min(1, (t - line.at) / 0.25, (line.end - t) / 0.25))
+        } else if (subS) subS.style.display = 'none'
+      }
       // the post-match presentation: the host on the stage, both teams clapping at the sides, the captains and the Man of the Match going up to the microphone in turn
       const subEl = nodes.current.get('sub'), chequeEl = nodes.current.get('cheque')
-      if (subEl) subEl.style.display = 'none'
+      if (subEl && L.show.kind !== 'signing') subEl.style.display = 'none'
       if (chequeEl) chequeEl.style.display = 'none'
       if (cs && L.show.kind === 'ceremony' && L.show.ceremony) {
         const cer = L.show.ceremony
@@ -439,7 +471,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         {base.nonStriker && <div ref={setNode('nonstriker')} className={sprite} style={box}><Figure player={base.nonStriker} team={base.batTeam} look="nonstriker" rig={setRig('nonstriker')} /></div>}
         <div ref={setNode('umpire1')} className={sprite} style={box}><Figure look="umpire" variant={1} rig={setRig('umpire1')} /></div>
         <div ref={setNode('umpire2')} className={sprite} style={box}><Figure look="umpire" variant={3} rig={setRig('umpire2')} /></div>
-        {cast && show.kind === 'ceremony' && cast.host && <div ref={setNode('host')} className={sprite} style={box}><HostFigure presenter={cast.host} colors={show.colors} rig={setRig('host')} /></div>}
+        {cast && (show.kind === 'ceremony' || show.kind === 'signing') && cast.host && <div ref={setNode('host')} className={sprite} style={box}><HostFigure presenter={cast.host} colors={show.colors} rig={setRig('host')} /></div>}
         {cast && cast.rivals && cast.rivals.players.map((p, i) => (
           <div key={`v${p.id}`} ref={setNode(`v${i}`)} className={sprite} style={box}>
             <Figure player={p} team={cast.rivals!.team} look="fielder" rig={setRig(`v${i}`)} />
@@ -457,7 +489,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         ))}
         {cast && cast.players.map((p, i) => (
           <div key={p.id} ref={setNode(`w${i}`)} className={sprite} style={box}>
-            <Figure player={p} team={cast.team} look={show.kind === 'entrance' || show.kind === 'walkoff' || (show.kind === 'talk' && show.talk === 'mentor') || (show.kind === 'milestone' && i === 0) ? 'striker' : show.kind === 'bowler' ? 'bowler' : 'fielder'} rig={setRig(`w${i}`)} />
+            <Figure player={p} team={cast.team} look={show.kind === 'talk' && show.talk === 'duel' ? (i === 0 ? 'bowler' : 'striker') : show.kind === 'entrance' || show.kind === 'walkoff' || (show.kind === 'talk' && (show.talk === 'mentor' || show.talk === 'duel')) || (show.kind === 'milestone' && i === 0) ? 'striker' : show.kind === 'bowler' ? 'bowler' : 'fielder'} rig={setRig(`w${i}`)} />
           </div>
         ))}
         {(show.kind === 'trophy' || show.kind === 'motm') && show.trophy && <div ref={setNode('trophy')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: 100, height: 100, transformOrigin: '0 0' }}><TrophyArt kind={show.trophy as TrophyKind} size={100} shine /></div>}
@@ -470,6 +502,13 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       {show.kind === 'fans' && [1, 2].map((k) => <div key={`fc${k}`} className="pointer-events-none absolute inset-0 z-[8000] bg-white" style={{ opacity: 0, animation: `bcast-cut 0.3s ease-out ${(k * 2.2 - 0.05) / Math.max(0.25, rate)}s forwards` }} />)}
       {show.kind === 'walkoff' && <div className="pointer-events-none absolute inset-0 z-[8000] bg-white" style={{ opacity: 0, animation: `bcast-cut 0.3s ease-out ${(WALKOFF.cut - 0.05) / Math.max(0.25, rate)}s forwards` }} />}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
+      {show.kind === 'signing' && (show.signing?.tier ?? 0) >= 5 && show.signing?.mode !== 'release' && <div className="pointer-events-none absolute inset-0 z-[8000] bg-white" style={{ opacity: 0, animation: `bcast-cut 0.5s ease-out ${(SIGN.arrive - 0.1) / Math.max(0.25, rate)}s forwards` }} />}
+      {show.kind === 'signing' && show.signing && (
+        <div ref={setNode('sub')} className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] hidden rounded-lg bg-black/80 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}` }}>
+          <div className="flex items-center gap-2"><span data-who className="font-display text-base uppercase leading-none tracking-wide text-white" /><span data-tag className="rounded bg-amber-300 px-1.5 text-[9px] font-extrabold uppercase tracking-wider text-black" /></div>
+          <div data-text className="text-[12px] font-semibold leading-snug text-slate-100" />
+        </div>
+      )}
       {show.kind === 'ceremony' && show.ceremony && (
         <>
           <div ref={setNode('sub')} className="pointer-events-none absolute bottom-3 left-3 right-3 z-[9000] hidden rounded-lg bg-black/80 px-3 py-1.5 ring-1 ring-white/15" style={{ boxShadow: `inset 4px 0 0 ${show.colors[0]}` }}>

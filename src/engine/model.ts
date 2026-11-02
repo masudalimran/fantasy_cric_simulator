@@ -68,6 +68,24 @@ export interface BatContext {
   bonus?: number
   /** A boost token: every rating of this side is multiplied by this (1.5). */
   mult?: number
+  /** Rating points (to technique and power) from the batsman's hand against the bowler's arm and kind (see `handEdge`). */
+  hand?: number
+}
+
+/**
+ * Left-handers against right-arm bowlers (and the other way round) change the angle, so the bowler has to work harder: the batsman gains a little. Against the
+ * same hand he loses a little (the mix of the two is about balanced). An off-spinner turns away from a left-hander and a leg-spinner or a left-arm spinner turns
+ * away from a right-hander: the ball leaving the bat is the bowler's, the ball coming in is the batsman's. In rating points; zero switches it off.
+ */
+export const HAND = { across: 1.4, same: 0.6, spin: 1.4 }
+export function handEdge(bat: Pick<Player, 'hand'>, bowler: Pick<Player, 'hand' | 'bowling'>): number {
+  const type = bowler.bowling?.type
+  if (type === 'offspin' || type === 'legspin' || type === 'leftspin') {
+    const awayFromRight = type !== 'offspin'
+    const away = awayFromRight ? bat.hand === 'R' : bat.hand === 'L'
+    return away ? -HAND.spin : HAND.spin
+  }
+  return bat.hand !== bowler.hand ? HAND.across : -HAND.same
 }
 
 export function effectiveBat(p: Player, c: BatContext): EffBat {
@@ -87,6 +105,7 @@ export function effectiveBat(p: Player, c: BatContext): EffBat {
     if (has('clutch') || has('big-match')) temp += 6
     else temp -= 5
   }
+  tech += c.hand ?? 0; power += c.hand ?? 0
   const f = c.form + (c.bonus ?? 0)
   const m = c.mult ?? 1
   return { tech: (tech + f) * m, power: (power + f) * m, temp: (temp + f * 0.5) * m, run: (run + f * 0.4) * m }

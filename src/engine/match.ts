@@ -3,7 +3,7 @@ import { keeperIn } from '../data/squad'
 import { aiIntent, aiTossDecision, chooseBowler } from './ai'
 import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
-  KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, parRunsPerOver, REF,
+  KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, handEdge, parRunsPerOver, REF,
 } from './model'
 import { BYE_FOUR, RUNOUT_CHECK, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
 import { pitchLean } from './pitchInfo'
@@ -446,7 +446,7 @@ export class Match {
       forfeit: this.forfeitSide === battingSideIdx ? 'bat' : this.forfeitSide === bowlingSideIdx ? 'bowl' : undefined,
       ballsFaced: strikerLine.balls,
       fieldingAvg: (this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx]) * this.boostMult[bowlingSideIdx],
-      bat: effectiveBat(striker, { phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx], mult: this.boostMult[battingSideIdx] }),
+      bat: effectiveBat(striker, { hand: handEdge(striker, bowler), phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx], mult: this.boostMult[battingSideIdx] }),
       bowl: effectiveBowl(bowler, { phase, pitch: this.pitch, inningsIndex: this.clock ? (this.clock.day >= 3 ? 1 : 0) : (inn.index as 0 | 1), fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx], mult: this.boostMult[bowlingSideIdx] }),
     })
 

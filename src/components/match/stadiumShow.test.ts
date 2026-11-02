@@ -321,11 +321,11 @@ describe('the stadium shows', () => {
     expect(screenAt(s, 3)!.board!.map!.balls.length).toBe(1)
   })
   it('the talk: the speaker walks up to the other and stands close, then leaves (the batsmen walk back to their own ends)', () => {
-    for (const talk of ['encourage', 'angry', 'mentor'] as const) {
+    for (const talk of ['encourage', 'angry', 'mentor', 'duel'] as const) {
       const s: StadiumShow = { ...show('talk', 5), talk }
       const mid = TALK.start + TALK.walk + 0.6
       const a = talkPerson(s, mid, 'speaker').pos, b = talkPerson(s, mid, 'listener').pos
-      expect(Math.hypot(a.x - b.x, a.z - b.z), talk).toBeLessThan(2.6)
+      expect(Math.hypot(a.x - b.x, a.z - b.z), talk).toBeLessThan(talk === 'duel' ? 3.2 : 2.6)
       expect(Math.hypot(a.x - b.x, a.z - b.z), talk).toBeGreaterThan(0.6)
       const end = SHOW_SECONDS.talk
       const a0 = talkPerson(s, 0, 'speaker').pos, a1 = talkPerson(s, end, 'speaker').pos

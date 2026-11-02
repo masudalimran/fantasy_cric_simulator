@@ -10,6 +10,7 @@ import { MobileNowPlaying, NowPlaying } from '../components/match/NowPlaying'
 import { MobileScoreboard, Scoreboard } from '../components/match/Scoreboard'
 import { MobileDock } from '../components/match/MobileDock'
 import { MomentOverlay } from '../components/match/MomentOverlay'
+import { Highlights } from '../components/match/Highlights'
 import { PHANTOM_CAST_SECONDS } from '../components/match/ReplayScreens'
 import { TIRED_SECONDS } from '../components/match/EventScreens'
 import { haptic, useIsLandscapePhone, useIsMobile } from '../hooks'
@@ -19,7 +20,7 @@ import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
 import { setStatsFormat } from '../statsFormat'
-import { average, collect, economy, strikeRate as seasonSR } from '../season/stats'
+import { average, collect, duelBetween, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
@@ -213,6 +214,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const lastSwing = useRef(-100) // the ball a momentum screen last played on, so they do not come one after another
   const matchOverRef = useRef(false) // the match has ended and its last screens are still to play
   const winShownRef = useRef(false)
+  const [highlightsOpen, setHighlightsOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [moment, setMoment] = useState<Moment | null>(null)
   const momentTimer = useRef<number | undefined>(undefined)
@@ -417,7 +419,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const lines = pair ? intros.map((it, i) => `${players[i].name}: ${it.lines.slice(0, 2).join(' · ')}`) : intros[0].lines.slice(0, 2)
         enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: pair ? { title: `${players[0].name} & ${players[1].name}`, lines: [], chip, pair: intros.map((it, i) => ({ title: players[i].name.split(' ')[0], sub: it.lines[0] ?? '', rating: it.rating, tiles: (it.tiles ?? []).slice(0, 5) })) } : { title: lead.name, lines, chip, tiles: intros[0].tiles, rating: intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
         // wickets have been falling and a set batsman is still there: when the new one comes in he walks down the pitch for a word (looks only)
-        if (!pair && inn.wickets >= 3 && !seen.current!.has(`mentor:${inn.index}:${inn.wickets}`)) {
+        if (getAnimPrefs().talks && !pair && inn.wickets >= 3 && !seen.current!.has(`mentor:${inn.index}:${inn.wickets}`)) {
           const otherId = [inn.strikerId, inn.nonStrikerId].find((id) => id !== lead.id)
           const ol = otherId ? inn.batters.find((b) => b.id === otherId) : undefined
           const lately = inn.log.slice(-36).filter((e) => e.wicket).length
@@ -873,7 +875,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const runsIn = (o: number) => innE.log.filter((e) => e.over === o && e.bowlerId === bid).reduce((a, e) => a + e.total, 0)
             const mine = [...new Set(innE.log.filter((e) => e.bowlerId === bid).map((e) => e.over))].sort((a, b) => b - a)
             const capt = bowlS.team.players.find((p) => p.id === bowlS.team.captainId)
-            if (capt && capt.id !== bid && bowlS.xi.some((p) => p.id === capt.id) && runsIn(lastEv.over) >= limit && lastEv.seq - lastTalk.current >= 18) {
+            if (getAnimPrefs().talks && capt && capt.id !== bid && bowlS.xi.some((p) => p.id === capt.id) && runsIn(lastEv.over) >= limit && lastEv.seq - lastTalk.current >= 18) {
               const prev = mine[1] !== undefined ? runsIn(mine[1]) : 0
               const angry = prev >= limit
               const bw = match.player(bid)
@@ -885,7 +887,28 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const chase = innE.target !== null ? { need: innE.target - innE.runs, balls: FORMATS[match.format].overs * 6 - innE.legalBalls } : null
           // now and then the numbers of the innings go up on screen instead: a wagon wheel, the worm, the runs of each over, how the runs came
           const stats = innE.log.length >= 18
-          const pool = ['stands', 'social', 'box', 'pitchmap', 'beehive', 'fans', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring', 'projection', 'partnership', 'bowlers', 'form'] : [])]
+          // a rivalry: this batsman and this bowler keep meeting. The two walk to the middle of the pitch and stand face to face, with how it has gone between them (looks only)
+          if (getAnimPrefs().rivalry && lastEv.seq - lastTalk.current >= 18) {
+            const bid = lastEv.bowlerId, sid = lastEv.strikerId
+            const dkey = `duel:${innE.index}:${sid}:${bid}`
+            if (!seen.current!.has(dkey)) {
+              const nowBalls = innE.log.filter((e) => e.strikerId === sid && e.bowlerId === bid && e.legal).length
+              const nowRuns = innE.log.filter((e) => e.strikerId === sid && e.bowlerId === bid).reduce((a, e) => a + e.runsBat, 0)
+              const nowOuts = innE.log.filter((e) => e.strikerId === sid && e.bowlerId === bid && e.wicket).length
+              const past = season ? duelBetween(season, sid, bid, match.format, fixture?.id) : { balls: 0, runs: 0, outs: 0, matches: 0 }
+              if (nowBalls >= 10 || (past.outs >= 2 && nowBalls >= 4) || (past.balls >= 30 && nowBalls >= 4)) {
+                seen.current!.add(dkey)
+                lastTalk.current = lastEv.seq
+                const bt = match.player(sid), bw = match.player(bid)
+                const totBalls = past.balls + nowBalls, totRuns = past.runs + nowRuns, totOuts = past.outs + nowOuts
+                const line = nowOuts > 0 ? `${first(bw.name)} has had ${first(bt.name)} out already today` : past.outs >= 2 ? `${first(bw.name)} has dismissed ${first(bt.name)} ${past.outs} times this season` : `${first(bt.name)} and ${first(bw.name)} are going head to head`
+                stadiumShow('talk', bowlS.team, { talk: 'duel', left: bt.hand === 'L', lower: { title: `${first(bt.name)} v ${first(bw.name)}`, lines: [line], chip: 'RIVALRY', color: '#f87171', tiles: [{ label: 'Balls', value: String(totBalls) }, { label: 'Runs', value: String(totRuns) }, { label: 'Out', value: String(totOuts) }, { label: 'Strike rate', value: totBalls ? String(Math.round((totRuns / totBalls) * 100)) : '-' }] } }, 'Rivalry', undefined, { team: bowlS.team, players: [bw, bt] })
+                return
+              }
+            }
+          }
+          const chartsOn = getAnimPrefs().charts
+          const pool = ['stands', 'social', 'box', ...(chartsOn ? ['pitchmap', 'beehive'] : []), 'fans', ...(stats && chartsOn ? ['wagon', 'worm', 'manhattan', 'scoring', 'projection', 'partnership', 'bowlers', 'form'] : [])]
           const v = pool[ambientPick(lastEv.seq + 1, pool.length)]
           const shots = innE.log.filter((e) => e.strikerId === lastEv.strikerId && e.runsBat > 0).length
           const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined, overs: FORMATS[match.format].overs, target: innE.target, names: Object.fromEntries([...batT.players, ...bowlS.team.players].map((p) => [p.id, callName(p)])) }
@@ -1387,6 +1410,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const resultCard = view.isOver && match.result ? (
 <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-fuchsia-500/10 p-5 text-center">
           <div className="font-display text-4xl tracking-wide text-amber-300">{match.result.text}</div>
+          {getAnimPrefs().highlights && <button onClick={() => setHighlightsOpen(true)} className="cta-pulse cta-pulse-gold mt-3 cursor-pointer rounded-full border-2 border-amber-200 bg-gradient-to-b from-amber-300 to-amber-500 px-6 py-2.5 font-display text-2xl leading-none tracking-wide text-black shadow-lg active:scale-[0.98]">▶ Watch highlights</button>}
           {pom && (
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-100">
               Man of the Match: <ClickAvatar player={match.player(pom.id)} team={match.sides[pom.side].team} size={30} /> <b>{match.player(pom.id).name}</b>
@@ -1441,6 +1465,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       <Fx fx={fx} />
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>
       {!match.isOver && <TipBanner id="match" title="Playing the match" lift={96} left>Press the glowing <b>NEXT BALL</b> to play one ball. Use the double arrow to let it play by itself. Tap any face to see that player.</TipBanner>}
+      <AnimatePresence>{highlightsOpen && match.isOver && <Highlights match={match} look={stadium} pitch={pitchKind} motm={pom ? match.player(pom.id).name : undefined} onClose={() => setHighlightsOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{summaryOpen && match.isOver && <MatchSummary match={match} onClose={() => setSummaryOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{showBreak && breakPopup && match.awaiting !== 'followon' && (match.format === 'test' ? <TestBreak match={match} stumps={match.awaiting === 'day'} onClose={() => setBreakPopup(false)} onNextDay={resume} /> : <InningsBreak match={match} onClose={() => setBreakPopup(false)} />)}</AnimatePresence>
       <AnimatePresence>{match.awaiting === 'followon' && !moment && <FollowOnPrompt match={match} onChoose={(enforce) => act({ t: 'followon', enforce })} />}</AnimatePresence>

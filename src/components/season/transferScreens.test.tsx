@@ -1,22 +1,49 @@
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
-import { TransferNews, type TransferRow } from './TransferScreens'
+import { overall } from '../../data/builders'
+import { cameraAt, signingMate, signingPlayer, SHOW_SECONDS } from '../match/stadiumShow'
+import { SIGN, signingScript } from '../match/signingScript'
+import { TransferNews, signingShow, type TransferRow } from './TransferScreens'
 
-describe('transfer screens', () => {
-  it('draw a signing, a move between clubs and a release for players of every tier', () => {
-    const [a, b] = BUILT_IN_TEAMS
-    const players = [...a.players].sort((x, y) => (y.batting.power + (y.bowling?.variation ?? 0)) - (x.batting.power + (x.bowling?.variation ?? 0)))
-    const rows: TransferRow[] = [
-      { t: { id: 't1', date: '2026-03-01', playerId: players[0].id, name: players[0].name, from: null, to: a.id, fee: 12, kind: 'sign' }, player: players[0], from: null, to: a, mates: b.players.slice(0, 3) },
-      { t: { id: 't2', date: '2026-03-01', playerId: players[5].id, name: players[5].name, from: a.id, to: b.id, fee: 30, kind: 'buy' }, player: players[5], from: a, to: b, mates: b.players.slice(0, 3) },
-      { t: { id: 't3', date: '2026-03-01', playerId: players[9].id, name: players[9].name, from: a.id, to: null, fee: 3, kind: 'release' }, player: players[9], from: a, to: null, mates: a.players.slice(0, 2) },
-    ]
-    for (let i = 0; i < rows.length; i++) {
-      const html = renderToString(<TransferNews rows={[rows[i]]} mine={a.id} extra={2} onClose={() => {}} />)
-      expect(html).toContain(rows[i].player.name)
-      expect(html).toContain(i === 2 ? 'RELEASED' : 'Done')
+const [a, b] = BUILT_IN_TEAMS
+const sorted = [...a.players].sort((x, y) => overall(y) - overall(x))
+const row = (i: number, kind: 'sign' | 'buy' | 'release'): TransferRow => ({
+  t: { id: `t${i}${kind}`, date: '2026-03-01', playerId: sorted[i].id, name: sorted[i].name, from: kind === 'sign' ? null : a.id, to: kind === 'release' ? null : b.id, fee: 12, kind },
+  player: sorted[i], from: kind === 'sign' ? null : a, to: kind === 'release' ? null : b, club: kind === 'release' ? a : b, squad: (kind === 'release' ? a : b).players.filter((p) => p.id !== sorted[i].id),
+})
+
+describe('transfer scenes', () => {
+  it('build a stage scene for a signing, a move and a release of every tier, with the words one voice at a time', () => {
+    for (const [i, kind] of [[0, 'buy'], [6, 'sign'], [14, 'sign'], [15, 'release']] as const) {
+      const { show, cast } = signingShow(row(i, kind))
+      expect(show.signing?.mode).toBe(kind === 'buy' ? 'buy' : kind)
+      expect(cast.players[0].id).toBe(sorted[i].id)
+      const lines = show.signing!.script
+      expect(lines.length).toBeGreaterThanOrEqual(3)
+      for (let k = 1; k < lines.length; k++) expect(lines[k].at).toBeGreaterThanOrEqual(lines[k - 1].end)
+      expect(lines[lines.length - 1].end).toBeLessThanOrEqual(SHOW_SECONDS.signing)
     }
-    expect(renderToString(<TransferNews rows={rows} mine={null} extra={0} onClose={() => {}} />)).toContain('Transfer news')
+  })
+  it('a new player walks out to the stage and stops there; a leaving one walks away at the end; the camera never jumps', () => {
+    const inn = signingShow(row(0, 'buy')).show, out = signingShow(row(1, 'release')).show
+    const stop = signingPlayer(inn, SIGN.arrive + 0.5).pos
+    expect(Math.hypot(stop.x - 0.9, stop.z + 7.7)).toBeLessThan(0.1)
+    expect(Math.hypot(signingPlayer(out, 0.4).pos.x - 10, 0)).toBeLessThan(1)
+    expect(Math.hypot(signingPlayer(out, SIGN.end).pos.x - 0.9, signingPlayer(out, SIGN.end).pos.z + 7.7)).toBeGreaterThan(5)
+    for (const sh of [inn, out]) {
+      let prev = cameraAt(sh, 0)
+      for (let t = 0.05; t <= SHOW_SECONDS.signing; t += 0.05) {
+        const c = cameraAt(sh, t)
+        expect(Number.isFinite(c.yaw + c.pitch + c.hfov)).toBe(true)
+        expect(Math.hypot(c.p.x - prev.p.x, c.p.y - prev.p.y, c.p.z - prev.p.z)).toBeLessThan(4.5)
+        prev = c
+      }
+    }
+    for (let k = 0; k < 6; k++) { const m = signingMate(inn, 6, k, k === 0); expect(Number.isFinite(m.pos.x + m.pos.z)).toBe(true) }
+    expect(signingScript({ host: 'A', team: 'T', player: 'P', captain: 'C', mode: 'sign', fee: 0, tier: 5, seed: 1 }).length).toBe(3)
+  })
+  it('the transfer overlay draws', () => {
+    expect(renderToString(<TransferNews rows={[row(0, 'buy'), row(3, 'release')]} extra={2} onClose={() => {}} />)).toContain('Transfer')
   })
 })

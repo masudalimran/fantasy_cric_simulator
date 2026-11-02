@@ -80,10 +80,13 @@ export interface MatchSummary {
   reel?: import('./reel').Reel
   /** The quickest fifty of the match: who (roster position) and how many balls he faced to reach it. */
   ff?: [number, number]
+  /** Batsman against bowler in this match: [batsman, bowler (roster positions), balls faced, runs, times out]. Only pairs with six balls or a wicket. Missing in older matches. */
+  duels?: [number, number, number, number, number][]
 }
 
 /** A summary as the engine produces it, before player ids are swapped for roster indices. */
-export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six' | 'fast' | 'reel' | 'ff'> & {
+export type RawSummary = Omit<MatchSummary, 'bat' | 'bowl' | 'played' | 'six' | 'fast' | 'reel' | 'ff' | 'duels'> & {
+  duels?: [string, string, number, number, number][]
   fast?: [string, number][]
   ff?: [string, number] | null
   reel?: import('./reel').RawReel | null

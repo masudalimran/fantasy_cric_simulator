@@ -53,7 +53,8 @@ export function summarizeMatch(match: Match, fixture: Fixture, tieBreakSeed: num
   for (const inn of match.innings) for (const e of inn.log) quickest.set(e.bowlerId, Math.max(quickest.get(e.bowlerId) ?? 0, ballSpeed(e, match.player(e.bowlerId))))
   const fast = [...quickest]
   const motm = computeAwards(match).motm
-  return { six, fast, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, ...(r.draw ? { draw: true } : {}), ...(match.format === 'test' ? { test: { days: match.clock?.day ?? 5, innings: match.innings.map((i) => ({ teamId: match.sides[i.battingSide].team.id, runs: i.runs, wickets: i.wickets, balls: i.legalBalls, ...(i.declared ? { declared: true } : {}), ...(i.followOn ? { followOn: true } : {}) })) } } : {}), playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
+  const duels = duelsOf(match.innings.flatMap((i) => i.log))
+  return { duels, six, fast, played: match.sides.flatMap((s) => s.xi.map((p) => p.id)), fixtureId: fixture.id, winnerId, text, margin: superOver ? null : (r.margin?.type ?? null), scores, superOver, ...(r.draw ? { draw: true } : {}), ...(match.format === 'test' ? { test: { days: match.clock?.day ?? 5, innings: match.innings.map((i) => ({ teamId: match.sides[i.battingSide].team.id, runs: i.runs, wickets: i.wickets, balls: i.legalBalls, ...(i.declared ? { declared: true } : {}), ...(i.followOn ? { followOn: true } : {}) })) } } : {}), playerOfMatchId: motm?.id ?? null, motmNote: motm?.line, bat, bowl, reel: buildReel(match.innings), ff: fastestFiftyOf(match.innings) }
 }
 
 export function simulateFixture(season: Season, fixture: Fixture, teams: Map<string, Team>): RawSummary {
@@ -142,6 +143,20 @@ export function resolveSeason(season: Season): Season {
 }
 
 /** Stores a finished match, swapping player ids for roster positions to keep the saved season small. */
+/** Batsman against bowler over a set of balls: the pairs that met for six balls or more, or with a wicket between them. */
+export function duelsOf(log: { strikerId: string; bowlerId: string; legal: boolean; runsBat: number; wicket?: { playerId?: string } | null }[]): [string, string, number, number, number][] {
+  const m = new Map<string, [string, string, number, number, number]>()
+  for (const e of log) {
+    const k = `${e.strikerId}|${e.bowlerId}`
+    const d = m.get(k) ?? [e.strikerId, e.bowlerId, 0, 0, 0]
+    if (e.legal) d[2]++
+    d[3] += e.runsBat
+    if (e.wicket && (!e.wicket.playerId || e.wicket.playerId === e.strikerId)) d[4]++
+    m.set(k, d)
+  }
+  return [...m.values()].filter((d) => d[2] >= 6 || d[4] > 0)
+}
+
 export function recordResult(season: Season, raw: RawSummary, teams?: Map<string, Team>): Season {
   const roster = [...(season.roster ?? [])]
   const index = new Map(roster.map((id, i) => [id, i]))
@@ -157,6 +172,7 @@ export function recordResult(season: Season, raw: RawSummary, teams?: Map<string
     played: raw.played?.map(idx),
     six: raw.six?.map(([id, m]) => [idx(id), m] as [number, number]),
     fast: raw.fast?.map(([id, k]) => [idx(id), k] as [number, number]),
+    duels: raw.duels?.map(([b, w, ...rest]) => [idx(b), idx(w), ...rest] as [number, number, number, number, number]),
     reel: raw.reel ? { p: idx(raw.reel.p), k: raw.reel.k, e: raw.reel.e, ...(raw.reel.s ? { s: raw.reel.s } : {}) } : undefined,
     ff: raw.ff ? [idx(raw.ff[0]), raw.ff[1]] : undefined,
   }

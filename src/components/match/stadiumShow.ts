@@ -3,6 +3,7 @@ import { BAT_END_Z, BOWL_Z, camWide, lookAt, ROPE, type Cam, type V3 } from './b
 import { clamp01, mixPose, standing, type Pose } from './bodyPose'
 import { shade } from '../../engine/stadium'
 import { benchSpot as benchAt, DUGOUT_C, PLATFORM, DJ } from './setDraw'
+import { SIGN } from './signingScript'
 import { CEREMONY_BEATS, type SpeechLine } from './ceremonyScript'
 import { REVIEW_VERDICT_AT, SCREEN_R, STAGE, slopePoint, type Ball3, type BigScreen, type BoardInfo, type Confetti, type CrowdClose, type FanSign, type ReviewBoard, type ScreenPost, type Spark } from './crowdDraw'
 
@@ -12,7 +13,7 @@ import { REVIEW_VERDICT_AT, SCREEN_R, STAGE, slopePoint, type Ball3, type BigScr
  * where the camera is at each moment, what the crowd and the sky are doing, and how the cheerleaders and the huddle stand. Looks only.
  */
 
-export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover' | 'bowler' | 'hug' | 'walkoff' | 'landing' | 'lights' | 'lineup' | 'motm' | 'review' | 'rain' | 'milestone' | 'ceremony' | 'physio' | 'dugout' | 'drinks' | 'handshake' | 'pitchreport' | 'salute' | 'fans' | 'pitchmap' | 'beehive' | 'moonshot' | 'talk'
+export type ShowKind = 'cheer' | 'stands' | 'huddle' | 'fireworks' | 'social' | 'entrance' | 'trophy' | 'board' | 'studio' | 'flyover' | 'bowler' | 'hug' | 'walkoff' | 'landing' | 'lights' | 'lineup' | 'motm' | 'review' | 'rain' | 'milestone' | 'ceremony' | 'physio' | 'dugout' | 'drinks' | 'handshake' | 'pitchreport' | 'salute' | 'fans' | 'pitchmap' | 'beehive' | 'moonshot' | 'talk' | 'signing'
 
 /** The title strip in the corner while a show plays: a name, a few lines under it and a small chip ("CHAMPIONS"). */
 export interface Lower { title: string; lines: string[]; chip?: string; /** A big figure on the left of the strip (a dismissed batsman's score) with a small caption under it. */ big?: { value: string; sub: string }; /** A colour for the title (a verdict such as BAT FIRST) and the chip. */ color?: string; /** Two people side by side (the two openers), each with his own card. */ pair?: { title: string; sub: string; rating?: number; tiles: { label: string; value: string }[] }[]; /** Figures under the words (a batsman's season: apps, runs, average...) and his overall rating. */ tiles?: { label: string; value: string }[]; rating?: number }
@@ -68,12 +69,14 @@ export interface StadiumShow {
   /** The dugout and the fans: how they feel (cheering, or hands on heads), and for the fans which side of the ground they are on. */
   mood?: 'cheer' | 'groan'
   /** A talk in the middle: the captain has a word with a bowler who has been hit about (`encourage`), and loses his temper when it goes on (`angry`); or the set batsman has a word with the new one (`mentor`). The first person of the cast speaks, the second listens. */
-  talk?: 'encourage' | 'angry' | 'mentor'
+  talk?: 'encourage' | 'angry' | 'mentor' | 'duel'
+  /** A signing or a leaving, shown as the club's own unveiling on the stage: what is said, who is the player and the captain, whether he joins from outside, from another club or leaves, how big a name he is (0 to 5), and the words on the backdrop. */
+  signing?: { script: SpeechLine[]; playerId: string; captainId: string; hostName: string; mode: 'sign' | 'buy' | 'release'; tier: number; title: string; sub: string }
   ceremony?: { script: SpeechLine[]; winCaptainId: string; loseCaptainId: string; motmId: string; cheque: string; title: string; hostName: string }
 }
 
 /** How long each show lasts at full speed (the camera flight is the first part of it). */
-export const SHOW_SECONDS: Record<ShowKind, number> = { cheer: 7, stands: 6.6, huddle: 6.6, fireworks: 7, social: 9.2, entrance: 8.6, trophy: 9.6, board: 8.2, studio: 4.6, flyover: 6, bowler: 7.8, hug: 4.8, walkoff: 5.8, landing: 4.8, lights: 7.4, lineup: 11.5, motm: 9, review: 12, rain: 9.4, milestone: 7.2, ceremony: CEREMONY_BEATS.end, physio: 8.4, dugout: 6.2, drinks: 8, handshake: 9.4, pitchreport: 8.6, salute: 6, fans: 7.2, pitchmap: 8.2, beehive: 8.2, moonshot: 8.6, talk: 7.4 }
+export const SHOW_SECONDS: Record<ShowKind, number> = { cheer: 7, stands: 6.6, huddle: 6.6, fireworks: 7, social: 9.2, entrance: 8.6, trophy: 9.6, board: 8.2, studio: 4.6, flyover: 6, bowler: 7.8, hug: 4.8, walkoff: 5.8, landing: 4.8, lights: 7.4, lineup: 11.5, motm: 9, review: 12, rain: 9.4, milestone: 7.2, ceremony: CEREMONY_BEATS.end, physio: 8.4, dugout: 6.2, drinks: 8, handshake: 9.4, pitchreport: 8.6, salute: 6, fans: 7.2, pitchmap: 8.2, beehive: 8.2, moonshot: 8.6, talk: 7.4, signing: SIGN.end }
 
 const hash01 = (n: number) => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s) }
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k
@@ -452,6 +455,11 @@ function ceremonyKey(t: number): Key {
 export const TALK = { walk: 2.4, start: 0.5, back: 1.9 }
 /** Where the two stand: the bowler is at his mark with the captain walking up to him; or two batsmen meet in the middle of the pitch. */
 export function talkPlaces(show: StadiumShow): { speaker: { from: V3; at: V3 }; listener: { from: V3; at: V3 } } {
+  if (show.talk === 'duel') {
+    // the bowler walks up from his end and the batsman from his crease, until they stand face to face in the middle of the pitch
+    const x = show.left ? -0.75 : 0.75
+    return { speaker: { from: { x: -x, y: 0, z: BOWL_Z + 0.9 }, at: { x: 0.1, y: 0, z: -11.5 } }, listener: { from: { x, y: 0, z: BAT_END_Z }, at: { x: 0.1, y: 0, z: -8.6 } } }
+  }
   if (show.talk === 'mentor') {
     const x = show.left ? -0.75 : 0.75
     return { speaker: { from: { x, y: 0, z: BAT_END_Z }, at: { x: 0.95, y: 0, z: -9.5 } }, listener: { from: { x: -x, y: 0, z: BOWL_Z + 0.9 }, at: { x: -0.2, y: 0, z: -10.9 } } }
@@ -466,7 +474,7 @@ export function talkPerson(show: StadiumShow, t: number, who: 'speaker' | 'liste
   let pos = lerp3(pl.from, pl.at, walk)
   let moving = t > TALK.start && walk < 1
   const back = ease((t - (end - TALK.back)) / TALK.back)
-  if (show.talk === 'mentor') { if (back > 0) { pos = lerp3(pl.at, pl.from, back); moving = back < 1 } }
+  if (show.talk === 'mentor' || show.talk === 'duel') { if (back > 0) { pos = lerp3(pl.at, pl.from, back); moving = back < 1 } }
   else if (who === 'speaker' && show.talk === 'angry' && back > 0) { pos = lerp3(pl.at, { x: pl.at.x - 9, y: 0, z: pl.at.z + 4 }, back); moving = back < 1 }
   else if (who === 'speaker' && back > 0) { pos = lerp3(pl.at, { x: pl.at.x - 7, y: 0, z: pl.at.z + 3 }, back); moving = back < 1 }
   return { pos, moving }
@@ -476,6 +484,11 @@ export function talkPose(show: StadiumShow, t: number, who: 'speaker' | 'listene
   const b = t * 5
   const idle: Pose = { ...standing(), hip: { x: 30, y: 85.3 }, handL: { x: -9, y: 24 }, handR: { x: 9, y: 24 } }
   const talking = clamp01((t - TALK.start - TALK.walk) / 0.4)
+  if (show.talk === 'duel') {
+    // a stare-out: the bowler tosses the ball from hand to hand, the batsman has his hands on his hips and a slow shake of the head
+    if (who === 'speaker') return mixPose(idle, { ...idle, ball: true, hip: { x: 30, y: 85.3 }, head: { dx: 0, dy: 0, tilt: 3 * Math.sin(b * 0.4) }, handR: { x: 8, y: 6 - 14 * Math.max(0, Math.sin(b * 1.4)) }, handL: { x: -8, y: 10 } }, talking)
+    return mixPose(idle, { ...idle, lean: -3, head: { dx: 0, dy: 0, tilt: 5 * Math.sin(b * 0.5) }, handL: { x: -13, y: 14 }, handR: { x: 13, y: 14 } }, talking)
+  }
   if (show.talk === 'angry') {
     if (who === 'listener') return mixPose(idle, { ...idle, ball: true, head: { dx: 0, dy: 4, tilt: 7 }, lean: 4, hip: { x: 30, y: 86.5 }, handL: { x: -7, y: 30 }, handR: { x: 6, y: 30 } }, talking)
     // the captain: hands up in the air, then hands on his head, then pointing, shaking his head
@@ -489,6 +502,79 @@ export function talkPose(show: StadiumShow, t: number, who: 'speaker' | 'listene
   const pat = ease((t - TALK.start - TALK.walk - 1.8) / 0.4) * (1 - ease((t - TALK.start - TALK.walk - 3.4) / 0.5))
   const calm: Pose = { ...idle, head: { dx: 0, dy: 0, tilt: 3 * Math.sin(b * 0.6) }, handR: { x: 12 + 4 * Math.sin(b), y: 8 + 4 * Math.cos(b * 0.8) }, handL: { x: -8, y: 26 } }
   return mixPose(mixPose(idle, calm, talking), { ...calm, handR: { x: 16, y: -6 }, lean: -4 }, pat)
+}
+
+// ---- a signing (or a leaving) unveiled on the stage ----------------------------------------------------------------------------------
+
+const SIGN_SPOT: V3 = { x: 0.9, y: STAGE.h, z: -7.7 }
+const SIGN_CAPTAIN_SPOT: V3 = { x: 2.5, y: STAGE.h, z: -7.7 }
+/** The player: a new one walks out of the gate across the ground to the stage; a leaving one is already on the stage and, at the end, walks away to the gate. */
+export function signingPlayer(show: StadiumShow, t: number): { pos: V3; moving: boolean; arrived: boolean } {
+  const g = gatePos()
+  const release = show.signing?.mode === 'release'
+  if (release) {
+    const inK = ease((t - 0.5) / 1.9)
+    let pos = lerp3({ x: 10, y: 0, z: -8.2 }, SIGN_SPOT, inK)
+    let moving = t > 0.5 && inK < 1
+    const out = ease((t - SIGN.leave) / (SIGN.end - SIGN.leave))
+    if (out > 0) { pos = lerp3(SIGN_SPOT, { x: g.x * 0.4, y: 0, z: g.z * 0.4 }, out); moving = true }
+    return { pos, moving, arrived: inK >= 1 }
+  }
+  const sw = clamp01((t - SIGN.walk0) / (SIGN.arrive - SIGN.walk0))
+  const e = 1 - Math.pow(1 - sw, 1.3)
+  return { pos: lerp3({ x: g.x * 0.5, y: 0, z: g.z * 0.5 }, SIGN_SPOT, e), moving: sw > 0 && sw < 1, arrived: sw >= 1 }
+}
+/** The captain steps up to the player as he arrives and stays beside him; the rest of the squad runs on and lines up at the sides, clapping. */
+export function signingMate(_show: StadiumShow, t: number, i: number, captain: boolean): { pos: V3; moving: boolean; onStage: boolean } {
+  const side = (i % 2) as 0 | 1
+  const line = ceremonyLine(side, Math.floor(i / 2))
+  const run = ease((t - 0.3 - (i % 6) * 0.12) / 2.0)
+  let pos = lerp3({ x: line.x + (side === 0 ? -34 : 34), y: 0, z: line.z }, line, run)
+  let moving = run > 0 && run < 1
+  if (captain) {
+    const k = ease((t - (SIGN.arrive - 1.2)) / 1.4)
+    if (k > 0) { pos = lerp3(line, SIGN_CAPTAIN_SPOT, k); moving = k < 1 }
+    return { pos, moving, onStage: k >= 1 }
+  }
+  return { pos, moving, onStage: false }
+}
+/** The player's and the others' poses: a wave to the crowd, both arms up with the shirt, and the whole squad on its toes when he arrives. */
+export function signingPose(show: StadiumShow, t: number, role: 'player' | 'captain' | 'mate' | 'host', i = 0): Pose | null {
+  const b = beatAt(t) * 0.8 + i
+  const base: Pose = { ...standing(), hip: { x: 30, y: 85.3 }, handL: { x: -9, y: 24 }, handR: { x: 9, y: 24 } }
+  const release = show.signing?.mode === 'release'
+  if (role === 'player') {
+    const up = ease((t - SIGN.shirt) / 0.5) * (1 - ease((t - SIGN.shirt - 2.6) / 0.6))
+    if (release) return mixPose(base, { ...base, handR: { x: 15, y: -30 + 5 * Math.sin(t * 6) }, handL: { x: -9, y: 24 } }, ease((t - 3.2) / 0.5) * (1 - ease((t - SIGN.leave) / 0.4)))
+    const wave = ease((t - SIGN.shirt - 2.4) / 0.5)
+    return mixPose(mixPose(base, { ...base, hip: { x: 30, y: 85.3 - 2 * Math.abs(Math.sin(t * 5)) }, handL: { x: -18, y: -28 }, handR: { x: 18, y: -28 } }, up), { ...base, handR: { x: 15, y: -28 + 5 * Math.sin(t * 6) } }, wave)
+  }
+  if (role === 'captain') return mixPose(base, { ...base, lean: 3, handR: { x: 14, y: 4 + 4 * Math.sin(t * 5) } }, ease((t - SIGN.arrive - 0.3) / 0.4))
+  const clap = Math.abs(Math.sin(b))
+  const cheer = ease((t - SIGN.arrive) / 0.4) * (1 - ease((t - SIGN.arrive - 3) / 0.8))
+  const clapP: Pose = { ...base, handL: { x: -4 - 6 * clap, y: 6 - 4 * clap }, handR: { x: 4 + 6 * clap, y: 6 - 4 * clap }, head: { dx: 0, dy: 0, tilt: 2 * Math.sin(b) } }
+  return release ? clapP : mixPose(clapP, { ...base, hip: { x: 30, y: 85.3 - 4 * Math.abs(Math.sin(b * 1.6)) }, handL: { x: -18, y: -26 }, handR: { x: 18, y: -26 } }, cheer)
+}
+/** The camera: wide on the stage, with the player as he walks out, closer for the welcome and the words, and wide again at the end. */
+function signingKey(show: StadiumShow, t: number): Key {
+  const release = show.signing?.mode === 'release'
+  const pl = signingPlayer(show, t).pos
+  const wide: Key = { p: { x: 0, y: 2.9, z: -27 }, aim: { x: 0, y: 1.6, z: -8 }, hfov: 76 * rad }
+  const close: Key = { p: { x: 1.8, y: 2.0, z: -17.5 }, aim: { x: 1.2, y: 1.6, z: -8 }, hfov: 54 * rad }
+  const mix = (a: Key, b: Key, k: number): Key => ({ p: lerp3(a.p, b.p, k), aim: lerp3(a.aim, b.aim, k), hfov: lerp(a.hfov, b.hfov, k) })
+  let key = wide
+  if (!release) {
+    // following him across the ground, then in on the stage
+    const follow: Key = { p: { x: 2.0 + pl.x * 0.3, y: 2.1, z: Math.max(-22, pl.z - 12) }, aim: { x: pl.x, y: 1.4, z: pl.z }, hfov: 56 * rad }
+    key = mix(key, follow, ease((t - 2.2) / 1.2) * (1 - ease((t - (SIGN.arrive - 0.8)) / 1.6)))
+    key = mix(key, close, ease((t - (SIGN.arrive - 0.8)) / 1.6))
+    // a big name gets a slow swing round him
+    if ((show.signing?.tier ?? 0) >= 4) key = { ...key, p: { ...key.p, x: key.p.x + 2.2 * Math.sin((t - SIGN.arrive) * 0.5) * ease((t - SIGN.arrive) / 1.0) } }
+  } else {
+    key = mix(wide, { p: { x: 1.4, y: 2.1, z: -16 }, aim: { x: 0.9, y: 1.6, z: -8 }, hfov: 56 * rad }, ease((t - 1.8) / 1.6))
+    key = mix(key, { p: { x: 0, y: 2.8, z: -26 }, aim: { x: pl.x * 0.4, y: 1.5, z: Math.min(-4, pl.z) }, hfov: 66 * rad }, ease((t - SIGN.leave + 0.4) / 2.0))
+  }
+  return mix(key, wide, ease((t - (SIGN.end - 1.4)) / 1.4) * (release ? 0 : 1))
 }
 
 // ---- the physio runs on -------------------------------------------------------------------------------------------------------
@@ -772,7 +858,7 @@ function flightOf(show: StadiumShow): Flight {
   if (show.kind === 'talk') {
     const pl = talkPlaces(show)
     const mid = lerp3(pl.speaker.at, pl.listener.at, 0.5)
-    const end: Key = show.talk === 'mentor'
+    const end: Key = show.talk === 'mentor' || show.talk === 'duel'
       ? { p: { x: 8.5, y: 1.7, z: mid.z }, aim: { x: mid.x, y: 1.35, z: mid.z }, hfov: 36 * rad }
       : { p: { x: 8.5, y: 1.7, z: mid.z + 0.5 }, aim: { x: mid.x + 0.2, y: 1.35, z: mid.z }, hfov: 34 * rad }
     return { keys: [s0, { p: lerp3(s0.p, end.p, 0.5), aim: lerp3(s0.aim, end.aim, 0.5), hfov: lerp(s0.hfov, end.hfov, 0.5) }, end], fly: 1.8 }
@@ -791,6 +877,10 @@ function flightOf(show: StadiumShow): Flight {
     const a = screenAngle(show.seed + 13)
     const end: Key = { p: ringPt(a, 0.8, 8), aim: ringPt(a, SCREEN_R, 15), hfov: 34 * rad }
     return { keys: [s0, mid(end, 8, 0), end], fly: 2.8 }
+  }
+  if (show.kind === 'signing') {
+    const end = signingKey(show, 0)
+    return { keys: [s0, { p: { x: 12, y: 8, z: -34 }, aim: lerp3(s0.aim, end.aim, 0.6), hfov: 56 * rad }, end], fly: 2.2 }
   }
   if (show.kind === 'ceremony') {
     const end = ceremonyKey(0)
@@ -887,6 +977,8 @@ export function cameraAt(show: StadiumShow, t: number): Cam {
     if (s >= 1) { const k = ease((t - 3) / 4); p = { x: lerp(-22, 20, k), y: lerp(9, 6, k), z: lerp(-36, -30, k) }; aim = { x: 0, y: 0.5, z: -12 } }
   } else if (show.kind === 'handshake') {
     if (s >= 1) { const k = ease((t - 3) / 6); aim = { x: 0, y: 1.3, z: -8 }; hfov = lerp(46, 34, k) * rad; p = { x: lerp(0, 1.5, k), y: lerp(2.1, 1.8, k), z: lerp(-22, -17, k) } }
+  } else if (show.kind === 'signing') {
+    if (s >= 1) { const k = signingKey(show, t); p = k.p; aim = k.aim; hfov = k.hfov }
   } else if (show.kind === 'ceremony') {
     if (s >= 1) { const k = ceremonyKey(t); p = k.p; aim = k.aim; hfov = k.hfov }
   } else if (show.kind === 'review') {
@@ -960,6 +1052,7 @@ export function crowdAt(show: StadiumShow, t: number): CrowdClose | null {
   if (show.kind === 'pitchmap' || show.kind === 'beehive') { const a = screenAngle(show.seed + 13); return { a0: a - 0.2, a1: a + 0.2, u0: 0.03, u1: 0.99, rows: 12, per: 46, k: 0.5, seed: show.seed } }
   if (show.kind === 'handshake') return { a0: Math.PI / 2 - 0.6, a1: Math.PI / 2 + 0.6, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: 0.85, seed: show.seed }
   if (show.kind === 'salute') { const a = Math.PI / 2; return { a0: a - 0.4, a1: a + 0.4, u0: 0.03, u1: 0.97, rows: 12, per: 60, k: 1, seed: show.seed } }
+  if (show.kind === 'signing') return { a0: Math.PI / 2 - 0.6, a1: Math.PI / 2 + 0.6, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: show.signing?.mode === 'release' ? 0.5 : t >= SIGN.arrive ? 1 : 0.6, seed: show.seed }
   if (show.kind === 'ceremony') return { a0: Math.PI / 2 - 0.6, a1: Math.PI / 2 + 0.6, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: t >= CEREMONY_BEATS.motm ? 1 : 0.55, seed: show.seed }
   if (show.kind === 'motm') return { a0: Math.PI / 2 - 0.6, a1: Math.PI / 2 + 0.6, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: 1, seed: show.seed }
   if (show.kind === 'lineup') return { a0: Math.PI / 2 - 0.6, a1: Math.PI / 2 + 0.6, u0: 0.03, u1: 0.97, rows: 12, per: 70, k: 0.7, seed: show.seed }
@@ -991,7 +1084,7 @@ export function crowdAt(show: StadiumShow, t: number): CrowdClose | null {
 }
 
 /** How much the whole stadium is on its feet. */
-export const crowdCheer = (show: StadiumShow, t: number): number => (show.kind === 'hug' || show.kind === 'landing' || show.kind === 'motm' || show.kind === 'salute' || show.kind === 'handshake' ? 1 : show.kind === 'fans' || show.kind === 'dugout' ? (show.mood === 'groan' ? 0.1 : 1) : show.kind === 'ceremony' ? (t >= CEREMONY_BEATS.motm ? 1 : 0.5) : show.kind === 'rain' ? 0.1 : show.kind === 'milestone' ? 1 : show.kind === 'walkoff' ? (show.walk?.ovation ? 1 : 0.15) : clamp01(0.5 + t / 3))
+export const crowdCheer = (show: StadiumShow, t: number): number => (show.kind === 'hug' || show.kind === 'landing' || show.kind === 'motm' || show.kind === 'salute' || show.kind === 'handshake' ? 1 : show.kind === 'fans' || show.kind === 'dugout' ? (show.mood === 'groan' ? 0.1 : 1) : show.kind === 'signing' ? (show.signing?.mode === 'release' ? 0.35 : t >= SIGN.arrive ? 1 : 0.55) : show.kind === 'ceremony' ? (t >= CEREMONY_BEATS.motm ? 1 : 0.5) : show.kind === 'rain' ? 0.1 : show.kind === 'milestone' ? 1 : show.kind === 'walkoff' ? (show.walk?.ovation ? 1 : 0.15) : clamp01(0.5 + t / 3))
 
 /** The giant screen `t` seconds in (null for the other shows). */
 export function screenAt(show: StadiumShow, t: number): BigScreen | null {
@@ -1160,11 +1253,12 @@ export function huddlePerson(show: StadiumShow, t: number, i: number, n: number,
 
 /** The confetti in the air: cannons at the sides of the ground fire it up in two volleys, and it flutters down. */
 export function confettiAt(show: StadiumShow, t: number): Confetti[] {
-  if (show.kind !== 'trophy' && show.kind !== 'motm' && show.kind !== 'ceremony') return []
+  if (show.kind !== 'trophy' && show.kind !== 'motm' && show.kind !== 'ceremony' && show.kind !== 'signing') return []
+  if (show.kind === 'signing' && (show.signing?.mode === 'release' || (show.signing?.tier ?? 0) < 3)) return [] // (confetti for a star and above)
   const out: Confetti[] = []
   const cols: [number, number, number][] = [rgbOf(show.colors[0]), rgbOf(show.colors[1]), [255, 255, 255], [255, 214, 80], [239, 68, 68], [56, 189, 248]]
   const cannons: V3[] = [{ x: -16, y: 0, z: -17 }, { x: 16, y: 0, z: -17 }, { x: -16, y: 0, z: 1 }, { x: 16, y: 0, z: 1 }]
-  ;(show.kind === 'ceremony' ? [CEREMONY_BEATS.cheque + 0.3, CEREMONY_BEATS.cheque + 2.6] : [3.2, 5.6]).forEach((tv, vi) => {
+  ;(show.kind === 'ceremony' ? [CEREMONY_BEATS.cheque + 0.3, CEREMONY_BEATS.cheque + 2.6] : show.kind === 'signing' ? ((show.signing?.tier ?? 0) >= 4 ? [SIGN.arrive + 0.2, SIGN.arrive + 2.4] : [SIGN.arrive + 0.2]) : [3.2, 5.6]).forEach((tv, vi) => {
     const tau = t - tv
     if (tau < 0) return
     cannons.forEach((c, ci) => {

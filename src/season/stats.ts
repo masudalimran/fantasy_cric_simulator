@@ -343,3 +343,19 @@ export function formBefore(season: Season, id: string, excludeFixtureId: string,
   }
   return form.bat || form.bowl || form.past ? form : null
 }
+
+/** How a batsman has done against a bowler in the matches of this season that were saved with it (older matches have no record): balls, runs, times out and matches. */
+export function duelBetween(season: Season, batId: string, bowlId: string, format?: MatchFormat, excludeFixtureId?: string): { balls: number; runs: number; outs: number; matches: number } {
+  const roster = season.roster ?? []
+  const bi = roster.indexOf(batId), wi = roster.indexOf(bowlId)
+  const out = { balls: 0, runs: 0, outs: 0, matches: 0 }
+  if (bi < 0 || wi < 0) return out
+  const fmt = new Map(season.fixtures.map((f) => [f.id, f.format]))
+  for (const r of Object.values(season.results)) {
+    if (r.fixtureId === excludeFixtureId || (format && fmt.get(r.fixtureId) !== format)) continue
+    const d = r.duels?.find((x) => x[0] === bi && x[1] === wi)
+    if (!d) continue
+    out.balls += d[2]; out.runs += d[3]; out.outs += d[4]; out.matches++
+  }
+  return out
+}
