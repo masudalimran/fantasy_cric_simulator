@@ -10,7 +10,7 @@ import { average, bowlAverage, collect, economy as bowlEcon, strikeRate, topBats
 import type { AttrKey, BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
 import { useStatsFormat } from '../../statsFormat'
 import { useTeams, useViewedSeason } from '../../store/useStore'
-import type { Player, Team } from '../../types'
+import type { MatchFormat, Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { Sheet } from '../Sheet'
 import { OriginTag, OverseasTag, CapsContext, Delta, PlayerAvatar, ProfileContext, RatingBadge, ROLE_LABEL, bowlLabel, StatBar, TeamCrest, accentOf, tierOf } from '../ui'
@@ -224,7 +224,7 @@ export function CareerPath({ season, playerId, teams }: { season: Season | null;
 }
 
 /** The player's last matches in this career, and what each one did to his ratings. */
-export function RecentMatches({ season, playerId, teamId, teams }: { season: Season | null; playerId: string; teamId: string; teams: Map<string, Team> }) {
+export function RecentMatches({ season, playerId, teamId, teams, format }: { season: Season | null; playerId: string; teamId: string; teams: Map<string, Team>; /** Only this format's matches (all of them when left out). */ format?: MatchFormat }) {
   const api = useDetails()
   const recent = useMemo(() => {
     if (!season) return []
@@ -235,7 +235,7 @@ export function RecentMatches({ season, playerId, teamId, teams }: { season: Sea
     const out: { fixtureId: string; date: string; vs: Team | undefined; own?: Team; bat?: BatLine; bowl?: BowlLine; change?: number; attrs?: Partial<Record<AttrKey, number>> }[] = []
     for (const f of season.fixtures) {
       const r = season.results[f.id]
-      if (!r) continue
+      if (!r || (format && f.format !== format)) continue
       const bat = (r.bat ?? []).find((l) => l[0] === at)
       const bowl = (r.bowl ?? []).find((l) => l[0] === at)
       if (!bat && !bowl) continue
@@ -245,12 +245,12 @@ export function RecentMatches({ season, playerId, teamId, teams }: { season: Sea
       out.push({ fixtureId: f.id, date: f.date, own: moves.length ? teams.get(ownId ?? '') : undefined, vs: teams.get((f.homeId === side ? f.awayId : f.homeId) as string), bat, bowl, change: season.changes?.[f.id]?.[playerId]?.o, attrs: season.changes?.[f.id]?.[playerId]?.a })
     }
     return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
-  }, [season, playerId, teams, teamId])
+  }, [season, playerId, teams, teamId, format])
   return (
     <>
       {recent.length > 0 && (
         <section>
-          <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Recent matches <span className="font-normal normal-case tracking-normal text-slate-500">· the last column is what each match did to his ratings</span></h3>
+          <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">{format ? `${format === 'odi' ? 'ODI' : format === 't20' ? 'T20' : 'Test'} · ` : ''}Recent matches <span className="font-normal normal-case tracking-normal text-slate-500">· the last column is what each match did to his ratings</span></h3>
           <div className="divide-y divide-line/60 rounded-2xl border border-line bg-panel">
             {recent.map((r) => (
               <button key={r.fixtureId} onClick={() => api?.openMatch(r.fixtureId)} className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/5">
@@ -357,7 +357,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
 
         {player.traits.length > 0 && <div className="flex flex-wrap gap-1.5">{player.traits.map((t) => <span key={t} className="rounded-full border border-line bg-panel-2 px-2.5 py-1 text-xs capitalize text-slate-200">{t.replace(/-/g, ' ')}</span>)}</div>}
 
-        {inCareer && <RecentMatches season={season} playerId={playerId} teamId={team.id} teams={teams} />}
+        {inCareer && <RecentMatches season={season} playerId={playerId} teamId={team.id} teams={teams} format={fmt ?? undefined} />}
         {inCareer && <CareerPath season={season} playerId={playerId} teams={teams} />}
       </div>
     </Shell>

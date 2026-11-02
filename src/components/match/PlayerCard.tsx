@@ -133,7 +133,7 @@ function Card({ match, player, team, career, onClose }: { match: Match; player: 
             {career && seasons.length > 0 ? <OverallStats key={statsTab} playerId={player.id} seasons={seasons} live={liveStats} format={statsTab === 'format' ? match.format : undefined} /> : <p className="text-sm text-slate-500">Season and career numbers are kept in a career. This is a friendly.</p>}
           </section>
 
-          {career && seasons.length > 0 && <RecentMatches season={seasons[seasons.length - 1]} playerId={player.id} teamId={team.id} teams={careerTeams} />}
+          {career && seasons.length > 0 && <RecentMatches season={seasons[seasons.length - 1]} playerId={player.id} teamId={team.id} teams={careerTeams} format={statsTab === 'format' ? match.format : undefined} />}
           {career && seasons.length > 0 && <CareerPath season={seasons[seasons.length - 1]} playerId={player.id} teams={careerTeams} />}
 
           <section className="rounded-2xl border border-line bg-panel p-3">
