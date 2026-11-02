@@ -25,8 +25,8 @@ describe('the studio show script', () => {
   })
 
   it('goes through the batsmen top to bottom, then the bowlers, with figures on the TV', () => {
-    const m = play(4)
-    const s = buildScript(m, 'innings', 4)
+    const m = play(6)
+    const s = buildScript(m, 'innings', 6)
     const stats = s.beats.filter((b) => b.clip?.kind === 'stat')
     const bats = stats.filter((b) => b.clip?.kind === 'stat' && b.clip.as === 'bat')
     const bowls = stats.filter((b) => b.clip?.kind === 'stat' && b.clip.as === 'bowl')

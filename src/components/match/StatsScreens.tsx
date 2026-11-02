@@ -19,6 +19,10 @@ export interface StatsInfo {
   /** Words for the headline. */
   title: string
   rate: number
+  /** For the projection, the partnership, the bowling figures and the form: the length of the innings in overs, the target of a chase, and every name by player id. */
+  overs?: number
+  target?: number | null
+  names?: Record<string, string>
 }
 
 const COLOR: Record<number, string> = { 1: '#e2e8f0', 2: '#a5f3fc', 3: '#a5b4fc', 4: '#38bdf8', 6: '#f472b6' }
@@ -174,3 +178,133 @@ export function ScoringScreen({ info }: { info: StatsInfo }) {
 
 /** The batsman's face beside a stat card: used by the wagon wheel when it is one man's shots. */
 export const Face = ({ player, team }: { player: Player; team: Team }) => <PlayerAvatar player={player} team={team} size={28} />
+
+// ---- The projection -------------------------------------------------------------------------------------------------
+
+/** Where the innings would finish at the run rate so far and at a few other rates, as bars; in a chase the target is a line across them and the rate needed is named. */
+export function ProjectionScreen({ info }: { info: StatsInfo }) {
+  const { log, team, rate: r } = info
+  const accent = accentOf(team)
+  const last = log[log.length - 1]
+  const runs = last?.score.runs ?? 0, balls = last?.score.legalBalls ?? 0
+  const total = (info.overs ?? 20) * 6
+  const left = Math.max(0, total - balls)
+  const crr = balls ? (runs / balls) * 6 : 0
+  const at = (rr: number) => Math.round(runs + (rr * left) / 6)
+  const rows: [string, number, string][] = [['At this rate', at(crr), accent], ...[6, 8, 10, 12].map((rr): [string, number, string] => [`At ${rr} an over`, at(rr), '#64748b'])]
+  const max = Math.max(info.target ?? 0, ...rows.map((x) => x[1]), 10)
+  const need = info.target != null && left > 0 ? ((info.target - runs) / left) * 6 : null
+  return (
+    <Card title="Projected score" sub={need !== null ? `${team.short} need ${info.target! - runs} from ${left} balls: ${need.toFixed(2)} an over` : `${team.short} ${runs}/${last?.score.wickets ?? 0} after ${Math.floor(balls / 6)}.${balls % 6} overs`}>
+      <div className="absolute inset-0 flex flex-col justify-center gap-2">
+        {rows.map(([label, value, color], i) => (
+          <div key={label} className="flex items-center gap-2">
+            <span className="w-24 shrink-0 text-right text-xs font-semibold text-slate-300">{label}</span>
+            <div className="relative h-5 min-w-0 flex-1 overflow-hidden rounded bg-white/5">
+              <motion.div className="h-full rounded" style={{ background: color }} initial={{ width: 0 }} animate={{ width: `${(value / max) * 100}%` }} transition={{ delay: (0.2 + i * 0.25) * r, duration: 0.7 * r }} />
+              {info.target != null && <div className="absolute inset-y-0 w-0.5 bg-amber-300" style={{ left: `${(info.target / max) * 100}%` }} />}
+            </div>
+            <span className="w-10 shrink-0 text-sm font-bold tabular-nums text-white">{value}</span>
+          </div>
+        ))}
+        {info.target != null && <div className="text-center text-[11px] font-semibold text-amber-300">Yellow line: the target, {info.target}</div>}
+      </div>
+    </Card>
+  )
+}
+
+// ---- The partnership ------------------------------------------------------------------------------------------------
+
+/** The stand at the crease: how many it is worth, who scored them, and how it compares with the best of the innings. */
+export function PartnershipScreen({ info }: { info: StatsInfo }) {
+  const { log, team, rate: r } = info
+  const names = info.names ?? {}
+  const accent = accentOf(team)
+  // every stand of the innings: the balls between one wicket and the next
+  const stands: BallEvent[][] = [[]]
+  for (const e of log) { stands[stands.length - 1].push(e); if (e.wicket) stands.push([]) }
+  const cur = stands[stands.length - 1]
+  const runsOf = (l: BallEvent[]) => l.reduce((a, e) => a + e.total, 0)
+  const best = Math.max(0, ...stands.map(runsOf))
+  const total = runsOf(cur), balls = cur.filter((e) => e.legal).length
+  const by = new Map<string, number>()
+  for (const e of cur) if (e.runsBat > 0) by.set(e.strikerId, (by.get(e.strikerId) ?? 0) + e.runsBat)
+  const extras = cur.reduce((a, e) => a + (e.total - e.runsBat), 0)
+  const parts = [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
+  return (
+    <Card title={`${total}-run stand`} sub={`${balls} balls · ${balls ? ((total / balls) * 6).toFixed(1) : '0.0'} an over${total >= best && stands.length > 1 ? ' · the best of the innings' : best > total ? ` · the best was ${best}` : ''}`}>
+      <div className="absolute inset-0 flex flex-col justify-center gap-3">
+        <div className="flex h-9 overflow-hidden rounded-lg bg-white/5">
+          {[...parts.map(([id, n], i) => ({ label: names[id] ?? '', n, color: i ? '#64748b' : accent })), ...(extras > 0 ? [{ label: 'Extras', n: extras, color: '#334155' }] : [])].map((p, i) => (
+            <motion.div key={i} className="flex items-center justify-center overflow-hidden whitespace-nowrap px-1 text-xs font-bold text-white" style={{ background: p.color }} initial={{ width: 0 }} animate={{ width: `${(p.n / Math.max(1, total)) * 100}%` }} transition={{ delay: (0.3 + i * 0.3) * r, duration: 0.8 * r }}>{p.n}</motion.div>
+          ))}
+        </div>
+        <div className="flex justify-between text-[11px] font-semibold text-slate-300">
+          {parts.map(([id, n], i) => <span key={id} className={i ? 'text-right' : ''}>{names[id] ?? ''} <b className="text-white">{n}</b></span>)}
+        </div>
+        <div className="text-center text-[11px] text-slate-400">{stands.length} {stands.length === 1 ? 'partnership' : 'partnerships'} so far · the best of the innings is worth {best}</div>
+      </div>
+    </Card>
+  )
+}
+
+// ---- The bowling figures --------------------------------------------------------------------------------------------
+
+/** Every bowler's figures in the innings so far as a small table, with a bar for the economy rate (the lower the better). */
+export function BowlersScreen({ info }: { info: StatsInfo }) {
+  const { log, rate: r } = info
+  const names = info.names ?? {}
+  const rows = new Map<string, { balls: number; runs: number; wk: number; mdn: number; per: Map<number, { b: number; r: number }> }>()
+  for (const e of log) {
+    const b = rows.get(e.bowlerId) ?? { balls: 0, runs: 0, wk: 0, mdn: 0, per: new Map() }
+    const bowlerRuns = e.total - (e.extraType === 'bye' || e.extraType === 'legbye' ? e.extraRuns : 0)
+    b.runs += bowlerRuns; if (e.legal) b.balls++; if (e.wicket && e.wicket.kind !== 'run out') b.wk++
+    const o = b.per.get(e.over) ?? { b: 0, r: 0 }; if (e.legal) o.b++; o.r += bowlerRuns; b.per.set(e.over, o)
+    rows.set(e.bowlerId, b)
+  }
+  const list = [...rows.entries()].map(([id, b]) => ({ id, ...b, mdn: [...b.per.values()].filter((o) => o.b === 6 && o.r === 0).length, econ: b.balls ? (b.runs / b.balls) * 6 : 0 })).sort((a, b) => b.wk - a.wk || a.econ - b.econ).slice(0, 5)
+  const maxEcon = Math.max(8, ...list.map((x) => x.econ))
+  return (
+    <Card title="The bowling" sub={`Figures so far: overs · maidens · runs · wickets`}>
+      <div className="absolute inset-0 flex flex-col justify-center gap-1.5">
+        {list.map((b, i) => (
+          <motion.div key={b.id} className="flex items-center gap-2 text-xs" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: (0.2 + i * 0.2) * r }}>
+            <span className="w-20 shrink-0 truncate font-semibold text-white">{names[b.id] ?? ''}</span>
+            <span className="w-20 shrink-0 font-display text-base tabular-nums text-sky-300">{Math.floor(b.balls / 6)}.{b.balls % 6}-{b.mdn}-{b.runs}-{b.wk}</span>
+            <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded bg-white/5"><div className="h-full rounded" style={{ width: `${(b.econ / maxEcon) * 100}%`, background: b.econ <= 6 ? '#34d399' : b.econ <= 8.5 ? '#fbbf24' : '#f87171' }} /></div>
+            <span className="w-8 shrink-0 text-right tabular-nums text-slate-300">{b.econ.toFixed(1)}</span>
+          </motion.div>
+        ))}
+        <div className="mt-1 text-center text-[10px] text-slate-500">The bar and the last figure are the economy rate: green is tight, red is expensive</div>
+      </div>
+    </Card>
+  )
+}
+
+// ---- Who is in form -------------------------------------------------------------------------------------------------
+
+/** The batsmen who are going well: runs, strike rate, and their last ten balls as small coloured chips. */
+export function FormScreen({ info }: { info: StatsInfo }) {
+  const { log, team, rate: r } = info
+  const names = info.names ?? {}
+  const by = new Map<string, BallEvent[]>()
+  for (const e of log) if (e.legal || e.runsBat > 0) by.set(e.strikerId, [...(by.get(e.strikerId) ?? []), e])
+  const list = [...by.entries()].map(([id, l]) => { const runs = l.reduce((a, e) => a + e.runsBat, 0), n = l.filter((e) => e.legal).length; return { id, l, runs, n, sr: n ? (runs / n) * 100 : 0 } }).filter((x) => x.n >= 4).sort((a, b) => b.runs - a.runs).slice(0, 3)
+  const chip = (e: BallEvent) => e.wicket ? { t: 'W', c: '#ef4444' } : e.boundary === 6 ? { t: '6', c: '#e879f9' } : e.boundary === 4 ? { t: '4', c: '#38bdf8' } : e.runsBat > 0 ? { t: String(e.runsBat), c: '#cbd5e1' } : { t: '•', c: '#475569' }
+  return (
+    <Card title="In form" sub={`${team.short}'s batsmen: runs, strike rate and the last ten balls`}>
+      <div className="absolute inset-0 flex flex-col justify-center gap-3">
+        {list.map((b, i) => (
+          <motion.div key={b.id} className="rounded-lg bg-white/5 px-2.5 py-1.5" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (0.2 + i * 0.3) * r }}>
+            <div className="flex items-baseline justify-between gap-2"><span className="truncate text-sm font-bold text-white">{names[b.id] ?? ''}</span><span className="shrink-0 font-display text-xl text-white">{b.runs}<span className="ml-1 text-xs text-slate-400">({b.n})</span></span></div>
+            <div className="mt-1 flex items-center gap-1">
+              {b.l.slice(-10).map((e) => { const c = chip(e); return <span key={e.seq} className="grid h-5 w-5 place-items-center rounded-full text-[10px] font-extrabold text-black" style={{ background: c.c }}>{c.t}</span> })}
+              <span className="ml-auto text-[11px] font-bold" style={{ color: b.sr >= 130 ? '#34d399' : b.sr >= 90 ? '#fbbf24' : '#f87171' }}>SR {b.sr.toFixed(0)}</span>
+            </div>
+          </motion.div>
+        ))}
+        {list.length === 0 && <div className="text-center text-sm text-slate-400">Nobody has faced enough balls yet</div>}
+      </div>
+    </Card>
+  )
+}

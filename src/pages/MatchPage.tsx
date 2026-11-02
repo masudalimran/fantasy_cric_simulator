@@ -40,7 +40,7 @@ import { commentary } from '../engine/commentary'
 import { catchCause, catchContact, fourContact, sixContact } from '../engine/contact'
 import { shotText } from '../components/match/AimPads'
 import { cheerVariantFor } from '../components/match/CheerScreen'
-import { hugFocusOf, moonOutcome, SHOW_SECONDS, type ShowKind, type StadiumShow } from '../components/match/stadiumShow'
+import { hugFocusOf, moonOutcome, spaceOutcome, SPACE_SIX_METRES, SHOW_SECONDS, type ShowKind, type StadiumShow } from '../components/match/stadiumShow'
 import type { Cast } from '../components/match/StadiumCam'
 import { pitchSpot, stumpsSpot } from '../engine/delivery'
 import { trophyOf } from '../components/match/TrophyArt'
@@ -208,6 +208,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const upgradesSeen = useRef(false) // the rating-upgrade screen has been shown for this match
   const shownReels = useRef(new Set<string>()) // the highlight reels the timeouts of this match have used, so none repeats
   const lastCheer = useRef(-100)
+  const lastTalk = useRef(-100)
   const lastSwing = useRef(-100) // the ball a momentum screen last played on, so they do not come one after another
   const matchOverRef = useRef(false) // the match has ended and its last screens are still to play
   const winShownRef = useRef(false)
@@ -310,6 +311,18 @@ function LiveMatch({ live }: { live: LiveMatch }) {
     momentTimer.current = window.setTimeout(startNextMoment, total)
   }, [openWinWhenIdle])
   const enqueueMoment = useCallback((m: Moment) => {
+    // one replay per ball: a ball never gets two slow-motion replays of the same action (the six replay and then the phantom camera, the wicket replay and then a close call...). The best of them stays (the order of REPLAY_RANK); the other screens of the ball (where it landed, the walk-off, the duck...) are not replays and stay.
+    const rank = REPLAY_RANK.indexOf(m.kind)
+    if (rank >= 0 && m.key < 1_000_000) {
+      const ball = Math.floor(m.key)
+      const same = (q: Moment) => q.key < 1_000_000 && Math.floor(q.key) === ball && REPLAY_RANK.indexOf(q.kind) >= 0
+      if (current.current && same(current.current)) return
+      const clash = queue.current.findIndex(same)
+      if (clash >= 0) {
+        if (rank >= REPLAY_RANK.indexOf(queue.current[clash].kind)) return
+        queue.current.splice(clash, 1)
+      }
+    }
     queue.current.push(m)
     if (!current.current) startNextMoment()
   }, [startNextMoment])
@@ -394,6 +407,17 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const chip = pair ? 'OPENING PAIR' : intros[0].title.startsWith('NEW SIGNING') ? 'NEW SIGNING' : 'NEW BATSMAN'
         const lines = pair ? intros.map((it, i) => `${players[i].name}: ${it.lines.slice(0, 2).join(' · ')}`) : intros[0].lines.slice(0, 2)
         enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: lead, team: bat.team, title: pair ? 'THE OPENERS' : intros[0].title, lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.entrance * 1000 * rate), stadium: { show: { kind: 'entrance', pair, seed: match.seed + lead.name.length + inn.wickets * 7 + inn.index * 31, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: lead.hand === 'L', lower: pair ? { title: `${players[0].name} & ${players[1].name}`, lines: [], chip, pair: intros.map((it, i) => ({ title: players[i].name.split(' ')[0], sub: it.lines[0] ?? '', rating: it.rating, tiles: (it.tiles ?? []).slice(0, 5) })) } : { title: lead.name, lines, chip, tiles: intros[0].tiles, rating: intros[0].rating } }, base: nowBase(), label: pair ? 'The openers' : intros[0].title, rate, cast: { team: bat.team, players } } })
+        // wickets have been falling and a set batsman is still there: when the new one comes in he walks down the pitch for a word (looks only)
+        if (!pair && inn.wickets >= 3 && !seen.current!.has(`mentor:${inn.index}:${inn.wickets}`)) {
+          const otherId = [inn.strikerId, inn.nonStrikerId].find((id) => id !== lead.id)
+          const ol = otherId ? inn.batters.find((b) => b.id === otherId) : undefined
+          const lately = inn.log.slice(-36).filter((e) => e.wicket).length
+          if (ol && otherId && (ol.runs >= 20 || ol.balls >= 18) && (lately >= 2 || inn.wickets >= 5)) {
+            seen.current!.add(`mentor:${inn.index}:${inn.wickets}`)
+            const setP = match.player(otherId)
+            enqueueMoment({ key: introSeq.current++, kind: 'stadium', player: setP, team: bat.team, title: 'WORDS AT THE CREASE', lines: [], delay: 0, ms: Math.round(SHOW_SECONDS.talk * 1000 * rate), stadium: { show: { kind: 'talk', talk: 'mentor', seed: match.seed + inn.wickets * 5 + inn.index, colors: [bat.team.colors.primary, bat.team.colors.secondary], left: setP.hand === 'L', lower: { title: 'WORDS AT THE CREASE', lines: [`${first(setP.name)} (${ol.runs} off ${ol.balls}) walks down the pitch to settle ${first(lead.name)}`], chip: `${inn.wickets} DOWN`, color: '#fbbf24' } }, base: nowBase(), label: 'Words at the crease', rate, cast: { team: bat.team, players: [setP, lead] } } })
+          }
+        }
       } else for (const it of intros) enqueueMoment(it)
     }
     const bowlerId = inn.bowlerId
@@ -781,7 +805,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       // screens that only break up the game, now and then: the cheerleaders, the stands, a huddle, fireworks after a boundary or a wicket,
       // and at the end of some overs the wave, the fan cam, the commentators or a blimp (never two within 30 balls)
       const cheerMoment = () => {
-        if (!lastEv || events.length !== 1 || match.isOver || !getAnimPrefs().cheer || lastEv.seq - lastCheer.current < 12) return
+        if (!lastEv || events.length !== 1 || match.isOver || !getAnimPrefs().cheer || lastEv.seq - lastCheer.current < (lastEv.legal && lastEv.score.legalBalls % 6 === 0 ? 5 : 12)) return
         const innE = match.innings[lastEv.innings]
         const batT = match.sides[innE.battingSide].team
         const bowlS = match.sides[1 - innE.battingSide]
@@ -821,7 +845,8 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           else if (v === 'fans') stadiumShow('fans', team, { mood: lastEv.wicket && Math.sin(lastEv.seq * 5.1) > 0 ? 'groan' : 'cheer', lower: { title: 'IN THE STANDS', lines: [lastEv.wicket ? 'The crowd reacts to the wicket' : lastEv.boundary === 6 ? 'A six, and the fans go wild' : 'A four, and the fans love it'] } }, 'Fan cam')
           else if (v === 'dugout') {
             const dTeam = lastEv.wicket ? batT : batT
-            const mates = match.battingSide(innE).xi.filter((p) => p.id !== lastEv.strikerId && p.id !== lastEv.nonStrikerId && !innE.batters.some((b) => b.id === p.id && b.dismissal)).slice(0, 8)
+            // the whole squad is in the dressing room (the eleven and the bench, the ones already out too), apart from the two batsmen in the middle
+            const mates = match.battingSide(innE).team.players.filter((p) => p.id !== lastEv.strikerId && p.id !== lastEv.nonStrikerId).slice(0, 18)
             stadiumShow('dugout', dTeam, { mood: lastEv.wicket ? 'groan' : 'cheer', lower: { title: 'IN THE DRESSING ROOM', lines: [lastEv.wicket ? `${dTeam.name} are stunned: the balcony goes quiet` : `${dTeam.name} are up on their feet on the balcony`] } }, 'Dressing room', undefined, { team: dTeam, players: mates, staff: { count: 1, tint: dTeam.colors.primary } })
           }
           else if (v === 'huddle') stadiumShow('huddle', team, {}, 'Huddle', cap('huddle', { team: team.name }))
@@ -830,16 +855,36 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           return
         }
         // a quiet moment at the end of an over
-        if (lastEv.legal && lastEv.score.legalBalls % 6 === 0 && !innE.done && lastEv.seq - lastCheer.current >= 14 && ambientOver(lastEv.seq)) {
+        if (lastEv.legal && lastEv.score.legalBalls % 6 === 0 && !innE.done && lastEv.seq - lastCheer.current >= 5 && ambientOver(lastEv.seq)) {
           const over = lastEv.score.legalBalls / 6
+          // a bowler who has been hit about: the captain walks over for a word, and if it keeps happening he loses his temper (looks only)
+          {
+            const bid = lastEv.bowlerId
+            const limit = match.format === 'test' ? 8 : match.format === 'odi' ? 10 : 12
+            const runsIn = (o: number) => innE.log.filter((e) => e.over === o && e.bowlerId === bid).reduce((a, e) => a + e.total, 0)
+            const mine = [...new Set(innE.log.filter((e) => e.bowlerId === bid).map((e) => e.over))].sort((a, b) => b - a)
+            const capt = bowlS.team.players.find((p) => p.id === bowlS.team.captainId)
+            if (capt && capt.id !== bid && bowlS.xi.some((p) => p.id === capt.id) && runsIn(lastEv.over) >= limit && lastEv.seq - lastTalk.current >= 18) {
+              const prev = mine[1] !== undefined ? runsIn(mine[1]) : 0
+              const angry = prev >= limit
+              const bw = match.player(bid)
+              lastTalk.current = lastEv.seq
+              stadiumShow('talk', bowlS.team, { talk: angry ? 'angry' : 'encourage', lower: angry ? { title: 'THE CAPTAIN LOSES HIS TEMPER', lines: [`${first(capt.name)} cannot hide it: ${first(bw.name)} has gone for ${prev} and ${runsIn(lastEv.over)} in his last two overs`], chip: 'FRUSTRATION', color: '#f87171' } : { title: 'A WORD FROM THE CAPTAIN', lines: [`${first(capt.name)} walks over to ${first(bw.name)} after ${runsIn(lastEv.over)} off the over`], chip: 'KEEP YOUR HEAD UP', color: '#fbbf24' } }, angry ? 'Captain angry' : 'Captain encourages', undefined, { team: bowlS.team, players: [capt, bw] })
+              return
+            }
+          }
           const chase = innE.target !== null ? { need: innE.target - innE.runs, balls: FORMATS[match.format].overs * 6 - innE.legalBalls } : null
           // now and then the numbers of the innings go up on screen instead: a wagon wheel, the worm, the runs of each over, how the runs came
-          const stats = innE.log.length >= 24
-          const pool = ['stands', 'social', 'box', 'pitchmap', 'beehive', 'fans', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring'] : [])]
+          const stats = innE.log.length >= 18
+          const pool = ['stands', 'social', 'box', 'pitchmap', 'beehive', 'fans', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring', 'projection', 'partnership', 'bowlers', 'form'] : [])]
           const v = pool[ambientPick(lastEv.seq + 1, pool.length)]
           const shots = innE.log.filter((e) => e.strikerId === lastEv.strikerId && e.runsBat > 0).length
-          const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined }
+          const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined, overs: FORMATS[match.format].overs, target: innE.target, names: Object.fromEntries([...batT.players, ...bowlS.team.players].map((p) => [p.id, callName(p)])) }
           if (v === 'wagon') put({ variant: 'wagon', stats: { ...si, other: undefined, batsman: shots >= 8 ? match.player(lastEv.strikerId) : undefined }, rate }, 6200, 'WAGON WHEEL', batT, cap('wagon', { team: batT.name, player: scorer }))
+          else if (v === 'projection') put({ variant: 'projection', stats: si, rate }, 6200, 'PROJECTED SCORE', batT, cap('worm', { team: batT.name }))
+          else if (v === 'partnership') put({ variant: 'partnership', stats: si, rate }, 5800, 'THE PARTNERSHIP', batT, cap('worm', { team: batT.name }))
+          else if (v === 'bowlers') put({ variant: 'bowlers', stats: si, rate }, 6200, 'THE BOWLING', bowlS.team, cap('worm', { team: batT.name }))
+          else if (v === 'form') put({ variant: 'form', stats: si, rate }, 6200, 'IN FORM', batT, cap('worm', { team: batT.name }))
           else if (v === 'worm') put({ variant: 'worm', stats: si, rate }, 6000, 'THE WORM', batT, cap('worm', { team: batT.name }))
           else if (v === 'manhattan') put({ variant: 'manhattan', stats: si, rate }, 5600, 'OVER BY OVER', batT, cap('manhattan', { team: batT.name }))
           else if (v === 'pitchmap') {
@@ -901,9 +946,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
           const fan = Math.abs(Math.sin(notable.seq * 12.9898 + 78.233) * 43758.5453) % 1
           // out of the stadium: the camera chases the ball up over the roof and out over the city to where it comes down (a parked car, the river or a blimp)
           if (gone) {
-            const outcome = moonOutcome(notable.seq)
-            const what = outcome === 'car' ? 'It smashes into a parked car: the alarm is going off' : outcome === 'river' ? 'It splashes down in the river beyond the ground' : 'It hits the blimp above the stadium'
-            show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'OUT OF THE STADIUM!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.moonshot * 1000 * rate6), stadium: { show: { kind: 'moonshot', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], from: pl.meet, landing: pl.end, outcome, lower: (notable.distance ?? 0) >= 150 ? { title: `MEGA SIX! ${notable.distance} m`, lines: [what], chip: 'MONSTER ENERGY MEGA SIX', color: '#7CFC00' } : { title: `OUT OF THE STADIUM! ${notable.distance ?? ''} m`.trim(), lines: [what], chip: 'MOON SHOT', color: '#f472b6' } }, base: bs, label: 'Out of the stadium', rate: rate6 } })
+            const outcome = (notable.distance ?? 0) >= SPACE_SIX_METRES ? spaceOutcome(notable.seq) : moonOutcome(notable.seq)
+            const what = outcome === 'satellite' ? 'It leaves the atmosphere and clips a satellite' : outcome === 'rocket' ? 'It climbs into space and hits a rocket on its way up' : outcome === 'car' ? 'It smashes into a parked car: the alarm is going off' : outcome === 'river' ? 'It splashes down in the river beyond the ground' : 'It hits the blimp above the stadium'
+            show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: (notable.distance ?? 0) >= SPACE_SIX_METRES ? 'INTO ORBIT!' : 'OUT OF THE STADIUM!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.moonshot * 1000 * rate6), stadium: { show: { kind: 'moonshot', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], from: pl.meet, landing: pl.end, outcome, lower: (notable.distance ?? 0) >= SPACE_SIX_METRES ? { title: `INTO ORBIT! ${notable.distance} m`, lines: [what], chip: 'ORBITAL SIX', color: '#a78bfa' } : (notable.distance ?? 0) >= 150 ? { title: `MEGA SIX! ${notable.distance} m`, lines: [what], chip: 'MONSTER ENERGY MEGA SIX', color: '#7CFC00' } : { title: `OUT OF THE STADIUM! ${notable.distance ?? ''} m`.trim(), lines: [what], chip: 'MOON SHOT', color: '#f472b6' } }, base: bs, label: 'Out of the stadium', rate: rate6 } })
           } else
           show({ key: notable.seq + 0.27, kind: 'stadium', player: hitter, team, title: 'SIX!', lines: [], delay: Math.round(delay * 0.5), ms: Math.round(SHOW_SECONDS.landing * 1000 * rate6), stadium: { show: { kind: 'landing', seed: notable.seq, colors: [team.colors.primary, team.colors.secondary], landing: pl.end, caught: fan < 0.4, gone, lower: { title: `SIX! ${notable.distance ?? ''} m`.trim(), lines: [gone ? 'Out of the stadium!' : fan < 0.4 ? 'A fan takes it in the stands' : 'It crashes into the seats'] } }, base: bs, label: 'Six', rate: rate6 } })
         }
@@ -932,7 +977,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             const mLines = [`${outLine.runs} off ${outLine.balls} balls`, `SR ${strikeRate(outLine.runs, outLine.balls)} · ${outLine.fours}x4 · ${outLine.sixes}x6`]
             const mRate = sp === 4 ? 0.55 : sp === 2 ? 0.75 : 1
             const partnerId = notable.strikerId === outLine.id ? notable.nonStrikerId : notable.strikerId
-            const mates = match.battingSide(inn).xi.filter((p) => p.id !== notable.strikerId && p.id !== notable.nonStrikerId).slice(0, 8)
+            const mates = match.battingSide(inn).team.players.filter((p) => p.id !== notable.strikerId && p.id !== notable.nonStrikerId).slice(0, 18) // (the whole squad, not only the batsmen still to come)
             const bigM = battingMilestone !== 'fifty'
             show({ key: notable.seq, kind: 'milestone', player: match.player(outLine.id), team, title: tagLabel[battingMilestone], big: bigM, delay, ms: Math.round(7200 * mRate),
               stadium: getAnimPrefs().cheer ? { show: { kind: 'milestone', seed: notable.seq, score: outLine.runs, colors: [team.colors.primary, team.colors.secondary], lower: { title: match.player(outLine.id).name, lines: mLines, chip: bigM ? 'A HUNDRED!' : 'A FIFTY!' } }, base: replayBase(notable), label: tagLabel[battingMilestone], rate: mRate, cast: { team, players: [match.player(outLine.id), ...mates] } } : undefined,
@@ -1561,6 +1606,9 @@ function InProgress({ live, onDiscard, wanted }: { live: LiveMatch; onDiscard: (
 }
 
 /** The pitch report's card: the verdict in big coloured words (BAT FIRST, BOWL FIRST or EITHER WAY), what the pitch is like in a line, and three tiles in plain words. */
+/** The screens that replay a ball in slow motion, best first: only one of them is shown for any one ball. */
+const REPLAY_RANK: Moment['kind'][] = ['wicketcast', 'replay', 'six', 'fourcast', 'four', 'catch', 'almostcast', 'misscast', 'phantomcast', 'deliverycast', 'extracast', 'extra', 'noball']
+
 function pitchReportLower(pitch: Match['pitch']) {
   const pi = describePitch(pitch), adv = tossAdvice(pitch)
   const word = (v: number, spread: number, good: string, mid: string, bad: string) => { const m = 50 + (v / spread) * 22; return m > 60 ? good : m < 40 ? bad : mid }

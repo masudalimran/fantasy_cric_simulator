@@ -2,7 +2,7 @@ import { pitchColors, type PitchKind } from '../../engine/pitchInfo'
 import { shade, type StadiumLook } from '../../engine/stadium'
 import { BOWL_Z, ROPE, project, projectPoly, prep, toCam, type Cam, type V3 } from './broadcast'
 import { drawMove, type MoveDraw } from './moveFx'
-import { drawDJBooth, drawDugout, drawOutside, drawPlatform, type OutsideDraw } from './setDraw'
+import { drawDJBooth, drawDugout, drawOutside, drawPlatform, drawSpace, type OutsideDraw, type SpaceDraw } from './setDraw'
 import { drawStage, type StageDraw, drawBall3, drawBigScreen, drawConfetti, drawCrowdClose, drawSparks, type Ball3, type BigScreen, type Confetti, type CrowdClose, type Spark } from './crowdDraw'
 
 /** Paints the ground, stands, pitch and stumps of the broadcast view onto a canvas. Pure drawing: it reads the camera and nothing else. */
@@ -46,7 +46,7 @@ export interface Scene {
   /** The presentation stage with its backdrop. */
   stage?: StageDraw
   /** Things built at the side of the ground: the team's dugout, the cheerleaders' platform with the DJ's booth, and (for a six out of the stadium) the city beyond the stands. */
-  sets?: { dugout?: [string, string]; platform?: { centre: V3; side: 1 | -1; colors: [string, string]; dj?: V3 }; outside?: OutsideDraw }
+  sets?: { dugout?: [string, string]; platform?: { centre: V3; side: 1 | -1; colors: [string, string]; dj?: V3 }; outside?: OutsideDraw; space?: SpaceDraw }
   /** A ball in the air over the stands. */
   ball3?: Ball3 | null
   /** Confetti in the air (the trophy celebration). */
@@ -85,6 +85,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, cam: Cam, W: number, H:
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
   if (sc.sets?.outside) drawOutside(ctx, r, sc.sets.outside)
+  if (sc.sets?.space) drawSpace(ctx, r, sc.sets.space)
   const lift = L.time === 'day' ? (grey ? 0.1 : 0.26) : L.time === 'dusk' ? 0.1 : 0
 
   // fireworks hang in the sky, behind the stands

@@ -3,9 +3,10 @@ import { PLATFORM } from './setDraw'
 import { camWide, ROPE } from './broadcast'
 import { solve } from './bodyPose'
 import { slopePoint } from './crowdDraw'
-import { dugoutPose, DRINKS, drinksPerson, drinkSpot, fanCut, handshakePos, shaking, physioPos, physioPose, batsmanDown, PHYSIO, presenterPose, presenterPos, PITCHREP, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
+import { ceremonyScript } from './ceremonyScript'
+import { spaceAt, moonBall, moonLandAt, talkPerson, talkPose, TALK, dugoutPose, DRINKS, drinksPerson, drinkSpot, fanCut, handshakePos, shaking, physioPos, physioPose, batsmanDown, PHYSIO, presenterPose, presenterPos, PITCHREP, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
 
-const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony', 'physio', 'dugout', 'drinks', 'handshake', 'pitchreport', 'salute', 'fans', 'pitchmap', 'beehive', 'moonshot']
+const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony', 'physio', 'dugout', 'drinks', 'handshake', 'pitchreport', 'salute', 'fans', 'pitchmap', 'beehive', 'moonshot', 'talk']
 const FROM_LIVE = KINDS.filter((k) => k !== 'flyover' && k !== 'lineup') // (the fly-over is the other way round: it ENDS at the live camera)
 const show = (kind: ShowKind, seed: number, variant?: StadiumShow['variant']): StadiumShow => ({ kind, variant, seed, focus: { x: 10, y: 0, z: -14 }, celebrant: 2, landing: { x: 80, y: 6, z: -4 }, caught: true, colors: ['#f97316', '#1d4ed8'], sign: '6', name: 'Goku Son', word: 'U7W', why: 'boundary' })
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
@@ -242,6 +243,15 @@ describe('the stadium shows', () => {
       for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) if (ps[i].y > 0.1 && ps[j].y > 0.1) expect(Math.hypot(ps[i].x - ps[j].x, ps[i].z - ps[j].z), `${i}/${j} at ${t.toFixed(1)}`).toBeGreaterThan(0.9)
     }
   })
+  it('the ceremony: the winning captain, the losing captain and the Man of the Match come up one at a time, each walking back before the next walks up', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const script = ceremonyScript({ host: 'Aiko', winTeam: 'A', loseTeam: 'B', winCaptain: 'Goku', loseCaptain: 'Ichigo', motm: 'Vegeta', motmIsCaptain: false, result: 'won by 24 runs', margin: 'normal', winnersChased: false, motmDeed: '71 off 40 balls', motmWith: 'bat', prize: '5,000 coins', seed })
+      const s: StadiumShow = { ...show('ceremony', 4), ceremony: { script, winCaptainId: 'a3', loseCaptainId: 'b2', motmId: 'a5', cheque: '5,000 COINS', title: 'Cup', hostName: 'Zoe' } }
+      const w = turnsOf(s, 'a3')[0], l = turnsOf(s, 'b2')[0], m = turnsOf(s, 'a5')[0]
+      expect(w.end, `seed ${seed}`).toBeLessThan(l.start)
+      expect(l.end, `seed ${seed}`).toBeLessThan(m.start)
+    }
+  })
   it('the ceremony: the host walks on, the teams stand at the two sides, each speaker goes up to the microphone in his turn and the Man of the Match stays', () => {
     const script = [{ at: 1, end: 2, who: 'host' as const, text: 'x' }]
     const s: StadiumShow = { ...show('ceremony', 4), ceremony: { script, winCaptainId: 'a3', loseCaptainId: 'b2', motmId: 'a5', cheque: '5,000 COINS', title: 'Cup', hostName: 'Zoe' } }
@@ -309,5 +319,36 @@ describe('the stadium shows', () => {
   it('the pitch map is a notice on the giant screen', () => {
     const s: StadiumShow = { ...show('pitchmap', 4), board: { title: 'THE OVER', rows: [], map: { balls: [{ x: 0, z: -5, c: '#fff' }] } } }
     expect(screenAt(s, 3)!.board!.map!.balls.length).toBe(1)
+  })
+  it('the talk: the speaker walks up to the other and stands close, then leaves (the batsmen walk back to their own ends)', () => {
+    for (const talk of ['encourage', 'angry', 'mentor'] as const) {
+      const s: StadiumShow = { ...show('talk', 5), talk }
+      const mid = TALK.start + TALK.walk + 0.6
+      const a = talkPerson(s, mid, 'speaker').pos, b = talkPerson(s, mid, 'listener').pos
+      expect(Math.hypot(a.x - b.x, a.z - b.z), talk).toBeLessThan(2.6)
+      expect(Math.hypot(a.x - b.x, a.z - b.z), talk).toBeGreaterThan(0.6)
+      const end = SHOW_SECONDS.talk
+      const a0 = talkPerson(s, 0, 'speaker').pos, a1 = talkPerson(s, end, 'speaker').pos
+      if (talk === 'mentor') expect(Math.hypot(a0.x - a1.x, a0.z - a1.z)).toBeLessThan(0.3)
+      else expect(Math.hypot(a.x - a1.x, a.z - a1.z)).toBeGreaterThan(4)
+      for (let t = 0; t <= end; t += 0.5) { const p = talkPose(s, t, 'speaker'); expect(Number.isFinite(p.hip.y)).toBe(true) }
+    }
+  })
+  it('a six into space: the camera chases the ball up without jumps, the sky goes black, and the satellite or the rocket is hit where the ball arrives', () => {
+    for (const outcome of ['satellite', 'rocket'] as const) {
+      const s: StadiumShow = { ...show('moonshot', 9), outcome, landing: { x: 150, y: 0, z: -20 }, from: { x: 0.75, y: 1, z: -1.2 } }
+      let prev = cameraAt(s, 0)
+      for (let t = 0.05; t <= SHOW_SECONDS.moonshot; t += 0.05) {
+        const c = cameraAt(s, t)
+        expect(Number.isFinite(c.yaw + c.pitch + c.hfov + c.p.y), `${outcome} ${t.toFixed(2)}`).toBe(true)
+        expect(Math.hypot(c.p.x - prev.p.x, c.p.y - prev.p.y, c.p.z - prev.p.z), `${outcome} ${t.toFixed(2)}`).toBeLessThan(9)
+        prev = c
+      }
+      const at = spaceAt(s, moonLandAt())
+      const ball = moonBall(s, moonLandAt() - 0.01)!
+      expect(Math.hypot(at.pos.x - ball.p.x, at.pos.y - ball.p.y, at.pos.z - ball.p.z)).toBeLessThan(2)
+      expect(spaceAt(s, 0.4).dark).toBeLessThan(spaceAt(s, 3.5).dark)
+      expect(spaceAt(s, 3.5).dark).toBeGreaterThan(0.9)
+    }
   })
 })

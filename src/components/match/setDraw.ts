@@ -228,3 +228,83 @@ export function drawOutside(ctx: CanvasRenderingContext2D, r: CamR, o: OutsideDr
     }
   }
 }
+
+// ---- up in space (for a six of 180 metres or more) ------------------------------------------------------------------------------
+
+export interface SpaceDraw {
+  kind: 'satellite' | 'rocket'
+  /** Where it is, the seconds since the ball hit it (negative before), how dark the sky is (0 to 1) and how far it has turned. */
+  pos: V3
+  hit: number
+  dark: number
+  spin: number
+  tick: number
+}
+
+/** The sky going black with stars as the ball climbs, and the satellite or the rocket it hits. Drawn over the sky only (the ground is painted after it). */
+export function drawSpace(ctx: CanvasRenderingContext2D, r: CamR, o: SpaceDraw) {
+  const { width: W, height: H } = ctx.canvas
+  if (o.dark > 0.01) {
+    ctx.fillStyle = `rgba(2,4,12,${(o.dark * 0.98).toFixed(3)})`
+    ctx.fillRect(0, 0, W, H)
+    ctx.fillStyle = '#ffffff'
+    for (let i = 0; i < 150; i++) {
+      const hx = Math.sin(i * 91.7 + 3.1) * 43758.5453, hy = Math.sin(i * 12.9 + 7.7) * 24634.6345
+      const x = (hx - Math.floor(hx)) * W, y = (hy - Math.floor(hy)) * H
+      ctx.globalAlpha = o.dark * (0.35 + 0.65 * Math.abs(Math.sin(o.tick * 1.7 + i)))
+      const sz = 0.6 + ((i * 7) % 5) * 0.35
+      ctx.fillRect(x, y, sz, sz)
+    }
+    ctx.globalAlpha = 1
+  }
+  const pt = project(r, o.pos)
+  if (!pt) return
+  const m = r.F / pt.d // pixels in a metre at the object
+  ctx.save()
+  ctx.translate(pt.x, pt.y)
+  const struck = o.hit > 0
+  if (o.kind === 'satellite') {
+    ctx.rotate(0.35 + Math.sin(o.spin * 0.5) * 0.2 + (struck ? o.spin : 0))
+    const panel = (side: 1 | -1, off: number) => {
+      ctx.save(); ctx.translate(side * (2.6 + off) * m, off * m * (struck ? 0.6 : 0)); if (struck && off > 0) ctx.rotate(side * o.spin * 1.3)
+      ctx.fillStyle = '#1d4ed8'; ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = Math.max(0.6, m * 0.08)
+      ctx.fillRect(-2.2 * m, -0.95 * m, 4.4 * m, 1.9 * m); ctx.strokeRect(-2.2 * m, -0.95 * m, 4.4 * m, 1.9 * m)
+      for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo((-2.2 + k * 1.1) * m, -0.95 * m); ctx.lineTo((-2.2 + k * 1.1) * m, 0.95 * m); ctx.stroke() }
+      ctx.restore()
+    }
+    panel(-1, 0); panel(1, struck ? Math.min(30, o.hit * 14) : 0)
+    ctx.fillStyle = '#e2e8f0'; ctx.strokeStyle = '#64748b'; ctx.lineWidth = Math.max(0.6, m * 0.1)
+    ctx.fillRect(-1.3 * m, -1.3 * m, 2.6 * m, 2.6 * m); ctx.strokeRect(-1.3 * m, -1.3 * m, 2.6 * m, 2.6 * m)
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(-1.3 * m, -0.4 * m, 2.6 * m, 0.8 * m)
+    ctx.beginPath(); ctx.arc(0, -1.9 * m, 0.9 * m, Math.PI, 0); ctx.fillStyle = '#cbd5e1'; ctx.fill()
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(0, -1.3 * m); ctx.lineTo(0, -1.9 * m); ctx.stroke()
+  } else {
+    ctx.rotate(struck ? 0.5 * Math.sin(o.spin * 3) + o.hit * 0.25 : 0)
+    // the exhaust flame, until it is hit
+    if (!struck) {
+      const f = 3.5 + Math.sin(o.tick * 40) * 0.8
+      const g = ctx.createLinearGradient(0, 4.5 * m, 0, (4.5 + f) * m); g.addColorStop(0, '#fff7ae'); g.addColorStop(0.5, '#fb923c'); g.addColorStop(1, 'rgba(239,68,68,0)')
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-0.9 * m, 4.5 * m); ctx.lineTo(0, (4.5 + f) * m); ctx.lineTo(0.9 * m, 4.5 * m); ctx.closePath(); ctx.fill()
+    }
+    ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = Math.max(0.6, m * 0.1)
+    ctx.beginPath(); ctx.moveTo(-1.1 * m, 4.5 * m); ctx.lineTo(-1.1 * m, -2.5 * m); ctx.quadraticCurveTo(0, -7 * m, 1.1 * m, -2.5 * m); ctx.lineTo(1.1 * m, 4.5 * m); ctx.closePath(); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(-1.1 * m, -2.5 * m); ctx.quadraticCurveTo(0, -7 * m, 1.1 * m, -2.5 * m); ctx.closePath(); ctx.fill()
+    ctx.fillStyle = '#ef4444'; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sd * 1.1 * m, 1.5 * m); ctx.lineTo(sd * 2.4 * m, 5 * m); ctx.lineTo(sd * 1.1 * m, 4.5 * m); ctx.closePath(); ctx.fill() }
+    ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(0, -0.6 * m, 0.7 * m, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#475569'; ctx.stroke()
+    // smoke from the hit
+    if (struck) for (let i = 0; i < 6; i++) { ctx.globalAlpha = Math.max(0, 0.5 - o.hit * 0.15 - i * 0.05); ctx.fillStyle = '#9ca3af'; ctx.beginPath(); ctx.arc((Math.sin(i * 2.3) * 1.2) * m, (4 + i * 1.5 + o.hit * 3) * m, (0.9 + i * 0.35 + o.hit * 0.4) * m, 0, Math.PI * 2); ctx.fill() }
+    ctx.globalAlpha = 1
+  }
+  ctx.restore()
+  // the blast where the ball hit it: a white flash, a fireball and sparks flying out
+  if (o.hit > 0 && o.hit < 1.6) {
+    const k = o.hit / 1.6
+    ctx.save(); ctx.translate(pt.x, pt.y)
+    const rad = (2 + k * 9) * m
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rad); g.addColorStop(0, `rgba(255,255,255,${(1 - k).toFixed(2)})`); g.addColorStop(0.4, `rgba(251,146,60,${(0.8 * (1 - k)).toFixed(2)})`); g.addColorStop(1, 'rgba(239,68,68,0)')
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = `rgba(254,240,138,${(1 - k).toFixed(2)})`; ctx.lineWidth = Math.max(1, m * 0.15); ctx.lineCap = 'round'
+    for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2 + i, l0 = (1.5 + k * 8 + (i % 3)) * m, l1 = l0 + (1.2 + (i % 4)) * m * (1 - k); ctx.beginPath(); ctx.moveTo(Math.cos(a) * l0, Math.sin(a) * l0); ctx.lineTo(Math.cos(a) * l1, Math.sin(a) * l1); ctx.stroke() }
+    ctx.restore()
+  }
+}

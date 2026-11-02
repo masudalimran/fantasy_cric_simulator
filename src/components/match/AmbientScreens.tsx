@@ -6,7 +6,7 @@ import { PlayerAvatar, accentOf } from '../ui'
 import { TeamLogo } from '../season/Details'
 import { crowdSigns, type SocialPost } from '../../data/social'
 import { CommentaryBox } from './CommentaryBox'
-import { ManhattanScreen, ScoringScreen, WagonScreen, WormScreen, type StatsInfo } from './StatsScreens'
+import { BowlersScreen, FormScreen, ManhattanScreen, PartnershipScreen, ProjectionScreen, ScoringScreen, WagonScreen, WormScreen, type StatsInfo } from './StatsScreens'
 
 /**
  * Small screens that only break up the game: the stands, a Mexican wave, the team huddle, the fan cam, the commentators, a blimp, the
@@ -20,7 +20,7 @@ export type AmbientInfo =
   | { variant: 'lights'; teams: [Team, Team]; rate: number }
   | { variant: 'fireworks'; team: Team; rate: number }
   // the numbers of the match on the field: a wagon wheel, the run-rate worm, the runs of each over, how the runs came
-  | { variant: 'wagon' | 'worm' | 'manhattan' | 'scoring'; stats: StatsInfo; rate: number }
+  | { variant: 'wagon' | 'worm' | 'manhattan' | 'scoring' | 'projection' | 'partnership' | 'bowlers' | 'form'; stats: StatsInfo; rate: number }
 
 function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const box = useRef<HTMLDivElement>(null)
@@ -191,7 +191,7 @@ function Fireworks({ team, w, r }: { team: Team; w: number; r: number }) {
 const TAGS: Record<AmbientInfo['variant'], [string, string]> = {
   stands: ['In the stands', '#fbbf24'], social: ['Fan chat', '#7dd3fc'], huddle: ['Team huddle', '#fde68a'],
   box: ["Commentators' corner", '#c4b5fd'], lights: ['Under the lights', '#fef3c7'], fireworks: ['Fireworks', '#fde68a'],
-  wagon: ['Wagon wheel', '#38bdf8'], worm: ['The worm', '#34d399'], manhattan: ['Over by over', '#f472b6'], scoring: ['How the runs came', '#fbbf24'],
+  wagon: ['Wagon wheel', '#38bdf8'], worm: ['The worm', '#34d399'], manhattan: ['Over by over', '#f472b6'], scoring: ['How the runs came', '#fbbf24'], projection: ['Projected score', '#60a5fa'], partnership: ['The partnership', '#34d399'], bowlers: ['The bowling', '#f87171'], form: ['In form', '#fbbf24'],
 }
 
 export function AmbientScreen({ info }: { info: AmbientInfo }) {
@@ -215,6 +215,10 @@ export function AmbientScreen({ info }: { info: AmbientInfo }) {
       {info.variant === 'worm' && <WormScreen info={info.stats} />}
       {info.variant === 'manhattan' && <ManhattanScreen info={info.stats} />}
       {info.variant === 'scoring' && <ScoringScreen info={info.stats} />}
+      {info.variant === 'projection' && <ProjectionScreen info={info.stats} />}
+      {info.variant === 'partnership' && <PartnershipScreen info={info.stats} />}
+      {info.variant === 'bowlers' && <BowlersScreen info={info.stats} />}
+      {info.variant === 'form' && <FormScreen info={info.stats} />}
       <Tag text={tag} color={color} />
       <Skip />
     </div>

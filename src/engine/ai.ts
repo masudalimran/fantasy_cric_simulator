@@ -195,6 +195,13 @@ export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[
     const reserve = format === 't20' ? 2 : 5
     const going = !!f && f.perf > 4
     if (topIds.has(p.id) && phase !== 'death' && bowled(p) >= reserve && !going) s -= 6
+    // The best two keep their last over (two in a one-day match) for the end of the innings, when the runs come fastest: before the death overs
+    // they are not given their final overs unless someone else cannot be found, and in the death overs they are the first choice.
+    if (format !== 'test' && topIds.has(p.id)) {
+      const keep = 1
+      if (phase !== 'death' && bowled(p) >= cfg.maxBowlerOvers - keep && pool.length > 2) s -= 60
+      if (phase === 'death' && bowled(p) < cfg.maxBowlerOvers) s += 9
+    }
     if (!going) s -= 2.5 * (bowled(p) - avgBowled)
     s += (rng.next() - 0.5) * 8
     if (s > bestScore) { best = p; bestScore = s }

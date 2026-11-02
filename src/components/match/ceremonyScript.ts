@@ -35,7 +35,7 @@ const pick = <T,>(xs: T[], seed: number, salt: number): T => xs[Math.floor(h(see
 const first = (n: string) => n
 
 /** Where each part of the ceremony starts (seconds into the show). */
-export const CEREMONY_BEATS = { hostIn: 3.4, win: 4.8, lose: 10.6, motm: 16.2, cheque: 21.4, close: 25.6, end: 29.5 }
+export const CEREMONY_BEATS = { hostIn: 3.4, win: 6.9, lose: 16.9, motm: 26.1, cheque: 31.2, close: 38.6, end: 42.5 } // (one voice at a time: the host asks, the captain answers, and only then the host turns to the next)
 
 export function ceremonyScript(c: CeremonyCtx): SpeechLine[] {
   const s = c.seed
@@ -58,7 +58,7 @@ export function ceremonyScript(c: CeremonyCtx): SpeechLine[] {
       : pick([`A great team effort. We trusted each other and it paid off when it mattered.`, c.winnersChased ? `The chase was all about staying calm. The batsmen did it brilliantly.` : `We got enough runs on the board and the bowlers did the rest. Brilliant.`], s, 2)
   say(B.hostIn, 3.2, 'host', pick([`Good evening, everybody! What an atmosphere. Let us get the captains up and hear from them.`, `Welcome to the presentation, and thank you for staying with us under the lights!`], s, 0))
   say(B.win, 4.2, 'host', hostWin)
-  say(B.win + 4.4, 5.2, 'win', winAns)
+  say(B.win + 4.5, 5.2, 'win', winAns)
 
   // 2. the losing captain
   const hostLose = pick([
@@ -71,7 +71,7 @@ export function ceremonyScript(c: CeremonyCtx): SpeechLine[] {
       ? pick([`We did not quite have enough runs on the board. Credit to ${c.winTeam}, they chased it well.`, `A few more runs and it might have been different. We will learn from it and come back.`], s, 4)
       : pick([`We were a bit short with the bat in the chase. Credit to ${first(c.winCaptain)} and his bowlers.`, `They got away from us early and we never really recovered. Hats off to ${c.winTeam}.`], s, 4)
   say(B.lose, 3.6, 'host', hostLose)
-  say(B.lose + 3.8, 5.0, 'lose', loseAns)
+  say(B.lose + 3.9, 5.0, 'lose', loseAns)
 
   // 3. the Man of the Match and the prize
   const hostMotm = pick([
@@ -86,7 +86,7 @@ export function ceremonyScript(c: CeremonyCtx): SpeechLine[] {
       : pick([`A bit of everything today, really. It is a team game and I am just happy to contribute.`, `Thank you. Whatever the team needed, I tried to do it.`], s, 6)
   say(B.motm, 4.8, 'host', hostMotm)
   say(B.cheque, 2.8, 'host', `Here is your prize money, ${first(c.motm)}: ${c.prize}. Well deserved!`)
-  say(B.cheque + 3.0, 4.0, 'motm', motmAns)
+  say(B.cheque + 3.1, 4.0, 'motm', motmAns)
   say(B.close, 3.6, 'host', pick([`A huge round of applause for both teams. Thank you, and goodnight!`, `That is all from us. Thank you for coming, and what a game it was. Goodnight!`], s, 7))
   return out
 }

@@ -13,7 +13,7 @@ import { drawScene } from './broadcastDraw'
 import { batsmanPose, breathe, fielderPose, nonStrikerPose, type Pose, standing } from './bodyPose'
 import { CEREMONY_BEATS } from './ceremonyScript'
 import { beatAt } from './stadiumShow'
-import { benchSpot, benchStand, platformCentre, platformSide, djCentre, djPose, crewPose, DJ, moonBall, moonLandAt, moonOutcome, batsmanDown, dugoutPose, drinksPerson, handshakePos, shaking, physioPos, physioPose, presenterPos, presenterPose, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, balconyPose, bowlerPhase, bowlerPos, cameraAt, captainPos, coinAt, coverAt, crewPos, landingBall, linePerson, lineSpot, LINEUP, MILESTONE, photoFlashes, podiumPos, towersAt, hugCelebrant, hugJoiners, hugPerson, hugSpot, walkoffPos, WALKOFF, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
+import { isSpace, spaceAt, talkPerson, talkPose, benchSpot, benchStand, platformCentre, platformSide, djCentre, djPose, crewPose, DJ, moonBall, moonLandAt, moonOutcome, batsmanDown, dugoutPose, drinksPerson, handshakePos, shaking, physioPos, physioPose, presenterPos, presenterPose, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, balconyPose, bowlerPhase, bowlerPos, cameraAt, captainPos, coinAt, coverAt, crewPos, landingBall, linePerson, lineSpot, LINEUP, MILESTONE, photoFlashes, podiumPos, towersAt, hugCelebrant, hugJoiners, hugPerson, hugSpot, walkoffPos, WALKOFF, cheerleaders, confettiAt, crowdAt, crowdCheer, ENTRANCE, huddlePerson, screenAt, shinePose, sparksAt, SHOW_SECONDS, trophyPerson, walkerPos, type StadiumShow } from './stadiumShow'
 import type { ReplayBase } from './ReplayFrame'
 
 /**
@@ -105,7 +105,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       if (crowd?.fanReact) crowd = { ...crowd, fanReact: { ...crowd.fanReact, t0: crowd.fanReact.t0 * Math.max(0.25, L.rate) } }
       drawScene(ctx, cam, W, H, {
         pitch: L.base.pitch, look: L.show.kind === 'rain' ? { ...L.base.look, rain: L.show.rain ?? 2, weather: 'rain' as const, covers: false } : L.show.kind === 'lights' ? { ...L.base.look, time: 'dusk', lights: false, rain: 0, weather: 'clear' as const } : L.base.look, tick: real, cheer: crowdCheer(L.show, t), wear: 0, board: null, covers: false, stumps: 0, stumpsBowl: 0, trail: [], style: 'plain',
-        crowd, ball3: L.show.kind === 'moonshot' ? moonBall(L.show, t) : L.show.kind === 'landing' ? landingBall(L.show, t) : null, coverK: L.show.kind === 'rain' ? coverAt(t) : undefined, sets: { dugout: (L.show.kind === 'milestone' && t >= MILESTONE.cut) || L.show.kind === 'dugout' ? L.show.colors : undefined, platform: L.show.kind === 'cheer' && L.show.variant !== 'cards' ? { centre: platformCentre(L.show.seed), side: platformSide(L.show.seed), colors: L.show.colors, dj: djCentre(L.show.seed) } : undefined, outside: L.show.kind === 'moonshot' ? { seed: L.show.seed, landing: { x: (L.show.landing ?? { x: 160, y: 0, z: -10 }).x, y: 0, z: (L.show.landing ?? { x: 160, y: 0, z: -10 }).z }, outcome: L.show.outcome ?? moonOutcome(L.show.seed), since: t - moonLandAt(), tick: real } : undefined }, stage: L.show.kind === 'ceremony' && L.show.ceremony ? { colors: L.show.colors, title: 'PLAYER OF THE MATCH', sub: L.show.ceremony.title } : undefined, podium: L.show.kind === 'motm', towers: L.show.kind === 'lights' ? towersAt(t) : undefined,  screen: screenAt(L.show, t), confetti: confettiAt(L.show, t), sparks: L.show.kind === 'motm' || (L.show.kind === 'ceremony' && t > 17) ? [...sk.sparks, ...photoFlashes(L.show.seed, t)] : sk.sparks, flash: sk.flash,
+        crowd, ball3: L.show.kind === 'moonshot' ? moonBall(L.show, t) : L.show.kind === 'landing' ? landingBall(L.show, t) : null, coverK: L.show.kind === 'rain' ? coverAt(t) : undefined, sets: { dugout: (L.show.kind === 'milestone' && t >= MILESTONE.cut) || L.show.kind === 'dugout' ? L.show.colors : undefined, platform: L.show.kind === 'cheer' && L.show.variant !== 'cards' ? { centre: platformCentre(L.show.seed), side: platformSide(L.show.seed), colors: L.show.colors, dj: djCentre(L.show.seed) } : undefined, outside: L.show.kind === 'moonshot' && !isSpace(L.show.outcome) ? { seed: L.show.seed, landing: { x: (L.show.landing ?? { x: 160, y: 0, z: -10 }).x, y: 0, z: (L.show.landing ?? { x: 160, y: 0, z: -10 }).z }, outcome: (L.show.outcome ?? moonOutcome(L.show.seed)) as 'car' | 'river' | 'blimp', since: t - moonLandAt(), tick: real } : undefined, space: L.show.kind === 'moonshot' && isSpace(L.show.outcome) ? { ...spaceAt(L.show, t), tick: real } : undefined }, stage: L.show.kind === 'ceremony' && L.show.ceremony ? { colors: L.show.colors, title: 'PLAYER OF THE MATCH', sub: L.show.ceremony.title } : undefined, podium: L.show.kind === 'motm', towers: L.show.kind === 'lights' ? towersAt(t) : undefined,  screen: screenAt(L.show, t), confetti: confettiAt(L.show, t), sparks: L.show.kind === 'motm' || (L.show.kind === 'ceremony' && t > 17) ? [...sk.sparks, ...photoFlashes(L.show.seed, t)] : sk.sparks, flash: sk.flash,
       })
       // the light of the hour: at dusk everything goes golden and a low sun glows on the horizon
       if (L.base.look.time === 'dusk' && L.show.kind !== 'lights') {
@@ -167,7 +167,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
       const hugFroms = hug ? [...L.rest, hugBowlerRest] : []
       const hugCel = hug ? (L.show.celebrant === 'bowler' || L.show.celebrant === undefined ? L.rest.length : L.show.celebrant) : -1
       const hugJoin = hug ? hugJoiners(L.show, hugFroms, hugCel) : []
-      const hideBase = L.show.kind === 'trophy' || L.show.kind === 'rain' || L.show.kind === 'motm' || L.show.kind === 'lineup' || L.show.kind === 'milestone' || L.show.kind === 'ceremony' || L.show.kind === 'dugout' || L.show.kind === 'handshake' || L.show.kind === 'pitchreport' || L.show.kind === 'fans' || L.show.kind === 'pitchmap' || L.show.kind === 'beehive'
+      const hideBase = L.show.kind === 'trophy' || L.show.kind === 'rain' || L.show.kind === 'motm' || L.show.kind === 'lineup' || L.show.kind === 'milestone' || L.show.kind === 'ceremony' || L.show.kind === 'dugout' || L.show.kind === 'handshake' || L.show.kind === 'pitchreport' || L.show.kind === 'fans' || L.show.kind === 'pitchmap' || L.show.kind === 'beehive' || L.show.kind === 'talk'
       const n = L.base.fielders.length + 1
       if (!hideBase) L.base.fielders.forEach((_f, i) => {
         let w = huddle ? huddlePerson(L.show, t, i, n, L.rest[i]) : null
@@ -286,6 +286,16 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
           const m = move(`s${i}`, sp)
           apply(`s${i}`, pose ?? fielderPose({ speed: Math.max(m.v, 3.5), cyc: m.cyc, ready: 0, dive: 0, catchK: 0, joy: 0, stop: 0, throwK: 0, keeper: false }))
         }
+      }
+      // a word in the middle: the speaker (the captain, or the set batsman) and the one who listens
+      if (cs && L.show.kind === 'talk') {
+        ;(['speaker', 'listener'] as const).forEach((who, i) => {
+          if (!cs.players[i]) return
+          const tp = talkPerson(L.show, t, who)
+          if (!put(`w${i}`, tp.pos)) return
+          const m = move(`w${i}`, tp.pos)
+          apply(`w${i}`, tp.moving && m.v > 0.8 ? fielderPose({ speed: m.v, cyc: m.cyc, ready: 0, dive: 0, catchK: 0, joy: 0, stop: 0, throwK: 0, keeper: false }) : breathe(talkPose(L.show, t, who), tq, 6 + i, 0.8))
+        })
       }
       // the dressing room: the team reacting
       if (cs && L.show.kind === 'dugout') {
@@ -447,7 +457,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
         ))}
         {cast && cast.players.map((p, i) => (
           <div key={p.id} ref={setNode(`w${i}`)} className={sprite} style={box}>
-            <Figure player={p} team={cast.team} look={show.kind === 'entrance' || show.kind === 'walkoff' || (show.kind === 'milestone' && i === 0) ? 'striker' : show.kind === 'bowler' ? 'bowler' : 'fielder'} rig={setRig(`w${i}`)} />
+            <Figure player={p} team={cast.team} look={show.kind === 'entrance' || show.kind === 'walkoff' || (show.kind === 'talk' && show.talk === 'mentor') || (show.kind === 'milestone' && i === 0) ? 'striker' : show.kind === 'bowler' ? 'bowler' : 'fielder'} rig={setRig(`w${i}`)} />
           </div>
         ))}
         {(show.kind === 'trophy' || show.kind === 'motm') && show.trophy && <div ref={setNode('trophy')} className="absolute left-0 top-0 hidden will-change-transform" style={{ width: 100, height: 100, transformOrigin: '0 0' }}><TrophyArt kind={show.trophy as TrophyKind} size={100} shine /></div>}

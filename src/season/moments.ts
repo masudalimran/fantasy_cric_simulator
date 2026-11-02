@@ -129,7 +129,7 @@ export const cheersAfter = (seq: number) => hash(seq, 9) < 0.62
 /** A stable pick of 0 to n-1 for a ball, to choose between the break-the-monotony screens. */
 export const ambientPick = (seq: number, n: number) => Math.floor(hash(seq, 12) * n) % n
 /** True for about one over end in five, where a quiet screen (the wave, the fan cam, the commentators, a blimp) comes on. */
-export const ambientOver = (seq: number) => hash(seq, 13) < 0.5
+export const ambientOver = (seq: number) => hash(seq, 13) < 0.85 // (most overs end with a screen: the numbers, the crowd or the commentators)
 /** True for about three chases in five: the floodlights come on as the second innings starts. */
 export const ambientLights = (seed: number) => hash(seed, 14) < 0.6
 

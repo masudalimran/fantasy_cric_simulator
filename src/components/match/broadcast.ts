@@ -395,8 +395,8 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const noball = ev.extraType === 'noball'
   const bye = ev.extraType === 'bye', legbye = ev.extraType === 'legbye'
   if (w) {
-    if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' }
-    else if (w.kind === 'lbw') { end = { x: meet.x + (stanceX > 0 ? 0.35 : -0.35), y: 0.06, z: meet.z - 0.55 }; kind = 'pad'; swing = false }
+    if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' || hash01(ev.seq * 2.9 + 0.3) < 0.85 } // (most batsmen are bowled while playing a shot and missing it: only now and then is one beaten without offering a stroke)
+    else if (w.kind === 'lbw') { end = { x: meet.x + (stanceX > 0 ? 0.35 : -0.35), y: 0.06, z: meet.z - 0.55 }; kind = 'pad'; swing = hash01(ev.seq * 3.7 + 0.9) < 0.6 }
     else if (w.kind === 'stumped') { end = { x: 0, y: 0.95, z: 0.55 }; kind = 'keeper'; wicketFlies = true; swing = true; catcher = 0 } // (he lunges out, swings and misses; the keeper gathers it behind the stumps)
     else if (w.kind === 'caught and bowled') { end = { x: bowlerX + 1, y: 1.1, z: BOWL_Z + 4 }; kind = 'air'; peak = 3; bowlerCatch = true }
     else if (w.kind === 'run out') {
