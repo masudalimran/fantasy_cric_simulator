@@ -1,3 +1,4 @@
+import { bowledInsideEdge } from '../../engine/edges'
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { Match } from '../../engine/match'
@@ -93,7 +94,8 @@ describe('the bodies drawn in the broadcast view', () => {
     expect(batHitsBall({ ...ev, runsBat: 1 })).toBe(true)
     expect(batHitsBall({ ...ev, boundary: 4, runsBat: 4 })).toBe(true)
     const dd = { kind: 'bowled' as const, playerId: 'x' }
-    expect(batHitsBall({ ...ev, wicket: dd as never })).toBe(false)
+    // a bowled ball misses the bat, unless it is an inside edge onto the stumps
+    for (let seq = 1; seq <= 40; seq++) expect(batHitsBall({ ...ev, seq, wicket: dd as never })).toBe(bowledInsideEdge(seq))
     expect(batHitsBall({ ...ev, wicket: { kind: 'caught', playerId: 'x' } as never })).toBe(true)
     // a dot ball is either played and missed (no sound) or kept out by the bat (a soft thud), never both
     const dots = Array.from({ length: 40 }, (_, i) => ({ ...ev, seq: i + 1 }))

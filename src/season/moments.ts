@@ -1,3 +1,4 @@
+import { bowledInsideEdge } from '../engine/edges'
 import type { BallEvent } from '../engine/types'
 import { decodeBall, decodeScore, synthesizeBat, type ReelBall, type Snapshot } from './reel'
 import type { Season } from './types'
@@ -224,5 +225,5 @@ export function bowledFor(seq: number, type: string | null | undefined): { kmh: 
   const t = type ?? 'fast'
   const [lo, hi] = t === 'fast' ? [128, 150] : t === 'medium' ? [112, 130] : [68, 96]
   const hows = ['Through the gate', 'Cleans him up', 'Yorker at the base', 'Off stump knocked back', 'Beaten all ends up', 'Straight through the defences']
-  return { kmh: Math.round(lo + hash(seq, 27) * (hi - lo)), how: hows[Math.floor(hash(seq, 28) * hows.length) % hows.length], side: Math.round((hash(seq, 29) - 0.5) * 30) }
+  return { kmh: Math.round(lo + hash(seq, 27) * (hi - lo)), how: bowledInsideEdge(seq) ? 'Inside edge onto the stumps' : hows[Math.floor(hash(seq, 28) * hows.length) % hows.length], side: Math.round((hash(seq, 29) - 0.5) * 30) }
 }

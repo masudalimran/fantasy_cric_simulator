@@ -20,6 +20,7 @@ import { getAnimPrefs, getBroadcastView, setManualPlay, useManualPlay, useSwipeA
 import { useDetails } from '../components/season/Details'
 import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
+import { edgeOf } from '../engine/edges'
 import { setStatsFormat } from '../statsFormat'
 import { average, collect, duelBetween, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
@@ -639,7 +640,7 @@ function LiveMatch({ live }: { live: LiveMatch }) {
         const bowlS = match.sides[1 - innNow.battingSide]
         if (prefs.four && lastEv.boundary === 4) {
           const ang = eventAngle(lastEv)
-          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'fourcast', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms: Math.round(FOUR_SECONDS * 1000 * rate), fourCast: { replay: replayBase(lastEv), contact: fourContact(lastEv, match.player(lastEv.strikerId).batting.power), shot: shotText({ angle: ang, loft: !!lastEv.shot?.loft }) ?? 'Along the ground', batsman: match.player(lastEv.strikerId), batTeam: batT, fire: lastEv.freeHit, poor: (() => { const d = deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' }); return isPoorLength(d) ? LENGTH_WORDS[d.length] : undefined })(), rate } })
+          enqueueMoment({ key: lastEv.seq + 0.4, kind: 'fourcast', player: match.player(lastEv.strikerId), team: batT, title: 'FOUR!', lines: [], delay, ms: Math.round(FOUR_SECONDS * 1000 * rate), fourCast: { replay: replayBase(lastEv), contact: fourContact(lastEv, match.player(lastEv.strikerId).batting.power), shot: edgeOf(lastEv) ? (edgeOf(lastEv) === 'inside' ? 'Inside edge, fine leg' : 'Outside edge, past the slips') : (shotText({ angle: ang, loft: !!lastEv.shot?.loft }) ?? 'Along the ground'), batsman: match.player(lastEv.strikerId), batTeam: batT, fire: lastEv.freeHit, poor: (() => { const d = deliveryOf(lastEv, match.player(lastEv.bowlerId), { overcast: stadium.weather === 'overcast' }); return isPoorLength(d) ? LENGTH_WORDS[d.length] : undefined })(), rate } })
         }
         if (prefs.extras && (lastEv.extraType === 'wide' || lastEv.extraType === 'bye' || lastEv.extraType === 'legbye')) {
           const nameOf = lastEv.extraType === 'wide' ? (lastEv.wideByes ? 'WIDE + 4 BYES!' : 'WIDE!') : lastEv.extraRuns >= 4 ? (lastEv.extraType === 'bye' ? 'FOUR BYES!' : 'FOUR LEG BYES!') : lastEv.extraType === 'bye' ? 'BYE!' : 'LEG BYE!'

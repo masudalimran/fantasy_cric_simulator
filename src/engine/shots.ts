@@ -1,3 +1,4 @@
+import { edgeDegrees, edgeOf } from './edges'
 /**
  * Where a scoring shot went. The engine decides runs, not directions, so the direction is a stable
  * pseudo-random pick from the ball number (all round the ground, most often in front of the bat).
@@ -44,7 +45,12 @@ export function sectorIndex(deg: number): number {
 export const reachFactor = (runs: number) => (runs >= 6 ? 1.12 : runs === 4 ? 1 : runs === 3 ? 0.78 : runs === 2 ? 0.56 : runs === 1 ? 0.34 : 0.1)
 
 /** The direction a ball's shot went: the one a person chose, or the stable pick from the ball number. */
-export const eventAngle = (ev: { seq: number; shot?: { angle: number } }) => ev.shot?.angle ?? shotAngle(ev.seq)
+export const eventAngle = (ev: { seq: number; shot?: { angle: number }; runsBat?: number; boundary?: number; wicket?: { kind: string } | null; extraType?: string | null }) => {
+  if (ev.shot) return ev.shot.angle
+  // an edged ball runs away behind the wicket (an inside edge fine on the leg side, an outside edge towards third man)
+  const edge = edgeOf(ev)
+  return edge && !ev.wicket ? -Math.PI / 2 + (edgeDegrees(ev.seq, edge) * Math.PI) / 180 : shotAngle(ev.seq)
+}
 
 /** How far a six went, in metres: a stable figure from the ball number and the batsman's power (no randomness, so a replay always agrees). */
 export function sixDistance(seq: number, power: number): number {

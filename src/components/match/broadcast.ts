@@ -1,3 +1,4 @@
+import { edgeOf } from '../../engine/edges'
 import { fourFxKind, FOUR_FX_BIG, type FourFxKind } from './fourFx'
 import type { BallEvent } from '../../engine/types'
 
@@ -353,7 +354,7 @@ export function batHitsBall(ev: Pick<BallEvent, 'seq' | 'runsBat' | 'legal' | 'w
   if (ev.extraType === 'wide' || ev.extraType === 'bye' || ev.extraType === 'legbye') return false
   // (no touch, no sound: a catch behind that was turned down, or overturned, never met the bat)
   if (!ev.wicket && (ev.review?.kind === 'edge' || ev.appeal?.kind === 'edge')) return false
-  if (ev.wicket) return ev.wicket.kind === 'caught' || ev.wicket.kind === 'caught and bowled' || ev.wicket.kind === 'run out'
+  if (ev.wicket) return ev.wicket.kind === 'caught' || ev.wicket.kind === 'caught and bowled' || ev.wicket.kind === 'run out' || (ev.wicket.kind === 'bowled' && edgeOf(ev) === 'inside') // (an inside edge onto the stumps: the bat is touched)
   return ev.runsBat > 0 || ev.boundary > 0 || !beatenDot(ev)
 }
 
@@ -401,7 +402,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const noball = ev.extraType === 'noball'
   const bye = ev.extraType === 'bye', legbye = ev.extraType === 'legbye'
   if (w) {
-    if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' || hash01(ev.seq * 2.9 + 0.3) < 0.85 } // (most batsmen are bowled while playing a shot and missing it: only now and then is one beaten without offering a stroke)
+    if (w.kind === 'bowled' || w.kind === 'hit wicket') { end = { x: 0, y: 0.35, z: 0.5 }; kind = 'stumps'; wicketFlies = true; swing = w.kind === 'hit wicket' || edgeOf(ev) === 'inside' || hash01(ev.seq * 2.9 + 0.3) < 0.85 } // (most batsmen are bowled while playing a shot and missing it: only now and then is one beaten without offering a stroke)
     else if (w.kind === 'lbw') { end = { x: meet.x + (stanceX > 0 ? 0.35 : -0.35), y: 0.06, z: meet.z - 0.55 }; kind = 'pad'; swing = hash01(ev.seq * 3.7 + 0.9) < 0.6 }
     else if (w.kind === 'stumped') { end = { x: 0, y: 0.95, z: 0.55 }; kind = 'keeper'; wicketFlies = true; swing = true; catcher = 0 } // (he lunges out, swings and misses; the keeper gathers it behind the stumps)
     else if (w.kind === 'caught and bowled') { end = { x: bowlerX + 1, y: 1.1, z: BOWL_Z + 4 }; kind = 'air'; peak = 3; bowlerCatch = true }
@@ -595,6 +596,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const appeal = (w && (w.kind === 'lbw' || (kind === 'keeper' && w.kind === 'caught'))) || (!!ev.appeal && ev.appeal.kind !== 'runout')
   const react: Plan['react'] = dropped ? { text: 'Dropped!', at: t3 + 0.05, who: 'bowler' } : appeal ? { text: 'Howzat!', at: t2 + 0.15, who: 'bowler' } : legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
     : noball ? { text: 'No ball!', at: 0.95 + 0.05, who: 'bowler' } : milestone ? { text: ev.tags.includes('hundred') || ev.tags.includes('150') || ev.tags.includes('200') ? '100!' : '50!', at: t3 + Math.max(0, runs * RUN_SECONDS - tFlight) + 0.4, who: 'striker' }
+    : edgeOf(ev) ? { text: edgeOf(ev) === 'inside' ? 'Inside edge!' : 'Edged!', at: t2 + 0.1, who: 'striker' }
     : kind === 'keeper' && !w && ev.runsBat === 0 && ev.legal ? { text: 'Beaten!', at: t2 + 0.15, who: 'striker' } : null
   // how the catch is taken, from the ball number: low ones are dived for or slid at, high ones are leapt at, stretched for or run on to (the keeper and the slips just take them)
   const catchStyle: CatchStyle = (() => {
@@ -614,7 +616,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     delivery: dv, bounceU, swingM, turnM,
     appealAt: appeal || w?.kind === 'stumped' ? { at: w?.kind === 'stumped' ? t3 + 0.1 : t2 + 0.3, len: 0.8 } : null, dropped,
     stump: w?.kind === 'stumped' ? { gap: stumpGap(ev.seq), breakAt: t3 + 0.34 } : null,
-    shot: classifyShot({ stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
+    shot: classifyShot({ edge: !!edgeOf(ev), stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
     signal, hurt, keeperDive, back, fourFx, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }

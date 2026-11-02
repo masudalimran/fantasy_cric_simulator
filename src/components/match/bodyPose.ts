@@ -164,9 +164,10 @@ export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flic
  * drawn doing. `side` is how far the ball went to the leg side of the batsman (negative: the off side), `ahead` how far down the ground towards the
  * bowler (negative: behind the wicket).
  */
-export function classifyShot(c: { /** He has come down the pitch and missed (a stumping). */ stepOut?: boolean; swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
+export function classifyShot(c: { /** An edged ball (an inside or outside edge): he is playing at it with a push of the bat, not a full shot. */ edge?: boolean; /** He has come down the pitch and missed (a stumping). */ stepOut?: boolean; swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
   if (c.wide) return 'leave'
   if (c.stepOut) return 'stepout'
+  if (c.edge) return 'defend'
   if (c.kind === 'stumps' || c.kind === 'pad' || (!c.swing && c.runsBat === 0)) return 'beaten'
   if (c.runsBat === 0 && c.kind === 'ground' && c.boundary === 0) return 'defend'
   if (c.kind === 'keeper' && c.runsBat === 0 && c.boundary === 0) return c.seq % 3 === 0 ? 'leave' : 'beaten'

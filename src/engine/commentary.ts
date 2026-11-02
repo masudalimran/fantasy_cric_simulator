@@ -1,3 +1,4 @@
+import { edgeOf } from './edges'
 import type { BallEvent } from './types'
 
 interface Names {
@@ -31,7 +32,7 @@ function plainCommentary(ev: BallEvent, n: Names): string {
     const out = n.out ?? s
     const f = n.fielder ?? 'the fielder'
     switch (ev.wicket.kind) {
-      case 'bowled': return pick([`BOWLED! ${b} knocks over ${out}'s stumps!`, `Timber! ${out} is clean bowled by ${b}.`, `${b} sneaks one through and ${out} is bowled.`], q)
+      case 'bowled': if (edgeOf(ev)) return pick([`Inside edge! ${out} plays it on and ${b} has the wicket.`, `${b} gets one to nip in, it clips the inside edge and ${out}'s stumps are down.`, `Off the inside edge, and on to the stumps! ${out} is gone.`], q); return pick([`BOWLED! ${b} knocks over ${out}'s stumps!`, `Timber! ${out} is clean bowled by ${b}.`, `${b} sneaks one through and ${out} is bowled.`], q)
       case 'caught': return pick([`OUT! ${out} hits it in the air and ${f} takes the catch.`, `Gone! Caught by ${f}, ${b} gets the wicket.`, `${out} goes for the big shot and ${f} makes no mistake.`], q)
       case 'caught and bowled': return `Caught and bowled! ${b} takes a sharp return catch to dismiss ${out}.`
       case 'lbw': return pick([`LBW! ${out} is trapped in front by ${b}.`, `Given out! Plumb in front, ${out} has to go.`], q)
@@ -45,6 +46,13 @@ function plainCommentary(ev: BallEvent, n: Names): string {
   if (ev.extraType === 'noball') return `No ball! ${b} oversteps. Free hit coming up.`
   if (ev.extraType === 'bye') return ev.extraRuns >= 4 ? pick([`FOUR BYES! It beats everyone and races away to the rope.`, `FOUR byes! The keeper has no chance, it is gone to the fence.`], q) : `Byes. It beats everyone and they scamper a run.`
   if (ev.extraType === 'legbye') return ev.extraRuns >= 4 ? pick([`FOUR LEG BYES! Off the pad and it runs all the way to the boundary.`, `FOUR leg byes! Off the body and away, nobody could stop it.`], q) : `Leg byes. Off the pad and away for a run.`
+  const edge = edgeOf(ev)
+  if (edge && ev.runsBat > 0 && ev.runsBat < 6) {
+    const where = edge === 'inside' ? 'fine on the leg side' : 'past the slips'
+    const how = edge === 'inside' ? 'the inside edge' : 'the outside edge'
+    if (ev.runsBat === 4) return pick([`FOUR! Off ${how}, and it runs away ${where}.`, `FOUR! A thick edge from ${s} and it flies ${where} to the rope.`, `FOUR! Edged, and nobody can stop it: ${where}.`], q)
+    return pick([`Off ${how}, ${where}, and they scamper ${ev.runsBat === 1 ? 'a single' : ev.runsBat + ' runs'}.`, `${s} gets a touch, ${where}: ${ev.runsBat === 1 ? 'one run' : ev.runsBat + ' runs'}.`], q)
+  }
   switch (ev.runsBat) {
     case 0: return pick([`${b} to ${s}, no run. Solid defence.`, `${s} swings and misses!`, `Dot ball. ${b} is building the pressure.`, `${s} plays it back to the bowler.`, `Good length, ${s} can't get it away.`], q)
     case 1: return pick([`${s} works it away for a single.`, `Nudged into the gap, one run.`, `${s} dabs it down for a quick single.`], q)

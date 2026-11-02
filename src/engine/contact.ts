@@ -1,3 +1,4 @@
+import { edgeOf } from './edges'
 import type { BallEvent } from './types'
 
 /**
@@ -69,7 +70,10 @@ export function sixContact(ev: Pick<BallEvent, 'seq' | 'distance'>, power: numbe
  * A four: well hit but not as perfectly as the biggest sixes. How well comes from how attacking the batsman was and his power; a harder hit is nearer the
  * sweet spot with a faster bat, a ball that merely found the gap is hit off a part of the bat and a touch early or late.
  */
-export function fourContact(ev: Pick<BallEvent, 'seq' | 'intent'>, power: number): Contact {
+export function fourContact(ev: Pick<BallEvent, 'seq' | 'intent'> & Partial<Pick<BallEvent, 'runsBat' | 'boundary' | 'wicket' | 'extraType'>>, power: number): Contact {
+  // an edged four comes off the very edge of the bat, early or late, with a slower bat
+  const edge = edgeOf(ev)
+  if (edge) return build(0.28, 76 + hash(ev.seq * 2.7) * 8, signOf(hash(ev.seq * 3.3)) * 14, (hash(ev.seq * 4.9) - 0.5) * 0.4, edge === 'inside' ? -0.86 : 0.86)
   const p = clamp((power - 40) / 55, 0, 1)
   const a = clamp((ev.intent + 1) / 3, 0, 1)
   const q = clamp(0.42 + 0.3 * p + 0.15 * a + (hash(ev.seq * 1.9) - 0.5) * 0.3, 0.2, 0.92)
