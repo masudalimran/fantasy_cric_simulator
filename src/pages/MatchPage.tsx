@@ -908,7 +908,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
             }
           }
           const chartsOn = getAnimPrefs().charts
-          const pool = ['stands', 'social', 'box', ...(chartsOn ? ['pitchmap', 'beehive'] : []), 'fans', ...(stats && chartsOn ? ['wagon', 'worm', 'manhattan', 'scoring', 'projection', 'partnership', 'bowlers', 'form'] : [])]
+          // between overs it is always numbers or a chart (the crowd, the commentators and the fans have their own moments in the match)
+          const pool = chartsOn ? ['pitchmap', 'beehive', 'projection', 'partnership', 'bowlers', ...(stats ? ['wagon', 'worm', 'manhattan', 'scoring', 'form'] : [])] : []
+          if (pool.length === 0) return
           const v = pool[ambientPick(lastEv.seq + 1, pool.length)]
           const shots = innE.log.filter((e) => e.strikerId === lastEv.strikerId && e.runsBat > 0).length
           const si = { team: batT, log: innE.log, rate, title: '', other: innE.index > 0 ? match.innings[innE.index - 1].log : undefined, overs: FORMATS[match.format].overs, target: innE.target, names: Object.fromEntries([...batT.players, ...bowlS.team.players].map((p) => [p.id, callName(p)])) }

@@ -74,7 +74,8 @@ export function fielderWorld(x: number, y: number, spot: string): V3 {
   if (spot === 'Wicketkeeper') return { x: 0, y: 0, z: y < 80 ? 1.7 : 1.7 + ((y - 78.5) / 3.5) * 6.4 }
   // (x is already mirrored for a left-hander, so the off side is whichever side of the middle the fielder is on)
   if (spot === 'Slip') return { x: x > 80 ? -2.4 : 2.4, y: 0, z: 9.2 }
-  if (spot === 'Short leg') return { x: 2.9 * (x < 80 ? 1 : -1), y: 0, z: -1.4 }
+  // (never level with the batsman, to his left or right: he would stand between the replay cameras and the bat; the close catcher is a short mid-wicket, well in front of him)
+  if (spot === 'Short leg') return { x: 4.4 * (x < 80 ? 1 : -1), y: 0, z: -6.2 }
   if (spot === 'Gully') return { x: (x > 80 ? -1 : 1) * 6, y: 0, z: 8 }
   return toWorld(x, y)
 }
@@ -276,6 +277,8 @@ export interface Plan {
   /** The keeper dives for a wide or a bye (and whether he gets there), a fielder dives at the rope for a four. */
   keeperDive: { dir: number; at: number; miss: boolean } | null
   chaserDive: boolean
+  /** After a ball that stayed in the field (a single, a dot...) the fielder sends it back: to the bowler or to the keeper, who then passes it on. Each leg: where to, when it leaves (seconds after the ball got there) and how long it takes. */
+  back: { to: V3; at: number; dur: number }[] | null
   /** How the chase of a four goes: nobody near it (the ball is in the gap), a fielder who chases it to the rope without diving, or one so close that he dives and just misses it. */
   chaseKind: 'gap' | 'between' | 'close' | null
   /** A lofted shot that drops in front of the fielder (and he has to field it on the bounce): how far in front of him it lands, in metres. */
@@ -541,6 +544,22 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   // a quicker ball reaches the bat sooner, a slow one hangs in the air
   const tDeliver = tDeliverFor(speed)
   const t2 = 0.95 + tDeliver, t3 = t2 + tFlight
+  // the ball is sent back: the fielder who stops it throws it to the bowler or the keeper (the keeper rolls it on to the bowler); the keeper just rolls it back after a ball he took
+  const BOWLER_AT: V3 = { x: 0.5, y: 1.0, z: BOWL_Z + 1.6 }, KEEPER_AT: V3 = { x: 0, y: 1.0, z: 1.7 }
+  const staysInField = !w && !boundary && !six && !wide && !noball && !byeFour && (kind === 'ground' || kind === 'pad' || kind === 'keeper' || (kind === 'air' && catcher < 0 && !bowlerCatch))
+  const legDur = (a: V3, b: V3) => Math.max(0.4, Math.min(0.8, Math.hypot(a.x - b.x, a.z - b.z) / 26))
+  let back: Plan['back'] = null
+  if (staysInField && (kind === 'keeper' || chaser >= 0 || kind === 'pad')) {
+    const at0 = 0.28
+    if (kind === 'keeper') back = [{ to: BOWLER_AT, at: at0, dur: 0.65 }]
+    else {
+      const front = end.z < -7
+      const toBowler = front && (runs % 2 === 1 || runs === 0 || end.z < -11)
+      if (toBowler) back = [{ to: BOWLER_AT, at: at0, dur: legDur(end, BOWLER_AT) }]
+      else { const d1 = legDur(end, KEEPER_AT); back = [{ to: KEEPER_AT, at: at0, dur: d1 }, { to: BOWLER_AT, at: at0 + d1 + 0.3, dur: 0.65 }] }
+    }
+  }
+  if (back) tHold = Math.max(tHold, Math.min(2.4, back[back.length - 1].at + back[back.length - 1].dur + 0.2))
   // when the wicket falls: a catch when the ball is taken, the stumps at once, a run out when they are hit; then the batsman walks off
   const wicketAt = !w ? null : runOut ? t3 + runOut.tThrow : w.kind === 'caught' || w.kind === 'caught and bowled' ? t3 : w.kind === 'stumped' ? t3 + 0.34 : t2 + 0.25
   if (wicketAt !== null) tHold = Math.max(tHold, wicketAt + 1.6 - t3)
@@ -564,6 +583,8 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   else if (byeFour) signal = { kind: 'four', at: t3 - 0.2, who: 2 }
   else if (bye) signal = { kind: 'bye', at: t2 + 0.4, who: 1 }
   else if (legbye) signal = { kind: 'legbye', at: t2 + 0.4, who: 2 }
+  // a catch behind the stumps is often a dive to one side
+  if (!keeperDive && w && w.kind === 'caught' && kind === 'keeper' && hash01(ev.seq * 4.1 + 0.2) < 0.45) keeperDive = { dir: hash01(ev.seq * 6.3) < 0.5 ? -1 : 1, at: 0, miss: false }
   if (keeperDive) keeperDive.at = bye ? t2 - 0.05 : t2 + 0.1
   const appeal = (w && (w.kind === 'lbw' || (kind === 'keeper' && w.kind === 'caught'))) || (!!ev.appeal && ev.appeal.kind !== 'runout')
   const react: Plan['react'] = dropped ? { text: 'Dropped!', at: t3 + 0.05, who: 'bowler' } : appeal ? { text: 'Howzat!', at: t2 + 0.15, who: 'bowler' } : legbye ? { text: 'Ouch!', at: t2 + 0.1, who: 'striker' } : wide ? { text: 'Wide!', at: t2 + 0.3, who: 'keeper' } : bye ? { text: 'Bye!', at: t2 + 0.3, who: 'keeper' }
@@ -576,9 +597,9 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     const h = hash01(ev.seq * 5.3 + 1.7)
     const fw = fielders[catcher] ? fielderWorld(fielders[catcher].x, fielders[catcher].y, fielders[catcher].spot) : null
     const far = fw ? Math.hypot(end.x - fw.x, end.z - fw.z) : 0
-    if (peak < 3.4) return h < 0.55 ? 'dive' : h < 0.8 ? 'slide' : 'stand'
-    if (far > 6) return h < 0.45 ? 'run' : h < 0.7 ? 'jump' : h < 0.85 ? 'reach' : 'stand'
-    return h < 0.35 ? 'jump' : h < 0.6 ? 'reach' : 'stand'
+    if (peak < 3.4) return h < 0.7 ? 'dive' : h < 0.85 ? 'slide' : 'stand'
+    if (far > 6) return h < 0.32 ? 'dive' : h < 0.55 ? 'run' : h < 0.75 ? 'jump' : h < 0.9 ? 'reach' : 'stand'
+    return h < 0.28 ? 'dive' : h < 0.55 ? 'jump' : h < 0.75 ? 'reach' : 'stand'
   })()
   return {
     tRun: 0.95, tDeliver, tFlight, tHold, total: 0.95 + tDeliver + tFlight + tHold, speed, slow, realTotal: 0.95 + tDeliver + tFlight + tHold + (slow ? slow.len / slow.factor - slow.len : 0), runs, stanceX, runOut, runSeconds, bowlerCatch, stepOut: w?.kind === 'stumped',
@@ -588,7 +609,7 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     appealAt: appeal || w?.kind === 'stumped' ? { at: w?.kind === 'stumped' ? t3 + 0.1 : t2 + 0.3, len: 0.8 } : null, dropped,
     stump: w?.kind === 'stumped' ? { gap: stumpGap(ev.seq), breakAt: t3 + 0.34 } : null,
     shot: classifyShot({ stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
-    signal, hurt, keeperDive, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
+    signal, hurt, keeperDive, back, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
 
@@ -711,6 +732,17 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
   if (ro && t >= t2 + plan.tFlight) {
     const s2 = clamp01((t - (t2 + plan.tFlight)) / ro.tThrow)
     ball = { x: lerp(plan.end.x, ro.throwTo.x, s2), y: Math.max(0.1, lerp(0.9, ro.throwTo.y, s2) + 0.6 * Math.sin(Math.PI * s2)), z: lerp(plan.end.z, ro.throwTo.z, s2) }
+  }
+  // sent back: the fielder's throw (or the keeper's roll) from where the ball was stopped to the bowler's hands
+  if (plan.back && t >= t3 + plan.back[0].at) {
+    let from = plan.end
+    for (const leg of plan.back) {
+      const u = (t - (t3 + leg.at)) / leg.dur
+      if (u < 0) { ball = { x: from.x, y: from.y <= 0.2 ? 0.9 : from.y, z: from.z }; break } // (in his hands, waiting)
+      if (u <= 1) { const d = Math.hypot(leg.to.x - from.x, leg.to.z - from.z); ball = { x: lerp(from.x, leg.to.x, u), y: Math.max(0.1, lerp(Math.max(0.9, from.y), leg.to.y, u) + Math.min(1.4, 0.3 + d * 0.035) * Math.sin(Math.PI * u)), z: lerp(from.z, leg.to.z, u) }; break }
+      ball = { x: leg.to.x, y: leg.to.y, z: leg.to.z }
+      from = leg.to
+    }
   }
   // the bowler takes the catch off his own bowling
   if (plan.bowlerCatch) { const k = ease((t - t2) / plan.tFlight); bowlerPos = lerp3(bowlerPos, { x: plan.end.x, y: 0, z: plan.end.z }, k) }

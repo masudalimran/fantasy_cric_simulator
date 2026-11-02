@@ -77,7 +77,17 @@ export function benchSpot(i: number, n: number, stand = 0): V3 {
   const span = (DUGOUT.half - 1.2) * 2
   const x = n <= 1 ? 0 : -span / 2 + (span * i) / (n - 1)
   const zSit = C.z - DUGOUT.depth / 2 + 0.7
-  return { x, y: DUGOUT.bench * (1 - stand), z: zSit + 1.0 * stand }
+  if (stand <= 0) return { x, y: DUGOUT.bench, z: zSit }
+  // on their feet they step out of the box onto the grass in front of it: one row, or two staggered rows when there are many, spread wide enough for every face to show
+  const rows = n > 7 ? 2 : 1
+  const row = rows === 1 ? 0 : i % 2
+  const cnt = rows === 1 ? n : row === 0 ? Math.ceil(n / 2) : Math.floor(n / 2)
+  const inRow = rows === 1 ? i : Math.floor(i / 2)
+  const width = Math.min(15, 1.75 * cnt)
+  const xs = cnt <= 1 ? 0 : -width / 2 + (width * (inRow + (row ? 0.5 : 0))) / cnt + (row ? 0 : width / (cnt * 2) * 0)
+  const zs = zSit + 2.2 + row * 1.9
+  const k = Math.min(1, stand)
+  return { x: x + (xs - x) * k, y: DUGOUT.bench * (1 - k), z: zSit + (zs - zSit) * k }
 }
 
 // ---- the cheerleaders' stand and the DJ ------------------------------------------------------------------------------------

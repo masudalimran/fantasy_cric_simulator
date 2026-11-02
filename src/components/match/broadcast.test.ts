@@ -361,4 +361,27 @@ describe('a run out, an appeal, a dropped catch and the phantom camera', () => {
     }
     expect(styles.size).toBeGreaterThanOrEqual(4)
   })
+
+  it('a ball that stayed in the field is sent back: it ends in the bowler\'s hands (after a stop at the keeper when the fielder is far away)', () => {
+    let seen = 0, viaKeeper = 0
+    for (let seed = 1; seed <= 12; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[2], teamB: BUILT_IN_TEAMS[9], format: 't20', seed })
+      m.playMatch()
+      for (const ev of m.innings[0].log.filter((e) => !e.wicket && !e.boundary && !e.extraType && e.legal).slice(0, 40)) {
+        const bowlSide = m.sides[1 - m.innings[0].battingSide]
+        const p0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: null, hand: m.player(ev.strikerId).hand })
+        const f = placeFielders(bowlSide.xi, ev.bowlerId, p0.spots)
+        const plan = planBall(ev, f.map((x) => ({ id: x.player.id, x: x.x, y: x.y, spot: x.spot })), endPoint(ev, f), false)
+        if (!plan.back) continue
+        seen++
+        if (plan.back.length === 2) viaKeeper++
+        const last = frameAt(plan, plan.total, () => ({ x: 0, y: 0, z: 0 })).ball!
+        const to = plan.back[plan.back.length - 1].to
+        expect(Math.hypot(last.x - to.x, last.z - to.z)).toBeLessThan(0.6)
+        expect(plan.back[0].at + plan.back[0].dur).toBeLessThan(plan.tHold + 0.3)
+      }
+    }
+    expect(seen).toBeGreaterThan(30)
+    expect(viaKeeper).toBeGreaterThan(0)
+  })
 })

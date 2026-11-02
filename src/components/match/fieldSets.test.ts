@@ -42,4 +42,11 @@ describe('field sets', () => {
     expect(l.find((s) => s.spot === 'Mid-off')!.x).toBe(160 - r.find((s) => s.spot === 'Mid-on')!.x)
     expect(plan({ hand: 'L', noMirror: true }).spots).toEqual(r)
   })
+  it('no fielder ever stands level with the batsman to his left or right (he would block the replay cameras)', async () => {
+    const { fielderWorld } = await import('./broadcast')
+    for (const format of ['t20', 'odi', 'test'] as const) for (let over = 0; over < 50; over += 3) for (const hand of ['R', 'L'] as const) for (const bowlType of ['fast', 'offspin', 'legspin', 'medium', null] as const) {
+      const p = fieldPlan({ format, over, maxOvers: format === 't20' ? 20 : 50, runs: 60, legalBalls: over * 6, target: null, freeHit: false, bowlType, hand })
+      for (const s of p.spots) { if (s.spot === 'Wicketkeeper') continue; const w = fielderWorld(s.x, s.y, s.spot); expect(Math.abs(w.x) < 12 && w.z > -3.5 && w.z < 2.0, `${s.spot} ${w.x.toFixed(1)},${w.z.toFixed(1)}`).toBe(false) }
+    }
+  })
 })

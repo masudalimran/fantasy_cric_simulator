@@ -152,6 +152,13 @@ function SpellCard({ spell, color, delay }: { spell: NonNullable<ScoreBug['spell
   )
 }
 
+/** How long the fielders need to reach a changed field (0 when nobody moves far). */
+function walkLead(prev: Map<string, V3>, fielders: Placed[], now: V3[]): number {
+  let far = 0
+  fielders.forEach((f, i) => { const a = prev.get(f.player.id); if (a) far = Math.max(far, Math.hypot(a.x - now[i].x, a.z - now[i].z)) })
+  return far > 1.5 ? Math.min(2.2, 0.9 + far * 0.07) : 0
+}
+
 export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam, bowlingTeam, fielders, pitch = 'balanced', rate: rateProp = 1, look = DEFAULT_LOOK, scoreBug, caption, wear = 0, replay, fitSeconds }: {
   /** Play the clip so that it finishes in this many seconds, whatever its length (every ball of a highlight reel is shown to the end). */
   fitSeconds?: number
@@ -188,14 +195,18 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
   const scoreBarOn = useScoreBar()
   // where each fielder stood at the end of the last clip, so the field can change between balls with the fielders walking to their new places
   const lastRest = useRef(new Map<string, V3>())
+  /** Seconds at the start of the clip while the fielders walk to a new field with the bowler waiting at his mark (the field never changes after he starts to run). */
+  const preRef = useRef(0)
 
   // the plan for this ball
   const plan0: Plan = useMemo(() => {
     const ev = event ?? STUB
     const end = event ? endPoint(event, fielders) : { x: 80, y: 66 }
     const p = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), end, striker.hand === 'L', ballSpeed(ev, bowler), { holdRunOut: getAnimPrefs().reviews, bowler, overcast: look.weather === 'overcast' })
+    // a new field: the fielders walk to their places first, while the bowler waits, and only then does he run in
+    preRef.current = event && !replay && !fitSeconds ? walkLead(lastRest.current, fielders, fielders.map((f) => fielderWorld(f.x, f.y, f.spot))) : 0
     // (a replay inside an animation screen must not touch the clock the live clip keeps)
-    if (event && !replay && !fitSeconds) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round((p.realTotal * 1000) / Math.max(0.15, rateProp)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
+    if (event && !replay && !fitSeconds) { const fresh = clipNow.seq !== event.seq; clipNow.seq = event.seq; clipNow.ms = Math.round(((p.realTotal + preRef.current) * 1000) / Math.max(0.15, rateProp)); if (fresh) clipNow.until = Date.now() + clipNow.ms }
     return p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.seq, fielders.map((f) => f.player.id).join(), striker.id])
@@ -242,6 +253,8 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
     const anchors = new Map<string, { x: number; y: number; s: number; rot: number }>()
     const prevPos = new Map<string, V3>(), speeds = new Map<string, number>(), cycles = new Map<string, number>()
     const walkFrom = new Map(lastRest.current)
+    const pre = preRef.current // (the fielders settle first)
+    let preK = pre > 0 ? 0 : 1
     lastRest.current = new Map(live.current.fielders.map((fd, i) => [fd.player.id, live.current.rest[i]]))
 
     const paint = (t: number, dt: number, snap: boolean) => {
@@ -394,7 +407,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       // fielders: where they stand, or where they have run to
       L.fielders.forEach((_, i) => {
         const from = walkFrom.get(L.fielders[i].player.id)
-        const walk = from && t < 1.1 ? lerp3v(from, L.rest[i], Math.min(1, t / 1.0)) : L.rest[i]
+        const walk = from && preK < 1 ? lerp3v(from, L.rest[i], 1 - (1 - preK) * (1 - preK)) : L.rest[i]
         const w = f.moving.get(i) ?? walk
         const caught = L.plan.catcher === i
         const dv = f.dives.get(i)
@@ -420,7 +433,11 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         const nearCatch = thrower && !!pl.fellShort ? clamp01((t - (t3c - 0.4)) / 0.22) * (1 - clamp01((t - t3c) / 0.18)) : 0
         const catchK = Math.max(nearCatch, (caught && !dv && !(pl.runOut) && (pl.kind === 'air' || pl.kind === 'keeper') ? clamp01((t - (takeAt - 0.32)) / 0.22) : 0) * (1 - clamp01((t - takeAt - 0.7) / 0.35)))
         const stopK = thrower && !pl.boundary && !pl.six && !dv && (pl.kind === 'ground' || !!pl.fellShort) ? clamp01((sfp - 0.82) / 0.16) * (1 - clamp01((t - t3c - 0.2) / 0.3)) : 0
-        const throwK = thrower && (pl.runOut || pl.runs > 0) && t > t3c + 0.2 ? clamp01((t - (t3c + (pl.runOut ? 0.05 : 0.25))) / 0.4) * (t < t3c + 1.2 ? 1 : 0) : 0
+        // who throws and when: the run-out thrower; the fielder who stops the ball and sends it back (and the keeper, who rolls it on to the bowler)
+        const legs = pl.back
+        const lastLeg = legs ? legs[legs.length - 1] : null
+        const throwAt: number | null = pl.runOut ? (thrower ? 0.05 : null) : legs && lastLeg ? (i === 0 && (pl.kind === 'keeper' || legs.length === 2) ? lastLeg.at : thrower ? legs[0].at : null) : thrower && pl.runs > 0 ? 0.25 : null
+        const throwK = throwAt !== null && t > t3c + throwAt - 0.05 ? clamp01((t - (t3c + throwAt)) / 0.4) * (t < t3c + throwAt + (pl.runOut ? 1.15 : 0.95) ? 1 : 0) : 0
         const readyK = clamp01((t - (pl.tRun - 0.5)) / 0.5) * (i === 0 ? 1 : 1 - clamp01((t - t2c - 0.35) / 0.6))
         const fp = fielderPose({ speed: mf.v, cyc: mf.cyc, ready: readyK, dive: dv ? dv.k : 0, catchK, catchStyle: caught && !dv && pl.catchStyle !== 'stand' && pl.catchStyle !== 'dive' ? pl.catchStyle : undefined, joy: caught || (pl.runOut && thrower) ? f.joy * (caught ? 1 : 0) : 0, stop: stopK, throwK, keeper: i === 0, stump: i === 0 ? f.keeperStump : 0, appeal: f.appealK > 0 && (i === 0 || appealers.has(i)) ? f.appealK : 0 })
         rigs.current.get(`f${i}`)?.apply(mf.v === 0 && !dv && catchK === 0 && stopK === 0 && throwK === 0 ? breathe(fp, tq, 5 + i) : fp)
@@ -622,8 +639,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
         // (a nick's slow motion makes the clip last longer than its own seconds)
         const real = (now - t0) / 1000 / Math.max(0.15, live.current.rate)
         const lp = live.current.plan
-        paint(Math.min(warpTime(lp, real), lp.total), dt, false)
-        if (real < lp.realTotal) raf = requestAnimationFrame(tick)
+        preK = pre > 0 ? Math.min(1, real / pre) : 1
+        paint(Math.min(warpTime(lp, Math.max(0, real - pre)), lp.total), dt, false)
+        if (real < lp.realTotal + pre) raf = requestAnimationFrame(tick)
       }
       paint(0, 0.016, true)
       raf = requestAnimationFrame(tick)
@@ -661,9 +679,9 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       <div ref={setNode('shadow')} className="absolute left-0 top-0 hidden rounded-full bg-black/40" />
       <div ref={setNode('ball')} className="absolute left-0 top-0 hidden rounded-full border border-red-200" />
       {/* the speed gun: the speed of the ball just after it is let go */}
-      {event && <BallTag key={event.seq} name={ballName(plan.delivery, { type: bowler.bowling?.type ?? 'medium', pace: event.delivery?.pace, left: striker.hand === 'L', kmh: plan.speed })} dragon={speedStyle(plan.speed) === 'dragon'} at={plan.tRun} dur={plan.tDeliver + 1.2} rate={rate} />}
+      {event && <BallTag key={event.seq} name={ballName(plan.delivery, { type: bowler.bowling?.type ?? 'medium', pace: event.delivery?.pace, left: striker.hand === 'L', kmh: plan.speed })} dragon={speedStyle(plan.speed) === 'dragon'} at={plan.tRun + preRef.current} dur={plan.tDeliver + 1.2} rate={rate} />}
       {captionsOn && caption && event && (
-        <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver) / Math.max(0.15, rate), duration: 3.4 / Math.max(0.15, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
+        <motion.div key={`cap${event.seq}`} className="pointer-events-none absolute inset-x-3 top-8 z-[6001] mx-auto w-fit max-w-[92%] rounded-lg bg-black/70 px-2.5 py-1 text-center text-[11px] font-semibold leading-snug text-white ring-1 ring-white/15 sm:text-xs" initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 1, 0], y: 0 }} transition={{ delay: (plan.tRun + plan.tDeliver + preRef.current) / Math.max(0.15, rate), duration: 3.4 / Math.max(0.15, rate), times: [0, 0.1, 0.85, 1] }}>{caption}</motion.div>
       )}
       {replay && <div className="pointer-events-none absolute inset-0 z-[5500]" style={{ background: 'linear-gradient(180deg, rgba(14,165,233,0.10), rgba(2,6,23,0.18))', boxShadow: 'inset 0 0 0 2px rgba(56,189,248,0.55), inset 0 0 40px rgba(2,6,23,0.55)' }} />}
       <div ref={setNode('tagMove')} className="pointer-events-none absolute inset-x-0 top-[16%] z-[5002] hidden whitespace-nowrap text-center font-display text-3xl uppercase leading-none tracking-wider sm:text-5xl" style={{ paintOrder: 'stroke fill' }} />
@@ -715,7 +733,7 @@ export function BroadcastView({ event, striker, nonStriker, bowler, battingTeam,
       )}
       {/* with the score bar off, only the speed of the last ball shows, where the bar would be */}
       {!scoreBarOn && scoreBug?.lastKmh ? (() => { const st = speedStyle(scoreBug.lastKmh); const c = st === 'dragon' ? '#fb923c' : st === 'fire' ? '#f87171' : st === 'ice' ? '#7dd3fc' : '#e2e8f0'; return <div className="pointer-events-none absolute bottom-1.5 left-2 z-[6001] rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums ring-1 ring-white/20" style={{ color: c, textShadow: st === 'plain' ? undefined : `0 0 6px ${c}aa` }}>{st === 'dragon' ? '🌋' : st === 'fire' ? '🔥' : st === 'ice' ? '❄️' : ''}{scoreBug.lastKmh} km/h</div> })() : null}
-      {scoreBarOn && scoreBug?.spell && !replay && <SpellCard key={`spell${scoreBug.spell.key}`} spell={scoreBug.spell} color={accentOf(bowlingTeam)} delay={Math.max(1.2, (plan.realTotal * 0.75) / Math.max(0.3, rate))} />}
+      {scoreBarOn && scoreBug?.spell && !replay && <SpellCard key={`spell${scoreBug.spell.key}`} spell={scoreBug.spell} color={accentOf(bowlingTeam)} delay={Math.max(1.2, ((plan.realTotal + preRef.current) * 0.75) / Math.max(0.3, rate))} />}
       <span className="pointer-events-none absolute left-2 bottom-8 z-[6001] flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white max-sm:hidden"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Live</span>
     </div>
   )
