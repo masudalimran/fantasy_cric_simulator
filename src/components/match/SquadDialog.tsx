@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import { overall, teamStrength } from '../../data/builders'
 import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE } from '../../data/squad'
 import { ATTR_LABEL, ratingRows } from '../../season/progression'
-import { useTeams } from '../../store/useStore'
+import { injuriesOf } from '../../season/injuries'
+import { newBloodSquad, recommendedSquad } from '../../season/recommend'
+import { myNextFixture } from '../../season/results'
+import { selectSeason, useStore, useTeams } from '../../store/useStore'
+import { useTeamMap } from '../season/shared'
 import type { Player, Team } from '../../types'
 import { Sheet } from '../Sheet'
 import { Delta, PlayerAvatar, RatingBadge, ROLE_LABEL, bowlLabel } from '../ui'
@@ -25,6 +29,13 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
   const [captainId, setCaptainId] = useState(team.captainId)
   const [keeperId, setKeeperId] = useState<string | undefined>(keeperIn(team.players.slice(0, XI_SIZE), team.keeperId)?.id)
   const [selected, setSelected] = useState<number | null>(null)
+  // the two squad helpers: the recommended team (form and injuries counted, in a career) and new blood (as many youngsters as the next match can afford)
+  const season = useStore(selectSeason)
+  const sessionTeams = useTeamMap()
+  const careerMine = !!season && season.myTeamId === team.id
+  const [notice, setNotice] = useState<string | null>(null)
+  const helperInput = () => ({ team: { ...team, players, captainId, keeperId }, season: careerMine ? season : null, teams: sessionTeams, fixture: careerMine && season ? myNextFixture(season) : null, unavailable: new Set((careerMine && season ? [...injuriesOf(season, { id: team.id, players }, season.today).keys()] : []) as string[]) })
+  const applyHelper = (r: { players: Player[]; keeperId?: string; captainId?: string }) => { setPlayers(r.players); setKeeperId(r.keeperId); if (r.captainId) setCaptainId(r.captainId); setSelected(null) }
 
 
   const check = useMemo(() => validateSquad(players, captainId, keeperId), [players, captainId, keeperId])
@@ -81,7 +92,9 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
           <button onClick={onClose} aria-label="Close" className="order-2 rounded-lg border border-line px-2.5 py-1 text-sm font-bold text-slate-200 hover:border-slate-400 md:order-none">✕</button>
           <div className="order-3 flex w-full items-center gap-3 md:order-none md:w-auto">
             <div className="text-center"><RatingBadge value={teamStrength({ ...team, players: players.slice(0, XI_SIZE) })} size="md" /><div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">XI rating</div></div>
-            <button onClick={() => { const xi = autoPickXI(players); setPlayers(xi); setKeeperId(keeperIn(xi.slice(0, XI_SIZE))?.id); setSelected(null) }} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-indigo-400" title="A balanced XI: one keeper, five bowling options, the best of the rest">Auto-pick XI</button>
+            <button onClick={() => { const xi = autoPickXI(players); setPlayers(xi); setKeeperId(keeperIn(xi.slice(0, XI_SIZE))?.id); setSelected(null) }} className="h-8 cursor-pointer rounded-lg border border-line px-3 text-sm hover:border-indigo-400" title="A balanced XI: one keeper, five bowling options, the best of the rest">Auto-pick XI</button>
+            <button onClick={() => { const r = recommendedSquad(helperInput()); applyHelper(r); setNotice('Recommended team set: the best XI for the next match' + (careerMine ? ', with form and injuries counted.' : '.')) }} className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg border border-emerald-400/60 bg-emerald-400/10 text-base hover:bg-emerald-400/20" title="Recommended: the best XI for the next match, counting form and injuries" aria-label="Recommended team">⭐</button>
+            <button onClick={() => { const r = newBloodSquad(helperInput()); if (r.ok) applyHelper(r); setNotice(r.message) }} className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg border border-sky-400/60 bg-sky-400/10 text-base hover:bg-sky-400/20" title="New blood: squeezes in as many youngsters as the next match can afford" aria-label="New blood">🌱</button>
           </div>
         </div>
 
@@ -102,6 +115,7 @@ export function SquadDialog({ team, scope, onSave, onClose }: {
             {check.errors.map((e) => <li key={e} className="text-red-300">• {e}</li>)}
             {missing.captain && <li className="text-amber-300">• Your captain is not in the playing XI. Pick one with C.</li>}
             {check.warnings.filter((w) => !/captain/i.test(w)).map((w) => <li key={w} className="text-amber-300">• {w}</li>)}
+            {notice && <li className="text-sky-200">• {notice}</li>}
             {canSave && <li className="text-emerald-300">{dirty ? 'Squad looks good.' : 'No changes yet.'}</li>}
           </ul>
           <div className="flex gap-2">
