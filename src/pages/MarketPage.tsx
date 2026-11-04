@@ -76,6 +76,8 @@ export function MarketPage() {
   const squadIds = market.squads[season.myTeamId] ?? []
   const outlook = projectedBill(season, index)
   const income = projectedIncome(season, outlook.total)
+  // what the books should show at the turn of the year (the same sum the year end does, without titles and catch-up money)
+  const nextBudget = Math.min(Math.max(200, outlook.total * 8), purse + income.income - outlook.total)
   const shown = (p: Player) => applyShift(p, season.shifts?.[p.id])
   const worth = (p: Player) => marketValue(p, recentForm(season, p.id), season.shifts?.[p.id])
 
@@ -189,6 +191,16 @@ export function MarketPage() {
             <div title="What the squad you have now will cost in wages next year, with each player's raise, if nobody leaves"><div className="font-display text-4xl leading-none text-sky-200">{outlook.total}</div><div className="text-[11px] uppercase tracking-wider text-slate-400">wages next yr</div></div>
             <div><div className={`font-display text-4xl leading-none ${squadIds.length >= SQUAD_CAP ? 'text-red-300' : 'text-white'}`}>{squadIds.length}<span className="text-xl text-slate-500">/{SQUAD_CAP}</span></div><div className="text-[11px] uppercase tracking-wider text-slate-400">squad</div></div>
           </div>
+        </div>
+        {/* this year's money in one line: what you have, what the year should earn, the wages that come out of it, and what is left to start next year with */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/25 px-3 py-2 text-[13px] tabular-nums text-slate-300" title="At the turn of the year your earnings come in, next year's wages are paid out of them and what is left is next year's budget (it is capped, and titles and any catch-up money are not counted here)">
+          <span>Budget <b className="text-amber-300">{purse}</b></span>
+          <span className="text-slate-500">+</span>
+          <span>earnings this year <b className="text-emerald-300">~{income.income}</b></span>
+          <span className="text-slate-500">−</span>
+          <span>wages <b className="text-sky-200">{outlook.total}</b></span>
+          <span className="text-slate-500">=</span>
+          <span>next year's budget <b className={nextBudget < 0 ? 'text-red-300' : 'text-white'}>~{nextBudget}</b></span>
         </div>
         <details className="mt-2 text-xs text-slate-400">
           <summary className="cursor-pointer font-semibold text-slate-300">How the money works</summary>
