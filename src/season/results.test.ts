@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { competitionStatus, isMine, hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, nextMatchDate, recordResult, resolveSeason, simDay, simulateFixture, tableFor } from './results'
+import { competitionStatus, isMine, hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, nextMatchDate, recordResult, resolveSeason, simDay, simThrough, simulateFixture, tableFor } from './results'
 import type { Season } from './types'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
@@ -110,5 +110,20 @@ describe('playing in order', () => {
     expect(done.fixtures.filter((f) => f.date < mine.date && f.homeId && f.awayId).every((f) => done.results[f.id])).toBe(true)
     expect(done.results[mine.id]).toBeUndefined()
     expect(done.fixtures.filter((f) => f.date >= mine.date).every((f) => !done.results[f.id])).toBe(true)
+  })
+
+  it('skip to a day plays every match up to and including it, in order, and moves the date there', () => {
+    const start = generateSeason({ year: 2027, teams: BUILT_IN_TEAMS, seed: 3 })
+    const dates = [...new Set(start.fixtures.filter((f) => f.homeId && f.awayId).map((f) => f.date))].sort()
+    const target = dates[Math.min(6, dates.length - 1)]
+    const s = simThrough(start, target, teams)
+    expect(s.today).toBe(target)
+    for (const f of s.fixtures) if (f.homeId && f.awayId && f.date <= target) expect(Boolean(s.results[f.id]), `${f.date} ${f.id}`).toBe(true)
+    for (const f of s.fixtures) if (f.date > target) expect(s.results[f.id]).toBeUndefined()
+    // a match being played live is left alone
+    const live = start.fixtures.find((f) => f.date === dates[0] && f.homeId && f.awayId)!
+    const s2 = simThrough(start, target, teams, live.id)
+    expect(s2.results[live.id]).toBeUndefined()
+    expect(s2.today).toBe(target)
   })
 })

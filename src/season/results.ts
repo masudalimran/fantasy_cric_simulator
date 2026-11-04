@@ -283,6 +283,22 @@ export function simUntil(season: Season, date: string, teams: Map<string, Team>)
   return { season: { ...cur, today: date > cur.today ? date : cur.today }, stoppedAt: null }
 }
 
+/**
+ * Plays everything up to and including `date`, in order (the computer's matches and the player's own, except a match being played live right now),
+ * then moves the date there. This is "skip to this day".
+ */
+export function simThrough(season: Season, date: string, teams: Map<string, Team>, liveFixtureId?: string | null): Season {
+  let cur = season
+  for (let guard = 0; guard < 600; guard++) {
+    const next = nextMatchDate(cur)
+    if (!next || next > date) break
+    const before = Object.keys(cur.results).length
+    cur = simDay(cur, next, teams, false, liveFixtureId)
+    if (Object.keys(cur.results).length === before) break // (only a live match is left on that day)
+  }
+  return { ...cur, today: date > cur.today ? date : cur.today }
+}
+
 /** Is there any match before this date that hasn't been played yet? */
 export const hasEarlierUnplayed = (season: Season, date: string) => season.fixtures.some((f) => f.date < date && !season.results[f.id] && isPlayable(f))
 

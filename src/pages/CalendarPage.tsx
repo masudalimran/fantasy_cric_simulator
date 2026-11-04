@@ -25,7 +25,7 @@ import { PlayerAvatar, TeamCrest } from '../components/ui'
 import { useIsMobile } from '../hooks'
 import { paths } from '../routes'
 import { addDays, daysBetween, formatDate, monthGrid, MONTHS, WEEKDAYS } from '../season/dates'
-import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simDay, simUntil as simSeasonUntil } from '../season/results'
+import { competitionStatus, isMine, myNextFixture, nextMatchDate, seasonComplete, simThrough, simUntil as simSeasonUntil } from '../season/results'
 import type { Fixture, Season } from '../season/types'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 
@@ -221,6 +221,14 @@ export function CalendarPage() {
     if (nd && nd <= until) goToDay(nd)
     else moveTo(until)
   })
+  // Skip to a day: every match up to and including it is played, in order, yours too (a match being played live is left alone).
+  const pendingTo = (date: string) => season.fixtures.filter((f) => f.date <= date && !season.results[f.id] && f.homeId && f.awayId && f.id !== liveFixtureId)
+  const canSkipTo = (date: string) => date >= season.today && (date > season.today || pendingTo(date).length > 0)
+  const skipTo = (date: string) => gate(() => {
+    const mine = pendingTo(date).filter((f) => isMine(season, f)).length
+    if (mine > 0 && !window.confirm(`This also plays ${mine} of your own ${mine === 1 ? 'match' : 'matches'} for you. Skip anyway?`)) return
+    updateSeason((s) => simThrough(s, date, baseTeams, liveFixtureId))
+  })
   const myNext = myNextFixture(season)
   const between = matchesBefore(season)
   const skipToMine = () => gate(() => {
@@ -385,10 +393,10 @@ export function CalendarPage() {
                 <h2 className="font-display text-2xl tracking-wide">{formatDate(selected)}</h2>
                 <button
                   className="text-xs text-emerald-300 hover:underline disabled:opacity-40"
-                  disabled={!dayFixtures.some((f) => !season.results[f.id] && f.homeId && f.awayId)}
-                  onClick={() => updateSeason((s) => ({ ...simDay(s, selected, baseTeams, false, liveFixtureId), today: selected > s.today ? selected : s.today }))}
+                  disabled={!canSkipTo(selected)}
+                  onClick={() => skipTo(selected)}
                 >
-                  Skip this day
+                  Skip to this day
                 </button>
               </div>
               {dayFixtures.length === 0 ? (
@@ -427,10 +435,10 @@ export function CalendarPage() {
                 <h2 className="font-display text-2xl tracking-wide">{formatDate(selected)}</h2>
                 <button
                   className="rounded-full border border-emerald-400/50 px-3 py-1.5 text-xs font-bold text-emerald-300 disabled:opacity-40"
-                  disabled={!dayFixtures.some((f) => !season.results[f.id] && f.homeId && f.awayId)}
-                  onClick={() => updateSeason((s) => ({ ...simDay(s, selected, baseTeams, false, liveFixtureId), today: selected > s.today ? selected : s.today }))}
+                  disabled={!canSkipTo(selected)}
+                  onClick={() => skipTo(selected)}
                 >
-                  Skip this day
+                  Skip to this day
                 </button>
               </div>
               {dayFixtures.length === 0 ? <p className="text-sm text-slate-500">No matches on this day.</p> : <div className="space-y-2">{dayFixtures.map((f) => <FixtureRow key={f.id} season={season} fixture={f} teams={teams} showCompetition />)}</div>}
