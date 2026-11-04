@@ -34,6 +34,10 @@ export interface YearReport {
   retired: string[]
   released: string[]
   signed: string[]
+  /** Your own books only: each player's wage for the year, the catch-up money inside the income, and what the purse would have been before the cap trimmed it. */
+  wages?: [string, number][]
+  catchUp?: number
+  uncapped?: number
 }
 
 /** The first year a player's career can end: seven to ten seasons after the career began (or nine to twelve after he first joined a team). */
@@ -245,7 +249,8 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
     const income = incomeOf(bill, (scoreOf ? scoreOf(teamId) : seasonScore(season, teamId)), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
     const purse = market.budgets[teamId] ?? 0
     market.budgets[teamId] = Math.min(Math.max(200, bill * 8), purse + income - bill)
-    reports.set(teamId, { year: next, income, bill, before: purse, after: market.budgets[teamId], retired: retiredByTeam.get(teamId)?.filter((id) => allRetired.includes(id)) ?? [], released: [], signed: [] })
+    const mineBooks = teamId === me ? { wages: squad.filter((id) => !pending.some((p) => p.playerId === id)).map((id) => [id, (() => { const p = base.get(id); return p ? feeOf(market, p, shifts[id]) : 0 })()] as [string, number]), catchUp, uncapped: purse + income - bill } : {}
+    reports.set(teamId, { ...mineBooks, year: next, income, bill, before: purse, after: market.budgets[teamId], retired: retiredByTeam.get(teamId)?.filter((id) => allRetired.includes(id)) ?? [], released: [], signed: [] })
   }
 
   // computer teams: over budget means letting the least useful players go

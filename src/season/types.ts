@@ -154,7 +154,7 @@ export interface MarketState {
   /** Veterans of your team who are retiring and can be kept for one more year at a higher fee. */
   pending?: { playerId: string; fee: number; years: number }[]
   /** What the last turn of the year did to your purse. */
-  report?: { year: number; income: number; bill: number; before: number; after: number; retired: string[]; released: string[]; signed: string[] }
+  report?: { year: number; income: number; bill: number; before: number; after: number; retired: string[]; released: string[]; signed: string[]; wages?: [string, number][]; catchUp?: number; uncapped?: number }
 }
 
 /** What your coach is working on. Once set it stays at least a month. */

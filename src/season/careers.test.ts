@@ -117,4 +117,17 @@ describe('careers, fees and the yearly budget', () => {
       s = generateSeason({ year: s.year + 1, teams, seed: 40 + y, myTeamId: s.myTeamId, difficulty: s.difficulty, shifts: out.shifts, market: { ...out.market, pending: undefined } })
     }
   })
+
+  it('your books of the year are kept: every wage, the earnings, and what the cap cut', () => {
+    const s = start()
+    const out = yearEnd({ season: s, base: playerIndex(teams, s.market), titles: {}, seed: 5, catchUp: 7, scoreOf: () => 0.9 })
+    const r = out.mine!
+    expect(r.wages!.length).toBeGreaterThan(10)
+    expect(r.wages!.reduce((a, [, fee]) => a + fee, 0)).toBe(r.bill)
+    expect(r.catchUp).toBe(7)
+    expect(r.income).toBeGreaterThan(r.bill)
+    expect(r.uncapped).toBe(r.before + r.income - r.bill)
+    expect(r.after).toBeLessThanOrEqual(r.uncapped!)
+    expect(out.market.report).toEqual(r)
+  })
 })

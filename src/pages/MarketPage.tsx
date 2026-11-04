@@ -202,6 +202,30 @@ export function MarketPage() {
           <span className="text-slate-500">=</span>
           <span>next year's budget <b className={nextBudget < 0 ? 'text-red-300' : 'text-white'}>~{nextBudget}</b></span>
         </div>
+        {/* the books of the year that just ended: what came in, what the wages took, and what was left */}
+        {market.report && market.report.year === season.year && (() => {
+          const r = market.report
+          const trimmed = r.uncapped !== undefined ? Math.max(0, r.uncapped - r.after) : 0
+          const wages = [...(r.wages ?? [])].sort((a, b) => b[1] - a[1])
+          return (
+            <details className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-400/5 px-3 py-2 text-sm" open>
+              <summary className="cursor-pointer font-semibold text-emerald-200">Last year's books ({r.year - 1}): wages paid <b className="text-red-300">−{r.bill}</b></summary>
+              <div className="mt-2 grid gap-x-4 gap-y-1 tabular-nums sm:grid-cols-2">
+                <div className="flex justify-between"><span className="text-slate-400">Budget before</span><b className="text-white">{r.before}</b></div>
+                <div className="flex justify-between"><span className="text-slate-400">+ Earnings{r.catchUp ? ` (incl. ${r.catchUp} catch-up)` : ''}</span><b className="text-emerald-300">+{r.income}</b></div>
+                <div className="flex justify-between"><span className="text-slate-400">− Wages paid to your squad</span><b className="text-red-300">−{r.bill}</b></div>
+                {trimmed > 0 && <div className="flex justify-between"><span className="text-slate-400">− Cut by the budget cap</span><b className="text-red-300">−{trimmed}</b></div>}
+                <div className="flex justify-between border-t border-white/10 pt-1 sm:col-span-2"><span className="font-semibold text-slate-200">= New budget</span><b className="text-amber-300">{r.after}</b></div>
+              </div>
+              {wages.length > 0 && (
+                <details className="mt-2 text-xs text-slate-400">
+                  <summary className="cursor-pointer font-semibold text-slate-300">Who the wages went to</summary>
+                  <div className="mt-1 grid gap-x-4 gap-y-0.5 tabular-nums sm:grid-cols-2">{wages.map(([id, fee]) => <div key={id} className="flex justify-between gap-2"><span className="truncate">{index.get(id)?.name ?? id}</span><b className="text-sky-200">{fee}</b></div>)}</div>
+                </details>
+              )}
+            </details>
+          )
+        })()}
         <details className="mt-2 text-xs text-slate-400">
           <summary className="cursor-pointer font-semibold text-slate-300">How the money works</summary>
           <p className="mt-1"><b className="text-amber-300">Budget</b> ({purse}) is what you have to spend on players today. <b className="text-sky-200">Wages next year</b> ({outlook.total}) is what your current players will cost for the whole of next year, with the raise each is expected to get (young players are rising, a veteran about to retire costs more to keep). It assumes nobody leaves.</p>
