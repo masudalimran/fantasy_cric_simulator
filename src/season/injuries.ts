@@ -1,5 +1,6 @@
 import { overall } from '../data/builders'
 import type { Player, Team } from '../types'
+import { medicalBlock, physioSlots } from './clubEffects'
 import type { Season } from './types'
 
 /**
@@ -76,11 +77,15 @@ export function physioOf(season: Pick<Season, 'physio'>, teamId: string, date: s
   return (season.physio?.[teamId] ?? []).filter((a) => a.from <= date && (!a.to || date < a.to)).map((a) => a.playerId)
 }
 
+/** A fixed number between 0 and 1 for a player on a day (the medical centre's cover is drawn from it, so it never changes between looks). */
+function dayLuck(id: string, date: string): number { let h = 2166136261; const s = `med:${id}:${date}`; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return (h >>> 0) / 4294967296 }
+
 /** The physio cover of a team: your choices for your own team, the three most valuable players for the computer's. */
-export function shieldFor(season: Pick<Season, 'myTeamId' | 'physio'>, team: Pick<Team, 'id' | 'players'>): Shield {
+export function shieldFor(season: Pick<Season, 'myTeamId' | 'physio'> & Partial<Pick<Season, 'market'>>, team: Pick<Team, 'id' | 'players'>): Shield {
   if (team.id === season.myTeamId) {
     const list = season.physio?.[team.id] ?? []
-    return (id, date) => list.some((a) => a.playerId === id && a.from <= date && (!a.to || date < a.to))
+    const block = medicalBlock(season)
+    return (id, date) => (block > 0 && dayLuck(id, date) < block) || list.some((a) => a.playerId === id && a.from <= date && (!a.to || date < a.to))
   }
   const top = new Set([...team.players].sort((a, b) => overall(b) - overall(a)).slice(0, PHYSIOS).map((p) => p.id))
   return (id) => top.has(id)
@@ -101,7 +106,7 @@ export function assignPhysio(season: Season, team: Pick<Team, 'id' | 'players'>,
   const active = physioOf(season, team.id, date)
   if (!team.players.some((p) => p.id === playerId)) return { season, error: 'He is not in your squad.' }
   if (active.includes(playerId)) return { season, error: 'He already has a physio.' }
-  if (active.length >= PHYSIOS) return { season, error: `All ${PHYSIOS} physios are busy. Take one off somebody first.` }
+  if (active.length >= physioSlots(season)) return { season, error: `All ${physioSlots(season)} physios are busy. Take one off somebody first.` }
   if (injuryOn(season, playerId, date, shieldFor(season, team))) return { season, error: 'A physio cannot be put on a player who is already injured.' }
   return { season: { ...season, physio: { ...season.physio, [team.id]: [...(season.physio?.[team.id] ?? []), { playerId, from: date }] } } }
 }

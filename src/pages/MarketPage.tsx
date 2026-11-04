@@ -16,6 +16,7 @@ import { daysBetween, formatDate } from '../season/dates'
 import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, lockedUntil, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { feeOf, projectedBill, projectedIncome, retireYearOf } from '../season/careers'
+import { scaleOf, upkeepOf } from '../season/club'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 import type { Season } from '../season/types'
@@ -77,7 +78,8 @@ export function MarketPage() {
   const outlook = projectedBill(season, index)
   const income = projectedIncome(season, outlook.total)
   // what the books should show at the turn of the year (the same sum the year end does, without titles and catch-up money)
-  const nextBudget = Math.min(Math.max(200, outlook.total * 8), purse + income.income - outlook.total)
+  const clubUpkeep = upkeepOf(market.club, scaleOf(outlook.total)).reduce((n, [, v]) => n + v, 0)
+  const nextBudget = Math.min(Math.max(200, outlook.total * 8), purse + income.income - outlook.total - clubUpkeep)
   const shown = (p: Player) => applyShift(p, season.shifts?.[p.id])
   const worth = (p: Player) => marketValue(p, recentForm(season, p.id), season.shifts?.[p.id])
 
@@ -199,9 +201,11 @@ export function MarketPage() {
           <span>earnings this year <b className="text-emerald-300">~{income.income}</b></span>
           <span className="text-slate-500">−</span>
           <span>wages <b className="text-sky-200">{outlook.total}</b></span>
+          {clubUpkeep > 0 && <><span className="text-slate-500">−</span><span>club upkeep <b className="text-sky-200">{clubUpkeep}</b></span></>}
           <span className="text-slate-500">=</span>
           <span>next year's budget <b className={nextBudget < 0 ? 'text-red-300' : 'text-white'}>~{nextBudget}</b></span>
         </div>
+        <Link to={paths.club} className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 underline-offset-2 hover:underline">🏗️ Spend coins on your club: buildings, coaches, scouts, boosts ›</Link>
         {/* the books of the year that just ended: what came in, what the wages took, and what was left */}
         {market.report && market.report.year === season.year && (() => {
           const r = market.report
@@ -214,6 +218,7 @@ export function MarketPage() {
                 <div className="flex justify-between"><span className="text-slate-400">Budget before</span><b className="text-white">{r.before}</b></div>
                 <div className="flex justify-between"><span className="text-slate-400">+ Earnings{r.catchUp ? ` (incl. ${r.catchUp} catch-up)` : ''}</span><b className="text-emerald-300">+{r.income}</b></div>
                 <div className="flex justify-between"><span className="text-slate-400">− Wages paid to your squad</span><b className="text-red-300">−{r.bill}</b></div>
+                {(r.upkeep ?? []).length > 0 && <div className="flex justify-between"><span className="text-slate-400">− Club upkeep ({(r.upkeep ?? []).map(([n, v]) => `${n} ${v}`).join(', ')})</span><b className="text-red-300">−{(r.upkeep ?? []).reduce((n, [, v]) => n + v, 0)}</b></div>}
                 {trimmed > 0 && <div className="flex justify-between"><span className="text-slate-400">− Cut by the budget cap</span><b className="text-red-300">−{trimmed}</b></div>}
                 <div className="flex justify-between border-t border-white/10 pt-1 sm:col-span-2"><span className="font-semibold text-slate-200">= New budget</span><b className="text-amber-300">{r.after}</b></div>
               </div>

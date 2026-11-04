@@ -22,6 +22,7 @@ import { NewSessionPage } from './pages/NewSessionPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { PlayPage } from './pages/PlayPage'
 import { MarketPage } from './pages/MarketPage'
+import { ClubPage } from './pages/ClubPage'
 import { HomePage } from './pages/HomePage'
 import { HowToPlay } from './components/HowToPlay'
 import { openHelp } from './tips'
@@ -272,6 +273,7 @@ export default function App() {
             <Route path="/career/stats" element={<StatsPage />} />
             <Route path="/career/squad" element={<SessionSquadPage />} />
             <Route path="/career/market" element={<MarketPage />} />
+            <Route path="/career/club" element={<ClubPage />} />
             <Route path="/career/review" element={<ReviewPage />} />
           </Route>
           {/* old addresses still work */}

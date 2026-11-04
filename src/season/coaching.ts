@@ -3,6 +3,7 @@ import { Rng } from '../engine/rng'
 import type { Player } from '../types'
 import { addDays } from './dates'
 import { ACADEMY_COACH_BOOST, applyShift, headroom, inAcademy } from './progression'
+import { trainingMult } from './clubEffects'
 import type { AttrKey, Coaching, PlayerShift, Season } from './types'
 
 /**
@@ -88,7 +89,7 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
   let effort = 1
   if (!focus && teamId === season.myTeamId && coach) { focus = cpuChoice(season, teamId, ids.map((id) => base.get(id)).filter((p): p is Player => !!p), coach, date); effort = 0.5 }
   if (!focus || !coach || (c.since && date < c.since)) return season
-  const skill = (coach.skill / 80) * (coach.specialty === focus ? 1.3 : 1) * effort
+  const skill = (coach.skill / 80) * (coach.specialty === focus ? 1.3 : 1) * effort * trainingMult(season, teamId)
   const month = date.slice(0, 7)
   const year = date.slice(0, 4)
   let shifts = season.shifts

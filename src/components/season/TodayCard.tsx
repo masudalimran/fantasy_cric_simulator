@@ -4,15 +4,18 @@ import { daysBetween } from '../../season/dates'
 import { PHYSIOS, physioOf } from '../../season/injuries'
 import { needsFocus } from '../../season/coaching'
 import { seasonComplete } from '../../season/results'
+import { nudgeFor, scaleOf } from '../../season/club'
+import { markSeen, useSeenSet } from '../../tips'
 import type { Season } from '../../season/types'
 
-interface Row { key: string; tone: string; icon: string; text: React.ReactNode; to?: string; onClick?: () => void }
+interface Row { key: string; tone: string; icon: string; text: React.ReactNode; to?: string; onClick?: () => void; seen?: string }
 
 const when = (n: number) => (n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`)
 
 /** What needs doing today in your career, in a few lines you can tap: the next match, the coach, the market, your physios. */
 export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => void }) {
   const mine = season.myTeamId
+  const seenSet = useSeenSet()
   if (!mine) return null
   const rows: Row[] = []
   if (seasonComplete(season)) {
@@ -28,6 +31,13 @@ export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => 
   }
   const physios = physioOf(season, mine, season.today).length
   if (physios < PHYSIOS) rows.push({ key: 'physio', tone: '#fb7185', icon: '🩺', to: paths.sessionSquad, text: <>Pick your physios: <b className="text-white">{physios} of {PHYSIOS}</b> set</> })
+  // now and then, a reminder of something the club could do with idle coins (once a month, and not if you have already tried it all)
+  const squadIds = season.market?.squads[mine] ?? []
+  const bill = squadIds.reduce((n, id) => n + (season.market?.fees?.[id] ?? 4), 0)
+  const month = Number(season.today.slice(5, 7))
+  const hint = nudgeFor(season, season.market?.budgets[mine] ?? 0, scaleOf(bill), month)
+  const hintKey = `clubnudge:${season.today.slice(0, 7)}`
+  if (hint && !seenSet.has(hintKey)) rows.push({ key: 'club', tone: '#f59e0b', icon: hint.icon, to: paths.club, seen: hintKey, text: <>Your coins are sitting idle. <b className="text-white">{hint.text}</b></> })
   if (rows.length === 0) return null
   return (
     <section className="mb-4 rounded-2xl border border-line bg-panel px-3 py-2.5" aria-label="What to do today">
@@ -42,7 +52,7 @@ export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => 
             </>
           )
           const cls = 'flex w-full cursor-pointer items-center gap-3 py-2 text-left transition active:bg-white/5'
-          return <li key={r.key}>{r.to ? <Link to={r.to} className={cls}>{inner}</Link> : <button type="button" onClick={r.onClick} className={cls}>{inner}</button>}</li>
+          return <li key={r.key}>{r.to ? <Link to={r.to} className={cls} onClick={() => r.seen && markSeen(r.seen)}>{inner}</Link> : <button type="button" onClick={r.onClick} className={cls}>{inner}</button>}</li>
         })}
       </ul>
     </section>

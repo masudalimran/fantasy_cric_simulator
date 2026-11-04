@@ -4,6 +4,7 @@ import { Rng } from '../engine/rng'
 import type { Player } from '../types'
 import { applyShift, ATTRS } from './progression'
 import { FEE_SHARE, marketValue, potentialOf, SQUAD_FLOOR } from './market'
+import { academyPicks, ACADEMY_SHARE, scaleOf, upkeepOf } from './club'
 import type { AttrKey, MarketState, PlayerShift, Season } from './types'
 
 /**
@@ -38,6 +39,8 @@ export interface YearReport {
   wages?: [string, number][]
   catchUp?: number
   uncapped?: number
+  /** What running the club cost (facilities, a hired coach), your own books only. */
+  upkeep?: [string, number][]
 }
 
 /** The first year a player's career can end: seven to ten seasons after the career began (or nine to twelve after he first joined a team). */
@@ -248,8 +251,10 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
     const bill = squad.filter((id) => !pending.some((p) => p.playerId === id)).reduce((s, id) => { const p = base.get(id); return p ? s + feeOf(market, p, shifts[id]) : s }, 0)
     const income = incomeOf(bill, (scoreOf ? scoreOf(teamId) : seasonScore(season, teamId)), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
     const purse = market.budgets[teamId] ?? 0
-    market.budgets[teamId] = Math.min(Math.max(200, bill * 8), purse + income - bill)
-    const mineBooks = teamId === me ? { wages: squad.filter((id) => !pending.some((p) => p.playerId === id)).map((id) => [id, (() => { const p = base.get(id); return p ? feeOf(market, p, shifts[id]) : 0 })()] as [string, number]), catchUp, uncapped: purse + income - bill } : {}
+    const upkeep = teamId === me ? upkeepOf(market.club, scaleOf(bill)) : []
+    const upkeepTotal = upkeep.reduce((n, [, v]) => n + v, 0)
+    market.budgets[teamId] = Math.min(Math.max(200, bill * 8), purse + income - bill - upkeepTotal)
+    const mineBooks = teamId === me ? { wages: squad.filter((id) => !pending.some((p) => p.playerId === id)).map((id) => [id, (() => { const p = base.get(id); return p ? feeOf(market, p, shifts[id]) : 0 })()] as [string, number]), catchUp, uncapped: purse + income - bill - upkeepTotal, upkeep } : {}
     reports.set(teamId, { ...mineBooks, year: next, income, bill, before: purse, after: market.budgets[teamId], retired: retiredByTeam.get(teamId)?.filter((id) => allRetired.includes(id)) ?? [], released: [], signed: [] })
   }
 
@@ -284,8 +289,16 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
   const reserveLeft = reserve.filter((id) => !drawn.includes(id))
   market.pool = [...new Set([...poolAfter, ...drawn, ...grads.map((g) => g.id)])]
   market.reserve = reserveLeft
+  // your youth academy sets aside its best prospects at a discount, and last year's scouting finds are open to everyone again
+  if (me && market.club) {
+    const pot = (id: string) => (YOUTH_BY_ID.get(id)?.potential ?? 0)
+    const picks = academyPicks(market.club, market.reserve, pot)
+    market.reserve = market.reserve.filter((id) => !picks.includes(id))
+    market.pool = [...market.pool, ...picks]
+    market.club = { ...market.club, reserved: picks }
+  }
   const lookup = (id: string): Player | undefined => base.get(id) ?? market.players[id] ?? YOUTH_BY_ID.get(id)
-  for (const id of market.pool) { const p = lookup(id); if (p) market.asking[id] = Math.max(1, Math.round(marketValue(p, 0, shifts[id]))) }
+  for (const id of market.pool) { const p = lookup(id); if (p) market.asking[id] = Math.max(1, Math.round(marketValue(p, 0, shifts[id]) * (market.club?.reserved?.includes(id) ? ACADEMY_SHARE : 1))) }
 
   for (const id of forced) if (me) graduateFor(market, me, id, base, shifts, next)
 
@@ -300,7 +313,7 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
         const squad = [...market.squads[teamId]].sort((a, b) => prospect(a) - prospect(b))
         const weakest = squad[0]
         const purse0 = market.budgets[teamId] ?? 0
-        const best = market.pool.filter((id) => (market.asking[id] ?? 99) <= Math.max(purse0, 2)).sort((a, b) => prospect(b) - prospect(a))[0]
+        const best = market.pool.filter((id) => !market.club?.reserved?.includes(id) && (market.asking[id] ?? 99) <= Math.max(purse0, 2)).sort((a, b) => prospect(b) - prospect(a))[0]
         if (!weakest || !best || swaps >= 3 || prospect(best) < prospect(weakest) + 5) break
         market.squads[teamId] = market.squads[teamId].filter((id) => id !== weakest)
         market.budgets[teamId] += market.fees?.[weakest] ?? 1
@@ -311,7 +324,7 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
         swaps++
       }
       const purse = market.budgets[teamId] ?? 0
-      const options = market.pool.filter((id) => (market.asking[id] ?? 99) <= Math.max(purse, 2)).sort((a, b) => prospect(b) - prospect(a))
+      const options = market.pool.filter((id) => !market.club?.reserved?.includes(id) && (market.asking[id] ?? 99) <= Math.max(purse, 2)).sort((a, b) => prospect(b) - prospect(a))
       const pick = options[0]
       if (!pick) break
       const p = lookup(pick) as Player

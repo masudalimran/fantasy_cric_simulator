@@ -23,6 +23,7 @@ export const paths = {
   stats: '/career/stats',
   backup: '/backup',
   market: '/career/market',
+  club: '/career/club',
   competition: (id: string) => `/career/tournaments/${encodeURIComponent(id)}`,
   match: (a: string, b: string, format: string, seed: number) => `/match/${format}/${encodeURIComponent(a)}-vs-${encodeURIComponent(b)}/${seed}`,
 } as const

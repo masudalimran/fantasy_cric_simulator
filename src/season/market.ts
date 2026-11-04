@@ -199,7 +199,7 @@ export function lockedUntil(season: Pick<Season, 'market'>, playerId: string, da
  * `teamId` signs `playerId` (an unsigned player or one from another team). If the squad is full, `dropId` leaves first.
  * `date` is the day it happens. The price is deducted from the buyer and, for a player from another team, paid to it.
  */
-export function signPlayer(season: Season, base: Map<string, Player>, teamId: string, playerId: string, date: string, dropId?: string): Outcome {
+export function signPlayer(season: Season, base: Map<string, Player>, teamId: string, playerId: string, date: string, dropId?: string, share = 1): Outcome {
   const m = season.market
   const player = base.get(playerId)
   if (!m || !player) return deny(season, 'That player is not available.')
@@ -212,7 +212,7 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
   if (owner && (m.squads[owner]?.length ?? 0) <= SQUAD_FLOOR) return deny(season, 'His team cannot sell: they are down to the minimum squad.')
   const lock = owner ? lockedUntil(season, playerId, date) : null
   if (lock) return deny(season, `${player.name} only just joined his team. He cannot be moved until ${lock}.`)
-  const price = unsigned ? (m.asking[playerId] ?? marketValue(player)) : askingFromTeam(season, base, owner as string, playerId)
+  const price = Math.max(1, Math.round((unsigned ? (m.asking[playerId] ?? marketValue(player)) : askingFromTeam(season, base, owner as string, playerId)) * share))
   const refund = dropId ? refundOf(season, base, teamId, dropId) : 0
   if ((m.budgets[teamId] ?? 0) + refund < price) return deny(season, `Not enough coins. He costs ${price} and you have ${m.budgets[teamId] ?? 0}.`)
   if (squad.length >= SQUAD_CAP && !dropId) return deny(season, `Your squad is full (${SQUAD_CAP}). Release someone first.`)
@@ -295,7 +295,7 @@ export function cpuMarketDay(season: Season, base: Map<string, Player>, date: st
     const weakest = sorted[Math.min(sorted.length - 1, 13)] // the 14th-best is the line a newcomer must beat
     const purse = m.budgets[teamId] ?? 0
     // who could he buy? unsigned players mostly; now and then someone from another computer team
-    const options: { id: string; price: number; from: string | null }[] = m.pool.map((id) => ({ id, price: m.asking[id] ?? 1, from: null }))
+    const options: { id: string; price: number; from: string | null }[] = m.pool.filter((id) => !m.club?.reserved?.includes(id)).map((id) => ({ id, price: m.asking[id] ?? 1, from: null }))
     if (rng.chance(0.2)) {
       for (const other of teamIds) {
         if (other === teamId || (m.squads[other]?.length ?? 0) <= SQUAD_FLOOR) continue

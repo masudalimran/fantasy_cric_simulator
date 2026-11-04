@@ -127,7 +127,29 @@ export interface Offer {
 }
 
 /** Who is on which team, who is unsigned, and what everyone can afford. Lives in the season so a career carries it forward. */
+/** What your club has spent coins on besides players (see `season/club.ts`). Counters only count for the year in `year`. */
+export interface ClubState {
+  levels?: Partial<Record<'training' | 'medical' | 'academy' | 'stadium', number>>
+  year?: number
+  camps?: number
+  scouts?: number
+  boosts?: number
+  tickets?: number
+  /** Flops in a row (camp), ordinary finds in a row (scouting), rained-off tickets in a row. */
+  pityCamp?: number
+  pityScout?: number
+  pityTicket?: number
+  /** Prospects your scouts or academy found: computer teams leave them alone until the turn of the year. */
+  reserved?: string[]
+  /** A coach you hired (he costs a yearly wage). */
+  coach?: string
+  statues?: { id: string; name: string; year: number }[]
+  /** The year the wildcard was last used. */
+  wildcard?: number
+}
+
 export interface MarketState {
+  club?: ClubState
   /** Current squad of every team, as player ids (the first are the usual XI). */
   squads: Record<string, string[]>
   /** Definitions of players who have moved from the team they started with (youth are looked up from the youth pool). */
@@ -154,7 +176,7 @@ export interface MarketState {
   /** Veterans of your team who are retiring and can be kept for one more year at a higher fee. */
   pending?: { playerId: string; fee: number; years: number }[]
   /** What the last turn of the year did to your purse. */
-  report?: { year: number; income: number; bill: number; before: number; after: number; retired: string[]; released: string[]; signed: string[]; wages?: [string, number][]; catchUp?: number; uncapped?: number }
+  report?: { year: number; income: number; bill: number; before: number; after: number; retired: string[]; released: string[]; signed: string[]; wages?: [string, number][]; catchUp?: number; uncapped?: number; upkeep?: [string, number][] }
 }
 
 /** What your coach is working on. Once set it stays at least a month. */

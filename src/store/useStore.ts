@@ -101,6 +101,8 @@ interface State {
   setTossed: () => void
   /** Arms (or disarms) a boost token for your next match in the open career. */
   armBoost: (on: boolean) => void
+  /** Adds one bought boost token to the open career (the coins are taken by `buyBoost` in `season/club.ts`). */
+  giveBoost: () => void
   /** Uses (or does not use) a boost token in the match on the toss screen (only before the coin is flipped). */
   setLiveBoost: (on: boolean) => void
   /** For a match that was started before squad changes were tracked: take the XIs as they are now as the starting point. */
@@ -223,7 +225,7 @@ export const useStore = create<State>()(
           const spend = !!live.boost && !live.replay
           return {
             liveMatch: { ...live, tossed: true },
-            sessions: spend ? st.sessions.map((x) => (x.id === (live.sessionId ?? st.activeSessionId) ? { ...x, boost: { used: (x.boost?.used ?? 0) + 1, armed: false } } : x)) : st.sessions,
+            sessions: spend ? st.sessions.map((x) => (x.id === (live.sessionId ?? st.activeSessionId) ? { ...x, boost: { ...x.boost, used: (x.boost?.used ?? 0) + 1, armed: false } } : x)) : st.sessions,
           }
         }),
       armBoost: (on) =>
@@ -232,9 +234,10 @@ export const useStore = create<State>()(
             if (x.id !== st.activeSessionId) return x
             const b = boostSummary([...(x.history ?? []), x.season], x.boost, x.season.difficulty)
             if (on && b.available <= 0) return x
-            return { ...x, boost: { used: x.boost?.used ?? 0, armed: on } }
+            return { ...x, boost: { ...x.boost, used: x.boost?.used ?? 0, armed: on } }
           }),
         })),
+      giveBoost: () => set((st) => ({ sessions: st.sessions.map((x) => (x.id === st.activeSessionId ? { ...x, boost: { used: x.boost?.used ?? 0, armed: x.boost?.armed ?? false, bought: (x.boost?.bought ?? 0) + 1 } } : x)) })),
       setLiveBoost: (on) =>
         set((st) => {
           const live = st.liveMatch
@@ -246,7 +249,7 @@ export const useStore = create<State>()(
           if (on && b.available <= 0) return st
           return {
             liveMatch: { ...live, boost: on },
-            sessions: st.sessions.map((x) => (x.id === sid ? { ...x, boost: { used: x.boost?.used ?? 0, armed: on } } : x)),
+            sessions: st.sessions.map((x) => (x.id === sid ? { ...x, boost: { ...x.boost, used: x.boost?.used ?? 0, armed: on } } : x)),
           }
         }),
       setTossChoice: (c) => set((st) => (st.liveMatch && st.liveMatch.actions.length === 0 ? { liveMatch: { ...st.liveMatch, tossChoice: c } } : st)),

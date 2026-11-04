@@ -140,6 +140,17 @@ that links to the market) and on the Home page.
 - **Signing animation** (`SigningOverlay`): the player's portrait lands between his old team (or "Free agent") and the
   new one, with his ratings. In matches a new signing's introduction says where he came from and what he cost, and his
   player card has a **Career path** (every move he has made).
+### The Club (Career > Club): what coins buy besides players
+Winning teams used to pile up coins with nothing to spend them on, so the **Club page** (`/career/club`, `pages/ClubPage.tsx`, logic in `season/club.ts`, pure TypeScript) gives coins more uses. The base earnings are unchanged: winners still end richer, they just have things to buy. Every price is tied to the wage bill (`scaleOf`: bill / 84, never below 1), so a rich club pays more. Each section says in plain words what it does and asks before it spends.
+- **Buildings** (safe, no luck, levels 0 to 5, a price per level and a yearly upkeep taken at the turn of the year): *Training ground* (coach works 10% faster per level, +1 training camp a year), *Medical centre* (8% of injuries never happen per level; a 4th physio at level 2 and a 5th at level 4), *Youth academy* (sets aside one top prospect per level at 60% price at the turn of the year, and makes scouting trips better), *Stadium* (pride only, changes no result).
+- **Staff**: hire a better free coach for a fee; he then costs a yearly wage (about skill / 8, times the price scale). The coach you start with stays free.
+- **Boost tokens**: you can now buy 1.5x tokens (up to 4 a year, each dearer than the last) besides earning one per 5 wins. Easy and Normal only. Bought tokens are saved as `boost.bought`.
+- **Luck and long shots**, the odds always on screen, a safety net for bad luck: *Training camp* (one player: flop / solid / great / breakthrough, kinder odds when your club is losing, a camp after two flops always teaches something), *Scouting trip* (a half-price young talent from the reserve that only you can sign that year: raw / rising / prodigy, better odds for a struggling club, the academy and a run of ordinary finds), *Golden ticket* (a coin raffle that returns less than it costs on average, the sixth in a row of the worst result is a sell-out), *Wildcard legend* (once a year, only for clubs with under 45% wins: one of the league's top players at 60% of his price while a window is open).
+- **Trophy hall**: statues of your players (dearer each time), pride only.
+- **Reminders**: the Calendar's "To do today" card shows at most one hint a month (a building you have not built, a camp, a scouting trip, a boost, a statue) when you hold plenty of coins and have not tried it; tapping it opens the Club. The Market page has a link, and the nav has a **Club** tab.
+- **Books**: club upkeep is part of the year-end sums, listed in "Last year's books" on the Market page and in the next-year budget line.
+- Saved in the optional `market.club` (`ClubState`), so old careers just start with an empty club. Small effects live in `season/clubEffects.ts` (coaching speed, injury cover, physio places). Tests: `season/club.test.ts`.
+
 - Where it lives: the market is part of the season (`season.market`, `season.windows`), squads are applied in
   `sessionTeam`, the computer's shopping runs as the date moves through a window (`advanceMarket`, called from the store),
   and old careers get a market the first time they are opened (`ensureMarket`).

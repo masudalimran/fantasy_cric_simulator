@@ -6,7 +6,8 @@ import { overall, teamStrength } from '../data/builders'
 import { autoPickXI, keeperIn, missingPicks, swapPlayers, validateSquad, XI_SIZE } from '../data/squad'
 import { paths } from '../routes'
 import { daysBetween, formatDate } from '../season/dates'
-import { assignPhysio, injuriesOf, PHYSIOS, physioOf, releasePhysio, SEVERITY_COLOR, type Injury } from '../season/injuries'
+import { physioSlots } from '../season/clubEffects'
+import { assignPhysio, injuriesOf, physioOf, releasePhysio, SEVERITY_COLOR, type Injury } from '../season/injuries'
 import { BoostCard } from './season/BoostCard'
 import { ATTR_LABEL, playerChangeLog, ratingRows, sessionTeam } from '../season/progression'
 import { selectSeason, useStore, useTeams } from '../store/useStore'
@@ -197,8 +198,9 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
   const [selected, setSelected] = useState<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const slots = season ? physioSlots(season) : 3
   // opening the squad with physios still to give out asks you to choose them (once per visit)
-  const [physioOpen, setPhysioOpen] = useState(() => !!season && !!team && season.myTeamId === team.id && physioOf(season, team.id, season.today).length < PHYSIOS)
+  const [physioOpen, setPhysioOpen] = useState(() => !!season && !!team && season.myTeamId === team.id && physioOf(season, team.id, season.today).length < physioSlots(season))
 
   const check = useMemo(() => validateSquad(players, captainId, keeperId), [players, captainId, keeperId])
   const dirty = useMemo(
@@ -280,7 +282,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           <TeamCrest team={team} size={56} />
           <div>
             <h1 className="font-display text-3xl leading-none tracking-wide md:text-5xl">{session ? `${team.name} squad` : 'Squad'}</h1>
-            {careerMine && <p className="mt-1 text-sm text-slate-300"><b className="text-emerald-300">Physios {covered.length}/{PHYSIOS}</b>{hurt.size > 0 && <> · <b className="text-rose-300">{hurt.size} injured</b></>}</p>}
+            {careerMine && <p className="mt-1 text-sm text-slate-300"><b className="text-emerald-300">Physios {covered.length}/{slots}</b>{hurt.size > 0 && <> · <b className="text-rose-300">{hurt.size} injured</b></>}</p>}
             <details className="group mt-1 text-sm text-slate-400">
               <summary className="cursor-pointer list-none font-semibold text-slate-300">How this works <span className="ml-1 text-slate-500 transition group-open:rotate-90">›</span></summary>
               <div className="mt-1 space-y-1">
@@ -362,7 +364,7 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
           <div className="space-y-3 p-5 md:p-6">
             <div>
               <h2 className="font-display text-3xl tracking-wide text-white">Choose your physios</h2>
-              <p className="text-sm text-slate-300">You have {PHYSIOS} physios. A player with a physio cannot be injured. Pick who they look after ({covered.length}/{PHYSIOS} chosen). A player who is already injured cannot be picked.</p>
+              <p className="text-sm text-slate-300">You have {slots} physios. A player with a physio cannot be injured. Pick who they look after ({covered.length}/{slots} chosen). A player who is already injured cannot be picked.</p>
               {notice && <p className="mt-1 text-sm font-semibold text-amber-300" role="status">{notice}</p>}
             </div>
             <div className="grid gap-1.5 sm:grid-cols-2">
@@ -383,8 +385,8 @@ export function SquadView({ id, session = false }: { id: string; session?: boole
               })}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setPhysioOpen(false)} className="rounded-full border border-line px-4 py-2 text-sm text-slate-300 hover:border-slate-500">{covered.length >= PHYSIOS ? 'Close' : 'Later'}</button>
-              <button disabled={covered.length < PHYSIOS} onClick={() => setPhysioOpen(false)} className="rounded-full bg-indigo-500 px-6 py-2 font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40">Done</button>
+              <button onClick={() => setPhysioOpen(false)} className="rounded-full border border-line px-4 py-2 text-sm text-slate-300 hover:border-slate-500">{covered.length >= slots ? 'Close' : 'Later'}</button>
+              <button disabled={covered.length < slots} onClick={() => setPhysioOpen(false)} className="rounded-full bg-indigo-500 px-6 py-2 font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40">Done</button>
             </div>
           </div>
         </Sheet>

@@ -11,7 +11,7 @@ export const BOOST_EVERY = 5
 export const BOOST_MULT = 1.5
 
 /** What a career has saved about boosts: how many tokens have been spent, and whether one is armed for the next match. */
-export interface BoostState { used: number; armed: boolean }
+export interface BoostState { used: number; armed: boolean; /** Tokens bought in the club shop. */ bought?: number }
 
 /** Only Easy and Normal careers get boosts. */
 export const boostAllowed = (d: Difficulty | undefined) => d === 'easy' || d === 'normal'
@@ -41,7 +41,7 @@ export interface BoostSummary {
 export function boostSummary(seasons: Season[], state: BoostState | undefined, difficulty: Difficulty | undefined): BoostSummary {
   const allowed = boostAllowed(difficulty)
   const wins = careerWins(seasons)
-  const earned = allowed ? Math.floor(wins / BOOST_EVERY) : 0
+  const earned = allowed ? Math.floor(wins / BOOST_EVERY) + (state?.bought ?? 0) : 0
   const used = state?.used ?? 0
   const available = Math.max(0, earned - used)
   return { allowed, wins, earned, used, available, toNext: BOOST_EVERY - (wins % BOOST_EVERY), armed: !!state?.armed && available > 0 }
