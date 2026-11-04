@@ -6,6 +6,7 @@ import { BUILT_IN_TEAMS, LEGACY_TEAMS, refreshRatings } from '../data/teams'
 import { generateSeason } from '../season/generate'
 import { lastPlayedXI } from '../season/selection'
 import { advanceMarket, initMarket, marketWindows, playerIndex } from '../season/market'
+import { advanceProgrammes } from '../season/develop'
 import { advanceCoaching, assignCoaches, cpuCoachingMissing, setFocus, startCpuCoaching } from '../season/coaching'
 import type { CoachFocus } from '../data/coaches'
 import { recordResult } from '../season/results'
@@ -167,7 +168,7 @@ export const useStore = create<State>()(
             const next = fn(x.season)
             // as the days of a market window go by, the computer teams do their shopping
             const baseIndex = () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), next.market)
-            const season = advanceCoaching(x.season, advanceMarket(x.season, next, baseIndex), baseIndex)
+            const season = advanceProgrammes(x.season, advanceCoaching(x.season, advanceMarket(x.season, next, baseIndex), baseIndex), baseIndex)
             return { ...x, season, updatedAt: new Date().toISOString() }
           }),
         })),
@@ -181,7 +182,7 @@ export const useStore = create<State>()(
             const next = recordResult(x.season, summary, teams)
             const moved = { ...next, today: date > next.today ? date : next.today }
             const baseIndex = () => playerIndex(resolveTeams(st.customTeams, st.overrides, legacyIdsOf(st.sessions)), moved.market)
-            return { ...x, season: advanceCoaching(x.season, advanceMarket(x.season, moved, baseIndex), baseIndex), updatedAt: new Date().toISOString() }
+            return { ...x, season: advanceProgrammes(x.season, advanceCoaching(x.season, advanceMarket(x.season, moved, baseIndex), baseIndex), baseIndex), updatedAt: new Date().toISOString() }
           }),
         })),
       liveMatch: null,

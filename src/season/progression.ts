@@ -37,10 +37,14 @@ const get = (s: PlayerShift | undefined, k: AttrKey) => s?.a?.[k] ?? 0
 
 /** A player with everything he has earned (or lost) added to his starting ratings. */
 export function applyShift(p: Player, s: PlayerShift | undefined): Player {
-  if (!s || (!s.bat && !s.bowl && !s.a)) return p
+  if (!s || (!s.bat && !s.bowl && !s.a && !s.role && !s.hand && !s.bt && !s.nb && !s.traits)) return p
   const bat = s.bat ?? 0, bowl = s.bowl ?? 0
+  const bowling = p.bowling ?? s.nb ?? null
   return {
     ...p,
+    role: s.role ?? p.role,
+    hand: s.hand ?? p.hand,
+    traits: s.traits?.length ? [...new Set([...p.traits, ...s.traits])] : p.traits,
     fielding: clampRating(p.fielding + get(s, 'fielding')),
     batting: {
       technique: clampRating(p.batting.technique + bat + get(s, 'technique')),
@@ -48,8 +52,8 @@ export function applyShift(p: Player, s: PlayerShift | undefined): Player {
       temperament: clampRating(p.batting.temperament + bat + get(s, 'temperament')),
       running: clampRating(p.batting.running + Math.round(bat / 2) + get(s, 'running')),
     },
-    bowling: p.bowling
-      ? { ...p.bowling, accuracy: clampRating(p.bowling.accuracy + bowl + get(s, 'accuracy')), variation: clampRating(p.bowling.variation + bowl + get(s, 'variation')), stamina: clampRating(p.bowling.stamina + Math.round(bowl / 2) + get(s, 'stamina')) }
+    bowling: bowling
+      ? { ...bowling, type: s.bt ?? bowling.type, accuracy: clampRating(bowling.accuracy + bowl + get(s, 'accuracy')), variation: clampRating(bowling.variation + bowl + get(s, 'variation')), stamina: clampRating(bowling.stamina + Math.round(bowl / 2) + get(s, 'stamina')) }
       : null,
   }
 }

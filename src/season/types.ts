@@ -1,5 +1,5 @@
 import type { Difficulty } from '../engine/types'
-import type { MatchFormat } from '../types'
+import type { BowlingRatings, BowlType, Hand, MatchFormat, Role, Trait } from '../types'
 
 /** Where a fixture's team comes from: known at kickoff, or decided by earlier results. */
 export type Slot =
@@ -146,6 +146,16 @@ export interface ClubState {
   statues?: { id: string; name: string; year: number }[]
   /** The year the wildcard was last used. */
   wildcard?: number
+  /** Role / hand / bowling-type lessons taken this year. */
+  retrains?: number
+  /** Specialist programmes: one rating of one player trained faster for a while. */
+  programmes?: { id: string; attr: AttrKey; from: string; to: string; gained: number; cap: number }[]
+  /** Programmes finished in a row that earned no trait. */
+  pityTrait?: number
+  /** Hard lessons in a row (the next one cannot go as badly). */
+  pityLesson?: number
+  /** Finished programmes and the trait each earned (or none), newest last. */
+  graduates?: { id: string; trait: Trait | null; date: string }[]
 }
 
 export interface MarketState {
@@ -242,6 +252,12 @@ export interface PlayerShift {
   bat: number
   bowl: number
   a?: Partial<Record<AttrKey, number>>
+  /** Changes bought in the club (see `season/develop.ts`): a new role, throwing hand, bowling type, bowling ratings for a player who had none, and extra traits. */
+  role?: Role
+  hand?: Hand
+  bt?: BowlType
+  nb?: Omit<BowlingRatings, 'type'> & { type: BowlType }
+  traits?: Trait[]
 }
 
 /** What one match did to one player's ratings: the change in his overall rating, and in each rating that moved. */

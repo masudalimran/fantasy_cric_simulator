@@ -15,6 +15,11 @@ import { openWindow, playerIndex, potentialOf, SQUAD_CAP } from '../season/marke
 import { applyShift } from '../season/progression'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
+import {
+  BOWL_NAME, focusesFor, focusLabel, lessonsAllowed, lessonsFor, LESSON_ODDS, PROGRAMME_DAYS, programmeCap, programmePrice, programmeSlots, ROLE_NAME, startProgramme, takeLesson, traitChance, traitsLeft, daysLeft,
+  type Lesson,
+} from '../season/develop'
+import type { BowlType } from '../types'
 import type { Season } from '../season/types'
 import type { Player } from '../types'
 
@@ -144,6 +149,10 @@ export function ClubPage() {
         {freeCoaches(season).every((c) => c.skill <= (COACH_BY_ID.get(season.coaches?.[me] ?? '')?.skill ?? 0)) && <p className="text-xs text-slate-400">Nobody better is free right now.</p>}
       </Section>
 
+      <Section icon="🎯" title="Player development" hint="Change what a player is, or make him grow faster in one way.">
+        <Develop season={season} index={index} squad={squad} scale={scale} purse={purse} run={run} />
+      </Section>
+
       <Section icon="⚡" title="Boost tokens" hint={`Make the whole team 50% better for one match. You have ${bs.available}.`}>
         {!bs.allowed ? <p className="text-xs text-slate-400">Boosts are only on Easy and Normal careers.</p> : (
           <>
@@ -230,5 +239,66 @@ function StatuePicker({ squad, done, price, purse, onBuild }: { squad: Player[];
       </select>
       <button disabled={!p || purse < price} className={btn} onClick={() => p && onBuild(p)}>Statue · {price}</button>
     </div>
+  )
+}
+
+function Develop({ season, index, squad, scale, purse, run }: { season: Season; index: Map<string, Player>; squad: Player[]; scale: number; purse: number; run: (text: string, fn: (s: Season) => Result) => void }) {
+  const [id, setId] = useState('')
+  const [bowl, setBowl] = useState<BowlType>('medium')
+  const club = clubOf(season)
+  const p = squad.find((x) => x.id === id)
+  const done = club.year === season.year ? club.retrains ?? 0 : 0
+  const live = (club.programmes ?? []).filter((g) => g.to > season.today)
+  const bowlNeeds = (l: Lesson) => !p?.bowling && (l.role === 'BOWL' || l.role === 'AR')
+  return (
+    <>
+      <p className="text-xs leading-snug text-slate-300">Pick a player. <b className="text-white">Lessons</b> change his role, hand or bowling ({done}/{lessonsAllowed(club)} this year). <b className="text-white">Programmes</b> train one rating about 3× faster for {PROGRAMME_DAYS} days ({live.length}/{programmeSlots(club)} running).</p>
+      <select value={id} onChange={(e) => setId(e.target.value)} className="w-full rounded-full border border-line bg-black/30 px-3 py-2 text-xs text-white" aria-label="Pick a player to develop">
+        <option value="">Pick a player…</option>
+        {squad.map((x) => <option key={x.id} value={x.id}>{x.name} · {ROLE_NAME[x.role]} · {overall(x)}</option>)}
+      </select>
+      {live.length > 0 && (
+        <ul className="space-y-1 text-xs text-slate-300">
+          {live.map((g) => { const q = index.get(g.id); return <li key={g.id + g.attr} className="rounded-lg bg-black/20 px-2.5 py-1.5">🎯 <b className="text-white">{q?.name}</b>: {q ? focusLabel(q, g.attr).split(':')[0] : g.attr}, +{g.gained} so far (up to +{g.cap}), {daysLeft(g, season.today)} days left</li> })}
+        </ul>
+      )}
+      {p && (
+        <>
+          <div className="rounded-xl border border-line bg-black/20 p-2.5">
+            <div className="text-sm font-bold text-white">{p.name} <span className="text-xs font-normal text-slate-400">· {ROLE_NAME[p.role]}, {p.hand === 'R' ? 'right' : 'left'}-handed{p.bowling ? `, ${BOWL_NAME[p.bowling.type].toLowerCase()}` : ', does not bowl'}</span></div>
+            <p className="mt-1 text-xs leading-snug text-slate-400">Lessons: how it goes is luck. A hard one makes his ratings dip for a while, and the next one will not go as badly.</p>
+            <Odds rows={LESSON_ODDS} />
+            <div className="mt-2 space-y-1.5">
+              {lessonsFor(p, scale).map((l) => (
+                <div key={l.label} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 text-xs text-slate-200">{l.label}</span>
+                  {bowlNeeds(l) && (
+                    <select value={bowl} onChange={(e) => setBowl(e.target.value as BowlType)} className="rounded-full border border-line bg-black/30 px-2 py-1.5 text-[11px] text-white" aria-label="Kind of bowling">
+                      {(Object.keys(BOWL_NAME) as BowlType[]).map((b) => <option key={b} value={b}>{BOWL_NAME[b]}</option>)}
+                    </select>
+                  )}
+                  <button disabled={purse < l.price || done >= lessonsAllowed(club)} className={btn} onClick={() => run(`${p.name}: ${l.label.toLowerCase()} for ${l.price} coins?`, (s) => takeLesson(s, index, p.id, l, bowlNeeds(l) ? bowl : undefined))}>{l.price}</button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-line bg-black/20 p-2.5">
+            <div className="text-sm font-bold text-white">Specialist programme · {programmePrice(p, scale)} coins</div>
+            <p className="mt-1 text-xs leading-snug text-slate-400">Up to +{programmeCap(club)} on one rating in {PROGRAMME_DAYS} days (a good coach and a low rating make it faster). At the end he may earn a trait, a {traitChance(club)}% chance that grows by 15% after each programme without one.</p>
+            <div className="mt-2 space-y-1.5">
+              {focusesFor(p).map((a) => {
+                const t = traitsLeft(p, a)
+                return (
+                  <div key={a} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 text-xs text-slate-200">{focusLabel(p, a)}{t.length > 0 && <span className="text-slate-500"> · may earn {t.join(' / ')}</span>}</span>
+                    <button disabled={purse < programmePrice(p, scale) || live.length >= programmeSlots(club) || live.some((g) => g.id === p.id)} className={btn} onClick={() => run(`Start a ${PROGRAMME_DAYS}-day programme for ${p.name} (${focusLabel(p, a).split(':')[0]}) for ${programmePrice(p, scale)} coins?`, (s) => startProgramme(s, index, p.id, a, scale))}>Train</button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }

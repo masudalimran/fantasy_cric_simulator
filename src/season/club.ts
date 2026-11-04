@@ -37,7 +37,7 @@ const money = (base: number, scale: number) => Math.max(1, Math.round((base * sc
 export const clubOf = (season: Pick<Season, 'market'>): ClubState => season.market?.club ?? {}
 const yearOf = (season: Pick<Season, 'year'>) => season.year
 /** The counters in `club` only count for the year they were written in. */
-const thisYear = (club: ClubState, year: number) => (club.year === year ? club : { ...club, year, camps: 0, scouts: 0, boosts: 0, tickets: 0 })
+const thisYear = (club: ClubState, year: number) => (club.year === year ? club : { ...club, year, camps: 0, scouts: 0, boosts: 0, tickets: 0, retrains: 0 })
 
 // ---- Prices and upkeep --------------------------------------------------------------------------------------------
 
