@@ -15,16 +15,16 @@ export function useLevel() {
 export function LevelPlate({ children }: { children: React.ReactNode }) {
   const lv = useLevel()
   return (
-    <div className="relative mb-2 shrink-0">
+    <div className="relative mb-1.5 shrink-0">
       {children}
       {lv && (
         <Link
           to={paths.tree} aria-label={`Level ${lv.level}${lv.points > 0 ? `, ${lv.points} passive tree points to spend` : ''}. Open the passive tree`}
-          className="absolute -bottom-2 left-1/2 flex h-[15px] min-w-[38px] -translate-x-1/2 cursor-pointer items-center justify-center overflow-hidden rounded-full px-2 text-[9px] font-extrabold uppercase leading-none tracking-wider text-amber-100"
-          style={{ background: `linear-gradient(90deg, #6d4cd6 ${lv.pct * 100}%, #17112f ${lv.pct * 100}%)`, boxShadow: '0 0 0 1.5px #fbbf24, 0 2px 4px rgba(0,0,0,0.6)' }}
+          className="absolute -bottom-[9px] left-1/2 flex h-[10px] min-w-[24px] -translate-x-1/2 cursor-pointer items-center justify-center overflow-hidden rounded-full px-1 text-[6px] font-extrabold uppercase leading-none tracking-wide text-amber-100"
+          style={{ background: `linear-gradient(90deg, #6d4cd6 ${lv.pct * 100}%, #17112f ${lv.pct * 100}%)`, boxShadow: '0 0 0 1px #fbbf24, 0 1px 3px rgba(0,0,0,0.6)' }}
         >
           <span className="relative">Lv {lv.level}</span>
-          {lv.points > 0 && <span className="absolute right-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-emerald-400" aria-hidden />}
+          {lv.points > 0 && <span className="absolute right-0.5 top-1/2 h-1 w-1 -translate-y-1/2 rounded-full bg-emerald-400" aria-hidden />}
         </Link>
       )}
     </div>
