@@ -15,12 +15,12 @@ export function useLevel() {
 export function LevelPlate({ children }: { children: React.ReactNode }) {
   const lv = useLevel()
   return (
-    <div className="relative mb-1.5 shrink-0">
+    <div className="relative mb-1 shrink-0">
       {children}
       {lv && (
         <Link
           to={paths.tree} aria-label={`Level ${lv.level}${lv.points > 0 ? `, ${lv.points} passive tree points to spend` : ''}. Open the passive tree`}
-          className="absolute -bottom-[9px] left-1/2 flex h-[10px] min-w-[24px] -translate-x-1/2 cursor-pointer items-center justify-center overflow-hidden rounded-full px-1 text-[6px] font-extrabold uppercase leading-none tracking-wide text-amber-100"
+          className="absolute -bottom-[6px] left-1/2 z-10 flex h-[11px] w-[calc(100%+8px)] -translate-x-1/2 cursor-pointer items-center justify-center overflow-hidden rounded-none text-[7px] font-extrabold uppercase leading-none tracking-wide text-amber-100"
           style={{ background: `linear-gradient(90deg, #6d4cd6 ${lv.pct * 100}%, #17112f ${lv.pct * 100}%)`, boxShadow: '0 0 0 1px #fbbf24, 0 1px 3px rgba(0,0,0,0.6)' }}
         >
           <span className="relative">Lv {lv.level}</span>
