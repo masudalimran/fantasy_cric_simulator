@@ -60,5 +60,7 @@ A personal, non-commercial cricket simulator with anime and video-game character
 
 - **Six cut-aways and four moments (scenery only)**: `sixScenes.ts` (seven full-frame cartoon scenes drawn after the ball lands in a `moonshot`; `moonOutcome` picks among car, blimp and the scenes; 180 m and more is space) and `fourFx.ts` (eight moments at the rope, `plan.fourFx` from `fourFxKind(seq)`, drawn by `drawScene` as `fx4`; the camera goes in on them in `frameAt`). Both are tested with a stand-in canvas. Keep them light for phones (canvas drawing only, no files).
 
+- **Every specialist bowler bowls (deliberate small balance change, asked for by the owner)**: `chooseBowler` favours and then guarantees an over for any Bowler-role player who has not bowled (limited overs only). Checked by simulation: runs +1.0% T20, +0.7% ODI. Do not retune without being asked.
+
 ## Backlog (agreed, not planned yet)
 Achievements and goals; Hall of Fame / retirement; commentary line variety; difficulty-scaled purses; an automated page smoke test; instant replay in the broadcast view; subtitles for the commentary; a lighter broadcast quality setting for slow phones.

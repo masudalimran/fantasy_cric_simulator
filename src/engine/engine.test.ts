@@ -339,3 +339,22 @@ describe('hand against arm', () => {
     expect(handEdge({ hand: 'L' }, leg)).toBe(HAND.spin)
   })
 })
+
+describe('every specialist bowler bowls', () => {
+  it('a bowler who is not an all-rounder always gets a bowl in a limited-overs innings that lasts the distance', async () => {
+    const { Match } = await import('./match')
+    const { BUILT_IN_TEAMS } = await import('../data/teams')
+    let checked = 0, missing = 0
+    for (const format of ['t20', 'odi'] as const) for (let seed = 1; seed <= 16; seed++) {
+      const a = BUILT_IN_TEAMS[seed % 20], b = BUILT_IN_TEAMS[(seed * 7 + 3) % 20]
+      if (a.id === b.id) continue
+      const m = new Match({ teamA: a, teamB: b, format, seed }); m.playMatch()
+      for (const inn of m.innings) {
+        if (inn.legalBalls < (format === 't20' ? 90 : 240)) continue // (a short chase ends before everyone can bowl)
+        for (const p of m.sides[1 - inn.battingSide].xi) if (p.role === 'BOWL' && p.bowling) { checked++; if (!inn.bowlers.get(p.id)?.legalBalls) missing++ }
+      }
+    }
+    expect(checked).toBeGreaterThan(40)
+    expect(missing).toBe(0)
+  })
+})

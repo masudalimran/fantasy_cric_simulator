@@ -162,6 +162,9 @@ export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[
   const topIds = new Set(ranked.slice(0, 2).map((p) => p.id))
   const avgBowled = real.reduce((s, p) => s + bowled(p), 0) / Math.max(real.length, 1)
 
+  // Every specialist bowler gets a bowl: one who has not yet had an over is favoured, and by the end of the first half of the innings he is simply given one
+  const owed = pool.filter((p) => p.role === 'BOWL' && p.bowling && bowled(p) === 0)
+  if (format !== 'test' && owed.length > 0 && over >= Math.floor(cfg.overs * 0.4)) pool = owed
   const par = parRunsPerOver(format, phase)
   const batsmen = [inn.strikerId, inn.nonStrikerId]
   const slack = realCapacity - oversLeft // how close the real bowlers are to being needed for every remaining over
@@ -169,6 +172,7 @@ export function chooseBowler(a: { format: MatchFormat; inn: Innings; xi: Player[
   let bestScore = -Infinity
   for (const p of pool) {
     let s = bowlScore(p) + (a.pref?.[p.id] ?? 0) * 0.5
+    if (format !== 'test' && p.role === 'BOWL' && p.bowling && bowled(p) === 0) s += 7 // (a specialist who has not bowled yet)
     const f = p.bowling ? formOf(inn, p.id, par, format) : null
     if (f) {
       // going well: keep him on until his overs run out. Going badly: someone else
