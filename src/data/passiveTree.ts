@@ -18,6 +18,7 @@ export const BRANCHES: Branch[] = [
   { id: 'keep', name: 'Gloves and field', icon: '🧤', color: '#22d3ee', who: 'Keepers and fielders' },
   { id: 'capt', name: 'Captain', icon: '👑', color: '#a78bfa', who: 'Leadership, reviews, tosses' },
   { id: 'new', name: 'Rookies', icon: '🌱', color: '#4ade80', who: 'Academy youth and new signings' },
+  { id: 'vet', name: 'Veterans', icon: '🎖️', color: '#c4b5fd', who: 'Older players and long careers' },
   { id: 'club', name: 'Club and money', icon: '💰', color: '#facc15', who: 'Coins, youth, injuries' },
   { id: 'day', name: 'Matchday', icon: '🏟️', color: '#60a5fa', who: 'The whole team on the day' },
 ]
@@ -95,6 +96,16 @@ export const NODES: TreeNode[] = [
   n('new.7', 3, 1, 'Hidden potential', 'n', 'Youth in your squad show how far they can grow.', ['new.5'], 'Shows the ceiling stars on every youth in the squad.'),
   n('new.8', 4, 1, 'Cheap starts', 's', 'Academy and scouted youth cost 15% less.', ['new.7']),
   n('new.9', 5, 1, 'Golden generation', 'k', 'Academy youth: train twice as fast and gain +50% in matches, but they get no wages cut and cost more to sign.', ['new.5'], 'A big boost for a youth-heavy team.'),
+  // ---- Veterans: players of 30 and over, and long careers
+  n('vet.1', 0, 1, 'Experience', 's', 'Players aged 30 or more: +2 temperament.'),
+  n('vet.2', 1, 0, 'Evergreen', 'n', 'Veterans lose rating more slowly at the turn of the year.', ['vet.1'], 'Softens the yearly decline of older players.'),
+  n('vet.3', 1, 2, 'Big-match temperament', 's', 'Veterans: +3 temperament in finals and knock-outs.', ['vet.1']),
+  n('vet.4', 2, 0, 'One more year', 's', 'A retiring veteran asks 20% less to stay on.', ['vet.2']),
+  n('vet.5', 2, 1, 'Wise head', 'n', 'Veterans: +3 technique and temperament when the team is in trouble.', ['vet.2', 'vet.3'], 'Counts when you have lost 3 wickets for fewer than 30 runs, or are chasing a high rate.'),
+  n('vet.6', 2, 2, 'Seen it all', 's', 'Veterans: +2 accuracy when defending a small total.', ['vet.3']),
+  n('vet.7', 3, 1, 'Late bloomer', 'n', 'Players 30 and over can still improve from match gains.', ['vet.5'], 'Removes the slowdown on older players\' match gains.'),
+  n('vet.8', 4, 1, 'Fit for life', 's', 'Veterans get hurt less often.', ['vet.7']),
+  n('vet.9', 5, 1, 'Living legend', 'k', 'Your oldest player in the XI: +6 to every rating, but he retires a year sooner.', ['vet.5'], 'Wins now, costs a year of his career.'),
   // ---- Club and money
   n('club.1', 0, 1, 'Frugal', 's', 'Buildings cost 5% less.'),
   n('club.2', 1, 0, 'Sharp scouts', 'n', 'Scouting trips cost less and find talents more often.', ['club.1']),
