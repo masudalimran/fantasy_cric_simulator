@@ -107,6 +107,7 @@ export function ClubPage() {
         </div>
         <p className="mt-2 text-xs leading-snug text-slate-300">Players are not the only thing coins buy. Build, train, scout and take a gamble. Prices grow with your wage bill, so a rich club pays more. {upkeepTotal > 0 && <>Running the club costs <b className="text-white">{upkeepTotal} coins</b> at the turn of the year.</>}</p>
         <Link to={paths.market} className="mt-2 inline-block text-xs font-bold text-sky-300 underline-offset-2 hover:underline">Back to the player market ›</Link>
+        <Link to={paths.tree} className="ml-4 mt-2 inline-block text-xs font-bold text-violet-300 underline-offset-2 hover:underline">Passive tree (prototype) ›</Link>
       </header>
 
       {note && <p role="status" className={`mb-3 rounded-xl border px-3 py-2 text-sm ${note.good ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-rose-400/40 bg-rose-500/10 text-rose-200'}`}>{note.text}</p>}
