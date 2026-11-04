@@ -223,7 +223,7 @@ export function CalendarPage() {
   })
   // Skip to a day: every match up to and including it is played, in order, yours too (a match being played live is left alone).
   const pendingTo = (date: string) => season.fixtures.filter((f) => f.date <= date && !season.results[f.id] && f.homeId && f.awayId && f.id !== liveFixtureId)
-  const canSkipTo = (date: string) => date >= season.today && (date > season.today || pendingTo(date).length > 0)
+  const canSkipTo = (date: string) => !liveFixtureId && date >= season.today && (date > season.today || pendingTo(date).length > 0) // (not while a match of yours is being played)
   const skipTo = (date: string) => gate(() => {
     const mine = pendingTo(date).filter((f) => isMine(season, f)).length
     if (mine > 0 && !window.confirm(`This also plays ${mine} of your own ${mine === 1 ? 'match' : 'matches'} for you. Skip anyway?`)) return
@@ -394,6 +394,7 @@ export function CalendarPage() {
                 <button
                   className="text-xs text-emerald-300 hover:underline disabled:opacity-40"
                   disabled={!canSkipTo(selected)}
+                  title={liveFixtureId ? 'Finish or leave the match you are playing first' : undefined}
                   onClick={() => skipTo(selected)}
                 >
                   Skip to this day
@@ -436,6 +437,7 @@ export function CalendarPage() {
                 <button
                   className="rounded-full border border-emerald-400/50 px-3 py-1.5 text-xs font-bold text-emerald-300 disabled:opacity-40"
                   disabled={!canSkipTo(selected)}
+                  title={liveFixtureId ? 'Finish or leave the match you are playing first' : undefined}
                   onClick={() => skipTo(selected)}
                 >
                   Skip to this day
