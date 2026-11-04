@@ -23,7 +23,7 @@ export function LevelPlate({ children }: { children: React.ReactNode }) {
           className="absolute -bottom-[6px] left-1/2 z-10 flex h-[11px] w-[calc(100%+8px)] -translate-x-1/2 cursor-pointer items-center justify-center overflow-hidden rounded-none text-[7px] font-extrabold uppercase leading-none tracking-wide text-amber-100"
           style={{ background: `linear-gradient(90deg, #6d4cd6 ${lv.pct * 100}%, #17112f ${lv.pct * 100}%)`, boxShadow: '0 0 0 1px #fbbf24, 0 1px 3px rgba(0,0,0,0.6)' }}
         >
-          <span className="relative">Lv {lv.level}</span>
+          <span className="relative">Level {lv.level}</span>
           {lv.points > 0 && <span className="absolute right-0.5 top-1/2 h-1 w-1 -translate-y-1/2 rounded-full bg-emerald-400" aria-hidden />}
         </Link>
       )}
