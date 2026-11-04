@@ -11,49 +11,22 @@ export function useLevel() {
   return { ...info, points: pointsLeft(info.level, session.season.market?.club?.perks ?? []) }
 }
 
-/** A thin ring around the crest that fills as you earn XP towards the next level. */
-export function LevelRing({ size, children }: { size: number; children: React.ReactNode }) {
+/** The crest standing on a small level plate, like an avatar frame in a game: "LV 12", filled from the left as XP comes in, with a green dot while points are waiting. Opens the passive tree. */
+export function LevelPlate({ children }: { children: React.ReactNode }) {
   const lv = useLevel()
-  const pad = 4
-  const box = size + pad * 2
-  const r = box / 2 - 1.5
-  const c = 2 * Math.PI * r
   return (
-    <div className="relative shrink-0" style={{ width: box, height: box }}>
-      <div className="absolute" style={{ left: pad, top: pad }}>{children}</div>
-      <PointsCount />
+    <div className="relative mb-2 shrink-0">
+      {children}
       {lv && (
-        <svg className="pointer-events-none absolute inset-0 -rotate-90" width={box} height={box} aria-hidden>
-          <circle cx={box / 2} cy={box / 2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={2} />
-          <circle cx={box / 2} cy={box / 2} r={r} fill="none" stroke="#a78bfa" strokeWidth={2} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - lv.pct)} />
-        </svg>
+        <Link
+          to={paths.tree} aria-label={`Level ${lv.level}${lv.points > 0 ? `, ${lv.points} passive tree points to spend` : ''}. Open the passive tree`}
+          className="absolute -bottom-2 left-1/2 flex h-[15px] min-w-[38px] -translate-x-1/2 cursor-pointer items-center justify-center overflow-hidden rounded-full px-2 text-[9px] font-extrabold uppercase leading-none tracking-wider text-amber-100"
+          style={{ background: `linear-gradient(90deg, #6d4cd6 ${lv.pct * 100}%, #17112f ${lv.pct * 100}%)`, boxShadow: '0 0 0 1.5px #fbbf24, 0 2px 4px rgba(0,0,0,0.6)' }}
+        >
+          <span className="relative">Lv {lv.level}</span>
+          {lv.points > 0 && <span className="absolute right-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-emerald-400" aria-hidden />}
+        </Link>
       )}
     </div>
-  )
-}
-
-/** "Lv 12" as plain text next to the career name; it opens the passive tree, with a small dot when points are waiting. */
-export function LevelTag() {
-  const lv = useLevel()
-  if (!lv) return null
-  return (
-    <Link to={paths.tree} aria-label={`Level ${lv.level}${lv.points > 0 ? `, ${lv.points} points to spend` : ''}. Open the passive tree`} className="cursor-pointer text-violet-300 hover:text-violet-200">
-      {' · '}Lv {lv.level}{lv.points > 0 && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 align-middle" aria-hidden />}
-    </Link>
-  )
-}
-
-/** Like the unread count on an email app: a small red pill on the corner of the crest with the number of passive-tree points waiting. It disappears at zero. */
-function PointsCount() {
-  const lv = useLevel()
-  if (!lv || lv.points <= 0) return null
-  return (
-    <Link
-      to={paths.tree} aria-label={`${lv.points} passive tree point${lv.points === 1 ? '' : 's'} to spend`}
-      className="absolute -right-1.5 -top-1.5 z-10 grid h-[17px] min-w-[17px] cursor-pointer place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none tabular-nums text-white"
-      style={{ boxShadow: '0 0 0 2px #0b0e15' }}
-    >
-      {lv.points > 99 ? '99+' : lv.points}
-    </Link>
   )
 }

@@ -10,7 +10,7 @@ import { quickNudge } from '../season/club'
 import { daysBetween } from '../season/dates'
 import { useBaseTeamMap, useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
-import { LevelRing, LevelTag } from './LevelBadge'
+import { LevelPlate } from './LevelBadge'
 import { OfferBanner } from './season/OfferBanner'
 
 const COLOR = { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' } as const
@@ -70,9 +70,9 @@ export function CareerLayout() {
     return (
       <div>
         <div className="mb-2 flex items-center gap-2.5 rounded-2xl border border-line bg-panel px-3 py-2.5">
-          {mine && <LevelRing size={38}><TeamCrest team={mine} size={38} /></LevelRing>}
+          {mine && <LevelPlate><TeamCrest team={mine} size={38} /></LevelPlate>}
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}<LevelTag /></div>
+            <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}</div>
             <h1 className="truncate font-display text-2xl leading-none tracking-wide text-white">{session.name}</h1>
             {mine && <div className="truncate text-xs text-slate-300">You manage <b className="text-white">{mine.name}</b></div>}
           </div>
@@ -112,9 +112,9 @@ export function CareerLayout() {
       <div className="mb-5 rounded-2xl border border-line bg-panel px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            {mine && <LevelRing size={44}><TeamCrest team={mine} size={44} /></LevelRing>}
+            {mine && <LevelPlate><TeamCrest team={mine} size={44} /></LevelPlate>}
             <div className="min-w-0">
-              <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}<LevelTag /></div>
+              <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}</div>
               <h1 className="truncate font-display text-3xl leading-none tracking-wide text-white">{session.name}</h1>
               {mine && <div className="mt-0.5 text-sm text-slate-300">You manage <b className="text-white">{mine.name}</b></div>}
             </div>
