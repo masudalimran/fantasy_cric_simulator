@@ -21,6 +21,7 @@ export function LevelRing({ size, children }: { size: number; children: React.Re
   return (
     <div className="relative shrink-0" style={{ width: box, height: box }}>
       <div className="absolute" style={{ left: pad, top: pad }}>{children}</div>
+      <PointsCount />
       {lv && (
         <svg className="pointer-events-none absolute inset-0 -rotate-90" width={box} height={box} aria-hidden>
           <circle cx={box / 2} cy={box / 2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={2} />
@@ -38,6 +39,21 @@ export function LevelTag() {
   return (
     <Link to={paths.tree} aria-label={`Level ${lv.level}${lv.points > 0 ? `, ${lv.points} points to spend` : ''}. Open the passive tree`} className="cursor-pointer text-violet-300 hover:text-violet-200">
       {' · '}Lv {lv.level}{lv.points > 0 && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 align-middle" aria-hidden />}
+    </Link>
+  )
+}
+
+/** Like the unread count on an email app: a small red pill on the corner of the crest with the number of passive-tree points waiting. It disappears at zero. */
+function PointsCount() {
+  const lv = useLevel()
+  if (!lv || lv.points <= 0) return null
+  return (
+    <Link
+      to={paths.tree} aria-label={`${lv.points} passive tree point${lv.points === 1 ? '' : 's'} to spend`}
+      className="absolute -right-1.5 -top-1.5 z-10 grid h-[17px] min-w-[17px] cursor-pointer place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none tabular-nums text-white"
+      style={{ boxShadow: '0 0 0 2px #0b0e15' }}
+    >
+      {lv.points > 99 ? '99+' : lv.points}
     </Link>
   )
 }
