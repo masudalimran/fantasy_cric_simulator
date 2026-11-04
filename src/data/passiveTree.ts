@@ -17,6 +17,7 @@ export const BRANCHES: Branch[] = [
   { id: 'spin', name: 'Spin', icon: '🌀', color: '#34d399', who: 'Off, leg and left-arm spin' },
   { id: 'keep', name: 'Gloves and field', icon: '🧤', color: '#22d3ee', who: 'Keepers and fielders' },
   { id: 'capt', name: 'Captain', icon: '👑', color: '#a78bfa', who: 'Leadership, reviews, tosses' },
+  { id: 'new', name: 'Rookies', icon: '🌱', color: '#4ade80', who: 'Academy youth and new signings' },
   { id: 'club', name: 'Club and money', icon: '💰', color: '#facc15', who: 'Coins, youth, injuries' },
   { id: 'day', name: 'Matchday', icon: '🏟️', color: '#60a5fa', who: 'The whole team on the day' },
 ]
@@ -84,6 +85,16 @@ export const NODES: TreeNode[] = [
   n('capt.7', 3, 1, 'Inspiring', 'n', 'Team: +1 to every rating while the captain is on the field.', ['capt.5']),
   n('capt.8', 4, 1, 'Big-match captain', 's', 'Finals and knock-outs: captain +4 temperament.', ['capt.7']),
   n('capt.9', 5, 1, 'The general', 'k', 'Team: +2 to every rating, but only while the same captain stays.', ['capt.7'], 'Changing the captain loses it.'),
+  // ---- Rookies: academy youth and players who have just joined
+  n('new.1', 0, 1, 'Fresh legs', 's', 'Academy youth: train 10% faster with the coach.'),
+  n('new.2', 1, 0, 'Quick learners', 'n', 'Academy youth: match gains are 25% bigger.', ['new.1']),
+  n('new.3', 1, 2, 'Settling in', 's', 'A new signing plays his first 5 matches with +2 to every rating.', ['new.1'], 'Counts matches since he joined.'),
+  n('new.4', 2, 0, 'Raw talent', 's', 'Scouting trips find prodigies a little more often.', ['new.2']),
+  n('new.5', 2, 1, 'Mentor', 'n', 'A veteran in your XI lifts one rookie: +3 temperament.', ['new.2', 'new.3'], 'Needs a player aged 30 or more and a youth in the same XI.'),
+  n('new.6', 2, 2, 'Debut fire', 's', 'A player in his first match for you: +4 power and accuracy.', ['new.3']),
+  n('new.7', 3, 1, 'Hidden potential', 'n', 'Youth in your squad show how far they can grow.', ['new.5'], 'Shows the ceiling stars on every youth in the squad.'),
+  n('new.8', 4, 1, 'Cheap starts', 's', 'Academy and scouted youth cost 15% less.', ['new.7']),
+  n('new.9', 5, 1, 'Golden generation', 'k', 'Academy youth: train twice as fast and gain +50% in matches, but they get no wages cut and cost more to sign.', ['new.5'], 'A big boost for a youth-heavy team.'),
   // ---- Club and money
   n('club.1', 0, 1, 'Frugal', 's', 'Buildings cost 5% less.'),
   n('club.2', 1, 0, 'Sharp scouts', 'n', 'Scouting trips cost less and find talents more often.', ['club.1']),

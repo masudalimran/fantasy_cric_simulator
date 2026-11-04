@@ -63,7 +63,7 @@ export function TreePage() {
               const all = NODES.filter((x) => x.branch === br.id)
               const mine = all.filter((x) => taken.has(x.id))
               return (
-                <button key={br.id} onClick={() => setBranch(br.id)} className="cursor-pointer rounded-2xl border bg-panel p-3 text-left transition active:scale-[0.98]" style={{ borderColor: `${br.color}66`, boxShadow: mine.length ? `inset 0 0 24px ${br.color}22` : undefined }}>
+                <button key={br.id} onClick={() => setBranch(br.id)} className={`cursor-pointer rounded-2xl border bg-panel p-3 text-left transition active:scale-[0.98] ${BRANCHES.length % 2 === 1 && br.id === BRANCHES[BRANCHES.length - 1].id ? "col-span-2" : ""}`} style={{ borderColor: `${br.color}66`, boxShadow: mine.length ? `inset 0 0 24px ${br.color}22` : undefined }}>
                   <div className="text-3xl" aria-hidden>{br.icon}</div>
                   <div className="mt-1 font-display text-xl leading-none tracking-wide text-white">{br.name}</div>
                   <div className="mt-1 text-[11px] leading-snug text-slate-400">{br.who}</div>
