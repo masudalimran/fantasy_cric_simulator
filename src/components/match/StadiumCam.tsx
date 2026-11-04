@@ -563,7 +563,7 @@ export function StadiumCam({ show, base, rate = 1, label, cast }: { show: Stadiu
                 <span className={`min-w-0 flex-1 truncate font-display uppercase leading-none tracking-wide ${show.lower.color ? 'text-3xl' : 'text-base text-white'}`} style={show.lower.color ? { color: show.lower.color, textShadow: `0 0 14px ${show.lower.color}88` } : undefined}>{show.lower.title}</span>
                 {show.lower.rating !== undefined && <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-violet-500 font-display text-base leading-none text-white ring-2 ring-white/30">{show.lower.rating}</span>}
               </div>
-              {show.lower.lines.filter((ln) => ln !== 'Ratings' && !ln.startsWith('This season')).map((ln, i) => <div key={i} className={`mt-0.5 truncate leading-snug ${i === 0 ? 'text-[10px] font-bold text-slate-200' : 'text-[9px] font-semibold text-slate-400'}`}>{ln}</div>)}
+              {show.lower.lines.filter((ln) => ln !== 'Ratings' && !ln.startsWith('This season') && !ln.startsWith('Career in')).map((ln, i) => <div key={i} className={`mt-0.5 truncate leading-snug ${i === 0 ? 'text-[10px] font-bold text-slate-200' : 'text-[9px] font-semibold text-slate-400'}`}>{ln}</div>)}
               {show.lower.tiles && show.lower.tiles.length > 0 && <StatBand tiles={show.lower.tiles.slice(0, 6)} small={show.lower.rating !== undefined} />}
             </div>
           </div>

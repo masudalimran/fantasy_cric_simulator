@@ -269,6 +269,21 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
 
 export const playerRef = (index: Map<string, PlayerRef>, id: string | undefined) => (id ? index.get(id) : undefined)
 
+/** The same totals across several seasons (a career): every player's lines from each season are added up. */
+export function collectAll(seasons: Season[], scope: Scope = {}, ownTeamOf?: (playerId: string) => string | undefined): Collected {
+  if (seasons.length === 1) return collect(seasons[0], scope, ownTeamOf)
+  const parts = seasons.map((s) => collect(s, scope, ownTeamOf))
+  const bat = new Map<string, BatStat>(), bowl = new Map<string, BowlStat>(), potm = new Map<string, number>(), played = new Map<string, number>()
+  const ids = <T,>(pick: (c: Collected) => Map<string, T>) => new Set(parts.flatMap((c) => [...pick(c).keys()]))
+  for (const id of ids((c) => c.bat)) { const m = mergeBat(parts.flatMap((c) => (c.bat.has(id) ? [c.bat.get(id) as BatStat] : []))); if (m) bat.set(id, m) }
+  for (const id of ids((c) => c.bowl)) { const m = mergeBowl(parts.flatMap((c) => (c.bowl.has(id) ? [c.bowl.get(id) as BowlStat] : []))); if (m) bowl.set(id, m) }
+  for (const c of parts) {
+    for (const [id, n] of c.potm) potm.set(id, (potm.get(id) ?? 0) + n)
+    for (const [id, n] of c.played) played.set(id, (played.get(id) ?? 0) + n)
+  }
+  return { bat, bowl, potm, played, matches: parts.reduce((n, c) => n + c.matches, 0) }
+}
+
 /** Adds one player's batting lines from several seasons into a single career line. */
 export function mergeBat(list: BatStat[]): BatStat | undefined {
   if (list.length === 0) return undefined

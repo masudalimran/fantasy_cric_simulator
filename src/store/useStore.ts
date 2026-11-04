@@ -353,6 +353,12 @@ export function useViewedSeason(): { season: Season | null; year: number | null;
   return { season: past ?? current, year: (past ?? current)?.year ?? null, isCurrent: !past, years }
 }
 
+/** Every season of the career you have open, oldest first (the last one is the season being played). For lifetime figures. */
+export function useAllSeasons(): Season[] {
+  const session = useStore(selectSession)
+  return useMemo(() => (session ? [...(session.history ?? []), session.season] : []), [session])
+}
+
 /** True while your team is in a match (the toss screen, or play, or a result not yet closed): a boost cannot be armed from the squad screen then. */
 export const hasMatchInProgress = (s: { liveMatch: LiveMatch | null }): boolean => !!s.liveMatch && !!s.liveMatch.myTeamId && !s.liveMatch.finished
 

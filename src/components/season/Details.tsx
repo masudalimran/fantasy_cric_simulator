@@ -6,10 +6,10 @@ import { overall } from '../../data/builders'
 import { paths } from '../../routes'
 import { formatDate } from '../../season/dates'
 import { ATTR_LABEL } from '../../season/progression'
-import { average, bowlAverage, collect, economy as bowlEcon, strikeRate, topBatsmen, topBowlers } from '../../season/stats'
+import { average, bowlAverage, collect, collectAll, economy as bowlEcon, strikeRate, topBatsmen, topBowlers } from '../../season/stats'
 import type { AttrKey, BatLine, BowlLine, MatchSummary, Season } from '../../season/types'
 import { useStatsFormat } from '../../statsFormat'
-import { useTeams, useViewedSeason } from '../../store/useStore'
+import { useAllSeasons, useTeams, useViewedSeason } from '../../store/useStore'
 import type { MatchFormat, Player, Team } from '../../types'
 import { oversText } from '../match/format'
 import { Sheet } from '../Sheet'
@@ -288,7 +288,8 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
   }, [inCareer, careerIndex, teams])
   const e = index.get(playerId)
   const fmt = useStatsFormat() // opened from inside a match: that match's format
-  const c = useMemo(() => (inCareer && season ? collect(season, fmt ? { format: fmt } : {}) : null), [inCareer, season, fmt])
+  const allSeasons = useAllSeasons()
+  const c = useMemo(() => (inCareer && season ? collectAll(allSeasons, fmt ? { format: fmt } : {}) : null), [inCareer, season, fmt, allSeasons])
   if (!e) return null
   const { player, team } = e
   const accent = accentOf(team)
@@ -323,7 +324,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
       </div>
       <div className="space-y-5 p-6">
         {inCareer && <section>
-          <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">This season{fmt ? ` · ${fmt === 'odi' ? 'ODI' : fmt === 't20' ? 'T20' : 'Test'} matches only` : ''}</h3>
+          <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-300">Career{fmt ? ` · ${fmt === 'odi' ? 'ODI' : fmt === 't20' ? 'T20' : 'Test'} matches only` : ''}</h3>
           {b || w || potm || tPlayed ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tPlayed !== undefined && stat('Matches', tPlayed)}{potm > 0 && stat('Man of the Match', potm)}</div>
@@ -340,7 +341,7 @@ function PlayerDialog({ season, playerId, z, onClose }: { season: Season | null;
                 </div>
               )}
             </div>
-          ) : <p className="text-sm text-slate-500">Hasn't played a match this season yet.</p>}
+          ) : <p className="text-sm text-slate-500">Hasn't played a match yet.</p>}
         </section>}
 
         <section className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">

@@ -22,7 +22,7 @@ import { ClickAvatar, PlayerCardProvider } from '../components/match/PlayerCard'
 import { overall } from '../data/builders'
 import { edgeOf } from '../engine/edges'
 import { setStatsFormat } from '../statsFormat'
-import { average, collect, duelBetween, economy, strikeRate as seasonSR } from '../season/stats'
+import { average, collectAll, duelBetween, economy, strikeRate as seasonSR } from '../season/stats'
 import { MatchSummary } from '../components/match/MatchSummary'
 import { useCoachGate } from '../components/season/CoachGate'
 import { ManualControls } from '../components/match/ManualControls'
@@ -95,7 +95,7 @@ import { hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, s
 import { ATTR_LABEL, sessionTeam } from '../season/progression'
 import { SquadProblemCard, squadProblem } from '../components/season/SquadProblem'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
-import { livePerks, matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMatch } from '../store/useStore'
+import { livePerks, matchKey, selectSeason, selectSession, useAllSeasons, useStore, useTeams, type LiveMatch } from '../store/useStore'
 import { Delta, PlayerAvatar, ROLE_LABEL, bowlLabel } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
@@ -343,8 +343,9 @@ function LiveMatch({ live }: { live: LiveMatch }) {
   const clearMoments = useCallback(() => { queue.current = []; startNextMoment() }, [startNextMoment])
 
   // First time a batsman faces or a bowler bowls in this match: a few seconds of who he is.
-  // (the figures on the introduction cards are this format's: a T20 shows T20 runs, wickets and averages)
-  const seasonStats = useMemo(() => (fixture && season ? collect(season, { format: match.format }) : null), [fixture, season, match.format])
+  // (the figures on the introduction cards are his career in this format: a T20 shows his T20 runs, wickets and averages over every season)
+  const allSeasons = useAllSeasons()
+  const seasonStats = useMemo(() => (fixture && season ? collectAll(allSeasons, { format: match.format }) : null), [fixture, season, match.format, allSeasons])
   useEffect(() => { setStatsFormat(match.format); return () => setStatsFormat(null) }, [match.format])
   const seen = useRef<Set<string> | null>(null)
   if (seen.current === null) {
@@ -386,14 +387,14 @@ function LiveMatch({ live }: { live: LiveMatch }) {
       let lines: string[]
       if (kind === 'batsman') {
         const s = seasonStats?.bat.get(id)
-        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `This season in ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'}: ${s.runs} runs in ${s.innings} innings` : fixture ? `No ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'} runs yet this season` : 'Ratings']
+        lines = [`${ROLE_LABEL[p.role]} · ${p.hand === 'L' ? 'Left' : 'Right'}-hand`, s ? `Career in ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'}: ${s.runs} runs in ${s.innings} innings` : fixture ? `No ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'} runs yet` : 'Ratings']
         tiles = s
           ? [t('Apps', s.batApps + 1), t('Runs', s.runs), t('Average', average(s) === null ? '-' : average(s)!.toFixed(1)), t('Best', `${s.high}${s.highNotOut ? '*' : ''}`), t('50s / 100s', `${s.fifties}/${s.hundreds}`), t('Strike rate', seasonSR(s) === null ? '-' : seasonSR(s)!.toFixed(0))]
           : [t('Technique', p.batting.technique), t('Power', p.batting.power), t('Temperament', p.batting.temperament), t('Running', p.batting.running)]
       } else {
         const s = seasonStats?.bowl.get(id)
         const w = p.bowling
-        lines = [`${bowlLabel(w?.type)} bowler`, s ? `This season in ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'}: ${s.wickets} wickets in ${s.matches} matches` : fixture ? `No ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'} wickets yet this season` : 'Ratings']
+        lines = [`${bowlLabel(w?.type)} bowler`, s ? `Career in ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'}: ${s.wickets} wickets in ${s.matches} matches` : fixture ? `No ${match.format === 'odi' ? 'ODI' : match.format === 'test' ? 'Test' : 'T20'} wickets yet` : 'Ratings']
         tiles = s
           ? [t('Apps', s.bowlApps + 1), t('Wickets', s.wickets), t('Economy', economy(s) === null ? '-' : economy(s)!.toFixed(2)), t('Best', `${s.bestW}/${s.bestR}`), t('Maidens', s.maidens), t('5-wicket hauls', s.fiveW)]
           : [t('Accuracy', w?.accuracy ?? 0), t('Variation', w?.variation ?? 0), t('Stamina', w?.stamina ?? 0)]

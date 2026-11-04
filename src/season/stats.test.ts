@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
 import { nextMatchDate, simDay } from './results'
-import { average, collect, mostValuable, seasonRecords, strikeRate, teamRecords, topBatsmen, topBowlers } from './stats'
+import { average, collect, collectAll, mostValuable, seasonRecords, strikeRate, teamRecords, topBatsmen, topBowlers } from './stats'
 import type { Season } from './types'
 
 const teams = new Map(BUILT_IN_TEAMS.map((t) => [t.id, t]))
@@ -132,5 +132,19 @@ describe('matches played versus batting and bowling appearances', () => {
     }
     // a keeper or specialist who neither batted nor bowled in a match still has the match counted
     expect([...c.played.entries()].some(([id, n]) => n > (c.bat.get(id)?.batApps ?? 0) && n > (c.bowl.get(id)?.bowlApps ?? 0)) || someoneDidNeither).toBe(true)
+  })
+})
+
+describe('lifetime stats', () => {
+  const second = playAll(generateSeason({ year: 2028, teams: BUILT_IN_TEAMS, seed: 12 }))
+  it('add up every season, player by player', () => {
+    const a = collect(done), b = collect(second), both = collectAll([done, second])
+    expect(both.matches).toBe(a.matches + b.matches)
+    const id = [...a.bat.keys()].find((x) => b.bat.has(x)) as string
+    expect(both.bat.get(id)?.runs).toBe((a.bat.get(id)?.runs ?? 0) + (b.bat.get(id)?.runs ?? 0))
+    expect(both.bat.get(id)?.high).toBe(Math.max(a.bat.get(id)?.high ?? 0, b.bat.get(id)?.high ?? 0))
+    const bw = [...a.bowl.keys()].find((x) => b.bowl.has(x)) as string
+    expect(both.bowl.get(bw)?.wickets).toBe((a.bowl.get(bw)?.wickets ?? 0) + (b.bowl.get(bw)?.wickets ?? 0))
+    expect(collectAll([done]).matches).toBe(a.matches)
   })
 })

@@ -9,7 +9,7 @@ import { paths } from '../routes'
 import { formatDate } from '../season/dates'
 import { oversText } from '../components/match/format'
 import {
-  average, bowlAverage, bowlStrikeRate, collect, economy, mostValuable, seasonRecords, strikeRate, teamRecords,
+  average, bowlAverage, bowlStrikeRate, collect, collectAll, economy, mostValuable, seasonRecords, strikeRate, teamRecords,
   type BatStat, type BowlStat, type Collected, type Scope,
 } from '../season/stats'
 import { useDetails } from '../components/season/Details'
@@ -18,7 +18,8 @@ import { overall } from '../data/builders'
 import type { Season } from '../season/types'
 import { coachBoard } from '../season/coaching'
 import { CoachSheet } from '../components/season/CoachSheet'
-import { useTeams, useViewedSeason } from '../store/useStore'
+import { Dropdown } from '../components/Dropdown'
+import { selectSession, useAllSeasons, useStore, useTeams, useViewedSeason } from '../store/useStore'
 import type { MatchFormat, Player, Team } from '../types'
 
 const TABS = [
@@ -233,8 +234,16 @@ function Ratings({ index }: { index: Map<string, PlayerEntry> }) {
 }
 
 export function StatsPage() {
-  const { season } = useViewedSeason()
+  const { season, years } = useViewedSeason()
+  const allSeasons = useAllSeasons()
+  const session = useStore(selectSession)
+  const setViewYear = useStore((s) => s.setViewYear)
   const [params, setParams] = useSearchParams()
+  // by default the figures are the whole career; a year can be picked to look at just that season
+  const lifetime = !params.has('y')
+  const yParam = Number(params.get('y'))
+  const currentYear = session?.season.year
+  useEffect(() => { setViewYear(lifetime || yParam === currentYear || !yParam ? null : yParam) }, [lifetime, yParam, currentYear, setViewYear])
   const index = usePlayerIndex()
   const teams = useTeamMap()
   const details = useDetails()
@@ -246,7 +255,7 @@ export function StatsPage() {
   // the caps on the portraits follow the format picked here (All adds every format together)
   useEffect(() => { setStatsFormat(format || null); return () => setStatsFormat(null) }, [format])
   const scope: Scope = useMemo(() => ({ competitionId: competitionId || undefined, format: format || undefined }), [competitionId, format])
-  const collected = useMemo(() => (season ? collect(season, scope) : null), [season, scope])
+  const collected = useMemo(() => (season ? (lifetime ? collectAll(allSeasons, scope) : collect(season, scope)) : null), [season, scope, lifetime, allSeasons])
   const records = useMemo(() => (season ? seasonRecords(season, scope) : []), [season, scope])
   const teamRows = useMemo(() => (season ? teamRecords(season, scope) : []), [season, scope])
 
@@ -263,13 +272,15 @@ export function StatsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-5xl tracking-wide">Stats <span className="text-slate-500">{season.year}</span></h1>
-      <p className="mb-5 text-sm text-slate-400">{collected.matches} matches counted{competitionId ? ` in ${season.competitions.find((c) => c.id === competitionId)?.name}` : ' across the whole season'}.</p>
+      <h1 className="font-display text-5xl tracking-wide">Stats <span className="text-slate-500">{lifetime ? 'Lifetime' : season.year}</span></h1>
+      <p className="mb-3 text-sm text-slate-400">{collected.matches} matches counted{competitionId ? ` in ${season.competitions.find((c) => c.id === competitionId)?.name}` : lifetime ? ' across your whole career' : ' across the whole season'}.</p>
+      {lifetime && (tab === 'teams' || tab === 'coaches' || tab === 'records') && <p className="mb-3 rounded-lg border border-line bg-panel px-3 py-2 text-xs text-slate-300">This tab is per season, so it shows {season.year}. Pick a year above to look at another.</p>}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="grid w-full grid-cols-3 gap-1 text-sm md:flex md:w-auto md:gap-0 md:overflow-hidden md:rounded-full md:border md:border-line">
           {TABS.map((t) => <button key={t.id} onClick={() => set('tab', t.id === 'batting' ? '' : t.id)} className={`rounded-xl px-4 py-2.5 transition md:rounded-none md:py-1.5 ${tab === t.id ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-300 hover:text-white md:bg-transparent md:text-slate-400'}`}>{t.label}</button>)}
         </div>
+        <div className="w-44"><Dropdown label="Which seasons" value={lifetime ? 'all' : String(yParam)} onChange={(v) => set('y', v === 'all' ? '' : v)} options={[{ value: 'all', label: 'Lifetime' }, ...[...years].reverse().map((y) => ({ value: String(y), label: y === currentYear ? `${y} (now)` : String(y) }))]} /></div>
         <select value={competitionId} onChange={(e) => set('scope', e.target.value)} className={sel}>
           <option value="">Whole season</option>
           {tournaments.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
