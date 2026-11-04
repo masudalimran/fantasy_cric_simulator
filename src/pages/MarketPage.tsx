@@ -13,7 +13,7 @@ import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { originOf } from '../data/origin'
 import { daysBetween, formatDate } from '../season/dates'
-import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
+import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, lockedUntil, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { feeOf, projectedBill, projectedIncome, retireYearOf } from '../season/careers'
 import { paths } from '../routes'
@@ -274,7 +274,7 @@ export function MarketPage() {
             {theirs.map(({ owner, p }) => {
               const price = askingFromTeam(season, index, owner, p.id)
               const t = teams.get(owner) ?? null
-              return row(p, { teamBadge: t, action: buyBtn(p, price, owner, (market.squads[owner]?.length ?? 0) <= SQUAD_FLOOR ? 'Not for sale' : undefined) })
+              return row(p, { teamBadge: t, action: buyBtn(p, price, owner, (market.squads[owner]?.length ?? 0) <= SQUAD_FLOOR ? 'Not for sale' : lockedUntil(season, p.id, today) ? 'Just signed' : undefined) })
             })}
           </div>
         </div>

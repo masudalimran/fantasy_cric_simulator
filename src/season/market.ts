@@ -183,6 +183,18 @@ export function refundOf(season: Season, base: Map<string, Player>, teamId: stri
 
 function remove<T>(arr: T[], x: T) { return arr.filter((y) => y !== x) }
 
+/** A player a team has just signed or bought cannot be bought from it, and no team offers for him, for this many days. */
+export const TRANSFER_LOCK_DAYS = 7
+
+/** The day he can be moved again, if he joined his team less than a week before `date` (null when he is free to move). */
+export function lockedUntil(season: Pick<Season, 'market'>, playerId: string, date: string): string | null {
+  let last: string | null = null
+  for (const t of season.market?.log ?? []) if (t.playerId === playerId && t.to && (t.kind === 'sign' || t.kind === 'buy') && (!last || t.date > last)) last = t.date
+  if (!last) return null
+  const free = addDays(last, TRANSFER_LOCK_DAYS)
+  return date < free ? free : null
+}
+
 /**
  * `teamId` signs `playerId` (an unsigned player or one from another team). If the squad is full, `dropId` leaves first.
  * `date` is the day it happens. The price is deducted from the buyer and, for a player from another team, paid to it.
@@ -198,6 +210,8 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
   const owner = Object.entries(m.squads).find(([, ids]) => ids.includes(playerId))?.[0] ?? null
   if (!unsigned && !owner) return deny(season, 'That player is not available.')
   if (owner && (m.squads[owner]?.length ?? 0) <= SQUAD_FLOOR) return deny(season, 'His team cannot sell: they are down to the minimum squad.')
+  const lock = owner ? lockedUntil(season, playerId, date) : null
+  if (lock) return deny(season, `${player.name} only just joined his team. He cannot be moved until ${lock}.`)
   const price = unsigned ? (m.asking[playerId] ?? marketValue(player)) : askingFromTeam(season, base, owner as string, playerId)
   const refund = dropId ? refundOf(season, base, teamId, dropId) : 0
   if ((m.budgets[teamId] ?? 0) + refund < price) return deny(season, `Not enough coins. He costs ${price} and you have ${m.budgets[teamId] ?? 0}.`)
@@ -286,7 +300,7 @@ export function cpuMarketDay(season: Season, base: Map<string, Player>, date: st
       for (const other of teamIds) {
         if (other === teamId || (m.squads[other]?.length ?? 0) <= SQUAD_FLOOR) continue
         const extras = (m.squads[other] ?? []).slice(11) // the bench, not the first XI
-        for (const id of extras) options.push({ id, price: askingFromTeam(cur, base, other, id), from: other })
+        for (const id of extras) if (!lockedUntil(cur, id, date)) options.push({ id, price: askingFromTeam(cur, base, other, id), from: other })
       }
     }
     let best: { id: string; price: number; gain: number } | null = null
@@ -329,7 +343,7 @@ function cpuOffers(season: Season, base: Map<string, Player>, date: string, rng:
     const weakest = [...squad].sort((a, b) => worth(b) - worth(a))[Math.min(squad.length - 1, 13)]
     const purse = m.budgets[teamId] ?? 0
     const wants = mine
-      .filter((p) => !offers.some((o) => o.playerId === p.id) && worth(p) - worth(weakest) > 3)
+      .filter((p) => !offers.some((o) => o.playerId === p.id) && !lockedUntil(season, p.id, date) && worth(p) - worth(weakest) > 3)
       .map((p) => ({ p, fee: Math.round(marketValue(p, recentForm(season, p.id), season.shifts?.[p.id]) * (1.25 + rng.next() * 0.35) * (top.has(p.id) ? 1.8 : 1)) }))
       .filter((w) => w.fee <= purse)
     if (!wants.length) continue
@@ -349,6 +363,7 @@ export function acceptOffer(season: Season, base: Map<string, Player>, offerId: 
   const mine = m.squads[me] ?? []
   const player = base.get(offer.playerId)
   if (!player || !mine.includes(offer.playerId)) return deny(season, 'He is no longer in your squad.')
+  if (lockedUntil(season, offer.playerId, date)) return deny(season, 'He only just joined you, so he cannot be moved yet.')
   if (mine.length <= SQUAD_FLOOR) return deny(season, `You need at least ${SQUAD_FLOOR} players.`)
   if ((m.budgets[offer.teamId] ?? 0) < offer.fee) return deny(season, 'They can no longer afford him.')
   const theirs = m.squads[offer.teamId] ?? []

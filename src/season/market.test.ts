@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { generateSeason } from './generate'
-import { refundOf, acceptOffer, advanceMarket, declineOffer, cpuMarketDay, developYouth, initMarket, marketValue, openWindow, playerIndex, POOL_SIZE, releasePlayer, rolloverMarket, signPlayer, SQUAD_CAP, SQUAD_FLOOR, teamOnDate } from './market'
+import { refundOf, acceptOffer, advanceMarket, declineOffer, cpuMarketDay, developYouth, initMarket, marketValue, openWindow, playerIndex, POOL_SIZE, releasePlayer, rolloverMarket, signPlayer, lockedUntil, SQUAD_CAP, SQUAD_FLOOR, teamOnDate } from './market'
 import { sessionTeam } from './progression'
 import type { Season } from './types'
 
@@ -141,5 +141,22 @@ describe('player market', () => {
     const m = initMarket(teams, 1)
     const shifts = developYouth({ ...m, squads: { ...m.squads, bleach: [...m.squads.bleach, ...m.pool.slice(0, 5)] } }, {}, playerIndex(teams, m), 9)
     expect(Object.keys(shifts).length).toBeGreaterThan(0)
+  })
+
+  it('a player a team has just signed cannot be bought from it, or offered for, for seven days', () => {
+    const s = open(mk(), '2030-01-02')
+    const id = s.market!.pool[0]
+    const rich = { ...s, market: { ...s.market!, budgets: { ...s.market!.budgets, bleach: 900, naruto: 900 } } }
+    const bought = signPlayer(rich, index(s), 'naruto', id, '2030-01-02')
+    expect(bought.error).toBeUndefined()
+    expect(lockedUntil(bought.season, id, '2030-01-04')).toBe('2030-01-09')
+    // another team cannot buy him from his new club within the week
+    const early = signPlayer(bought.season, index(s), 'bleach', id, '2030-01-04')
+    expect(early.error).toMatch(/cannot be moved until 2030-01-09/)
+    // after seven days he is free to move again
+    expect(lockedUntil(bought.season, id, '2030-01-09')).toBeNull()
+    expect(signPlayer({ ...bought.season, today: '2030-01-09' }, index(s), 'bleach', id, '2030-01-09').error).toBeUndefined()
+    // a player nobody has signed is not locked
+    expect(lockedUntil(s, s.market!.pool[1], '2030-01-02')).toBeNull()
   })
 })
