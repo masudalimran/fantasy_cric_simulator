@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { average, bowlAverage, collect, economy, mergeBat, mergeBowl, strikeRate } from '../../season/stats'
 import type { BatStat, BowlStat } from '../../season/stats'
 import type { Season } from '../../season/types'
@@ -13,7 +13,7 @@ const tile = (label: string, value: React.ReactNode) => (
 )
 
 /**
- * A player's overall numbers: this season so far, and (once there are finished seasons) the whole career.
+ * A player's overall numbers. It opens on the whole career; a row of small tabs under it switches to any one season (this one, or a finished year).
  * `seasons` is every season of the career, oldest first; the last one is the season being played.
  */
 export function OverallStats({ playerId, seasons, live, format }: { playerId: string; seasons: Season[]; live?: { bat?: BatStat; bowl?: BowlStat }; /** Count only this format's matches (all of them when left out). */ format?: MatchFormat }) {
@@ -23,13 +23,17 @@ export function OverallStats({ playerId, seasons, live, format }: { playerId: st
     // matches he was in the XI for (older saves only know about the ones where he batted or bowled)
     return { year: s.year, bat, bowl, potm: c.potm.get(playerId) ?? 0, played: c.played.get(playerId) ?? Math.max(bat?.matches ?? 0, bowl?.matches ?? 0) }
   }), [seasons, playerId, format])
+  const [view, setView] = useState<'career' | number>('career')
   if (lines.length === 0) return null
   const fmtName = format === 't20' ? 'T20' : format === 'odi' ? 'ODI' : format === 'test' ? 'Test' : ''
   // the match being played right now counts as it goes: being in the XI is a match, and his runs and wickets are added straight away
   const withLive = (bat: BatStat | undefined, bowl: BowlStat | undefined) => ({ bat: mergeBat([bat, live?.bat].filter((x): x is BatStat => !!x)), bowl: mergeBowl([bowl, live?.bowl].filter((x): x is BowlStat => !!x)) })
-  const cur = lines[lines.length - 1]
-  const current = { year: cur.year, ...withLive(cur.bat, cur.bowl), potm: cur.potm, played: cur.played + (live ? 1 : 0) }
   const career = { ...withLive(mergeBat(lines.flatMap((l) => (l.bat ? [l.bat] : []))), mergeBowl(lines.flatMap((l) => (l.bowl ? [l.bowl] : [])))), potm: lines.reduce((x, l) => x + l.potm, 0), played: lines.reduce((x, l) => x + l.played, 0) + (live ? 1 : 0) }
+  const lastYear = lines[lines.length - 1].year
+  const season = (year: number) => {
+    const l = lines.find((x) => x.year === year) ?? lines[lines.length - 1]
+    return year === lastYear ? { ...withLive(l.bat, l.bowl), potm: l.potm, played: l.played + (live ? 1 : 0) } : l
+  }
 
   const block = (title: string, l: { bat?: ReturnType<typeof mergeBat>; bowl?: ReturnType<typeof mergeBowl>; potm: number; played: number }) => (
     <div key={title}>
@@ -54,10 +58,16 @@ export function OverallStats({ playerId, seasons, live, format }: { playerId: st
     </div>
   )
 
+  const shown = view === 'career' ? career : season(view)
+  const title = view === 'career' ? `${fmtName ? `${fmtName} · ` : ''}Career${lines.length > 1 ? ` · ${lines.length} seasons` : ''}${live ? ', including this match so far' : ''}` : `${fmtName ? `${fmtName} · ` : ''}Season ${view}${view === lastYear && live ? ', including this match so far' : ''}`
+  const tab = (active: boolean) => `shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs font-extrabold tracking-wider ${active ? 'bg-sky-400 text-black' : 'bg-white/5 text-slate-300 hover:text-white'}`
   return (
     <div className="space-y-3">
-      {block(`${fmtName ? `${fmtName} · ` : ''}This season (${current.year})${live ? ', including this match so far' : ''}`, current)}
-      {seasons.length > 1 && block(`${fmtName ? `${fmtName} · ` : ''}Career · ${seasons.length} seasons`, career)}
+      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5" role="tablist" aria-label="Career or one season">
+        <button role="tab" aria-selected={view === 'career'} onClick={() => setView('career')} className={tab(view === 'career')}>CAREER</button>
+        {[...lines].reverse().map((l) => <button key={l.year} role="tab" aria-selected={view === l.year} onClick={() => setView(l.year)} className={tab(view === l.year)}>{l.year}{l.year === lastYear ? ' · NOW' : ''}</button>)}
+      </div>
+      {block(title, shown)}
     </div>
   )
 }

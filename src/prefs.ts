@@ -174,3 +174,17 @@ export function animLevelOf(p: AnimPrefs): AnimLevel | null {
 export function useAnimPrefs(): AnimPrefs {
   return useSyncExternalStore((cb) => { animListeners.add(cb); return () => { animListeners.delete(cb) } }, () => anim, () => ANIM_ALL)
 }
+
+// ---- Backups: when a copy of the saves was last downloaded ----------------------------------------------------
+const BACKUP_KEY = 'fcs.lastBackup'
+/** When the person last saved a backup file from this browser (milliseconds), or null if never. */
+export function lastBackupAt(): number | null {
+  try { const v = Number(localStorage.getItem(BACKUP_KEY)); return v > 0 ? v : null } catch { return null }
+}
+export function markBackedUp(at = Date.now()) {
+  try { localStorage.setItem(BACKUP_KEY, String(at)) } catch { /* just not remembered */ }
+}
+/** Time to remind? Only when there is something worth losing (a career with ten matches played) and no backup in the last 30 days. */
+export function backupDue(playedMatches: number, now = Date.now(), last = lastBackupAt()): boolean {
+  return playedMatches >= 10 && (last === null || now - last > 30 * 86_400_000)
+}

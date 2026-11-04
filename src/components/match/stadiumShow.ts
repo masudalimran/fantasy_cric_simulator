@@ -405,22 +405,28 @@ export const hostPos = (t: number): V3 => {
   const k = ease((t - 0.8) / 2.2)
   return lerp3({ x: -11, y: 0, z: -8.2 }, HOST_SPOT, k)
 }
-/** Whose turn at the microphone: his own first and last moment on the stage. */
+/**
+ * Whose turn at the microphone: his own first and last moment on the stage. A captain who is also the Man of the Match has two turns (his
+ * captain's interview, then, after walking back to the line, the prize money), so he must not be counted as only one of the two.
+ */
 export function turnsOf(show: StadiumShow, id: string): { start: number; end: number }[] {
   const c = show.ceremony
   if (!c) return []
   const B = CEREMONY_BEATS
-  const who = id === c.winCaptainId ? 'win' : id === c.loseCaptainId ? 'lose' : id === c.motmId ? 'motm' : null
-  if (!who) return []
-  // one at a time: he walks up just before his first word and walks back once he has said his last (the Man of the Match stays)
-  const lines = c.script.filter((l) => l.who === who)
-  if (lines.length > 0) {
-    const first = Math.min(...lines.map((l) => l.at)), last = Math.max(...lines.map((l) => l.end))
-    return [{ start: Math.max(0.5, first - WALK - 0.2), end: who === 'motm' ? Infinity : last + 0.7 }]
+  const roles = (['win', 'lose', 'motm'] as const).filter((r) => id === (r === 'win' ? c.winCaptainId : r === 'lose' ? c.loseCaptainId : c.motmId))
+  const turns: { start: number; end: number }[] = []
+  for (const who of roles) {
+    // one at a time: he walks up just before his first word and walks back once he has said his last (the Man of the Match stays)
+    const lines = c.script.filter((l) => l.who === who)
+    if (lines.length > 0) {
+      const first = Math.min(...lines.map((l) => l.at)), last = Math.max(...lines.map((l) => l.end))
+      // (the Man of the Match is up on the stage when he is called, well before the prize money is handed over)
+      turns.push({ start: Math.max(0.5, who === 'motm' ? Math.min(first - WALK - 0.2, B.motm + 2.0) : first - WALK - 0.2), end: who === 'motm' ? Infinity : last + 0.7 })
+    } else if (who === 'win') turns.push({ start: B.win - 0.4, end: B.lose - 0.4 - WALK - 0.2 })
+    else if (who === 'lose') turns.push({ start: B.lose - 0.4, end: B.motm - 1.0 - WALK - 0.2 })
+    else turns.push({ start: B.motm - 1.0, end: Infinity })
   }
-  if (who === 'win') return [{ start: B.win - 0.4, end: B.lose - 0.4 - WALK - 0.2 }]
-  if (who === 'lose') return [{ start: B.lose - 0.4, end: B.motm - 1.0 - WALK - 0.2 }]
-  return [{ start: B.motm - 1.0, end: Infinity }]
+  return turns.sort((x, y) => x.start - y.start)
 }
 /** One of the players `t` seconds in: running on to the line, standing there clapping, or up on the stage. */
 export function ceremonyPerson(show: StadiumShow, t: number, id: string, line: V3, side: 0 | 1, i: number): { pos: V3; arrived: boolean; onStage: boolean } {

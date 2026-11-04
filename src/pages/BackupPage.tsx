@@ -5,6 +5,7 @@ import {
   applyBackup, backupFileName, buildBackup, isEmpty, parseBackup, summarize, teamsOnly,
   type BackupData, type BackupSummary, type ImportMode, type ImportReport,
 } from '../data/backup'
+import { markBackedUp } from '../prefs'
 import { paths } from '../routes'
 import { useStore } from '../store/useStore'
 
@@ -57,6 +58,7 @@ export function BackupPage() {
     a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 2000)
     setDownloaded(a.download)
+    markBackedUp()
   }
 
   const readFile = async (file: File | undefined) => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BallEvent } from '../engine/types'
-import { cooledDown, HIGHLIGHT_COOLDOWN, markShown, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor } from './moments'
+import { cooledDown, HIGHLIGHT_COOLDOWN, markShown, partnershipAt, partnershipMark, recentHighlight, runOutGap, trackFor, trackX } from './moments'
 import type { Season } from './types'
 
 const ev = (seq: number, o: Partial<BallEvent> & { runs: number; wk?: number }): BallEvent => ({
@@ -49,5 +49,28 @@ describe('highlight cooldown', () => {
     expect(cooledDown({ ...shown, results: season(20 + HIGHLIGHT_COOLDOWN - 1).results }).has('f3')).toBe(true)
     expect(cooledDown({ ...shown, results: season(20 + HIGHLIGHT_COOLDOWN).results }).has('f3')).toBe(false)
     expect(cooledDown(season(20)).size).toBe(0)
+  })
+})
+describe('ball tracking for an lbw', () => {
+  it('is one smooth curve that bends one way: the sideways position only ever moves in one direction from the hand to the stumps', () => {
+    for (let seq = 1; seq <= 400; seq++) {
+      for (const out of [true, false]) {
+        const t = trackFor(seq, out)
+        const xs = Array.from({ length: 41 }, (_, i) => trackX(t, i / 40))
+        const steps = xs.slice(1).map((x, i) => x - xs[i])
+        const up = steps.filter((d) => d > 1e-9).length, down = steps.filter((d) => d < -1e-9).length
+        expect(Math.min(up, down), `ball ${seq} out=${out} goes both ways`).toBe(0)
+        expect(trackX(t, 1)).toBeCloseTo(t.stumpsX, 9)
+      }
+    }
+  })
+  it('still agrees with the decision: given out means in line at the pad and hitting the stumps', () => {
+    for (let seq = 1; seq <= 400; seq++) {
+      const o = trackFor(seq, true)
+      expect(o.wickets.startsWith('Hitting')).toBe(true)
+      expect(o.impact).toBe('In line')
+      expect(Math.abs(o.stumpsX)).toBeLessThanOrEqual(0.18)
+      expect(trackFor(seq, false).wickets).not.toMatch(/^Hitting \(/)
+    }
   })
 })

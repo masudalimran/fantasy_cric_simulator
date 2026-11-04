@@ -6,6 +6,8 @@ import { needsFocus } from '../../season/coaching'
 import { seasonComplete } from '../../season/results'
 import { quickNudge } from '../../season/club'
 import { markSeen, useSeenSet } from '../../tips'
+import { backupDue } from '../../prefs'
+import { useLevel } from '../LevelBadge'
 import type { Season } from '../../season/types'
 
 interface Row { key: string; tone: string; icon: string; text: React.ReactNode; to?: string; onClick?: () => void; seen?: string }
@@ -16,6 +18,7 @@ const when = (n: number) => (n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} 
 export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => void }) {
   const mine = season.myTeamId
   const seenSet = useSeenSet()
+  const lv = useLevel()
   if (!mine) return null
   const rows: Row[] = []
   if (seasonComplete(season)) {
@@ -31,6 +34,11 @@ export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => 
   }
   const physios = physioOf(season, mine, season.today).length
   if (physios < PHYSIOS) rows.push({ key: 'physio', tone: '#fb7185', icon: '🩺', to: paths.sessionSquad, text: <>Pick your physios: <b className="text-white">{physios} of {PHYSIOS}</b> set</> })
+  if ((lv?.points ?? 0) > 0) rows.push({ key: 'perks', tone: '#a78bfa', icon: '🌳', to: paths.tree, text: <>You have <b className="text-white">{lv?.points} perk {lv?.points === 1 ? 'point' : 'points'}</b> to spend in the passive tree</> })
+  // your careers only live on this phone: remind now and then to save a copy
+  const played = Object.keys(season.results).length
+  const backupKey = `backupnudge:${Math.floor(Date.now() / (7 * 86_400_000))}`
+  if (backupDue(played) && !seenSet.has(backupKey)) rows.push({ key: 'backup', tone: '#38bdf8', icon: '💾', to: paths.backup, seen: backupKey, text: <>Your career lives only on this phone. <b className="text-white">Save a backup copy</b> so nothing is lost</> })
   // now and then, a reminder of something the club could do with idle coins (once a month, and not if you have already tried it all)
   const week = Math.floor(daysBetween('2000-01-01', season.today) / 7)
   const hint = quickNudge(season, week)

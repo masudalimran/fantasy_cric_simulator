@@ -29,6 +29,8 @@ import { HowToPlay } from './components/HowToPlay'
 import { openHelp } from './tips'
 import { ReviewPage } from './pages/ReviewPage'
 import { BackupPage } from './pages/BackupPage'
+import { NewsPage, PatchNotesPopup } from './components/PatchNotes'
+import { usePatchesRead, unreadPatches } from './patchSeen'
 import { StatsPage } from './pages/StatsPage'
 import { isMuted, setMuted, sfx } from './audio/sfx'
 import { setHideImages, useHideImages, useKeepAwake } from './prefs'
@@ -98,6 +100,17 @@ function BackupIcon() {
         <path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z" /><path d="M4 7v5c0 1.7 3.6 3 8 3m8-8v3" /><path d="M4 12v5c0 1.7 3.6 3 8 3m5-4v6m0 0 3-3m-3 3-3-3" />
       </svg>
       <span role="tooltip" className="pointer-events-none absolute right-0 top-full z-50 mt-2 whitespace-nowrap rounded-lg bg-black px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl ring-1 ring-white/20 transition-opacity group-focus-visible:opacity-100 group-hover:opacity-100">Backup & transfer</span>
+    </NavLink>
+  )
+}
+
+/** The newspaper icon: what changed in the game, with a green dot while there is something unread. */
+function NewsIcon() {
+  const unread = unreadPatches(usePatchesRead()).length > 0
+  return (
+    <NavLink to={paths.news} aria-label="News: what is new" title="What's new" className={({ isActive }) => `relative ml-2 grid h-9 w-9 place-items-center rounded-full border transition ${isActive ? 'border-emerald-400 bg-emerald-400/15 text-emerald-200' : 'border-line text-slate-300 hover:border-slate-500 hover:text-white'}`}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h11v16H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM16 9h4v9a2 2 0 0 1-2 2M8 8h5M8 12h5M8 16h3" /></svg>
+      {unread && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-ink" />}
     </NavLink>
   )
 }
@@ -227,6 +240,7 @@ export default function App() {
     <CoachGateProvider>
     <Glossary />
     <VoicePrompt />
+    <PatchNotesPopup />
     <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${mobile ? (showChrome ? '' : 'px-2.5') : 'pb-16'}`} style={mobile ? { paddingBottom: showChrome ? 'calc(var(--sab) + 84px)' : 'var(--sab)', paddingLeft: 'max(var(--sal), 1rem)', paddingRight: 'max(var(--sar), 1rem)' } : undefined}>
       {mobile && showChrome && <MobileHeader resuming={resuming} playTo={playTo} />}
       <header className="hidden items-center justify-between py-5 md:flex">
@@ -245,6 +259,7 @@ export default function App() {
             <PlayButton to={playTo} resuming={resuming} />
           </div>
           <HelpButton />
+          <NewsIcon />
           <ImageToggle />
           <SoundToggle />
           <BackupIcon />
@@ -285,6 +300,7 @@ export default function App() {
           <Route path="/stats" element={<Navigate to={paths.stats} replace />} />
           <Route path="/competitions/*" element={<Navigate to={paths.competitions} replace />} />
           <Route path="/backup" element={<BackupPage />} />
+          <Route path="/news" element={<NewsPage />} />
           <Route path="/match/:format/:pair/:seed" element={<MatchPage />} />
           <Route path="/crests" element={<CrestGallery />} />
           <Route path="*" element={<NotFound />} />

@@ -25,6 +25,14 @@ export const MAX_EXTENSIONS = 4
 
 const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
 
+/**
+ * The most coins a team can carry over into a new year: 8 times its wage bill. YOUR club may keep 14 times: the biggest Club building (the stadium's
+ * last level) costs about 9.5 times the bill, so with the old cap it could never be saved up for, however well you did. The computer keeps the old cap.
+ */
+export const CPU_PURSE_CAP = 8
+export const MY_PURSE_CAP = 14
+export const purseCap = (bill: number, mine: boolean): number => Math.max(200, bill * (mine ? MY_PURSE_CAP : CPU_PURSE_CAP))
+
 export interface Pending { playerId: string; /** The fee he asks for one more year. */ fee: number; /** Seasons already extended. */ years: number }
 export interface YearReport {
   year: number
@@ -256,7 +264,7 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
     const purse = market.budgets[teamId] ?? 0
     const upkeep = teamId === me ? upkeepOf(market.club, scaleOf(bill)) : []
     const upkeepTotal = upkeep.reduce((n, [, v]) => n + v, 0)
-    market.budgets[teamId] = Math.min(Math.max(200, bill * 8), purse + income - bill - upkeepTotal)
+    market.budgets[teamId] = Math.min(purseCap(bill, teamId === me), purse + income - bill - upkeepTotal)
     const mineBooks = teamId === me ? { wages: squad.filter((id) => !pending.some((p) => p.playerId === id)).map((id) => [id, (() => { const p = base.get(id); return p ? feeOf(market, p, shifts[id]) : 0 })()] as [string, number]), catchUp, uncapped: purse + income - bill - upkeepTotal, upkeep } : {}
     reports.set(teamId, { ...mineBooks, year: next, income, bill, before: purse, after: market.budgets[teamId], retired: retiredByTeam.get(teamId)?.filter((id) => allRetired.includes(id)) ?? [], released: [], signed: [] })
   }

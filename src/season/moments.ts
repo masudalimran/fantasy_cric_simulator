@@ -101,21 +101,43 @@ export function runOutGap(seq: number): { cm: number; text: string } {
   return { cm, text: cm < 10 ? `${cm} cm short: a whisker` : cm < 35 ? `${cm} cm short of the crease` : `${cm} cm short: well out` }
 }
 
-export interface Track { pitchX: number; impactX: number; stumpsX: number; pitching: string; impact: string; wickets: string; umpiresCall: boolean }
+export interface Track {
+  pitchX: number; impactX: number; stumpsX: number
+  /** Where the ball was across the pitch at the bowler's hand, and how far the one smooth curve from there to the stumps bulges sideways (swing, then turn, all the same way). */
+  handX: number; bend: number
+  pitching: string; impact: string; wickets: string; umpiresCall: boolean
+}
+
+/** Where the tracked ball is across the pitch, `u` of the way from the hand (0) to the stumps (1): one smooth curve that bends one way, never left and then right. */
+export const trackX = (k: Pick<Track, 'handX' | 'stumpsX' | 'bend'>, u: number): number => k.handX + (k.stumpsX - k.handX) * u + k.bend * 4 * u * (1 - u)
+/** How far down the way to the stumps the ball is when it pitches and when it hits the pad (the picture's 94 to 16 span). */
+export const TRACK_PITCH_U = 0.4615
+export const TRACK_IMPACT_U = 0.795
 
 /**
  * Where a ball tracked for an lbw appeal pitched, hit the pad and was heading. x is across the pitch in -1 (leg) to 1 (off), and the
  * stumps are +-0.18. `out` means the batsman was given out: the ball is then tracked as hitting (sometimes only just, an "umpire's call").
+ * The whole path is one smooth curve from the hand to the stumps, so where it pitched and where it hit the pad come from that curve rather than
+ * from separate guesses (which made the line zig-zag like a snake).
  */
 export function trackFor(seq: number, out: boolean): Track {
   const inLine = (x: number) => Math.abs(x) <= 0.18
-  const pitchX = out ? (hash(seq, 2) - 0.5) * 0.34 : (hash(seq, 2) - 0.5) * 1.1
-  const impactX = out ? (hash(seq, 3) - 0.5) * 0.3 : (hash(seq, 3) - 0.5) * 0.9
-  const stumpsX = out ? (hash(seq, 4) - 0.5) * 0.34 : (hash(seq, 4) > 0.5 ? 1 : -1) * (0.25 + hash(seq, 5) * 0.3)
+  const dir = hash(seq, 6) > 0.5 ? 1 : -1 // which way the ball moves across the pitch, the whole way
+  const sep = out ? 0.06 + hash(seq, 7) * 0.2 : 0.1 + hash(seq, 7) * 0.4
+  let stumpsX = out ? (hash(seq, 4) - 0.5) * 0.34 : (hash(seq, 4) > 0.5 ? 1 : -1) * (0.25 + hash(seq, 5) * 0.3)
+  const make = (s: number) => {
+    const handX = Math.max(-0.9, Math.min(0.9, s - dir * sep))
+    const bend = (s - handX) * 0.22 * hash(seq, 8) // it bows the same way the ball is travelling (a small bow, so it can never turn back)
+    return { handX, stumpsX: s, bend }
+  }
+  let k = make(stumpsX)
+  // a ball given out must be in line when it hits the pad: bring the finish in a little until the curve says so
+  for (let n = 0; out && n < 6 && Math.abs(trackX(k, TRACK_IMPACT_U)) > 0.165; n++) { stumpsX *= 0.8; k = make(stumpsX) }
+  const pitchX = trackX(k, TRACK_PITCH_U), impactX = trackX(k, TRACK_IMPACT_U)
   const edge = out && Math.abs(stumpsX) > 0.12
   const side = (x: number) => (inLine(x) ? 'In line' : x > 0 ? 'Outside off' : 'Outside leg')
   return {
-    pitchX, impactX, stumpsX,
+    pitchX, impactX, stumpsX, handX: k.handX, bend: k.bend,
     pitching: side(pitchX),
     impact: out ? (edge ? 'In line' : side(impactX)) : side(impactX),
     wickets: out ? (edge ? "Hitting (umpire's call)" : 'Hitting') : inLine(stumpsX) ? 'Hitting' : 'Missing',

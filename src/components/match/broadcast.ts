@@ -87,6 +87,8 @@ export const RUN_SECONDS = 0.95
 const NON_STRIKER_X = -3.2
 /** The batsman stands just behind his popping crease (which is 1.22 m in front of the stumps), so he is in front of the stumps, between them and the bowler. */
 export const BAT_END_Z = -0.95
+/** How far a batsman walks down the pitch to a ball he comes down the wicket to. */
+export const ADVANCE_M = 1.5
 const BOWL_END_Z = BOWL_Z + 0.7
 
 /**
@@ -266,6 +268,8 @@ export interface Plan {
   /** The bowler runs to take the catch off his own bowling; the batsman steps out of his crease to be stumped. */
   bowlerCatch: boolean
   stepOut: boolean
+  /** Metres the striker walks down the pitch to meet this ball (a down-the-wicket shot at a slower ball); 0 when he stays in his crease. Looks only. */
+  advance: number
   /** The appeal: when the bowler, the keeper and the close fielders turn and shout, and for how long (the camera goes to the umpire's face for it). */
   appealAt: { at: number; len: number } | null
   /** A lofted catch that was put down (it landed at the fielder's hands and spilled). */
@@ -376,10 +380,13 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
   const dv = deliveryOf(ev, opts.bowler, { overcast: opts.overcast })
   const lenZ = dv.pitchZ ?? 0
   const stanceX = leftHand ? -0.75 : 0.75
+  // a slower ball of a driveable length that goes for a boundary down the ground is often met by walking down the pitch to it (looks only: the same ball, the same result)
+  const aim = toWorld(endTop.x, endTop.y)
+  const advance = !w && !ev.extraType && ev.boundary > 0 && speed < 115 && lenZ <= -3.4 && lenZ >= -6.8 && aim.z < -12 && Math.abs(aim.x) < Math.abs(aim.z) * 0.6 && hash01(ev.seq * 7.7 + 0.3) < 0.7 ? ADVANCE_M : 0
   const toStumps = !!w && (w.kind === 'bowled' || w.kind === 'hit wicket')
   const lbwOut = !!w && w.kind === 'lbw'
   // an lbw is the ball striking the front pad, down at shin height, right in front of the batsman's legs (not out at the stumps behind him)
-  const meet: V3 = lbwOut ? { x: stanceX * 0.62, y: 0.38, z: BAT_END_Z - 0.2 } : { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : dv.height, z: toStumps || wide ? -0.45 : -1.25 }
+  const meet: V3 = lbwOut ? { x: stanceX * 0.62, y: 0.38, z: BAT_END_Z - 0.2 } : { x: wide ? lineX : toStumps ? lineX * 0.15 : ev.extraType === 'legbye' ? stanceX * 0.55 : lineX * 0.6, y: toStumps ? 0.5 : ev.extraType === 'legbye' ? 0.45 : beatenDot(ev) ? missHeight(ev) : dv.height, z: toStumps || wide ? -0.45 : -1.25 - advance }
   // a ball that bounces turns a little off the pitch (so it pitches a little to the other side of where it meets the bat) and one that swings bows in the air
   const turnM = dv.pitchZ === null ? 0 : Math.tan((dv.turn * Math.PI) / 180) * Math.abs(meet.z - dv.pitchZ)
   const swingM = Math.tan((dv.swing * Math.PI) / 180) * 14
@@ -616,7 +623,8 @@ export function planBall(ev: BallEvent, fielders: FielderIn[], endTop: { x: numb
     delivery: dv, bounceU, swingM, turnM,
     appealAt: appeal || w?.kind === 'stumped' ? { at: w?.kind === 'stumped' ? t3 + 0.1 : t2 + 0.3, len: 0.8 } : null, dropped,
     stump: w?.kind === 'stumped' ? { gap: stumpGap(ev.seq), breakAt: t3 + 0.34 } : null,
-    shot: classifyShot({ edge: !!edgeOf(ev), stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
+    advance,
+    shot: classifyShot({ advance: advance > 0, edge: !!edgeOf(ev), stepOut: w?.kind === 'stumped', swing, wide, runsBat: ev.runsBat, boundary: ev.boundary, air: kind === 'air', kind, side: (end.x - meet.x) * (leftHand ? -1 : 1), ahead: meet.z - end.z, length: lenZ, speed, seq: ev.seq }),
     signal, hurt, keeperDive, back, fourFx, chaserDive: chaseKind === 'close', chaseKind, fellShort, chaseTo, exitAt: rv || (runOut && opts.holdRunOut) ? null : wicketAt, reviewed: !!rv || (!!runOut && !!opts.holdRunOut), celebrateAt: milestone ? react?.at ?? null : null, react,
   }
 }
@@ -841,6 +849,14 @@ export function frameAt(plan: Plan, t: number, fielderAt: (i: number) => V3): Fr
     // stumped: he lunges out of his crease as the ball is bowled, swings and misses, and is left stranded, his back foot just beyond the popping crease by the number of centimetres the screen gives
     const outZ = -1.22 - 0.32 - (plan.stump?.gap ?? 15) / 100
     striker = { x: plan.stanceX, y: 0, z: lerp(BAT_END_Z, outZ, ease((t - (t2 - 0.8)) / 0.55)) }
+  }
+  // down the wicket: he walks out to the ball, meets it well in front of his crease, and drifts back (a run starts from wherever he is)
+  if (plan.advance > 0 && !plan.stepOut) {
+    const off = plan.advance * ease((t - (t2 - 0.9)) / 0.7) * (1 - ease((t - (t2 + 0.5)) / 0.9))
+    if (off > 0.001) {
+      if (runners) runners = { a: { ...runners.a, z: runners.a.z - off }, b: runners.b }
+      else striker = { x: plan.stanceX, y: 0, z: BAT_END_Z - off }
+    }
   }
   // the out batsman walks off once the wicket has fallen
   if (plan.exitAt !== null && plan.exitAt !== undefined && t > plan.exitAt + 0.3) {

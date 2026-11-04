@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { BUILT_IN_TEAMS } from '../data/teams'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { boostSummary } from './boost'
-import { yearEnd } from './careers'
+import { purseCap, yearEnd } from './careers'
+import { FACILITY_KEYS, MAX_LEVEL } from './club'
 import {
   academyPicks, boostPrice, buildStatue, buyBoost, campFor, campOdds, CAMP_ODDS, clubOf, goldenTicket, hireCoach, freeCoaches, levelOf, medicalBlock, nudgeFor, physioSlots,
   scaleOf, scoutOdds, scoutTrip, TICKET_ODDS, TICKET_PITY, trainingMult, upgradeFacility, upkeepOf, wildcardOffer, buildCost, campsAllowed,
@@ -172,5 +173,14 @@ describe('club', () => {
     const s = make()
     expect(nudgeFor(s, 10, 1, 3)).toBeNull()
     expect(nudgeFor(s, 5000, 1, 3)).not.toBeNull()
+  })
+})
+
+describe('the biggest building can be saved up for', () => {
+  it('every level of every building costs less than the most your club may carry into a year', () => {
+    const bill = 84
+    const cap = purseCap(bill, true)
+    for (const k of FACILITY_KEYS) for (let l = 0; l < MAX_LEVEL; l++) expect(buildCost(k, l, scaleOf(bill)), `${k} level ${l + 1}`).toBeLessThan(cap)
+    expect(purseCap(bill, false)).toBe(bill * 8) // the computer keeps the old cap
   })
 })

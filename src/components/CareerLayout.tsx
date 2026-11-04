@@ -10,7 +10,7 @@ import { quickNudge } from '../season/club'
 import { daysBetween } from '../season/dates'
 import { useBaseTeamMap, useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
-import { LevelPlate } from './LevelBadge'
+import { LevelPlate, LevelUpPopup, useLevel } from './LevelBadge'
 import { OfferBanner } from './season/OfferBanner'
 
 const COLOR = { easy: '#34d399', normal: '#38bdf8', hard: '#fbbf24', legend: '#fb7185' } as const
@@ -41,6 +41,7 @@ export function CareerLayout() {
     if (strip && on) strip.scrollTo({ left: Math.max(0, on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2), behavior: 'smooth' }) // the open tab is brought to the middle, fully visible
   }, [pathname, mobile])
   useEffect(() => { measure(); window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure) }, [measure, mobile, pathname])
+  const lvl = useLevel()
   const viewYear = useStore((s) => s.viewYear)
   const setViewYear = useStore((s) => s.setViewYear)
   const viewed = useViewedSeason()
@@ -64,6 +65,7 @@ export function CareerLayout() {
     [paths.stats, 'Stats'],
     ...(mine ? ([[paths.market, (season.market?.offers ?? []).some((o) => o.expires >= season.today) ? 'Market ●' : 'Market']] as [string, string][]) : []),
     ...(mine ? ([[paths.club, quickNudge(season, Math.floor(daysBetween('2000-01-01', season.today) / 7)) ? 'Club ●' : 'Club']] as [string, string][]) : []),
+    ...(mine ? ([[paths.tree, (lvl?.points ?? 0) > 0 ? 'Perks ●' : 'Perks']] as [string, string][]) : []),
     ...(mine ? ([[paths.sessionSquad, 'My squad'], [paths.review, 'Season review']] as [string, string][]) : []),
   ]
 
@@ -103,6 +105,7 @@ export function CareerLayout() {
           <button onClick={() => nudge(1)} disabled={!more.right} aria-label="More tabs" className="grid h-9 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-lg font-bold text-white transition active:bg-white/15 disabled:opacity-25">›</button>
         </div>
         <OfferBanner />
+        <LevelUpPopup />
         <Outlet />
       </div>
     )
@@ -148,6 +151,7 @@ export function CareerLayout() {
         </nav>
       </div>
       <OfferBanner />
+      <LevelUpPopup />
       <Outlet />
     </div>
   )

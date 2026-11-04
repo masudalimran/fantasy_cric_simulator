@@ -270,9 +270,21 @@ export function seasonRecords(season: Season, scope: Scope = {}): RecordEntry[] 
 export const playerRef = (index: Map<string, PlayerRef>, id: string | undefined) => (id ? index.get(id) : undefined)
 
 /** The same totals across several seasons (a career): every player's lines from each season are added up. */
+/** Finished seasons never change, so what was worked out for one (per scope) is kept: a long career does not redo old years on every screen update. */
+const PAST = new WeakMap<Season, Map<string, Collected>>()
+function collectCached(s: Season, scope: Scope, ownTeamOf?: (playerId: string) => string | undefined): Collected {
+  if (ownTeamOf) return collect(s, scope, ownTeamOf)
+  const key = `${scope.competitionId ?? ''}|${scope.format ?? ''}|${scope.teamId ?? ''}`
+  let per = PAST.get(s)
+  if (!per) { per = new Map(); PAST.set(s, per) }
+  let hit = per.get(key)
+  if (!hit) { hit = collect(s, scope); per.set(key, hit) }
+  return hit
+}
+
 export function collectAll(seasons: Season[], scope: Scope = {}, ownTeamOf?: (playerId: string) => string | undefined): Collected {
   if (seasons.length === 1) return collect(seasons[0], scope, ownTeamOf)
-  const parts = seasons.map((s) => collect(s, scope, ownTeamOf))
+  const parts = seasons.map((s, i) => (i < seasons.length - 1 ? collectCached(s, scope, ownTeamOf) : collect(s, scope, ownTeamOf)))
   const bat = new Map<string, BatStat>(), bowl = new Map<string, BowlStat>(), potm = new Map<string, number>(), played = new Map<string, number>()
   const ids = <T,>(pick: (c: Collected) => Map<string, T>) => new Set(parts.flatMap((c) => [...pick(c).keys()]))
   for (const id of ids((c) => c.bat)) { const m = mergeBat(parts.flatMap((c) => (c.bat.has(id) ? [c.bat.get(id) as BatStat] : []))); if (m) bat.set(id, m) }

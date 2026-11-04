@@ -16,6 +16,7 @@ import { openWindow, playerIndex, potentialOf, SQUAD_CAP } from '../season/marke
 import { applyShift } from '../season/progression'
 import { perkSum } from '../season/perkNums'
 import { paths } from '../routes'
+import { useLevel } from '../components/LevelBadge'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 import {
   BOWL_NAME, focusesFor, focusLabel, lessonsAllowed, lessonsFor, lessonOdds, PROGRAMME_DAYS, programmeCap, programmePrice, programmeSlots, ROLE_NAME, startProgramme, takeLesson, traitChance, traitsLeft, daysLeft,
@@ -26,6 +27,8 @@ import type { Season } from '../season/types'
 import type { Player } from '../types'
 
 const rate = (p: Player) => overall(p)
+/** How many specialist programmes are running today. */
+const live0 = (club: ReturnType<typeof clubOf>, today: string) => (club.programmes ?? []).filter((g) => g.to > today).length
 
 function Section({ icon, title, hint, children, open = false }: { icon: string; title: string; hint: string; children: React.ReactNode; open?: boolean }) {
   return (
@@ -60,6 +63,7 @@ export function ClubPage() {
   const teams = useTeamMap()
   const [note, setNote] = useState<{ text: string; good: boolean } | null>(null)
   const [campFor_, setCampFor] = useState<string>('')
+  const lv = useLevel()
   const market = season?.market
   const me = season?.myTeamId
   const index = useMemo(() => playerIndex(base, market), [base, market])
@@ -87,6 +91,15 @@ export function ClubPage() {
   const wild = wildcardOffer(season, index, score, rate)
   const nameOf = (id: string) => index.get(id)?.name ?? 'a youngster'
 
+  // what is worth doing right now, in one glance
+  const todo: { icon: string; text: string; to?: string }[] = []
+  if ((lv?.points ?? 0) > 0) todo.push({ icon: '🌳', text: `${lv?.points} perk ${lv?.points === 1 ? 'point' : 'points'} waiting in the passive tree`, to: paths.tree })
+  const cheapest = FACILITY_KEYS.map((k) => ({ k, lv: levelOf(club, k), cost: buildCost(k, levelOf(club, k), bScale) })).filter((x) => x.lv < MAX_LEVEL).sort((a, b) => a.cost - b.cost)[0]
+  if (cheapest && purse >= cheapest.cost) todo.push({ icon: '🏗️', text: `You can afford a ${FACILITIES[cheapest.k].name.toLowerCase()} upgrade (${cheapest.cost} coins)` })
+  if (bs.available > 0) todo.push({ icon: '⚡', text: `${bs.available} boost ${bs.available === 1 ? 'token' : 'tokens'} ready for a big match` })
+  if (camps < campsAllowed(club) && purse >= campPrice(camps, scale)) todo.push({ icon: '🏋️', text: 'A training camp place is free this year' })
+  if (live0(club, season.today) < programmeSlots(club) && purse >= programmePrice(squad[0] ?? ({} as Player), scale) && squad.length > 0) todo.push({ icon: '🎯', text: 'A specialist programme slot is free' })
+
   const run = (text: string, fn: (s: Season) => Result, after?: () => void) => {
     if (!window.confirm(text)) return
     const out = fn(season)
@@ -113,6 +126,24 @@ export function ClubPage() {
         <Link to={paths.market} className="mt-2 inline-block text-xs font-bold text-sky-300 underline-offset-2 hover:underline">Back to the player market ›</Link>
         <Link to={paths.tree} className="ml-4 mt-2 inline-block text-xs font-bold text-violet-300 underline-offset-2 hover:underline">Passive tree ›</Link>
       </header>
+
+      <section className="mb-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/5 px-3.5 py-3" aria-label="Worth doing now">
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-widest text-emerald-300">Worth doing now</div>
+        {todo.length === 0 ? <p className="text-xs text-slate-300">Nothing pressing. Save your coins, or play on and come back after a few wins.</p> : (
+          <ul className="space-y-1">
+            {todo.map((x) => <li key={x.text} className="flex items-center gap-2 text-sm text-slate-100"><span aria-hidden>{x.icon}</span><span className="min-w-0 flex-1">{x.text}</span>{x.to && <Link to={x.to} className="shrink-0 text-xs font-bold text-emerald-300">Go ›</Link>}</li>)}
+          </ul>
+        )}
+        <details className="mt-2 text-xs text-slate-300">
+          <summary className="cursor-pointer font-bold text-slate-200">How the Club works</summary>
+          <ul className="mt-1.5 list-disc space-y-1 pl-4 leading-snug">
+            <li><b className="text-white">Buildings</b> make training, healing, youth and match days better. They cost a little every year to run.</li>
+            <li><b className="text-white">Staff, boosts and development</b> are sure things: you pay, you get what it says.</li>
+            <li><b className="text-white">Luck and long shots</b> are gambles. Their odds are always shown, and bad luck gets a safety net.</li>
+            <li>Prices rise with your wage bill, so a bigger club pays more for everything.</li>
+          </ul>
+        </details>
+      </section>
 
       {note && <p role="status" className={`mb-3 rounded-xl border px-3 py-2 text-sm ${note.good ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-rose-400/40 bg-rose-500/10 text-rose-200'}`}>{note.text}</p>}
 

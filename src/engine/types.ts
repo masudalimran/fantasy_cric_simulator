@@ -93,6 +93,8 @@ export interface BallEvent {
   appeal?: { kind: 'lbw' | 'edge' | 'runout'; out: boolean }
   /** A challenge was made on this ball (see drs.ts): the wicket in `wicket` is the decision after it. */
   review?: import('./drs').Review
+  /** One of your passive-tree perks helped on this ball (a boundary by your batsman or a wicket by your bowler). Words only: it never changes a result. */
+  perk?: string
 }
 
 export interface BatterLine {

@@ -5,7 +5,7 @@ import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, handEdge, parRunsPerOver, REF,
 } from './model'
-import { perkAdd, withPerk, type MatchPerks } from './perks'
+import { perkAdd, perkRules, withPerk, type MatchPerks } from './perks'
 import type { Phase } from './types'
 import { BYE_FOUR, RUNOUT_CHECK, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
 import { pitchLean } from './pitchInfo'
@@ -73,6 +73,8 @@ export class Match {
   private bonus: [number, number] = [0, 0]
   /** Passive-tree perks of your side (nothing for the computer). */
   private perks: MatchPerks | undefined
+  /** Which of your perks counted on the ball being played (only to say so afterwards; nothing here changes a result). */
+  private ballPerks: { role: 'bat' | 'bowl'; name: string }[] = []
   /** A boost token multiplies every rating of a side (1 = none). */
   private boostMult: [number, number] = [1, 1]
   private blunder = 0
@@ -134,11 +136,12 @@ export class Match {
   private perkPlayer(p: Player, role: 'bat' | 'bowl', sideIdx: 0 | 1, s: { phase: Phase; bowlType: BowlType; pressure: boolean; ballsFaced: number; innIndex: number }): Player {
     if (!this.perks || sideIdx !== this.mySide) return p
     const side = this.sides[sideIdx]
-    const add = perkAdd(this.perks, {
+    const sit = {
       role, p, pos: side.xi.findIndex((x) => x.id === p.id), captainId: side.team.captainId, keeperId: this.keeper[sideIdx], xi: side.xi, phase: s.phase,
       inningsIndex: s.innIndex, limited: this.format !== 'test', bowlType: s.bowlType, pressure: s.pressure, ballsFaced: s.ballsFaced, pitchSpin: this.pitch.spin, pitchPace: this.pitch.pace,
-    })
-    return withPerk(p, add, role)
+    }
+    for (const r of perkRules(this.perks, sit)) if (r.name) this.ballPerks.push({ role, name: r.name })
+    return withPerk(p, perkAdd(this.perks, sit), role)
   }
 
   // ---- A Test's clock ----------------------------------------------------
@@ -455,6 +458,7 @@ export class Match {
           (this.blunder > 0 && battingSideIdx === this.cpuSide ? Math.max(-1.2, Math.min(2.2, this.rng.normal() * this.blunder * 0.9)) : 0)
         : typeof userIntent === 'number' ? userIntent : INTENT_VALUE[userIntent]
 
+    this.ballPerks = []
     const probs = ballProbs({
       shot: this.shotAim[battingSideIdx], delivery: this.deliveryAim[bowlingSideIdx],
       repeat: !!this.deliveryAim[bowlingSideIdx] && this.lastDelivery[bowlingSideIdx]?.line === this.deliveryAim[bowlingSideIdx]!.line && this.lastDelivery[bowlingSideIdx]?.length === this.deliveryAim[bowlingSideIdx]!.length,
@@ -587,6 +591,9 @@ export class Match {
       ...(review ? { review } : {}),
       ...(appeal ? { appeal } : {}),
     }
+    // your perk that helped, said out loud only when it showed: a boundary by your batsman, or a wicket by your bowler
+    const helped = (runsBat >= 4 && battingSideIdx === this.mySide ? this.ballPerks.find((x) => x.role === 'bat') : dismissal && dismissal.kind !== 'run out' && bowlingSideIdx === this.mySide ? this.ballPerks.find((x) => x.role === 'bowl') : undefined)
+    if (helped) ev.perk = helped.name
 
     if (runsBat === 6) ev.distance = sixDistance(ev.seq, striker.batting.power)
     if (dismissal) {

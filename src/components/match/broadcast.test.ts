@@ -384,4 +384,39 @@ describe('a run out, an appeal, a dropped catch and the phantom camera', () => {
     expect(seen).toBeGreaterThan(30)
     expect(viaKeeper).toBeGreaterThan(0)
   })
+
+  it('some batsmen walk down the pitch to a slower ball and meet it well in front of the crease; sweeps are seen too; none of it touches a result', () => {
+    let dtw = 0, sweeps = 0, balls = 0
+    for (let seed = 1; seed <= 40; seed++) {
+      const m = new Match({ teamA: BUILT_IN_TEAMS[3], teamB: BUILT_IN_TEAMS[11], format: 't20', seed })
+      m.playMatch()
+      for (const inn of m.innings) {
+        const bowlSide = m.sides[1 - inn.battingSide]
+        for (const ev of inn.log) {
+          const striker = m.player(ev.strikerId)
+          const plan0 = fieldPlan({ format: 't20', over: ev.over, maxOvers: 20, runs: ev.score.runs, legalBalls: ev.score.legalBalls, target: null, freeHit: false, bowlType: m.player(ev.bowlerId).bowling?.type ?? null, hand: striker.hand })
+          const fielders = placeFielders(bowlSide.xi, ev.bowlerId, plan0.spots)
+          const plan = planBall(ev, fielders.map((f) => ({ id: f.player.id, x: f.x, y: f.y, spot: f.spot })), endPoint(ev, fielders), striker.hand === 'L', 100)
+          balls++
+          if (plan.shot === 'sweep') sweeps++
+          if (plan.advance > 0) {
+            dtw++
+            expect(plan.shot).toBe('dtw')
+            expect(ev.boundary).toBeGreaterThan(0)
+            const rest = fielders.map((f) => fielderWorld(f.x, f.y, f.spot))
+            const at = (s: number) => frameAt(plan, s, (i) => rest[i]).striker
+            const t2 = plan.tRun + plan.tDeliver
+            const early = at(0.2), contact = at(t2), late = at(plan.total)
+            expect(early === null || Math.abs(early.z - -0.95) < 0.01).toBe(true) // still in his crease when the ball is let go
+            expect(contact!.z).toBeLessThan(-0.95 - plan.advance * 0.9) // out in front of it, towards the bowler, at the moment of the shot
+            expect(plan.meet.z).toBeLessThan(-0.95 - plan.advance) // and the ball is met out there too
+            expect(late === null || late.z > contact!.z).toBe(true) // and he drifts back
+          } else expect(plan.shot).not.toBe('dtw')
+        }
+      }
+    }
+    expect(dtw).toBeGreaterThan(3)
+    expect(sweeps).toBeGreaterThan(3)
+    expect(balls).toBeGreaterThan(1000)
+  })
 })

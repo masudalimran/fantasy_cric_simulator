@@ -22,6 +22,7 @@ export const paths = {
   careerTeam: (id: string) => `/career/team/${encodeURIComponent(id)}`,
   stats: '/career/stats',
   backup: '/backup',
+  news: '/news',
   market: '/career/market',
   club: '/career/club',
   tree: '/career/tree',

@@ -47,9 +47,10 @@ export function matchPerksFor(season: Season, xi: Player[], fixture?: Pick<Fixtu
   const rules: Rule[] = []
   let field = 0, review = 0
   for (const id of taken) {
-    const fx = NODE_BY_ID.get(id)?.fx
-    if (!fx) continue
-    if (fx.rules) rules.push(...fx.rules)
+    const node = NODE_BY_ID.get(id)
+    const fx = node?.fx
+    if (!fx || !node) continue
+    if (fx.rules) rules.push(...fx.rules.map((r) => ({ ...r, name: node.name })))
     field += fx.field ?? 0
     review += fx.review ?? 0
   }

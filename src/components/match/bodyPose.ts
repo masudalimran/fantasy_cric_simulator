@@ -157,16 +157,17 @@ export function solve(p: Pose, batLen = BAT_LEN): Skeleton {
 
 // ---- what kind of shot a ball got ------------------------------------------------------------------------------------------
 
-export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave' | 'hook' | 'upper' | 'glance' | 'slog' | 'paddle' | 'stepout'
+export type ShotStyle = 'defend' | 'drive' | 'straight' | 'cut' | 'pull' | 'flick' | 'sweep' | 'reverse' | 'ramp' | 'scoop' | 'loft' | 'beaten' | 'leave' | 'hook' | 'upper' | 'glance' | 'slog' | 'paddle' | 'stepout' | 'dtw'
 
 /**
  * Which shot the batsman plays, from where the ball went and how it was bowled. For show only: the same ball, the same result, whatever he is
  * drawn doing. `side` is how far the ball went to the leg side of the batsman (negative: the off side), `ahead` how far down the ground towards the
  * bowler (negative: behind the wicket).
  */
-export function classifyShot(c: { /** An edged ball (an inside or outside edge): he is playing at it with a push of the bat, not a full shot. */ edge?: boolean; /** He has come down the pitch and missed (a stumping). */ stepOut?: boolean; swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
+export function classifyShot(c: { /** He walked down the pitch to this ball (see `advance` in the plan): a big stride and a drive or a lofted hit. */ advance?: boolean; /** An edged ball (an inside or outside edge): he is playing at it with a push of the bat, not a full shot. */ edge?: boolean; /** He has come down the pitch and missed (a stumping). */ stepOut?: boolean; swing: boolean; wide: boolean; runsBat: number; boundary: 0 | 4 | 6; air: boolean; kind: string; side: number; ahead: number; length: number; speed: number; seq: number }): ShotStyle {
   if (c.wide) return 'leave'
   if (c.stepOut) return 'stepout'
+  if (c.advance && !c.edge) return 'dtw'
   if (c.edge) return 'defend'
   if (c.kind === 'stumps' || c.kind === 'pad' || (!c.swing && c.runsBat === 0)) return 'beaten'
   if (c.runsBat === 0 && c.kind === 'ground' && c.boundary === 0) return 'defend'
@@ -175,6 +176,7 @@ export function classifyShot(c: { /** An edged ball (an inside or outside edge):
   const full = c.length > -4.5
   const dist = Math.hypot(c.side, c.ahead)
   if (c.runsBat === 0 && dist < 12) return 'defend'
+  if (c.boundary === 6 && !short && c.speed < 110 && c.side > 4 && c.ahead > -3 && c.seq % 2 === 0) return 'sweep' // a slog sweep off a spinner
   if (c.boundary === 6) return short && c.side > 4 ? (c.seq % 2 === 0 ? 'hook' : 'pull') : c.side > 6 && !short && c.seq % 3 === 0 ? 'slog' : 'loft'
   const behind = c.ahead < -3
   if (behind) {
@@ -188,7 +190,7 @@ export function classifyShot(c: { /** An edged ball (an inside or outside edge):
     if (c.speed < 105 && c.side < -2 && c.seq % 3 === 0) return 'reverse'
     return c.side > 3 && short ? 'pull' : c.side > 3 ? 'flick' : 'cut'
   }
-  if (c.side > 4) return short ? (c.air && c.speed >= 125 && c.seq % 3 === 0 ? 'hook' : 'pull') : c.speed < 105 && !full && c.seq % 2 === 0 ? (c.ahead < 4 && c.seq % 4 === 0 ? 'paddle' : 'sweep') : c.air && c.seq % 3 === 0 ? 'slog' : 'flick'
+  if (c.side > 4) return short ? (c.air && c.speed >= 125 && c.seq % 3 === 0 ? 'hook' : 'pull') : c.speed < 112 && !full && c.seq % 3 !== 2 ? (c.ahead < 4 && c.seq % 4 === 0 ? 'paddle' : 'sweep') : c.air && c.seq % 3 === 0 ? 'slog' : 'flick'
   if (c.air && c.boundary === 4 && c.seq % 2 === 0) return 'loft'
   if (c.side < -9 && short) return 'cut'
   // down the ground: a straight drive, upright, otherwise a drive through the off side
@@ -284,6 +286,12 @@ const SHOTS: Record<ShotStyle, { b: Pose; c: Pose; f: Pose }> = {
     c: batPose({ x: 30, y: 92 }, -5, { x: 3, y: 18 }, -50, { x: 15, y: 117 }, { x: 43, y: 115 }, -4),
     f: batPose({ x: 31, y: 88 }, -16, { x: 14, y: -12 }, -170, { x: 22, y: 117 }, { x: 42, y: 110 }, -8),
   },
+  // down the wicket: a long stride out to the pitch of the ball, the bat swung through it, then a high finish
+  dtw: {
+    b: batPose({ x: 30, y: 95 }, 1, { x: -6, y: 12 }, 170, { x: 17, y: 117 }, { x: 43, y: 116 }),
+    c: batPose({ x: 26, y: 100 }, 12, { x: -14, y: 23 }, 34, { x: 8, y: 118 }, { x: 47, y: 115 }, 5),
+    f: batPose({ x: 29, y: 94 }, -4, { x: 7, y: -15 }, 214, { x: 10, y: 118 }, { x: 46, y: 112 }, -4),
+  },
   paddle: {
     b: batPose({ x: 30, y: 97 }, 3, { x: -4, y: 18 }, 40, { x: 16, y: 117 }, { x: 44, y: 115 }),
     c: batPose({ x: 31, y: 100 }, 8, { x: 4, y: 25 }, -40, { x: 13, y: 117 }, { x: 45, y: 116 }, 4),
@@ -369,7 +377,7 @@ export function batsmanPose(c: BatCtx): Pose {
   const base = SHOTS[c.style]
   const fl = c.flavor && c.flavor !== 'plain' ? FLAVORS[c.flavor] : null
   // the heritage mixes into the stance, the back-lift and the finish of a big shot; the contact stays the shot's own
-  const big = c.style === 'loft' || c.style === 'drive' || c.style === 'straight' || c.style === 'pull' || c.style === 'hook' || c.style === 'slog'
+  const big = c.style === 'loft' || c.style === 'dtw' || c.style === 'drive' || c.style === 'straight' || c.style === 'pull' || c.style === 'hook' || c.style === 'slog'
   const shot = fl ? { b: mixPose(base.b, fl.lift, 0.5), c: base.c, f: big ? mixPose(base.f, fl.finish, 0.6) : base.f } : base
   const lift = ease((c.t - (c.t1 - 0.5)) / Math.max(0.2, c.t2 - 0.25 - (c.t1 - 0.5)))
   let p = mixPose(fl ? fl.stance : STANCE, shot.b, lift)

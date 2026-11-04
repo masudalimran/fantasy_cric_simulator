@@ -9,6 +9,7 @@ import { formatDate } from '../season/dates'
 import { myNextFixture, seasonComplete } from '../season/results'
 import { paths } from '../routes'
 import { openHelp } from '../tips'
+import { unreadPatches, usePatchesRead } from '../patchSeen'
 import { selectSeason, selectSession, useStore } from '../store/useStore'
 
 interface Next { label: string; hint: string; to: string; gold?: boolean; mine?: boolean }
@@ -25,6 +26,7 @@ export function HomePage() {
   const live = useStore((s) => s.liveMatch)
   const teams = useTeamMap()
   const resuming = !!live && !live.finished
+  const unreadNews = unreadPatches(usePatchesRead()).length
   const nextMine = season ? myNextFixture(season) : null
   const me = season?.myTeamId ? teams.get(season.myTeamId) : undefined
   const home = nextMine?.homeId ? teams.get(nextMine.homeId) : undefined
@@ -69,6 +71,7 @@ export function HomePage() {
         {session && <Link to={paths.session()} className={tile}><span className="font-display text-2xl tracking-wide text-white">Calendar</span><span className="text-xs text-slate-400">All your matches</span></Link>}
         <Link to={paths.play} className={tile}><span className="font-display text-2xl tracking-wide text-white">Quick match</span><span className="text-xs text-slate-400">Any two teams, just for fun</span></Link>
         <Link to={paths.teams} className={tile}><span className="font-display text-2xl tracking-wide text-white">Teams</span><span className="text-xs text-slate-400">See all the heroes</span></Link>
+        <Link to={paths.news} className={`${tile} relative`}><span className="font-display text-2xl tracking-wide text-white">News</span><span className="text-xs text-slate-400">What has changed</span>{unreadNews > 0 && <span className="absolute right-3 top-3 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-black">NEW</span>}</Link>
         <button onClick={openHelp} className={tile}><span className="font-display text-2xl tracking-wide text-white">How to play</span><span className="text-xs text-slate-400">Six easy steps</span></button>
       </div>
       <AnimatePresence>{beforeOpen && <BeforeYoursSheet onClose={() => setBeforeOpen(false)} />}</AnimatePresence>

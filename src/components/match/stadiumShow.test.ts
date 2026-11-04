@@ -3,7 +3,7 @@ import { PLATFORM } from './setDraw'
 import { camWide, ROPE } from './broadcast'
 import { solve } from './bodyPose'
 import { slopePoint } from './crowdDraw'
-import { ceremonyScript } from './ceremonyScript'
+import { CEREMONY_BEATS, ceremonyScript } from './ceremonyScript'
 import { spaceAt, moonBall, moonLandAt, talkPerson, talkPose, TALK, dugoutPose, DRINKS, drinksPerson, drinkSpot, fanCut, handshakePos, shaking, physioPos, physioPose, batsmanDown, PHYSIO, presenterPose, presenterPos, PITCHREP, saluteBowler, staffPos, ceremonyLine, ceremonyPerson, hostPos, turnsOf, balconyPose, balconySpot, cameraAt, captainPos, cheerAngle, cheerleaders, coinAt, confettiAt, coverAt, crewPos, crowdAt, ENTRANCE, gatePos, MILESTONE, huddlePerson, huddleSpot, hugJoiners, hugPerson, hugSpot, landingBall, lineSpot, LINEUP, linePerson, photoFlashes, ringPt, screenAt, SHOW_SECONDS, sparksAt, startKey, towersAt, trophyPerson, trophySpot, walkerPos, walkoffPos, WALKOFF, type ShowKind, type StadiumShow } from './stadiumShow'
 
 const KINDS: ShowKind[] = ['cheer', 'stands', 'huddle', 'fireworks', 'social', 'entrance', 'trophy', 'board', 'studio', 'flyover', 'bowler', 'hug', 'walkoff', 'landing', 'lights', 'lineup', 'motm', 'review', 'rain', 'milestone', 'ceremony', 'physio', 'dugout', 'drinks', 'handshake', 'pitchreport', 'salute', 'fans', 'pitchmap', 'beehive', 'moonshot', 'talk']
@@ -250,6 +250,22 @@ describe('the stadium shows', () => {
       const w = turnsOf(s, 'a3')[0], l = turnsOf(s, 'b2')[0], m = turnsOf(s, 'a5')[0]
       expect(w.end, `seed ${seed}`).toBeLessThan(l.start)
       expect(l.end, `seed ${seed}`).toBeLessThan(m.start)
+    }
+  })
+  it('the ceremony: a captain who is also the Man of the Match goes up twice, and is on the stage for the prize money', () => {
+    for (const [who, other] of [['win', 'lose'], ['lose', 'win']] as const) {
+      for (let seed = 1; seed <= 20; seed++) {
+        const script = ceremonyScript({ host: 'Aiko', winTeam: 'A', loseTeam: 'B', winCaptain: 'Goku', loseCaptain: 'Ichigo', motm: who === 'win' ? 'Goku' : 'Ichigo', motmIsCaptain: true, result: 'won by 24 runs', margin: 'normal', winnersChased: false, motmDeed: '71 off 40 balls', motmWith: 'bat', prize: '5,000 coins', seed })
+        const ids = { win: 'a3', lose: 'b2' }
+        const s: StadiumShow = { ...show('ceremony', 4), ceremony: { script, winCaptainId: ids.win, loseCaptainId: ids.lose, motmId: ids[who], cheque: '5,000 COINS', title: 'Cup', hostName: 'Zoe' } }
+        const turns = turnsOf(s, ids[who])
+        expect(turns.length, `${who} seed ${seed}`).toBe(2)
+        expect(turns[0].end).toBeLessThan(turns[1].start) // he walks back to the line before he is called up again
+        expect(turns[1].end).toBe(Infinity) // and stays for the prize
+        const side = who === 'win' ? 0 : 1
+        expect(ceremonyPerson(s, CEREMONY_BEATS.cheque + 1, ids[who], ceremonyLine(side, 3), side, 3).onStage).toBe(true)
+        expect(turnsOf(s, ids[other]).length).toBe(1)
+      }
     }
   })
   it('the ceremony: the host walks on, the teams stand at the two sides, each speaker goes up to the microphone in his turn and the Man of the Match stays', () => {

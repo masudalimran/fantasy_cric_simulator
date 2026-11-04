@@ -6,6 +6,7 @@ import { useInstall } from '../hooks'
 import { setHideImages, setKeepAwake, useHideImages, useKeepAwake } from '../prefs'
 import { paths } from '../routes'
 import { openHelp } from '../tips'
+import { unreadPatches, usePatchesRead } from '../patchSeen'
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
@@ -37,6 +38,7 @@ export function MobileHeader({ resuming, playTo }: { resuming: boolean; playTo: 
 /** The tab bar along the bottom, like a native app: Teams, Career, a big Play button, More. */
 export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; playTo: string; onMore: () => void }) {
   const { pathname } = useLocation()
+  const unreadNews = unreadPatches(usePatchesRead()).length > 0
   const item = (active: boolean) => `flex flex-1 flex-col items-center justify-center gap-0.5 pt-1.5 text-[11px] font-bold tracking-wide transition ${active ? 'text-white' : 'text-slate-500'}`
   const playActive = pathname.startsWith('/play')
   return (
@@ -58,8 +60,9 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
         <NavLink to={paths.sessions} className={() => item(pathname.startsWith('/career'))}>
           <span className={pathname.startsWith('/career') ? 'text-indigo-300' : ''}>{Icon.career}</span>Career
         </NavLink>
-        <button onClick={onMore} className={item(pathname.startsWith('/backup'))} aria-label="More">
-          <span className={pathname.startsWith('/backup') ? 'text-indigo-300' : ''}>{Icon.more}</span>More
+        <button onClick={onMore} className={`relative ${item(pathname.startsWith('/backup') || pathname.startsWith('/news'))}`} aria-label={unreadNews ? 'More, there is news' : 'More'}>
+          <span className={pathname.startsWith('/backup') || pathname.startsWith('/news') ? 'text-indigo-300' : ''}>{Icon.more}</span>More
+          {unreadNews && <span className="absolute right-[28%] top-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-ink" />}
         </button>
       </div>
     </nav>
@@ -68,6 +71,7 @@ export function BottomNav({ resuming, playTo, onMore }: { resuming: boolean; pla
 
 /** A bottom sheet with the things that don't need a tab: backup, sound, images and installing the app. */
 export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const unreadNews = unreadPatches(usePatchesRead()).length
   const hideImages = useHideImages()
   const keepAwake = useKeepAwake()
   const [muted, setM] = useState(isMuted())
@@ -96,6 +100,12 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
                 <span className="flex-1"><span className="block font-semibold text-white">How to play</span><span className="block text-xs text-slate-400">Six easy steps</span></span>
                 <span className="text-slate-500">›</span>
               </button>
+              <Link to={paths.news} onClick={onClose} className={row}>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/15 text-emerald-300"><svg width="22" height="22" viewBox="0 0 24 24" {...stroke}><path d="M5 4h11v16H6a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM16 9h4v9a2 2 0 0 1-2 2M8 8h5M8 12h5M8 16h3" /></svg></span>
+                <span className="flex-1"><span className="block font-semibold text-white">News</span><span className="block text-xs text-slate-400">What has changed in the game</span></span>
+                {unreadNews > 0 && <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-black">NEW</span>}
+                <span className="text-slate-500">›</span>
+              </Link>
               <Link to={paths.backup} onClick={onClose} className={row}>
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-400/15 text-sky-300"><svg width="22" height="22" viewBox="0 0 24 24" {...stroke}><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z" /><path d="M4 7v5c0 1.7 3.6 3 8 3m8-8v3" /><path d="M4 12v5c0 1.7 3.6 3 8 3m5-4v6m0 0 3-3m-3 3-3-3" /></svg></span>
                 <span className="flex-1"><span className="block font-semibold text-white">Backup & transfer</span><span className="block text-xs text-slate-400">Save a copy, or move to another device</span></span>

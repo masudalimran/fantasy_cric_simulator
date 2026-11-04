@@ -29,7 +29,7 @@ export interface Cond {
   needsCaptain?: boolean
 }
 export type Adds = Partial<Record<'technique' | 'power' | 'temperament' | 'running' | 'accuracy' | 'variation' | 'stamina' | 'all', number>>
-export interface Rule { side: 'bat' | 'bowl'; who: BatWho | BowlWho; if?: Cond; add: Adds }
+export interface Rule { side: 'bat' | 'bowl'; who: BatWho | BowlWho; if?: Cond; add: Adds; /** The perk it came from (shown when it helps in a match). */ name?: string }
 
 export interface MatchPerks {
   rules: Rule[]
@@ -112,12 +112,16 @@ function condMatches(c: Cond | undefined, s: Sit, perks: MatchPerks): boolean {
   return true
 }
 
+/** The rules that count for this player on this ball. */
+export function perkRules(perks: MatchPerks | undefined, s: Sit): Rule[] {
+  if (!perks || perks.rules.length === 0) return []
+  return perks.rules.filter((r) => r.side === s.role && whoMatches(r, s, perks) && condMatches(r.if, s, perks))
+}
+
 /** The rating points your perks add to this player on this ball. */
 export function perkAdd(perks: MatchPerks | undefined, s: Sit): Adds {
-  if (!perks || perks.rules.length === 0) return {}
   const out: Adds = {}
-  for (const r of perks.rules) {
-    if (r.side !== s.role || !whoMatches(r, s, perks) || !condMatches(r.if, s, perks)) continue
+  for (const r of perkRules(perks, s)) {
     for (const [k, v] of Object.entries(r.add) as [keyof Adds, number][]) out[k] = (out[k] ?? 0) + v
   }
   return out

@@ -15,7 +15,7 @@ import { originOf } from '../data/origin'
 import { daysBetween, formatDate } from '../season/dates'
 import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, lockedUntil, myPrice, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
-import { feeOf, projectedBill, projectedIncome, retireYearOf } from '../season/careers'
+import { feeOf, projectedBill, projectedIncome, purseCap, retireYearOf } from '../season/careers'
 import { scaleOf, upkeepOf } from '../season/club'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
@@ -79,7 +79,7 @@ export function MarketPage() {
   const income = projectedIncome(season, outlook.total)
   // what the books should show at the turn of the year (the same sum the year end does, without titles and catch-up money)
   const clubUpkeep = upkeepOf(market.club, scaleOf(outlook.total)).reduce((n, [, v]) => n + v, 0)
-  const nextBudget = Math.min(Math.max(200, outlook.total * 8), purse + income.income - outlook.total - clubUpkeep)
+  const nextBudget = Math.min(purseCap(outlook.total, true), purse + income.income - outlook.total - clubUpkeep)
   const shown = (p: Player) => applyShift(p, season.shifts?.[p.id])
   const worth = (p: Player) => marketValue(p, recentForm(season, p.id), season.shifts?.[p.id])
 

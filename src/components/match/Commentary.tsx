@@ -56,6 +56,7 @@ export function Commentary({ match, tab, setTab, controls }: { match: Match; tab
                         fielder: ev.wicket?.fielderId ? match.player(ev.wicket.fielderId).name : undefined,
                       })}
                       {(ev.delivery || ev.shot) && <span className="mt-0.5 block text-[11px] font-normal text-amber-200/80">{[ev.delivery && `Bowled ${deliveryText(ev.delivery)}`, ev.shot && `played ${shotText(ev.shot)}`].filter(Boolean).join('; ')}.</span>}
+                      {ev.perk && <span className="ml-2 rounded bg-emerald-400/20 px-1.5 py-0.5 text-[11px] font-bold text-emerald-300" title="One of your passive-tree perks helped here">✨ {ev.perk}</span>}
                       {ev.tags.filter((t) => tagLabel[t] && t !== 'maiden').map((t) => <span key={t} className="ml-2 rounded bg-amber-400/25 px-1.5 py-0.5 text-[11px] font-bold text-amber-300">{tagLabel[t]}</span>)}
                     </span>
                   </div>

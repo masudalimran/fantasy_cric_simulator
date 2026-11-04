@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { sfx } from '../../audio/sfx'
-import type { Track } from '../../season/moments'
+import { trackX, type Track } from '../../season/moments'
 import type { Player, Team } from '../../types'
 import type { ReplayBase } from './ReplayFrame'
 import { RunOutCast } from './ReplayScreens'
@@ -43,15 +43,6 @@ const sx = (x: number, y: number) => 50 + x * halfWidth(y) * 1.5
 
 // ---- A smooth ball path --------------------------------------------------------------------------------------------------------
 
-/** A smooth curve through the knots (a cubic Hermite spline with finite-difference tangents), at a position t in 0 to (knots-1). */
-function spline(v: number[], t: number): number {
-  const n = v.length - 1
-  const i = Math.max(0, Math.min(n - 1, Math.floor(t)))
-  const u = t - i
-  const m = (k: number) => (k <= 0 ? v[1] - v[0] : k >= n ? v[n] - v[n - 1] : (v[k + 1] - v[k - 1]) / 2)
-  const [p0, p1, m0, m1] = [v[i], v[i + 1], m(i), m(i + 1)]
-  return (2 * u ** 3 - 3 * u ** 2 + 1) * p0 + (u ** 3 - 2 * u ** 2 + u) * m0 + (-2 * u ** 3 + 3 * u ** 2) * p1 + (u ** 3 - u ** 2) * m1
-}
 /** Seconds the ball takes from the hand to the pad. */
 const FLIGHT = 1.6
 const scaleAt = (y: number) => 4 + ((y - 14) / 78) * 6.5 // how many picture units a metre of height is, nearer the camera is bigger
@@ -62,12 +53,11 @@ function heightAt(y: number): number {
   const u = (32 - y) / 16
   return 0.5 + 0.3 * u - 0.25 * u * u
 }
-/** The ball as drawn at a place down the pitch: swinging across, and lifted off the ground by its height. */
-function ballAt(lat: number[], y: number) {
-  const t = ((94 - y) / 36) * (y >= 58 ? 1 : 0) + (y < 58 && y >= 32 ? 1 + (58 - y) / 26 : 0) + (y < 32 ? 2 + (32 - y) / 16 : 0)
-  return { x: sx(spline(lat, Math.min(3, t)), y), y: y - heightAt(y) * scaleAt(y) }
+/** The ball as drawn at a place down the pitch: following one smooth curve across the pitch, and lifted off the ground by its height. */
+function ballAt(track: Track, y: number) {
+  return { x: sx(trackX(track, (94 - y) / 78), y), y: y - heightAt(y) * scaleAt(y) }
 }
-const sample = (lat: number[], from: number, to: number, n: number) => Array.from({ length: n + 1 }, (_, i) => ballAt(lat, from + ((to - from) * i) / n))
+const sample = (track: Track, from: number, to: number, n: number) => Array.from({ length: n + 1 }, (_, i) => ballAt(track, from + ((to - from) * i) / n))
 const pathOf = (pts: { x: number; y: number }[]) => pts.map((q, i) => `${i ? 'L' : 'M'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`).join(' ')
 
 /**
@@ -77,10 +67,10 @@ const pathOf = (pts: { x: number; y: number }[]) => pts.map((q, i) => `${i ? 'L'
 export function BallTrackView({ track, out, rate = 1, compact = false, after = 0 }: { track: Track; out: boolean; rate?: number; /** Seconds to wait before it starts (while something else is on the screen). */ after?: number; /** Smaller, with the three findings in a column at the side (for the wicket replay, which has a card on top and a word underneath). */ compact?: boolean }) {
   const r = rate
   // where the ball swings to across the pitch at the hand, the bounce, the pad and the stumps; the curve between them is smooth
-  const lat = [Math.max(-0.9, Math.min(0.9, track.pitchX * 0.45 + (track.pitchX >= 0 ? 0.14 : -0.14))), track.pitchX, track.impactX, track.stumpsX]
-  const flightA = sample(lat, 94, 58, 22)
-  const flightB = sample(lat, 58, 32, 18)
-  const projected = sample(lat, 32, 16, 14)
+  // (one smooth curve from the hand to the stumps that bends a single way; the drop and the pad are two points on it)
+  const flightA = sample(track, 94, 58, 22)
+  const flightB = sample(track, 58, 32, 18)
+  const projected = sample(track, 32, 16, 14)
   const P = { x: sx(track.pitchX, 58), y: 58 }
   const I = flightB[flightB.length - 1]
   const S = projected[projected.length - 1]
