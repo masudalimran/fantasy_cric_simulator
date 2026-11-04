@@ -2,6 +2,7 @@ import { Rng } from '../engine/rng'
 import { addDays, daysBetween } from './dates'
 import { clubOf, type Result } from './club'
 import { levelOf } from './clubEffects'
+import { perkSum } from './perkNums'
 import { coachOf } from './coaching'
 import { applyShift, headroom } from './progression'
 import type { BowlType, Hand, Player, Role, Trait } from '../types'
@@ -30,6 +31,7 @@ export const LESSON_BASE: Record<LessonKind, number> = { hand: 80, bowl: 90, rol
 /** Lessons in a year: two, and one more per level of training ground. */
 export const lessonsAllowed = (club: ClubState | undefined): number => 2 + levelOf(club, 'training')
 export interface Outcome3 { name: string; odds: number; text: string }
+export const lessonOdds = (club: ClubState | undefined): Outcome3[] => (perkSum({ club }, 'lessonLuck') > 0 ? LESSON_ODDS.map((o, i) => ({ ...o, odds: [66, 28, 6][i] })) : LESSON_ODDS)
 export const LESSON_ODDS: Outcome3[] = [
   { name: 'Clean', odds: 60, text: 'He takes to it straight away.' },
   { name: 'Rough', odds: 30, text: 'A few weeks of struggle: small dips while he settles.' },
@@ -69,7 +71,7 @@ export function takeLesson(season: Season, base: Map<string, Player>, playerId: 
   if (done >= lessonsAllowed(club)) return deny(season, `Your coaches can give ${lessonsAllowed(club)} lessons a year. A better training ground allows more.`)
   if ((m.budgets[me] ?? 0) < lesson.price) return deny(season, `Not enough coins. It costs ${lesson.price} and you have ${m.budgets[me] ?? 0}.`)
   const rng = new Rng((season.seed ^ hashStr(`lesson:${playerId}:${season.year}:${season.today}:${lesson.label}`) ^ Math.imul(done + 1, 2654435761)) >>> 0)
-  const odds = LESSON_ODDS.map((o) => o.odds)
+  const odds = lessonOdds(club).map((o) => o.odds)
   let tier = rng.weighted(odds)
   if ((club.pityLesson ?? 0) >= 1 && tier === 2) tier = 1 // after a hard one, the next never goes that badly
   const eff = lessonEffects(p, lesson, tier)

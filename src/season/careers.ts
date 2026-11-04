@@ -4,6 +4,7 @@ import { Rng } from '../engine/rng'
 import type { Player } from '../types'
 import { applyShift, ATTRS } from './progression'
 import { FEE_SHARE, marketValue, potentialOf, SQUAD_FLOOR } from './market'
+import { perkSum } from './perkNums'
 import { academyPicks, ACADEMY_SHARE, scaleOf, upkeepOf } from './club'
 import type { AttrKey, MarketState, PlayerShift, Season } from './types'
 
@@ -160,7 +161,7 @@ function grow(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<str
 }
 
 /** Veterans in the last two seasons of a career slow down: every rating loses a point (two in the very last year). */
-function fade(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<string, Player>, year: number): Record<string, PlayerShift> {
+function fade(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<string, Player>, year: number, me?: string | null): Record<string, PlayerShift> {
   const out: Record<string, PlayerShift> = { ...shifts }
   for (const id of Object.values(m.squads).flat()) {
     const left = retireYearOf(m, id, year) - year
@@ -169,7 +170,8 @@ function fade(m: MarketState, shifts: Record<string, PlayerShift>, base: Map<str
     if (!p) continue
     const cur = out[id] ?? { bat: 0, bowl: 0 }
     const a = { ...(cur.a ?? {}) } as Record<string, number>
-    const drop = left <= 1 ? 2 : 1
+    const ease = me && m.squads[me]?.includes(id) ? perkSum(m, 'vetFade') : 0
+    const drop = Math.max(0, (left <= 1 ? 2 : 1) - ease)
     for (const k of ATTRS) a[k] = (a[k] ?? 0) - drop
     out[id] = { ...cur, a }
   }
@@ -217,7 +219,7 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
       market.fees![id] = nextFee(was, worth, d)
     }
   }
-  shifts = fade(market, shifts, base, next)
+  shifts = fade(market, shifts, base, next, me)
 
   // retirements
   const retiring = (id: string) => retireYearOf(market, id, next) <= next
@@ -235,7 +237,7 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
       for (const id of gone) {
         const p = base.get(id)
         const years = (market.retireAt?.[id] ?? 0) ? Math.max(0, (market.retireAt![id] ?? 0) - (retireYearOf({ ...market, retireAt: {} }, id, next))) : 0
-        if (p && years < MAX_EXTENSIONS) pending.push({ playerId: id, fee: Math.round(feeOf(market, p, shifts[id]) * EXTEND_RAISE), years })
+        if (p && years < MAX_EXTENSIONS) pending.push({ playerId: id, fee: Math.round(feeOf(market, p, shifts[id]) * EXTEND_RAISE * (1 + perkSum(market, 'extendCost'))), years })
         else { market.squads[teamId] = market.squads[teamId].filter((x) => x !== id); allRetired.push(id); forced.push(id) }
       }
     } else {
@@ -248,8 +250,9 @@ export function yearEnd({ season, base, titles, seed, catchUp, scoreOf }: YearEn
   const reports = new Map<string, YearReport>()
   for (const teamId of Object.keys(market.squads)) {
     const squad = market.squads[teamId]
-    const bill = squad.filter((id) => !pending.some((p) => p.playerId === id)).reduce((s, id) => { const p = base.get(id); return p ? s + feeOf(market, p, shifts[id]) : s }, 0)
-    const income = incomeOf(bill, (scoreOf ? scoreOf(teamId) : seasonScore(season, teamId)), titles[teamId] ?? 0) + (teamId === me ? catchUp : 0)
+    const bill0 = squad.filter((id) => !pending.some((p) => p.playerId === id)).reduce((s, id) => { const p = base.get(id); return p ? s + feeOf(market, p, shifts[id]) : s }, 0)
+    const bill = teamId === me ? Math.round(bill0 * (1 + perkSum(market, 'wages'))) : bill0
+    const income = Math.round(incomeOf(bill, (scoreOf ? scoreOf(teamId) : seasonScore(season, teamId)), titles[teamId] ?? 0) * (teamId === me ? 1 + perkSum(market, 'income') : 1)) + (teamId === me ? catchUp : 0)
     const purse = market.budgets[teamId] ?? 0
     const upkeep = teamId === me ? upkeepOf(market.club, scaleOf(bill)) : []
     const upkeepTotal = upkeep.reduce((n, [, v]) => n + v, 0)
@@ -448,9 +451,9 @@ export function projectedBill(season: Season, base: Map<string, Player>): { tota
     const worth = Math.max(1, Math.round(marketValue(p, 0, shift) * FEE_SHARE * Math.exp(d / 15)))
     const fee = nextFee(now, worth, d)
     const retiring = left <= 0
-    return { id, now, next: retiring ? Math.round(fee * EXTEND_RAISE) : fee, retiring }
+    return { id, now, next: retiring ? Math.round(fee * EXTEND_RAISE * (1 + perkSum(season, 'extendCost'))) : fee, retiring }
   })
-  return { total: rows.reduce((s, r) => s + r.next, 0), rows }
+  return { total: Math.round(rows.reduce((s, r) => s + r.next, 0) * (1 + perkSum(season, 'wages'))), rows }
 }
 
 /** How a team has played so far this season and what that would earn at the turn of the year (before any titles). */
@@ -458,5 +461,5 @@ export function projectedIncome(season: Season, bill: number): { score: number; 
   const me = season.myTeamId
   const score = me ? seasonScore(season, me) : 0.5
   const multiple = incomeMultiple(score)
-  return { score, multiple, income: Math.round(bill * multiple) }
+  return { score, multiple, income: Math.round(bill * multiple * (1 + perkSum(season, 'income'))) }
 }

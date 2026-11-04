@@ -95,7 +95,7 @@ import { hasEarlierUnplayed, mustPlayFirst, myNextFixture, playEarlierMatches, s
 import { ATTR_LABEL, sessionTeam } from '../season/progression'
 import { SquadProblemCard, squadProblem } from '../components/season/SquadProblem'
 import { cpuSelections, formTable, type NewsItem } from '../season/selection'
-import { matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMatch } from '../store/useStore'
+import { livePerks, matchKey, selectSeason, selectSession, useStore, useTeams, type LiveMatch } from '../store/useStore'
 import { Delta, PlayerAvatar, ROLE_LABEL, bowlLabel } from '../components/ui'
 import { TeamLogo } from '../components/season/Details'
 import { competitionName, matchHref, usePlayerIndex, useBaseTeamMap, useTeamMap } from '../components/season/shared'
@@ -142,7 +142,7 @@ function loadStops(): AutoStops {
 }
 
 function buildFromLive(live: LiveMatch): Match {
-  const m = new Match({ teamA: live.teamA, teamB: live.teamB, format: live.format, seed: live.seed, tossDecision: live.tossChoice, career: live.myTeamId ? { myTeamId: live.myTeamId, difficulty: live.difficulty ?? 'normal', boost: live.boost ? BOOST_MULT : undefined } : undefined })
+  const m = new Match({ teamA: live.teamA, teamB: live.teamB, format: live.format, seed: live.seed, tossDecision: live.tossChoice, career: live.myTeamId ? { myTeamId: live.myTeamId, difficulty: live.difficulty ?? 'normal', boost: live.boost ? BOOST_MULT + (livePerks(useStore.getState(), live)?.boostAdd ?? 0) : undefined, perks: livePerks(useStore.getState(), live) } : undefined })
   for (const a of live.actions) applyAction(m, a) // replays everything the player did, so we land exactly where they left off
   return m
 }

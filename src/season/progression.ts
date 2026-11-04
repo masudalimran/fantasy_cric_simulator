@@ -1,3 +1,4 @@
+import { perkSum } from './perkNums'
 import { Rng } from '../engine/rng'
 import { DIFFICULTIES } from '../engine/types'
 import { battingScore, bowlingScore, overall } from '../data/builders'
@@ -118,11 +119,11 @@ function pick(r: Rng, spread: [AttrKey, number][], not?: AttrKey): AttrKey {
 const add = (d: Delta, k: AttrKey, n: number) => { d[k] = (d[k] ?? 0) + n }
 const attrOf = (p: Player, k: AttrKey): number => (k === 'fielding' ? p.fielding : ((p.batting as unknown as Record<string, number>)[k] ?? (p.bowling as unknown as Record<string, number> | null)?.[k] ?? 0))
 /** One earned point on one rating: a loss is always 1, a gain is scaled by how much room the rating has to grow (a whole number, with the remainder decided by a seeded draw). */
-function addPoint(d: Delta, p: Player, k: AttrKey, sign: number, r: Rng) {
+function addPoint(d: Delta, p: Player, k: AttrKey, sign: number, r: Rng, extra = 1) {
   if (sign < 0) return add(d, k, -1)
   const v = attrOf(p, k)
   if (v >= 99) return
-  const f = headroom(v) * (inAcademy(p) ? ACADEMY_MATCH_BOOST : 1)
+  const f = headroom(v) * (inAcademy(p) ? ACADEMY_MATCH_BOOST * extra : 1)
   const n = Math.min(inAcademy(p) ? Math.max(1, ACADEMY_RATING_STOP - v) : Infinity, Math.floor(f) + (r.next() < f - Math.floor(f) ? 1 : 0))
   if (n > 0) add(d, k, n)
 }
@@ -135,7 +136,7 @@ function playerIndex(teams: Map<string, Team>): Map<string, Player> {
 }
 
 /** Changes for the players in one match, from the match's own batting and bowling lines. Players whose ratings don't move are left out. */
-export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<string, Team>, tilt?: Map<string, number>): Record<string, MatchDelta> {
+export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<string, Team>, tilt?: Map<string, number>, rookie?: (id: string) => number): Record<string, MatchDelta> {
   const byId = playerIndex(teams)
   const deltas = new Map<string, Delta>()
   const put = (id: string) => { let d = deltas.get(id); if (!d) deltas.set(id, (d = {})); return d }
@@ -155,8 +156,8 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
     const r = rngFor(raw.fixtureId, id)
     const g = rngFor(`${raw.fixtureId}|gain`, id)
     const first: AttrKey = runs === 0 && out && n < 0 ? 'temperament' : pick(r, BAT_SPREAD)
-    addPoint(d, p, first, Math.sign(n), g)
-    if (Math.abs(n) === 2) addPoint(d, p, pick(r, BAT_SPREAD, first), Math.sign(n), g)
+    addPoint(d, p, first, Math.sign(n), g, rookie?.(id) ?? 1)
+    if (Math.abs(n) === 2) addPoint(d, p, pick(r, BAT_SPREAD, first), Math.sign(n), g, rookie?.(id) ?? 1)
   }
 
   for (const [id, balls, runs, wickets, maidens] of raw.bowl) {
@@ -173,8 +174,8 @@ export function matchChanges(raw: RawSummary, format: MatchFormat, teams: Map<st
     const r = rngFor(raw.fixtureId, id)
     const g = rngFor(`${raw.fixtureId}|gain`, id)
     const first = pick(r, BOWL_SPREAD)
-    addPoint(d, p, first, Math.sign(n), g)
-    if (Math.abs(n) === 2) addPoint(d, p, pick(r, BOWL_SPREAD, first), Math.sign(n), g)
+    addPoint(d, p, first, Math.sign(n), g, rookie?.(id) ?? 1)
+    if (Math.abs(n) === 2) addPoint(d, p, pick(r, BOWL_SPREAD, first), Math.sign(n), g, rookie?.(id) ?? 1)
   }
 
   const out: Record<string, MatchDelta> = {}
@@ -202,7 +203,9 @@ function difficultyTilt(season: Pick<Season, 'myTeamId' | 'difficulty'>, fixture
 
 /** Records a match's rating changes in the season: they take effect from the next match on. */
 export function applyMatchChanges(season: Season, fixture: Fixture, raw: RawSummary, teams: Map<string, Team>): Season {
-  const delta = matchChanges(raw, fixture.format, teams, difficultyTilt(season, fixture, teams))
+  const mineIds = new Set(season.myTeamId ? season.market?.squads[season.myTeamId] ?? [] : [])
+  const rookieMult = 1 + perkSum(season, 'matchRookie')
+  const delta = matchChanges(raw, fixture.format, teams, difficultyTilt(season, fixture, teams), rookieMult !== 1 ? (id) => (mineIds.has(id) ? rookieMult : 1) : undefined)
   const ids = Object.keys(delta)
   if (!ids.length) return season
   const shifts: Record<string, PlayerShift> = { ...(season.shifts ?? {}) }

@@ -5,6 +5,7 @@ import { applyShift } from './progression'
 import { marketValue, openWindow, signPlayer, SQUAD_CAP, SQUAD_FLOOR } from './market'
 import type { AttrKey, ClubState, Season } from './types'
 import { levelOf } from './clubEffects'
+import { perkSum } from './perkNums'
 export { levelOf, trainingMult, medicalBlock, physioSlots } from './clubEffects'
 
 /**
@@ -52,7 +53,7 @@ export function upkeepOf(club: ClubState | undefined, scale: number): [string, n
 }
 export const coachWage = (skill: number, scale: number): number => Math.max(1, Math.round((skill / 8) * scale))
 export const coachFee = (skill: number, scale: number): number => money((skill * skill) / 70, scale)
-export const boostPrice = (bought: number, scale: number): number => money(45 * 1.6 ** bought, scale)
+export const boostPrice = (bought: number, scale: number, doubled = false): number => money(45 * 1.6 ** bought * (doubled ? 2 : 1), scale)
 export const BOOSTS_PER_YEAR = 4
 export const campPrice = (done: number, scale: number): number => money(22 * (1 + done * 0.4), scale)
 export const campsAllowed = (club: ClubState | undefined): number => 2 + levelOf(club, 'training')
@@ -86,6 +87,7 @@ export const isRich = (purse: number, scale: number): boolean => purse >= 100 * 
 export function upgradeFacility(season: Season, key: FacilityKey, scale: number): Result {
   const level = levelOf(clubOf(season), key)
   if (level >= MAX_LEVEL) return deny(season, `${FACILITIES[key].name} is already at the top level.`)
+  if (key === 'stadium' && perkSum(season, 'noStadium') > 0) return deny(season, 'Moneyball: you chose not to build a stadium.')
   const out = charge(season, buildCost(key, level, scale), (c) => ({ ...c, levels: { ...c.levels, [key]: level + 1 } }))
   return out.error ? out : { ...out, message: `${FACILITIES[key].name} is now level ${level + 1}.` }
 }
@@ -115,7 +117,7 @@ export function boostBought(club: ClubState | undefined, year: number): number {
 export function buyBoost(season: Season, scale: number): Result {
   const done = boostBought(clubOf(season), season.year)
   if (done >= BOOSTS_PER_YEAR) return deny(season, `You can only buy ${BOOSTS_PER_YEAR} boost tokens a year.`)
-  const out = charge(season, boostPrice(done, scale), (c) => ({ ...c, boosts: done + 1 }))
+  const out = charge(season, boostPrice(done, scale, perkSum(season, 'boostPrice') > 0), (c) => ({ ...c, boosts: done + 1 }))
   return out.error ? out : { ...out, message: 'Boost token bought.' }
 }
 
@@ -130,7 +132,11 @@ export const CAMP_ODDS: CampKind[] = [
 ]
 const struggling = (score: number) => score < 0.45
 /** The camp odds (a struggling team gets a better spread: fewer flops and more breakthroughs). */
-export const campOdds = (score: number): number[] => (struggling(score) ? [8, 42, 32, 18] : CAMP_ODDS.map((k) => k.odds))
+export const campOdds = (score: number, club?: ClubState): number[] => {
+  const o = struggling(score) ? [8, 42, 32, 18] : CAMP_ODDS.map((k) => k.odds)
+  const luck = Math.min(4, perkSum({ club }, 'campLuck') * 4) // a lucky club flops 4 points less and breaks through 4 points more
+  return luck ? [Math.max(0, o[0] - luck), o[1], o[2], o[3] + luck] : o
+}
 
 const BAT_ATTRS: AttrKey[] = ['technique', 'power', 'temperament', 'running']
 const BOWL_ATTRS: AttrKey[] = ['accuracy', 'variation', 'stamina']
@@ -150,7 +156,7 @@ export function campFor(season: Season, base: Map<string, Player>, playerId: str
   if (!p0) return deny(season, 'He is not in your squad.')
   const p = applyShift(p0, season.shifts?.[playerId])
   const rng = roller(season, `camp:${playerId}`, done + (club.pityCamp ?? 0) * 7)
-  let tier = rng.weighted(campOdds(score))
+  let tier = rng.weighted(campOdds(score, club))
   if ((club.pityCamp ?? 0) >= 2 && tier === 0) tier = 1 // two flops in a row: the third camp always teaches something
   const room = attrsOf(p).filter((a) => rateOf(p, a) > 0 && rateOf(p, a) < 97)
   if (room.length === 0) return deny(season, 'He cannot get any better.')
@@ -177,7 +183,7 @@ export function campFor(season: Season, base: Map<string, Player>, playerId: str
 export interface Tier { name: string; odds: number }
 /** The chance of each kind of talent a trip can find. A struggling team, the academy and a long run of ordinary finds all improve them. */
 export function scoutOdds(club: ClubState | undefined, score: number): Tier[] {
-  const prodigy = Math.min(40, 8 + (struggling(score) ? 8 : 0) + 2 * levelOf(club, 'academy') + 4 * (club?.pityScout ?? 0))
+  const prodigy = Math.min(45, 8 + (struggling(score) ? 8 : 0) + 2 * levelOf(club, 'academy') + 4 * (club?.pityScout ?? 0) + perkSum({ club }, 'scoutProdigy'))
   const rising = struggling(score) ? 34 : 30
   return [{ name: 'Raw talent', odds: 100 - prodigy - rising }, { name: 'Rising star', odds: rising }, { name: 'Prodigy', odds: prodigy }]
 }
@@ -289,7 +295,7 @@ export function buildStatue(season: Season, base: Map<string, Player>, playerId:
 
 /** Youth the academy sets aside at the turn of the year: the best prospects left in the reserve, one per academy level. */
 export function academyPicks(club: ClubState | undefined, reserve: string[], potentialOf: (id: string) => number): string[] {
-  const n = levelOf(club, 'academy')
+  const n = levelOf(club, 'academy') + (levelOf(club, 'academy') > 0 ? perkSum({ club }, 'academy') : 0)
   return n > 0 ? [...reserve].sort((a, b) => potentialOf(b) - potentialOf(a)).slice(0, n) : []
 }
 /** The academy sells its private prospects at this share of their price. */

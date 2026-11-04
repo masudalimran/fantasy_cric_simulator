@@ -4,6 +4,7 @@ import type { Player } from '../types'
 import { addDays } from './dates'
 import { ACADEMY_COACH_BOOST, applyShift, headroom, inAcademy } from './progression'
 import { trainingMult } from './clubEffects'
+import { perkSum } from './perkNums'
 import type { AttrKey, Coaching, PlayerShift, Season } from './types'
 
 /**
@@ -106,7 +107,7 @@ function trainTeam(season: Season, teamId: string, ids: string[], base: Map<stri
       const now = attr === 'fielding' ? p.fielding : (p.batting as unknown as Record<string, number>)[attr] ?? (p.bowling as unknown as Record<string, number> | null)?.[attr] ?? 0
       // the same curve as match gains: a low rating is easy to raise, one near the top is hard (and its yearly limit is lower too)
       const room = headroom(now)
-      const boost = inAcademy(p) ? ACADEMY_COACH_BOOST : 1 // the academy's players train four times as fast
+      const boost = inAcademy(p) ? ACADEMY_COACH_BOOST * (teamId === season.myTeamId ? 1 + perkSum(season, 'trainRookie') : 1) : 1 // the academy's players train four times as fast
       if (!now || now >= 97 || yearSoFar(pid, attr) >= Math.max(2, Math.min(8, Math.round(YEARLY_CAP * room))) * boost) continue
       const add = BASE * skill * room * weight * boost * (focus === 'fielding' ? 1.6 : 1)
       const have = (progress?.[pid]?.[attr] ?? 0) + add

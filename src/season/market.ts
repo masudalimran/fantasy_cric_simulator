@@ -5,6 +5,7 @@ import type { Difficulty } from '../engine/types'
 import type { Player, Team } from '../types'
 import { addDays, endOfYear } from './dates'
 import { applyShift } from './progression'
+import { perkSum } from './perkNums'
 import type { MarketState, MarketWindow, PlayerShift, Season, Transfer } from './types'
 
 /**
@@ -178,7 +179,7 @@ export function askingFromTeam(season: Season, base: Map<string, Player>, ownerI
 
 /** What you get back for releasing a player: 70% of what another team would ask for him. */
 export function refundOf(season: Season, base: Map<string, Player>, teamId: string, playerId: string): number {
-  return Math.max(0, Math.round(askingFromTeam(season, base, teamId, playerId) * RELEASE_SHARE))
+  return Math.max(0, Math.round(askingFromTeam(season, base, teamId, playerId) * (RELEASE_SHARE + (teamId === season.myTeamId ? perkSum(season, 'refund') : 0))))
 }
 
 function remove<T>(arr: T[], x: T) { return arr.filter((y) => y !== x) }
@@ -199,6 +200,12 @@ export function lockedUntil(season: Pick<Season, 'market'>, playerId: string, da
  * `teamId` signs `playerId` (an unsigned player or one from another team). If the squad is full, `dropId` leaves first.
  * `date` is the day it happens. The price is deducted from the buyer and, for a player from another team, paid to it.
  */
+/** What a signing costs YOU: a young talent in the unsigned pool is cheaper (or dearer) with passive-tree perks. Everyone else pays the plain price. */
+export function myPrice(season: Season, playerId: string, price: number): number {
+  const m = season.market
+  return m && m.pool.includes(playerId) && YOUTH_BY_ID.has(playerId) ? Math.max(1, Math.round(price * (1 + perkSum(season, 'youthCost')))) : price
+}
+
 export function signPlayer(season: Season, base: Map<string, Player>, teamId: string, playerId: string, date: string, dropId?: string, share = 1): Outcome {
   const m = season.market
   const player = base.get(playerId)
@@ -212,7 +219,7 @@ export function signPlayer(season: Season, base: Map<string, Player>, teamId: st
   if (owner && (m.squads[owner]?.length ?? 0) <= SQUAD_FLOOR) return deny(season, 'His team cannot sell: they are down to the minimum squad.')
   const lock = owner ? lockedUntil(season, playerId, date) : null
   if (lock) return deny(season, `${player.name} only just joined his team. He cannot be moved until ${lock}.`)
-  const price = Math.max(1, Math.round((unsigned ? (m.asking[playerId] ?? marketValue(player)) : askingFromTeam(season, base, owner as string, playerId)) * share))
+  const price = Math.max(1, Math.round((unsigned ? (teamId === season.myTeamId ? myPrice(season, playerId, m.asking[playerId] ?? marketValue(player)) : (m.asking[playerId] ?? marketValue(player))) : askingFromTeam(season, base, owner as string, playerId)) * share))
   const refund = dropId ? refundOf(season, base, teamId, dropId) : 0
   if ((m.budgets[teamId] ?? 0) + refund < price) return deny(season, `Not enough coins. He costs ${price} and you have ${m.budgets[teamId] ?? 0}.`)
   if (squad.length >= SQUAD_CAP && !dropId) return deny(season, `Your squad is full (${SQUAD_CAP}). Release someone first.`)

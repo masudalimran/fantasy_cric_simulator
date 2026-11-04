@@ -13,6 +13,9 @@ import { recordResult } from '../season/results'
 import { appendAction, type Action } from '../engine/replay'
 import type { Difficulty } from '../engine/types'
 import type { RawSummary, Season, SeasonReview } from '../season/types'
+import type { MatchPerks } from '../engine/perks'
+import { matchPerksFor } from '../season/matchPerks'
+import { perkSum } from '../season/perkNums'
 import { boostSummary, type BoostState } from '../season/boost'
 import type { MatchFormat, Team } from '../types'
 
@@ -61,8 +64,23 @@ export interface LiveMatch {
   startXI?: [string[], string[]]
   /** A boost token is in use for your side in this match (it is spent when the coin is flipped). */
   boost?: boolean
+  /** Your passive-tree perks as they were when the coin was flipped (so the match replays the same). */
+  perks?: MatchPerks
   actions: Action[]
   finished: boolean
+}
+
+/** Your perks for a live match: what was saved when the coin was flipped, or worked out now. */
+export function livePerks(st: Pick<State, 'sessions' | 'activeSessionId'>, live: LiveMatch): MatchPerks | undefined {
+  if (live.perks) return live.perks
+  if (!live.myTeamId) return undefined
+  const ses = st.sessions.find((x) => x.id === (live.sessionId ?? st.activeSessionId))
+  if (!ses) return undefined
+  const mine = live.teamA.id === live.myTeamId ? live.teamA : live.teamB.id === live.myTeamId ? live.teamB : null
+  if (!mine) return undefined
+  const fixture = live.fixtureId ? ses.season.fixtures.find((f) => f.id === live.fixtureId) : undefined
+  const p = matchPerksFor(ses.season, mine.players.slice(0, 11), fixture)
+  return p ? { ...p, boostAdd: perkSum(ses.season, 'boost') } : undefined
 }
 
 export const matchKey = (format: string, aId: string, bId: string, seed: number) => `${format}/${aId}-vs-${bId}/${seed}`
@@ -225,7 +243,7 @@ export const useStore = create<State>()(
           // the coin is flipped: a boost token in use is spent
           const spend = !!live.boost && !live.replay
           return {
-            liveMatch: { ...live, tossed: true },
+            liveMatch: { ...live, tossed: true, perks: livePerks(st, live) },
             sessions: spend ? st.sessions.map((x) => (x.id === (live.sessionId ?? st.activeSessionId) ? { ...x, boost: { ...x.boost, used: (x.boost?.used ?? 0) + 1, armed: false } } : x)) : st.sessions,
           }
         }),

@@ -144,6 +144,9 @@ export interface ClubState {
   /** A coach you hired (he costs a yearly wage). */
   coach?: string
   statues?: { id: string; name: string; year: number }[]
+  /** Passive-tree perks taken (ids from data/passiveTree.ts), and how many times they were reset. */
+  perks?: string[]
+  respecs?: number
   /** The year the wildcard was last used. */
   wildcard?: number
   /** Role / hand / bowling-type lessons taken this year. */

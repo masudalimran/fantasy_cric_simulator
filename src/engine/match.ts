@@ -5,6 +5,8 @@ import {
   BYE, DISMISSAL_KINDS, DOT, LEGBYE, WICKET,
   KNOBS, ballProbs, dismissalWeights, effectiveBat, effectiveBowl, handEdge, parRunsPerOver, REF,
 } from './model'
+import { perkAdd, withPerk, type MatchPerks } from './perks'
+import type { Phase } from './types'
 import { BYE_FOUR, RUNOUT_CHECK, REVIEWS_PER_INNINGS, WRONG_OUT, MISSED_OUT, CLOSE_CALL, wantsChallenge, type DrsCtx, type Review } from './drs'
 import { pitchLean } from './pitchInfo'
 import { Rng, randomSeed } from './rng'
@@ -26,7 +28,7 @@ export interface MatchOptions {
   /** What the toss winner chooses, when a person (not the computer) makes the call. The coin is unaffected. */
   tossDecision?: 'bat' | 'bowl'
   /** Career mode: this is the player's team, and this is how hard the computer plays against it. */
-  career?: { myTeamId: string | null; difficulty: Difficulty; /** A boost token is in use: every rating of your side is multiplied by this (see season/boost.ts). */ boost?: number }
+  career?: { myTeamId: string | null; difficulty: Difficulty; /** A boost token is in use: every rating of your side is multiplied by this (see season/boost.ts). */ boost?: number; /** Passive-tree perks for your side (see engine/perks.ts). */ perks?: MatchPerks }
 }
 
 interface Form { bat: number; bowl: number }
@@ -69,6 +71,8 @@ export class Match {
   /** True in career/session matches, where any side that isn't yours is run by the computer. */
   private careerOn = false
   private bonus: [number, number] = [0, 0]
+  /** Passive-tree perks of your side (nothing for the computer). */
+  private perks: MatchPerks | undefined
   /** A boost token multiplies every rating of a side (1 = none). */
   private boostMult: [number, number] = [1, 1]
   private blunder = 0
@@ -116,6 +120,7 @@ export class Match {
       this.bonus[this.mySide] = d.help
       this.blunder = d.blunder
       if (opts.career.boost && opts.career.boost > 1) this.boostMult[this.mySide] = opts.career.boost
+      this.perks = opts.career.perks
     }
     this.toss = this.doToss(opts.toss, opts.tossDecision)
     const batsFirst = this.toss.decision === 'bat' ? this.toss.winnerSide : ((1 - this.toss.winnerSide) as 0 | 1)
@@ -123,6 +128,17 @@ export class Match {
     this.startInnings(0, batsFirst, null)
     this.pickBowler(this.current)
     if (this.clock) this.skipEmptyDays() // (a first day that is washed out completely)
+  }
+
+  /** The player as your perks make him on this ball (the computer's players, and everyone without perks, are returned as they are). */
+  private perkPlayer(p: Player, role: 'bat' | 'bowl', sideIdx: 0 | 1, s: { phase: Phase; bowlType: BowlType; pressure: boolean; ballsFaced: number; innIndex: number }): Player {
+    if (!this.perks || sideIdx !== this.mySide) return p
+    const side = this.sides[sideIdx]
+    const add = perkAdd(this.perks, {
+      role, p, pos: side.xi.findIndex((x) => x.id === p.id), captainId: side.team.captainId, keeperId: this.keeper[sideIdx], xi: side.xi, phase: s.phase,
+      inningsIndex: s.innIndex, limited: this.format !== 'test', bowlType: s.bowlType, pressure: s.pressure, ballsFaced: s.ballsFaced, pitchSpin: this.pitch.spin, pitchPace: this.pitch.pace,
+    })
+    return withPerk(p, add, role)
   }
 
   // ---- A Test's clock ----------------------------------------------------
@@ -445,9 +461,9 @@ export class Match {
       format, phase, intent, style: BOWL_STYLE_VALUE[this.bowlStyle[bowlingSideIdx] ?? 'normal'], pitch: this.pitch, inningsIndex: inn.index, freeHit: inn.freeHit,
       forfeit: this.forfeitSide === battingSideIdx ? 'bat' : this.forfeitSide === bowlingSideIdx ? 'bowl' : undefined,
       ballsFaced: strikerLine.balls,
-      fieldingAvg: (this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx]) * this.boostMult[bowlingSideIdx],
-      bat: effectiveBat(striker, { hand: handEdge(striker, bowler), phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx], mult: this.boostMult[battingSideIdx] }),
-      bowl: effectiveBowl(bowler, { phase, pitch: this.pitch, inningsIndex: this.clock ? (this.clock.day >= 3 ? 1 : 0) : (inn.index as 0 | 1), fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx], mult: this.boostMult[bowlingSideIdx] }),
+      fieldingAvg: (this.fieldingAvg[bowlingSideIdx] + this.bonus[bowlingSideIdx] + (bowlingSideIdx === this.mySide ? this.perks?.field ?? 0 : 0)) * this.boostMult[bowlingSideIdx],
+      bat: effectiveBat(this.perkPlayer(striker, 'bat', battingSideIdx, { phase, bowlType, pressure, ballsFaced: strikerLine.balls, innIndex: inn.index }), { hand: handEdge(striker, bowler), phase, bowlType, pressure, form: this.form.get(striker.id)?.bat ?? 0, bonus: this.bonus[battingSideIdx], mult: this.boostMult[battingSideIdx] }),
+      bowl: effectiveBowl(this.perkPlayer(bowler, 'bowl', bowlingSideIdx, { phase, bowlType, pressure, ballsFaced: strikerLine.balls, innIndex: inn.index }), { phase, pitch: this.pitch, inningsIndex: this.clock ? (this.clock.day >= 3 ? 1 : 0) : (inn.index as 0 | 1), fatigue, form: this.form.get(bowler.id)?.bowl ?? 0, bonus: this.bonus[bowlingSideIdx], mult: this.boostMult[bowlingSideIdx] }),
     })
 
     // ---- Roll the delivery
@@ -505,7 +521,7 @@ export class Match {
         appeal = { kind: dismissal.kind === 'lbw' ? 'lbw' : 'edge', out: true }
         const d = wantsChallenge(ctx('bat'), rr.next())
         if (d.yes && inn.reviews) {
-          const wrong = rr.chance(WRONG_OUT)
+          const wrong = rr.chance(WRONG_OUT + (battingSideIdx === this.mySide ? this.perks?.review ?? 0 : 0))
           const kind: Review['kind'] = dismissal.kind === 'lbw' ? 'lbw' : 'edge'
           if (!wrong) inn.reviews.bat--
           review = { by: 'bat', kind, originalOut: true, finalOut: !wrong, overturned: wrong, desperate: d.desperate, left: inn.reviews.bat, total: REVIEWS_PER_INNINGS[format] }
@@ -519,7 +535,7 @@ export class Match {
         appeal = { kind: edge ? 'edge' : 'lbw', out: false }
         const d = wantsChallenge(ctx('bowl'), rr.next())
         if (d.yes && inn.reviews) {
-          const out = rr.chance(MISSED_OUT)
+          const out = rr.chance(MISSED_OUT + (bowlingSideIdx === this.mySide ? this.perks?.review ?? 0 : 0))
           if (!out) inn.reviews.bowl--
           review = { by: 'bowl', kind: edge ? 'edge' : 'lbw', originalOut: false, finalOut: out, overturned: out, desperate: d.desperate, left: inn.reviews.bowl, total: REVIEWS_PER_INNINGS[format] }
           if (out) dismissal = { kind: edge ? 'caught' : 'lbw', bowlerId: bowler.id, fielderId: edge ? keeperId : null, playerId: striker.id }

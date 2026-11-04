@@ -13,7 +13,7 @@ import { overall } from '../data/builders'
 import { YOUTH_BY_ID } from '../data/youthPool'
 import { originOf } from '../data/origin'
 import { daysBetween, formatDate } from '../season/dates'
-import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, lockedUntil, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
+import { windowOfDate, acceptOffer, askingFromTeam, declineOffer, marketValue, nextWindow, openWindow, playerIndex, recentForm, refundOf, releasePlayer, signPlayer, lockedUntil, myPrice, SQUAD_CAP, SQUAD_FLOOR } from '../season/market'
 import { applyShift } from '../season/progression'
 import { feeOf, projectedBill, projectedIncome, retireYearOf } from '../season/careers'
 import { scaleOf, upkeepOf } from '../season/club'
@@ -299,7 +299,7 @@ export function MarketPage() {
       {view === 'unsigned' && (
         <div className="space-y-2">
           <p className="text-xs text-slate-400">Young players with no team. The stars show how far each could grow, and some will. Their price is what they are worth today.</p>
-          {pool.length === 0 ? <p className="rounded-2xl border border-dashed border-line p-8 text-center text-slate-400">Nobody unsigned matches. The other teams have been busy.</p> : pool.map((p) => row(p, { teamBadge: null, action: buyBtn(p, market.asking[p.id] ?? worth(p), null) }))}
+          {pool.length === 0 ? <p className="rounded-2xl border border-dashed border-line p-8 text-center text-slate-400">Nobody unsigned matches. The other teams have been busy.</p> : pool.map((p) => row(p, { teamBadge: null, action: buyBtn(p, myPrice(season, p.id, market.asking[p.id] ?? worth(p)), null) }))}
         </div>
       )}
 

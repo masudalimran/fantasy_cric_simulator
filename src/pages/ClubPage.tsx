@@ -14,10 +14,11 @@ import {
 } from '../season/club'
 import { openWindow, playerIndex, potentialOf, SQUAD_CAP } from '../season/market'
 import { applyShift } from '../season/progression'
+import { perkSum } from '../season/perkNums'
 import { paths } from '../routes'
 import { selectSeason, selectSession, useStore, useTeams } from '../store/useStore'
 import {
-  BOWL_NAME, focusesFor, focusLabel, lessonsAllowed, lessonsFor, LESSON_ODDS, PROGRAMME_DAYS, programmeCap, programmePrice, programmeSlots, ROLE_NAME, startProgramme, takeLesson, traitChance, traitsLeft, daysLeft,
+  BOWL_NAME, focusesFor, focusLabel, lessonsAllowed, lessonsFor, lessonOdds, PROGRAMME_DAYS, programmeCap, programmePrice, programmeSlots, ROLE_NAME, startProgramme, takeLesson, traitChance, traitsLeft, daysLeft,
   type Lesson,
 } from '../season/develop'
 import type { BowlType } from '../types'
@@ -69,6 +70,9 @@ export function ClubPage() {
   const bill = projectedBill(season, index).total
   const scale = scaleOf(bill)
   const score = seasonScore(season, me)
+  const bScale = scale * (1 + perkSum(season, 'build'))
+  const sScale = scale * (1 + perkSum(season, 'scoutCost'))
+  const dblBoost = perkSum(season, 'boostPrice') > 0
   const year = season.year
   const squad = (market.squads[me] ?? []).map((id) => index.get(id)).filter((p): p is Player => !!p).map((p) => applyShift(p, season.shifts?.[p.id])).sort((a, b) => rate(b) - rate(a))
   const myTeam = teams.get(me)
@@ -107,7 +111,7 @@ export function ClubPage() {
         </div>
         <p className="mt-2 text-xs leading-snug text-slate-300">Players are not the only thing coins buy. Build, train, scout and take a gamble. Prices grow with your wage bill, so a rich club pays more. {upkeepTotal > 0 && <>Running the club costs <b className="text-white">{upkeepTotal} coins</b> at the turn of the year.</>}</p>
         <Link to={paths.market} className="mt-2 inline-block text-xs font-bold text-sky-300 underline-offset-2 hover:underline">Back to the player market ›</Link>
-        <Link to={paths.tree} className="ml-4 mt-2 inline-block text-xs font-bold text-violet-300 underline-offset-2 hover:underline">Passive tree (prototype) ›</Link>
+        <Link to={paths.tree} className="ml-4 mt-2 inline-block text-xs font-bold text-violet-300 underline-offset-2 hover:underline">Passive tree ›</Link>
       </header>
 
       {note && <p role="status" className={`mb-3 rounded-xl border px-3 py-2 text-sm ${note.good ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-rose-400/40 bg-rose-500/10 text-rose-200'}`}>{note.text}</p>}
@@ -116,7 +120,7 @@ export function ClubPage() {
         {FACILITY_KEYS.map((k: FacilityKey) => {
           const f = FACILITIES[k]
           const lv = levelOf(club, k)
-          const cost = buildCost(k, lv, scale)
+          const cost = buildCost(k, lv, bScale)
           return (
             <div key={k} className="rounded-xl border border-line bg-black/20 p-2.5">
               <div className="flex items-center gap-2.5">
@@ -128,7 +132,7 @@ export function ClubPage() {
               </div>
               <div className="mt-1.5 flex items-center justify-between gap-2">
                 <span className="text-[11px] text-slate-400">{f.perLevel} · upkeep {Math.round(f.upkeep * scale)}/level a year</span>
-                <button disabled={lv >= MAX_LEVEL || purse < cost} className={btn} onClick={() => run(`Build ${f.name} level ${lv + 1} for ${cost} coins?`, (s) => upgradeFacility(s, k, scale))}>
+                <button disabled={lv >= MAX_LEVEL || purse < cost} className={btn} onClick={() => run(`Build ${f.name} level ${lv + 1} for ${cost} coins?`, (s) => upgradeFacility(s, k, bScale))}>
                   {lv >= MAX_LEVEL ? 'Maxed' : `Build · ${cost}`}
                 </button>
               </div>
@@ -161,8 +165,8 @@ export function ClubPage() {
             <p className="text-xs leading-snug text-slate-300">You also earn one for every 5 wins ({bs.toNext} to go). Buying is for the matches that matter. Each one bought this year costs more.</p>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] text-slate-400">Bought this year {bought}/{BOOSTS_PER_YEAR}</span>
-              <button disabled={bought >= BOOSTS_PER_YEAR || purse < boostPrice(bought, scale)} className={btn} onClick={() => run(`Buy a boost token for ${boostPrice(bought, scale)} coins?`, (s) => buyBoost(s, scale), giveBoost)}>
-                {bought >= BOOSTS_PER_YEAR ? 'Sold out' : `Buy · ${boostPrice(bought, scale)}`}
+              <button disabled={bought >= BOOSTS_PER_YEAR || purse < boostPrice(bought, scale, dblBoost)} className={btn} onClick={() => run(`Buy a boost token for ${boostPrice(bought, scale, dblBoost)} coins?`, (s) => buyBoost(s, scale), giveBoost)}>
+                {bought >= BOOSTS_PER_YEAR ? 'Sold out' : `Buy · ${boostPrice(bought, scale, dblBoost)}`}
               </button>
             </div>
           </>
@@ -173,7 +177,7 @@ export function ClubPage() {
         <div className="rounded-xl border border-line bg-black/20 p-2.5">
           <div className="text-sm font-bold text-white">🏋️ Training camp <span className="text-xs font-normal text-slate-400">· {camps}/{campsAllowed(club)} this year</span></div>
           <p className="text-xs leading-snug text-slate-400">Send one player to camp. He may gain a few rating points, or nothing. Two flops in a row and the next camp always teaches something.</p>
-          <Odds rows={campOdds(score).map((o, i) => ({ name: CAMP_ODDS[i].name, odds: o }))} />
+          <Odds rows={campOdds(score, club).map((o, i) => ({ name: CAMP_ODDS[i].name, odds: o }))} />
           <div className="mt-2 flex items-center gap-2">
             <Dropdown label="Who goes to camp" value={campFor_} onChange={setCampFor} placeholder="Pick a player…" options={squad.map((x) => ({ value: x.id, label: x.name, hint: String(overall(x)) }))} />
             <button disabled={!campFor_ || camps >= campsAllowed(club) || purse < campPrice(camps, scale)} className={btn} onClick={() => run(`Send ${nameOf(campFor_)} to camp for ${campPrice(camps, scale)} coins?`, (s) => campFor(s, index, campFor_, score, scale))}>Camp · {campPrice(camps, scale)}</button>
@@ -185,7 +189,7 @@ export function ClubPage() {
           <p className="text-xs leading-snug text-slate-400">The scouts bring back a young talent at half price that only you can sign this year.{score < 0.45 ? ' Your club is struggling, so the odds are kinder.' : ''} Ordinary finds in a row raise the chance of a prodigy.</p>
           <Odds rows={scoutOdds(club, score)} />
           <div className="mt-2 flex justify-end">
-            <button disabled={scouts >= SCOUTS_PER_YEAR || purse < scoutPrice(scouts, scale)} className={btn} onClick={() => run(`Send the scouts for ${scoutPrice(scouts, scale)} coins?`, (s) => scoutTrip(s, index, score, scale, (id) => potentialOf(index.get(id) as Player), nameOf))}>Scout · {scoutPrice(scouts, scale)}</button>
+            <button disabled={scouts >= SCOUTS_PER_YEAR || purse < scoutPrice(scouts, sScale)} className={btn} onClick={() => run(`Send the scouts for ${scoutPrice(scouts, sScale)} coins?`, (s) => scoutTrip(s, index, score, sScale, (id) => potentialOf(index.get(id) as Player), nameOf))}>Scout · {scoutPrice(scouts, sScale)}</button>
           </div>
         </div>
 
@@ -260,7 +264,7 @@ function Develop({ season, index, squad, scale, purse, run }: { season: Season; 
           <div className="rounded-xl border border-line bg-black/20 p-2.5">
             <div className="text-sm font-bold text-white">{p.name} <span className="text-xs font-normal text-slate-400">· {ROLE_NAME[p.role]}, {p.hand === 'R' ? 'right' : 'left'}-handed{p.bowling ? `, ${BOWL_NAME[p.bowling.type].toLowerCase()}` : ', does not bowl'}</span></div>
             <p className="mt-1 text-xs leading-snug text-slate-400">Lessons: how it goes is luck. A hard one makes his ratings dip for a while, and the next one will not go as badly.</p>
-            <Odds rows={LESSON_ODDS} />
+            <Odds rows={lessonOdds(club)} />
             <div className="mt-2 space-y-1.5">
               {lessonsFor(p, scale).map((l) => (
                 <div key={l.label} className="flex items-center gap-2">

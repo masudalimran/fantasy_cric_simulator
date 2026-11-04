@@ -6,6 +6,7 @@ import { computeAwards } from '../engine/awards'
 import { FORMATS } from '../engine/types'
 import type { Team } from '../types'
 import { coverInjured } from './injuries'
+import { matchPerksFor } from './matchPerks'
 import { applyMatchChanges, sessionTeam } from './progression'
 import { buildReel } from './reel'
 import { fastestFiftyOf } from './stories'
@@ -69,7 +70,9 @@ export function simulateFixture(season: Season, fixture: Fixture, teams: Map<str
   const seed = fixtureSeed(season, fixture.id)
   // the computer picks its own XI (form, injuries, batting order); your team plays as you set it
   const [h, a] = season.myTeamId ? cpuSelections(season, fixture, [home, away], season.myTeamId, formTable(season, teams)).map((x) => x.team) : [home, away]
-  const match = new MatchClass({ teamA: h, teamB: a, format: fixture.format, seed, career: { myTeamId: season.myTeamId ?? null, difficulty: season.difficulty ?? 'normal' } })
+  const mine = h.id === season.myTeamId ? h : a.id === season.myTeamId ? a : null
+  const perks = mine ? matchPerksFor(season, mine.players.slice(0, 11), fixture) : undefined
+  const match = new MatchClass({ teamA: h, teamB: a, format: fixture.format, seed, career: { myTeamId: season.myTeamId ?? null, difficulty: season.difficulty ?? 'normal', perks } })
   match.playMatch()
   return summarizeMatch(match, fixture, seed)
 }
