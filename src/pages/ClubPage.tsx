@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { overall } from '../data/builders'
 import { COACH_BY_ID } from '../data/coaches'
+import { Dropdown } from '../components/Dropdown'
 import { PlayerAvatar, RatingBadge } from '../components/ui'
 import { useTeamMap } from '../components/season/shared'
 import { boostSummary } from '../season/boost'
@@ -173,10 +174,7 @@ export function ClubPage() {
           <p className="text-xs leading-snug text-slate-400">Send one player to camp. He may gain a few rating points, or nothing. Two flops in a row and the next camp always teaches something.</p>
           <Odds rows={campOdds(score).map((o, i) => ({ name: CAMP_ODDS[i].name, odds: o }))} />
           <div className="mt-2 flex items-center gap-2">
-            <select value={campFor_} onChange={(e) => setCampFor(e.target.value)} className="min-w-0 flex-1 rounded-full border border-line bg-black/30 px-3 py-2 text-xs text-white" aria-label="Who goes to camp">
-              <option value="">Pick a player…</option>
-              {squad.map((p) => <option key={p.id} value={p.id}>{p.name} · {overall(p)}</option>)}
-            </select>
+            <Dropdown label="Who goes to camp" value={campFor_} onChange={setCampFor} placeholder="Pick a player…" options={squad.map((x) => ({ value: x.id, label: x.name, hint: String(overall(x)) }))} />
             <button disabled={!campFor_ || camps >= campsAllowed(club) || purse < campPrice(camps, scale)} className={btn} onClick={() => run(`Send ${nameOf(campFor_)} to camp for ${campPrice(camps, scale)} coins?`, (s) => campFor(s, index, campFor_, score, scale))}>Camp · {campPrice(camps, scale)}</button>
           </div>
         </div>
@@ -233,10 +231,7 @@ function StatuePicker({ squad, done, price, purse, onBuild }: { squad: Player[];
   const p = squad.find((x) => x.id === id)
   return (
     <div className="flex items-center gap-2">
-      <select value={id} onChange={(e) => setId(e.target.value)} className="min-w-0 flex-1 rounded-full border border-line bg-black/30 px-3 py-2 text-xs text-white" aria-label="Who gets a statue">
-        <option value="">Pick a player…</option>
-        {squad.filter((x) => !done.includes(x.id)).map((x) => <option key={x.id} value={x.id}>{x.name} · {overall(x)}</option>)}
-      </select>
+      <Dropdown label="Who gets a statue" value={id} onChange={setId} placeholder="Pick a player…" options={squad.filter((x) => !done.includes(x.id)).map((x) => ({ value: x.id, label: x.name, hint: String(overall(x)) }))} />
       <button disabled={!p || purse < price} className={btn} onClick={() => p && onBuild(p)}>Statue · {price}</button>
     </div>
   )
@@ -253,10 +248,7 @@ function Develop({ season, index, squad, scale, purse, run }: { season: Season; 
   return (
     <>
       <p className="text-xs leading-snug text-slate-300">Pick a player. <b className="text-white">Lessons</b> change his role, hand or bowling ({done}/{lessonsAllowed(club)} this year). <b className="text-white">Programmes</b> train one rating about 3× faster for {PROGRAMME_DAYS} days ({live.length}/{programmeSlots(club)} running).</p>
-      <select value={id} onChange={(e) => setId(e.target.value)} className="w-full rounded-full border border-line bg-black/30 px-3 py-2 text-xs text-white" aria-label="Pick a player to develop">
-        <option value="">Pick a player…</option>
-        {squad.map((x) => <option key={x.id} value={x.id}>{x.name} · {ROLE_NAME[x.role]} · {overall(x)}</option>)}
-      </select>
+      <Dropdown label="Pick a player to develop" value={id} onChange={setId} placeholder="Pick a player…" options={squad.map((x) => ({ value: x.id, label: x.name, hint: `${ROLE_NAME[x.role]} · ${overall(x)}` }))} />
       {live.length > 0 && (
         <ul className="space-y-1 text-xs text-slate-300">
           {live.map((g) => { const q = index.get(g.id); return <li key={g.id + g.attr} className="rounded-lg bg-black/20 px-2.5 py-1.5">🎯 <b className="text-white">{q?.name}</b>: {q ? focusLabel(q, g.attr).split(':')[0] : g.attr}, +{g.gained} so far (up to +{g.cap}), {daysLeft(g, season.today)} days left</li> })}
@@ -273,9 +265,7 @@ function Develop({ season, index, squad, scale, purse, run }: { season: Season; 
                 <div key={l.label} className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 text-xs text-slate-200">{l.label}</span>
                   {bowlNeeds(l) && (
-                    <select value={bowl} onChange={(e) => setBowl(e.target.value as BowlType)} className="rounded-full border border-line bg-black/30 px-2 py-1.5 text-[11px] text-white" aria-label="Kind of bowling">
-                      {(Object.keys(BOWL_NAME) as BowlType[]).map((b) => <option key={b} value={b}>{BOWL_NAME[b]}</option>)}
-                    </select>
+                    <div className="w-32"><Dropdown small label="Kind of bowling" value={bowl} onChange={(v) => setBowl(v as BowlType)} options={(Object.keys(BOWL_NAME) as BowlType[]).map((b) => ({ value: b, label: BOWL_NAME[b] }))} /></div>
                   )}
                   <button disabled={purse < l.price || done >= lessonsAllowed(club)} className={btn} onClick={() => run(`${p.name}: ${l.label.toLowerCase()} for ${l.price} coins?`, (s) => takeLesson(s, index, p.id, l, bowlNeeds(l) ? bowl : undefined))}>{l.price}</button>
                 </div>

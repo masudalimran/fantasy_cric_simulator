@@ -4,7 +4,7 @@ import { daysBetween } from '../../season/dates'
 import { PHYSIOS, physioOf } from '../../season/injuries'
 import { needsFocus } from '../../season/coaching'
 import { seasonComplete } from '../../season/results'
-import { nudgeFor, scaleOf } from '../../season/club'
+import { quickNudge } from '../../season/club'
 import { markSeen, useSeenSet } from '../../tips'
 import type { Season } from '../../season/types'
 
@@ -32,11 +32,9 @@ export function TodayCard({ season, onCoach }: { season: Season; onCoach: () => 
   const physios = physioOf(season, mine, season.today).length
   if (physios < PHYSIOS) rows.push({ key: 'physio', tone: '#fb7185', icon: '🩺', to: paths.sessionSquad, text: <>Pick your physios: <b className="text-white">{physios} of {PHYSIOS}</b> set</> })
   // now and then, a reminder of something the club could do with idle coins (once a month, and not if you have already tried it all)
-  const squadIds = season.market?.squads[mine] ?? []
-  const bill = squadIds.reduce((n, id) => n + (season.market?.fees?.[id] ?? 4), 0)
-  const month = Number(season.today.slice(5, 7))
-  const hint = nudgeFor(season, season.market?.budgets[mine] ?? 0, scaleOf(bill), month)
-  const hintKey = `clubnudge:${season.today.slice(0, 7)}`
+  const week = Math.floor(daysBetween('2000-01-01', season.today) / 7)
+  const hint = quickNudge(season, week)
+  const hintKey = `clubnudge:${week}`
   if (hint && !seenSet.has(hintKey)) rows.push({ key: 'club', tone: '#f59e0b', icon: hint.icon, to: paths.club, seen: hintKey, text: <>Your coins are sitting idle. <b className="text-white">{hint.text}</b></> })
   if (rows.length === 0) return null
   return (

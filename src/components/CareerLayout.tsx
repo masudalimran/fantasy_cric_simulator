@@ -6,6 +6,8 @@ import { DIFFICULTIES } from '../engine/types'
 import { selectSeason, selectSession, useStore, useViewedSeason } from '../store/useStore'
 import { gradePlayedMatches } from '../season/progression'
 import { cpuCoachingMissing } from '../season/coaching'
+import { quickNudge } from '../season/club'
+import { daysBetween } from '../season/dates'
 import { useBaseTeamMap, useTeamMap } from './season/shared'
 import { TeamCrest } from './ui'
 import { OfferBanner } from './season/OfferBanner'
@@ -59,7 +61,7 @@ export function CareerLayout() {
     [paths.competitions, 'Tournaments'],
     [paths.stats, 'Stats'],
     ...(mine ? ([[paths.market, (season.market?.offers ?? []).some((o) => o.expires >= season.today) ? 'Market ●' : 'Market']] as [string, string][]) : []),
-    ...(mine ? ([[paths.club, 'Club']] as [string, string][]) : []),
+    ...(mine ? ([[paths.club, quickNudge(season, Math.floor(daysBetween('2000-01-01', season.today) / 7)) ? 'Club ●' : 'Club']] as [string, string][]) : []),
     ...(mine ? ([[paths.sessionSquad, 'My squad'], [paths.review, 'Season review']] as [string, string][]) : []),
   ]
 

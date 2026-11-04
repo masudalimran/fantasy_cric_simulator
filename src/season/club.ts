@@ -79,7 +79,7 @@ function charge(season: Season, price: number, patch: (c: ClubState) => ClubStat
 }
 
 /** Is the money idle? True when the club has more coins than a few seasons of wages would need. */
-export const isRich = (purse: number, scale: number): boolean => purse >= 200 * scale
+export const isRich = (purse: number, scale: number): boolean => purse >= 100 * scale
 
 // ---- Facilities ---------------------------------------------------------------------------------------------------
 
@@ -299,6 +299,14 @@ export const ACADEMY_SHARE = 0.6
 
 export interface Nudge { key: string; icon: string; text: string }
 /** One thing the club could do that has not been tried, rotating by month so the same hint does not nag. The page that shows it decides when to. */
+/** The same reminder worked out from the season alone (a rough wage bill from the saved fees). `tick` changes weekly so the hint rotates. */
+export function quickNudge(season: Season, tick: number): Nudge | null {
+  const me = season.myTeamId
+  const m = season.market
+  if (!me || !m) return null
+  const bill = (m.squads[me] ?? []).reduce((n, id) => n + (m.fees?.[id] ?? 4), 0)
+  return nudgeFor(season, m.budgets[me] ?? 0, scaleOf(bill), tick)
+}
 export function nudgeFor(season: Season, purse: number, scale: number, month: number): Nudge | null {
   const club = clubOf(season)
   const unused: Nudge[] = []
@@ -306,6 +314,8 @@ export function nudgeFor(season: Season, purse: number, scale: number, month: nu
   if (!club.year || club.year < season.year) unused.push({ key: 'camp', icon: '🏋️', text: 'A training camp can lift one player a few points. Pick your best young player.' })
   if (!(club.scouts && club.year === season.year)) unused.push({ key: 'scout', icon: '🔭', text: 'Send the scouts out: they may find a prodigy at half price.' })
   if (boostBought(club, season.year) === 0) unused.push({ key: 'boost', icon: '⚡', text: 'A boost token makes the whole team 50% better for one match. Save one for a final.' })
+  if (!(club.programmes ?? []).length) unused.push({ key: 'develop', icon: '🎯', text: 'Make a favourite grow: a specialist programme trains one skill (slogging, keeping, swing, spin) much faster.' })
+  if (!(club.retrains ?? 0)) unused.push({ key: 'lesson', icon: '🔄', text: 'Teach a player a new trick: change his role, his hand or his kind of bowling.' })
   if (!(club.statues ?? []).length) unused.push({ key: 'statue', icon: '🗿', text: 'Build a statue of your best player for your trophy hall.' })
   if (unused.length === 0 || !isRich(purse, scale)) return null
   return unused[month % unused.length]
