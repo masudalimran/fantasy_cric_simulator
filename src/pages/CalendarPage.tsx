@@ -151,7 +151,7 @@ export function CalendarPage() {
         const club = t.kind === 'release' ? from : to
         if (!club) continue
         const squad = club.players.filter((p) => p.id !== player.id)
-        rows.push({ t, player, from, to, club, squad, rank: (t.to === season.myTeamId || t.from === season.myTeamId ? 1000 : 0) + overall(player) })
+        rows.push({ t, player, from, to, club, squad, wage: season.market?.fees?.[t.playerId], rank: (t.to === season.myTeamId || t.from === season.myTeamId ? 1000 : 0) + overall(player) })
       }
       rows.sort((a, b) => b.rank - a.rank)
       const shown = rows.slice(0, 12)
@@ -298,7 +298,7 @@ export function CalendarPage() {
 
       <AnimatePresence>
         {news?.kind === 'champion' && season && (() => { const c = campaignOf(season, news.comp, news.team.id); return <TournamentVictory key={`champ${news.keys[0]}`} info={{ team: news.team, runnerUp: c.runnerUpId ? teams.get(c.runnerUpId) ?? null : null, tournament: competitionName(news.comp, teams), resultText: c.resultText, played: c.played, won: c.won, players: [...news.team.players.slice(0, 11)].sort((a, b) => (b.id === news.team.captainId ? 1 : 0) - (a.id === news.team.captainId ? 1 : 0)), variant: variantOf(news.comp.id) }} onDone={() => news.keys.forEach(markSeen)} /> })()}
-        {news?.kind === 'transfers' && <TransferNews key="xfer" rows={news.rows} extra={news.extra} onClose={() => news.keys.forEach(markSeen)} />}
+        {news?.kind === 'transfers' && <TransferNews key="xfer" rows={news.rows} mine={season.myTeamId} extra={news.extra} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'injury' && <InjuryNews key="inj" rows={news.rows} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'playoff' && <PlayoffNews key={`po${news.keys[0]}`} status={news.status} team={news.team} competition={news.comp} onClose={() => news.keys.forEach(markSeen)} />}
         {news?.kind === 'coach' && <NewCoachScreen key="coach" coach={news.coach} team={news.team} onClose={() => news.keys.forEach(markSeen)} />}

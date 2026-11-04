@@ -5,6 +5,8 @@ import { overall } from '../../data/builders'
 import { cameraAt, signingMate, signingPlayer, SHOW_SECONDS } from '../match/stadiumShow'
 import { SIGN, signingScript } from '../match/signingScript'
 import { TransferNews, signingShow, type TransferRow } from './TransferScreens'
+import { transferFacts } from './transferFacts'
+import { ROOM, roomScript } from './transferScript'
 
 const [a, b] = BUILT_IN_TEAMS
 const sorted = [...a.players].sort((x, y) => overall(y) - overall(x))
@@ -45,5 +47,33 @@ describe('transfer scenes', () => {
   })
   it('the transfer overlay draws', () => {
     expect(renderToString(<TransferNews rows={[row(0, 'buy'), row(3, 'release')]} extra={2} onClose={() => {}} />)).toContain('Transfer')
+  })
+  it('the card says clearly which club bought him from which, for how much, and whether it concerns you', () => {
+    const buy = transferFacts({ ...row(0, 'buy'), wage: 9 }, b.id)
+    expect(buy.kind).toBe('buy')
+    expect(buy.from.name).toBe(a.name)
+    expect(buy.to.name).toBe(b.name)
+    expect(buy.rows).toContainEqual(['Transfer fee', '12 coins'])
+    expect(buy.rows).toContainEqual(['Paid by', b.name])
+    expect(buy.rows).toContainEqual(['Received by', a.name])
+    expect(buy.rows).toContainEqual(['Yearly wage', '9 coins'])
+    expect(buy.yours).toBe('bought')
+    expect(transferFacts(row(0, 'buy'), a.id).yours).toBe('sold')
+    expect(transferFacts(row(0, 'buy'), 'nobody').yours).toBeNull()
+    const free = transferFacts(row(6, 'sign'), b.id)
+    expect(free.from.name).toBe('Unsigned pool')
+    expect(free.yours).toBe('signed')
+    const out = transferFacts(row(15, 'release'), a.id)
+    expect(out.to.name).toBe('Unsigned pool')
+    expect(out.rows[0][0]).toBe('Refund')
+    expect(out.yours).toBe('released')
+  })
+  it('the room script has one voice at a time and finishes before the scene ends', () => {
+    for (const mode of ['buy', 'sign', 'release'] as const) {
+      const lines = roomScript({ mode, player: 'P', to: 'B', from: 'A', fee: 12, tier: 4, seed: 3, rating: 80 })
+      expect(lines.length).toBeGreaterThanOrEqual(3)
+      for (let k = 1; k < lines.length; k++) expect(lines[k].at).toBeGreaterThanOrEqual(lines[k - 1].end)
+      expect(lines[lines.length - 1].end).toBeLessThanOrEqual(ROOM.end)
+    }
   })
 })

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { BUILT_IN_TEAMS } from '../../data/teams'
 import { overall } from '../../data/builders'
 import { PRESENTERS } from '../../data/presenters'
@@ -9,12 +9,13 @@ import type { Player, Team } from '../../types'
 import { signingScript } from '../match/signingScript'
 import { callName } from '../match/format'
 import type { ReplayBase } from '../match/ReplayFrame'
-import { StadiumCam, type Cast } from '../match/StadiumCam'
-import { SHOW_SECONDS, type StadiumShow } from '../match/stadiumShow'
+import type { Cast } from '../match/StadiumCam'
+import type { StadiumShow } from '../match/stadiumShow'
+import { TransferRoom } from './TransferRoom'
 import { tierOf } from '../ui'
 
 /** One move to show: what happened, to whom, which club's stage it is on (the new club, or the one he is leaving), and the players of that club. */
-export interface TransferRow { t: Transfer; player: Player; from: Team | null; to: Team | null; club: Team; squad: Player[] }
+export interface TransferRow { t: Transfer; player: Player; from: Team | null; to: Team | null; club: Team; squad: Player[]; /** His yearly wage with the buying club, when known. */ wage?: number }
 
 const hash = (s: string): number => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return (h >>> 0) / 4294967296 }
 const TIER_INDEX: Record<string, number> = { Legendary: 5, Elite: 4, Star: 3, Solid: 2, Fringe: 1, Tailender: 0 }
@@ -55,36 +56,29 @@ export function signingShow(row: TransferRow): { show: StadiumShow; cast: Cast; 
  * across the ground (a leaving one is on the stage, and walks away at the end) while the squad runs on and claps, and what is said runs along the bottom.
  * A tap moves on to the next; the tier of the player sets how big the moment is.
  */
-export function TransferNews({ rows, extra, onClose }: { rows: TransferRow[]; mine?: string | null; extra: number; onClose: () => void }) {
+export function TransferNews({ rows, mine, extra, onClose }: { rows: TransferRow[]; mine?: string | null; extra: number; onClose: () => void }) {
   const [i, setI] = useState(0)
   const row = rows[i]
   const last = i + 1 >= rows.length
-  const next = () => (last ? onClose() : setI((n) => n + 1))
+  const next = useCallback(() => (last ? onClose() : setI((n) => n + 1)), [last, onClose])
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
   }, [onClose])
-  const scene = useMemo(() => (row ? signingShow(row) : null), [row])
-  // each scene plays to its end, then the next one begins by itself
-  useEffect(() => {
-    const id = window.setTimeout(next, (SHOW_SECONDS.signing + 0.6) * 1000)
-    return () => window.clearTimeout(id)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i])
-  if (!row || !scene) return null
-  const mode = scene.show.signing?.mode
+  if (!row) return null
+  const kind = row.t.kind === 'release' || !row.to ? 'release' : row.t.kind
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-black" style={{ paddingTop: 'var(--sat)', paddingBottom: 'var(--sab)' }} role="dialog" aria-label="Transfers">
+    <div className="fixed inset-0 z-[80] flex flex-col bg-[#070910]" style={{ paddingTop: 'var(--sat)', paddingBottom: 'var(--sab)' }} role="dialog" aria-label="Transfers">
       <div className="relative z-[9500] flex shrink-0 items-center justify-between px-3 py-2">
-        <span className="flex items-center gap-2 rounded bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{mode === 'release' ? 'Leaving' : mode === 'buy' ? 'Transfer' : 'Signing'} · {i + 1} of {rows.length}{extra > 0 ? ` (+${extra} more)` : ''}</span>
+        <span className="flex items-center gap-2 rounded bg-black/70 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-widest text-sky-200"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{kind === 'release' ? 'Release' : kind === 'buy' ? 'Transfer' : 'Signing'} {i + 1} / {rows.length}{extra > 0 && i + 1 === rows.length ? ` · +${extra} more in the Market log` : ''}</span>
         <div className="flex gap-2">
           {!last && <button onClick={next} className="cursor-pointer rounded-full bg-white/15 px-3 py-1 text-sm font-bold text-white active:bg-white/25">Next</button>}
           <button onClick={onClose} className="cursor-pointer rounded-full bg-white/15 px-3 py-1 text-sm font-bold text-white active:bg-white/25">Skip all</button>
         </div>
       </div>
-      <div className="relative min-h-0 flex-1 overflow-hidden" onClick={next}>
-        <StadiumCam key={row.t.id} show={scene.show} base={scene.base} cast={scene.cast} rate={1} />
+      <div className="min-h-0 flex-1" onClick={next}>
+        <TransferRoom key={row.t.id} row={row} mine={mine} onDone={next} />
       </div>
     </div>
   )
