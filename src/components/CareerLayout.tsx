@@ -112,7 +112,7 @@ export function CareerLayout() {
       <div className="mb-5 rounded-2xl border border-line bg-panel px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            {mine && <div className="relative shrink-0"><TeamCrest team={mine} size={44} /><LevelBadge size={24} /></div>}
+            {mine && <div className="relative shrink-0"><TeamCrest team={mine} size={44} /><LevelBadge size={20} /></div>}
             <div className="min-w-0">
               <div className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Career · {season.year}{session.reviews.length > 0 ? ` · season ${session.reviews.length + 1}` : ''}</div>
               <h1 className="truncate font-display text-3xl leading-none tracking-wide text-white">{session.name}</h1>
